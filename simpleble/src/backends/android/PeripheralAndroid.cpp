@@ -81,7 +81,7 @@ void PeripheralAndroid::disconnect() { _gatt.disconnect(); }
 
 bool PeripheralAndroid::is_connected() { return _btGattCallback.connected && _btGattCallback.services_discovered; }
 
-bool PeripheralAndroid::is_connectable() { return false; }
+bool PeripheralAndroid::is_connectable() { return true; }
 
 bool PeripheralAndroid::is_paired() { return false; }
 
