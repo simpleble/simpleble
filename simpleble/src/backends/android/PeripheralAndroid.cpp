@@ -12,6 +12,9 @@
 #include "LoggingInternal.h"
 #include "simpleble/Descriptor.h"
 
+#include <chrono>
+#include <thread>
+
 using namespace SimpleBLE;
 using namespace std::chrono_literals;
 
@@ -19,6 +22,7 @@ PeripheralAndroid::PeripheralAndroid(Android::ScanResult scan_result) : _device(
     _btGattCallback.set_callback_onConnectionStateChange([this](bool connected) {
         // If a connection has been established, request service discovery.
         if (connected) {
+            SIMPLEBLE_LOG_INFO("Connected to device");
             _gatt.discoverServices();
         } else {
             // TODO: Whatever cleanup is necessary when disconnected.
@@ -29,6 +33,7 @@ PeripheralAndroid::PeripheralAndroid(Android::ScanResult scan_result) : _device(
 
     _btGattCallback.set_callback_onServicesDiscovered([this]() {
         _services = _gatt.getServices();
+        SIMPLEBLE_LOG_INFO("Discovered services");
 
         // Notify the user that the connection has been established once services have been discovered.
         SAFE_CALLBACK_CALL(callback_on_connected_);
@@ -53,13 +58,30 @@ int16_t PeripheralAndroid::tx_power() { return 0; }
 
 uint16_t PeripheralAndroid::mtu() { return _btGattCallback.mtu; }
 
-void PeripheralAndroid::connect() { _gatt = _device.connectGatt(false, _btGattCallback); }
+void PeripheralAndroid::connect() { 
+    _gatt = _device.connectGatt(false, _btGattCallback); 
+    
+    //wait until device is connected for comparable behavior to windows, linux and mac
+    int timeoutMs = 5000; //define and evaluate timeout period
+    std::chrono::steady_clock::time_point tstart = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> dt;
+    bool isConnected = false;
+    do
+    {
+        isConnected = is_connected();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        dt = std::chrono::high_resolution_clock::now() - tstart;
+    } while (!isConnected && dt.count() < timeoutMs);
+    
+    if(!isConnected && dt.count() >= timeoutMs)
+        throw SimpleBLE::Exception::OperationFailed("Connection attempt timed out.");
+    }
 
 void PeripheralAndroid::disconnect() { _gatt.disconnect(); }
 
 bool PeripheralAndroid::is_connected() { return _btGattCallback.connected && _btGattCallback.services_discovered; }
 
-bool PeripheralAndroid::is_connectable() { return false; }
+bool PeripheralAndroid::is_connectable() { return true; }
 
 bool PeripheralAndroid::is_paired() { return false; }
 
@@ -275,11 +297,10 @@ Android::BluetoothGattCharacteristic PeripheralAndroid::_fetch_characteristic(
                 if (characteristic.getUuid() == characteristic_uuid) {
                     return characteristic;
                 }
-                throw SimpleBLE::Exception::CharacteristicNotFound(characteristic_uuid);
             }
+            throw SimpleBLE::Exception::CharacteristicNotFound(characteristic_uuid);
         }
     }
-
     throw SimpleBLE::Exception::ServiceNotFound(service_uuid);
 }
 
@@ -294,11 +315,11 @@ Android::BluetoothGattDescriptor PeripheralAndroid::_fetch_descriptor(const Blue
                         if (descriptor.getUuid() == descriptor_uuid) {
                             return descriptor;
                         }
-                        throw SimpleBLE::Exception::DescriptorNotFound(descriptor_uuid);
                     }
+                    throw SimpleBLE::Exception::DescriptorNotFound(descriptor_uuid);
                 }
-                throw SimpleBLE::Exception::CharacteristicNotFound(characteristic_uuid);
             }
+            throw SimpleBLE::Exception::CharacteristicNotFound(characteristic_uuid);
         }
     }
     throw SimpleBLE::Exception::ServiceNotFound(service_uuid);
