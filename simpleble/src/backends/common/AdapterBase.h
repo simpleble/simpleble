@@ -36,7 +36,7 @@ class AdapterBase {
 
     virtual void* underlying() const = 0;
 
-    virtual std::string identifier() const = 0;
+    virtual std::string identifier() = 0;
     virtual BluetoothAddress address() = 0;
 
     virtual void scan_start() = 0;

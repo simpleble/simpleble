@@ -19,7 +19,7 @@ AdapterPlain::~AdapterPlain() {}
 
 void* AdapterPlain::underlying() const { return nullptr; }
 
-std::string AdapterPlain::identifier() const { return "Plain Adapter"; }
+std::string AdapterPlain::identifier() { return "Plain Adapter"; }
 
 BluetoothAddress AdapterPlain::address() { return "AA:BB:CC:DD:EE:FF"; }
 

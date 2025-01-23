@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "android/BluetoothAdapter.h"
+#include "android/BluetoothScanner.h"
 #include "bridge/ScanCallback.h"
 #include "jni/Common.hpp"
 
@@ -29,7 +31,7 @@ class AdapterAndroid : public AdapterBase {
 
     virtual void* underlying() const override;
 
-    virtual std::string identifier() const override;
+    virtual std::string identifier() override;
     virtual BluetoothAddress address() override;
 
     virtual void scan_start() override;
@@ -59,6 +61,8 @@ class AdapterAndroid : public AdapterBase {
   private:
     std::shared_ptr<BackendAndroid> backend_;
 
+    Android::BluetoothAdapter _btAdapter = Android::BluetoothAdapter::getDefaultAdapter();
+    Android::BluetoothScanner _btScanner = _btAdapter.getBluetoothLeScanner();
     Android::Bridge::ScanCallback _btScanCallback;
 
     std::map<BluetoothAddress, std::shared_ptr<PeripheralAndroid>> peripherals_;

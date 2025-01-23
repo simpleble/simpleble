@@ -199,6 +199,13 @@ class Class {
     }
 
     template <typename... Args>
+    Object call_static_method(jmethodID method, Args&&... args) {
+        JNIEnv* env = VM::env();
+        jobject obj = env->CallStaticObjectMethod(_cls.get(), method, std::forward<Args>(args)...);
+        return Object(obj, _cls.get());
+    }
+
+    template <typename... Args>
     Object call_constructor(const char* signature, Args&&... args) {
         JNIEnv* env = VM::env();
 

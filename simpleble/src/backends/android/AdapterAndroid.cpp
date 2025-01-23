@@ -48,25 +48,23 @@ AdapterAndroid::~AdapterAndroid() {}
 
 void* AdapterAndroid::underlying() const { return nullptr; }
 
-std::string AdapterAndroid::identifier() const {
-    return backend_->get_btAdapter().call_string_method("getName", "()Ljava/lang/String;");
+std::string AdapterAndroid::identifier() {
+    return _btAdapter.getName();
 }
 
 BluetoothAddress AdapterAndroid::address() {
-    return BluetoothAddress(backend_->get_btAdapter().call_string_method("getAddress", "()Ljava/lang/String;"));
+    return BluetoothAddress(_btAdapter.getAddress());
 }
 
 void AdapterAndroid::scan_start() {
     seen_peripherals_.clear();
-    backend_->get_btScanner().call_void_method("startScan", "(Landroid/bluetooth/le/ScanCallback;)V",
-                                               _btScanCallback.get());
+    _btScanner.startScan(_btScanCallback);
     scanning_ = true;
     SAFE_CALLBACK_CALL(this->callback_on_scan_start_);
 }
 
 void AdapterAndroid::scan_stop() {
-    backend_->get_btScanner().call_void_method("stopScan", "(Landroid/bluetooth/le/ScanCallback;)V",
-                                               _btScanCallback.get());
+    _btScanner.stopScan(_btScanCallback);
     scanning_ = false;
     SAFE_CALLBACK_CALL(this->callback_on_scan_stop_);
 }

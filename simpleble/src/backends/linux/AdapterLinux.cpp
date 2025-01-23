@@ -18,7 +18,7 @@ AdapterLinux::~AdapterLinux() { adapter_->clear_on_device_updated(); }
 
 void* AdapterLinux::underlying() const { return adapter_.get(); }
 
-std::string AdapterLinux::identifier() const { return adapter_->identifier(); }
+std::string AdapterLinux::identifier() { return adapter_->identifier(); }
 
 BluetoothAddress AdapterLinux::address() { return adapter_->address(); }
 

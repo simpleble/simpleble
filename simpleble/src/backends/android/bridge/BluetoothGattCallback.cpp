@@ -1,9 +1,9 @@
 #include "BluetoothGattCallback.h"
 #include <CommonUtils.h>
 
-#include "LoggingInternal.h"
 #include <jni/Types.h>
 #include <climits>
+#include "LoggingInternal.h"
 
 namespace SimpleBLE {
 namespace Android {
@@ -12,14 +12,15 @@ namespace Bridge {
 JNI::Class BluetoothGattCallback::_cls;
 std::map<jobject, BluetoothGattCallback*, JNI::JObjectComparator> BluetoothGattCallback::_map;
 
-#define GET_CALLBACK_OBJECT_OR_RETURN(thiz) ({                                           \
-    auto it = BluetoothGattCallback::_map.find(thiz);                                   \
-    if (it == BluetoothGattCallback::_map.end()) {                                      \
-        SIMPLEBLE_LOG_FATAL("Failed to find BluetoothGattCallback object. This should never happen."); \
-        return;                                                                          \
-    }                                                                                    \
-    it->second;                                                                         \
-})
+#define GET_CALLBACK_OBJECT_OR_RETURN(thiz)                                                                \
+    ({                                                                                                     \
+        auto it = BluetoothGattCallback::_map.find(thiz);                                                  \
+        if (it == BluetoothGattCallback::_map.end()) {                                                     \
+            SIMPLEBLE_LOG_FATAL("Failed to find BluetoothGattCallback object. This should never happen."); \
+            return;                                                                                        \
+        }                                                                                                  \
+        it->second;                                                                                        \
+    })
 
 void BluetoothGattCallback::initialize() {
     JNI::Env env;

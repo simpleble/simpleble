@@ -40,7 +40,7 @@ void* AdapterMac::underlying() const {
     return [internal underlying];
 }
 
-std::string AdapterMac::identifier() const { return fmt::format("Default Adapter [{}]", this->address()); }
+std::string AdapterMac::identifier() { return fmt::format("Default Adapter [{}]", this->address()); }
 
 BluetoothAddress AdapterMac::address() const {
     AdapterBaseMacOS* internal = (__bridge AdapterBaseMacOS*)opaque_internal_;

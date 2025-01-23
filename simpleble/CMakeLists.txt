@@ -319,11 +319,13 @@ elseif(SIMPLEBLE_BACKEND_ANDROID)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/AdapterAndroid.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/PeripheralAndroid.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/BackendAndroid.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothAdapter.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothDevice.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothGatt.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothGattService.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothGattCharacteristic.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothGattDescriptor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/BluetoothScanner.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/UUID.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/ScanRecord.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/android/ScanResult.cpp

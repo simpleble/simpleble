@@ -150,7 +150,7 @@ bool AdapterWindows::bluetooth_enabled() { return BackendWinRT::get()->bluetooth
 
 void* AdapterWindows::underlying() const { return reinterpret_cast<void*>(const_cast<BluetoothAdapter*>(&adapter_)); }
 
-std::string AdapterWindows::identifier() const { return identifier_; }
+std::string AdapterWindows::identifier() { return identifier_; }
 
 BluetoothAddress AdapterWindows::address() { return _mac_address_to_str(adapter_.BluetoothAddress()); }
 

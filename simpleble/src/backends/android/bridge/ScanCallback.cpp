@@ -1,7 +1,7 @@
-#include <fmt/format.h>
-#include <android/log.h>
-#include <CommonUtils.h>
 #include "ScanCallback.h"
+#include <CommonUtils.h>
+#include <android/log.h>
+#include <fmt/format.h>
 
 namespace SimpleBLE {
 namespace Android {
@@ -25,9 +25,7 @@ ScanCallback::ScanCallback() {
     _map[_obj.get()] = this;
 }
 
-ScanCallback::~ScanCallback() {
-    _map.erase(_obj.get());
-}
+ScanCallback::~ScanCallback() { _map.erase(_obj.get()); }
 
 void ScanCallback::set_callback_onScanResult(std::function<void(Android::ScanResult)> callback) {
     if (callback) {
@@ -53,7 +51,7 @@ void ScanCallback::set_callback_onScanFailed(std::function<void()> callback) {
     }
 }
 
-void ScanCallback::jni_onScanResultCallback(JNIEnv *env, jobject thiz, jint callback_type, jobject j_scan_result) {
+void ScanCallback::jni_onScanResultCallback(JNIEnv* env, jobject thiz, jint callback_type, jobject j_scan_result) {
     auto it = ScanCallback::_map.find(thiz);
     if (it != ScanCallback::_map.end()) {
         ScanCallback* obj = it->second;
@@ -68,12 +66,12 @@ void ScanCallback::jni_onScanResultCallback(JNIEnv *env, jobject thiz, jint call
     }
 }
 
-void ScanCallback::jni_onBatchScanResultsCallback(JNIEnv *env, jobject thiz, jobject results) {
+void ScanCallback::jni_onBatchScanResultsCallback(JNIEnv* env, jobject thiz, jobject results) {
     __android_log_write(ANDROID_LOG_INFO, "SimpleBLE", "onBatchScanResultsCallback");
     // TODO: Implement
 }
 
-void ScanCallback::jni_onScanFailedCallback(JNIEnv *env, jobject thiz, jint error_code) {
+void ScanCallback::jni_onScanFailedCallback(JNIEnv* env, jobject thiz, jint error_code) {
     __android_log_write(ANDROID_LOG_INFO, "SimpleBLE", "onScanFailedCallback");
     // TODO: Implement
 }

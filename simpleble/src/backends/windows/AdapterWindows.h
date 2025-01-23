@@ -36,7 +36,7 @@ class AdapterWindows : public AdapterBase {
 
     virtual void* underlying() const override;
 
-    virtual std::string identifier() const override;
+    virtual std::string identifier() override;
     virtual BluetoothAddress address() override;
 
     virtual void scan_start() override;
