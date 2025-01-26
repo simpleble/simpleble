@@ -5,14 +5,16 @@ SimpleBLE
 
 The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE), designed for simplicity and ease of use.
 
-**Key Features**
+Key Features
+------------
 
 * **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
 * **Easy Integration**: Clean, consistent API across all platforms
 * **Multiple Language Support**: Production-ready bindings for C, C++, and Python, more languages coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
 
-**Language Bindings**
+Language Bindings
+-----------------
 
 * **C/C++**: Core implementation with full platform support
 * **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
@@ -21,16 +23,16 @@ The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE),
 
 More languages coming soon!
 
-**Extension Libraries**
+Extension Libraries
+-------------------
 
 Our extension libraries are also available under commercial licenses:
 
 * **SimpleBluez**: BlueZ abstraction layer over DBus
 * **SimpleDBus**: DBus object hierarchy handler
 
-These libraries can be licensed separately or bundled with SimpleBLE.
-
-**Support & Resources**
+Support & Resources
+--------------------
 
 We're here to help you succeed with SimpleBLE:
 
@@ -40,7 +42,8 @@ We're here to help you succeed with SimpleBLE:
 
 Don't hesitate to reach out - we're happy to help!
 
-**Projects using SimpleBLE**
+Projects using SimpleBLE
+------------------------
 
 Don't forget to check out the following projects using SimpleBLE:
 
