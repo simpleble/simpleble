@@ -10,7 +10,7 @@ Key Features
 
 * **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
 * **Easy Integration**: Clean, consistent API across all platforms
-* **Multiple Language Support**: Production-ready bindings for C, C++, and Python, more languages coming soon
+* **Multiple Language Support**: Production-ready bindings for C, C++, and Python, more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
 
 Language Bindings
