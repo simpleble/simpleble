@@ -56,7 +56,7 @@ This means that the project is now free to use for non-commercial purposes, but 
 license for commercial use. Each version of SimpleBLE will convert to the GNU General Public License
 version 3 after four years of its initial release.
 
-**Why purchase a commercial license?
+**Why purchase a commercial license?**
 
 - Build and deploy unlimited commercial applications
 - Use across your entire development team
