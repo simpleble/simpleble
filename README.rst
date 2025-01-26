@@ -20,13 +20,10 @@ Language Bindings
 * **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
 * **Rust (SimpleRsBLE) - Alpha**: Rust bindings (under major refactor). See the `SimpleRsBLE`_ Crates.io page for more details.
 * **Android (SimpleDroidBLE) - Alpha**: Android-only bindings (alpha).
-
-More languages coming soon!
+* More languages coming soon!
 
 Extension Libraries
 -------------------
-
-Our extension libraries are also available under commercial licenses:
 
 * **SimpleBluez**: BlueZ abstraction layer over DBus
 * **SimpleDBus**: DBus object hierarchy handler
