@@ -1,25 +1,27 @@
+|Latest Documentation Status| |PyPI Licence|
+
 SimplePyBLE
 ===========
 
-The ultimate cross-platform bindings for Bluetooth Low Energy (BLE).
+The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE), designed for simplicity and ease of use.
 
-|Latest Documentation Status| |PyPI Licence|
+Key Features
+------------
 
-Overview
---------
+* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux
+* **Easy Integration**: Clean, consistent API across all platforms
+* **Commercial Ready**: Source-available commercial license for proprietary applications
 
-SimplePyBLE provides Python bindings for `SimpleBLE`_, a fully cross-platform BLE library,
-designed for simplicity and ease of use, with a consistent behavior and API across all platforms.
+Support & Resources
+--------------------
 
-SimplePyBLE runs on Windows 10+, Linux (Ubuntu 20.04+) and MacOS 10.15+ (Catalina and newer).
+We're here to help you succeed with SimpleBLE:
 
-**Commercial licensing is available for projects requiring proprietary distribution.**
+* **Documentation**: Visit our `ReadTheDocs`_ page for comprehensive guides
+* **Commercial Support**: Check our `website`_ or `email us <mailto:contact@simpleble.org>`_ for licensing and professional services
+* **Community**: Join our `Discord`_ server for discussions and help
 
-If you want to use SimplePyBLE and need help. **Please do not hesitate to reach out!**
-
-* Visit our `ReadTheDocs`_ page for comprehensive documentation.
-* Visit our `website`_ or email us at `email us <mailto:contact@simpleble.org>`_ for commercial licensing and professional support services.
-* Join our `Discord`_ server for community discussions and help.
+Don't hesitate to reach out - we're happy to help!
 
 Installation
 ------------
@@ -48,7 +50,7 @@ version 3 after four years of its initial release.
 - Priority technical support included
 - Clear terms for integrating into MIT-licensed projects
 
-**You can find more information on pricing and commercial terms of service on our `website`_.**
+**You can find more information on pricing and commercial terms of service at www.simpleble.org**
 
 For further enquiries, please contact us at ``contact at simpleble dot org``.
 
@@ -60,9 +62,9 @@ For further enquiries, please contact us at ``contact at simpleble dot org``.
 
 .. _SimplePyBLE: https://pypi.org/project/simplepyble/
 
-.. _SimpleBLE: https://github.com/OpenBluetoothToolbox/SimpleBLE/
+.. _SimpleBLE: https://github.com/simpleble/simpleble/
 
-.. _code examples: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble
+.. _code examples: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble
 
 .. _Discord: https://discord.gg/N9HqNEcvP3
 

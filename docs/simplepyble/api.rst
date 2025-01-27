@@ -41,16 +41,16 @@ The following list briefly describes each example provided:
 
 .. Links
 
-.. _examples: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble
+.. _examples: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble
 
-.. _list_adapters: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble/list_adapters.py
+.. _list_adapters: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble/list_adapters.py
 
-.. _scan: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble/scan.py
+.. _scan: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble/scan.py
 
-.. _connect: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble/connect.py
+.. _connect: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble/connect.py
 
-.. _read: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble/read.py
+.. _read: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble/read.py
 
-.. _write: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble/write.py
+.. _write: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble/write.py
 
-.. _notify: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplepyble/notify.py
+.. _notify: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble/notify.py

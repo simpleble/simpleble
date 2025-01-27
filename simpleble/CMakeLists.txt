@@ -6,7 +6,7 @@ project(
     simpleble
     VERSION ${SIMPLEBLE_VERSION}
     DESCRIPTION "The ultimate fully-fledged cross-platform library for Bluetooth Low Energy (BLE)."
-    HOMEPAGE_URL "https://github.com/OpenBluetoothToolbox/SimpleBLE"
+    HOMEPAGE_URL "https://github.com/simpleble/simpleble"
     LANGUAGES CXX
 )
 

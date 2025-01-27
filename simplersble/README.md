@@ -1,19 +1,24 @@
 # SimpleRsBLE
 
-The ultimate cross-platform bindings for Bluetooth Low Energy (BLE).
-
-## Overview
-
-SimpleRsBLE provides Rust bindings for [SimpleBLE](https://github.com/OpenBluetoothToolbox/SimpleBLE/),
-a fully cross-platform BLE library, designed for simplicity and ease of use, with a consistent behavior and API across all platforms.
+The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE), designed for simplicity and ease of use.
 
 **IMPORTANT:** SimpleRsBLE is currently in the process of being rewritten from scratch to follow proper idiomatic Rust patterns.
 
-If you want to use SimpleRsBLE and need help, **please do not hesitate to reach out!**
+## Key Features
 
-- Visit our [ReadTheDocs](https://simpleble.readthedocs.io/en/latest/) page for comprehensive documentation
-- Visit our [website](https://simpleble.org) or email us at `contact@simpleble.org` for commercial licensing and professional support services
-- Join our [Discord](https://discord.gg/N9HqNEcvP3) server for community discussions and help
+* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
+* **Easy Integration**: Clean, consistent API across all platforms
+* **Commercial Ready**: Source-available commercial license for proprietary applications
+
+## Support & Resources
+
+We're here to help you succeed with SimpleBLE:
+
+* **Documentation**: Visit our [ReadTheDocs](https://simpleble.readthedocs.io/en/latest/) page for comprehensive guides
+* **Commercial Support**: Check our [website](https://simpleble.org) or `email us <mailto:contact@simpleble.org>`_ for licensing and professional services
+* **Community**: Join our [Discord](https://discord.gg/N9HqNEcvP3) server for discussions and help
+
+Don't hesitate to reach out - we're happy to help!
 
 ## Installation
 
@@ -24,7 +29,7 @@ You can add SimpleRsBLE to your project by adding the following lines to your `C
 simplersble = "0.6.0"
 ```
 
-Please review our [code examples](https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplersble/src/bin) on GitHub for more information on how to use SimpleRsBLE.
+Please review our [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplersble/src/bin) on GitHub for more information on how to use SimpleRsBLE.
 
 # License
 

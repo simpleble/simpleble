@@ -11,4 +11,4 @@ in the repository.
 
 .. Links
 
-.. _examples: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simplebluez
+.. _examples: https://github.com/simpleble/simpleble/tree/main/examples/simplebluez

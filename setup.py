@@ -141,7 +141,7 @@ skbuild.setup(
     version=version_str,
     author="Kevin Dewald",
     author_email="kevin@dewald.me",
-    url="https://github.com/OpenBluetoothToolbox/SimpleBLE",
+    url="https://github.com/simpleble/simpleble",
     description="The ultimate fully-fledged cross-platform BLE library, designed for simplicity and ease of use.",
     long_description=long_description,
     long_description_content_type="text/x-rst",

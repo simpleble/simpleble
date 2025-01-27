@@ -6,7 +6,7 @@ version = "0.9.1"
 license = "BUSL-1.1"
 description = "The all-in-one Bluetooth library that makes it easy to add wireless connectivity to your projects."
 readme = "simplersble/README.md"
-repository = "https://github.com/OpenBluetoothToolbox/SimpleBLE"
+repository = "https://github.com/simpleble/simpleble"
 
 include = [
     "/VERSION",

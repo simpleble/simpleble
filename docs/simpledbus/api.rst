@@ -36,4 +36,4 @@ Proxy
 
 .. Links
 
-.. _examples: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simpledbus
+.. _examples: https://github.com/simpleble/simpleble/tree/main/examples/simpledbus

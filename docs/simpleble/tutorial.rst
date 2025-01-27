@@ -227,22 +227,22 @@ Layers and their responsibilities
 
 .. Links
 
-.. _examples: https://github.com/OpenBluetoothToolbox/SimpleBLE/tree/main/examples/simpleble
+.. _examples: https://github.com/simpleble/simpleble/tree/main/examples/simpleble
 
-.. _list_adapters: https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/list_adapters/list_adapters.cpp
+.. _list_adapters: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/list_adapters/list_adapters.cpp
 
-.. _scan (cpp): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/scan/scan.cpp
+.. _scan (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/scan/scan.cpp
 
-.. _connect (cpp): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/connect/connect.cpp
+.. _connect (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/connect/connect.cpp
 
-.. _connect_safe (cpp): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/connect_safe/connect_safe.cpp
+.. _connect_safe (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/connect_safe/connect_safe.cpp
 
-.. _read: https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/read/read.cpp
+.. _read: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/read/read.cpp
 
-.. _write: https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/write/write.cpp
+.. _write: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/write/write.cpp
 
-.. _notify (cpp): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/cpp/notify/notify.cpp
+.. _notify (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/notify/notify.cpp
 
-.. _connect (c): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/c/connect.c
-.. _scan (c): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/c/scan.c
-.. _notify (c): https://github.com/OpenBluetoothToolbox/SimpleBLE/blob/main/examples/simpleble/c/notify.c
+.. _connect (c): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/c/connect.c
+.. _scan (c): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/c/scan.c
+.. _notify (c): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/c/notify.c
