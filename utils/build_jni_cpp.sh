@@ -34,6 +34,14 @@ while (( "$#" )); do
         FLAG_DEBUG=0
         shift
         ;;
+    -sa|--sanitize_address)
+        FLAG_SANITIZE_ADDRESS=0
+        shift
+        ;;
+    -st|--sanitize_thread)
+        FLAG_SANITIZE_THREAD=0
+        shift
+        ;;
     -*|--*=) # unsupported flags
         echo "Error: Unsupported flag $1" >&2
         exit 1
@@ -45,6 +53,12 @@ while (( "$#" )); do
   esac
 done
 
+# Don't allow sanitize flags to coexist
+if [ ! -z "$FLAG_SANITIZE_ADDRESS" ] && [ ! -z "$FLAG_SANITIZE_THREAD" ]; then
+    echo "Error: Cannot use both --sanitize_address and --sanitize_thread" >&2
+    exit 1
+fi
+
 # Set positional arguments in their proper place
 eval set -- "$PARAMS"
 
@@ -52,24 +66,27 @@ eval set -- "$PARAMS"
 EXTRA_BUILD_ARGS=${@:1}
 
 PROJECT_ROOT=$(realpath $(dirname `realpath $0`)/..)
-
-GRADLE_HOME=$PROJECT_ROOT/.gradle
-GRADLE_CMD=$PROJECT_ROOT/utils/gradle/gradlew
-GRADLE_ACTIONS=""
-
-SOURCE_PATH=$PROJECT_ROOT/simplejavable/java
+SOURCE_PATH=$PROJECT_ROOT/simplejavable/cpp
 BUILD_PATH=$PROJECT_ROOT/build_simplejavable
+
+# If FLAG_SANITIZE_ADDRESS is set, build the library with the sanitize address argument
+if [[ ! -z "$FLAG_SANITIZE_ADDRESS" ]]; then
+    BUILD_SANITIZE_ADDRESS_ARG="-D${LIB_NAME^^}_SANITIZE=Address"
+fi
+
+# If FLAG_SANITIZE_THREAD is set, build the library with the sanitize thread argument
+if [[ ! -z "$FLAG_SANITIZE_THREAD" ]]; then
+    BUILD_SANITIZE_THREAD_ARG="-D${LIB_NAME^^}_SANITIZE=Thread"
+fi
 
 # If FLAG_CLEAN is set, clean the build directory
 if [[ ! -z "$FLAG_CLEAN" ]]; then
-    GRADLE_ACTIONS="$GRADLE_ACTIONS clean"
+    rm -rf $BUILD_PATH
 fi
 
 if [[ ! -z "$FLAG_DEBUG" ]]; then
-    # TODO
-    echo "Debug build not supported yet"
-    exit 1
+    DEBUG_ARG="-DCMAKE_BUILD_TYPE=Debug"
 fi
 
-GRADLE_ACTIONS="$GRADLE_ACTIONS build"
-exec $GRADLE_CMD -g $GRADLE_HOME -p $SOURCE_PATH -Dorg.gradle.project.buildDir=$BUILD_PATH $GRADLE_ACTIONS
+cmake $DEBUG_ARG -H$SOURCE_PATH -B $BUILD_PATH $BUILD_SANITIZE_ADDRESS_ARG $BUILD_SANITIZE_THREAD_ARG $EXTRA_BUILD_ARGS
+cmake --build $BUILD_PATH

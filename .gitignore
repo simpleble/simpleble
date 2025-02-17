@@ -4,6 +4,7 @@
 _build
 _doxygen
 _skbuild
+.gradle
 
 /build_*
 /dist

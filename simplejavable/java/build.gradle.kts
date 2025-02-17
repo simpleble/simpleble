@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.simplejavable"
-version = "1.0-SNAPSHOT"
+version = "v${file("../../VERSION").readText().trim()}"
 
 repositories {
     mavenCentral()
@@ -19,8 +19,8 @@ kotlin {
 val nativeLibUrl: String? by project // -PnativeLibUrl=...
 val nativeLibPath: String? by project // -PnativeLibPath=...
 val cmakePath = "../cpp" // Default CMake location
-val cmakeBuildPath = layout.buildDirectory.dir("build_simplejavable").get().asFile
-val cmakeBuildOutputPath = layout.buildDirectory.dir("build_simplejavable/lib").get().asFile
+val cmakeBuildPath = layout.buildDirectory.dir("build_cpp").get().asFile
+val cmakeBuildOutputPath = layout.buildDirectory.dir("build_cpp/lib").get().asFile
 
 // OS and architecture detection for CMake builds
 val currentOs = when {
