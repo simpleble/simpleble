@@ -1,5 +1,6 @@
 package org.simplejavable;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -128,5 +129,13 @@ public class Adapter {
         void onScanStop();
         void onScanUpdated(Peripheral peripheral);
         void onScanFound(Peripheral peripheral);
+    }
+
+    static {
+        try {
+            NativeLibraryLoader.loadLibrary("simplejavable");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load native library", e);
+        }
     }
 }
