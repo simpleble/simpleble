@@ -54,6 +54,10 @@ while (( "$#" )); do
         FLAG_PLAIN=0
         shift
         ;;
+    -ec|--exclude_c)
+        FLAG_EXCLUDE_C=0
+        shift
+        ;;
     -sa|--sanitize_address)
         FLAG_SANITIZE_ADDRESS=0
         shift
@@ -124,6 +128,10 @@ if [[ ! -z "$FLAG_PLAIN" ]]; then
     BUILD_PLAIN="-DSIMPLEBLE_PLAIN=ON"
 fi
 
+if [[ ! -z "$FLAG_EXCLUDE_C" ]]; then
+    BUILD_EXCLUDE_C="-DSIMPLEBLE_EXCLUDE_C=ON"
+fi
+
 # If FLAG_CLEAN is set, clean the build directory
 if [[ ! -z "$FLAG_CLEAN" ]]; then
     rm -rf $BUILD_PATH
@@ -134,7 +142,7 @@ if [[ ! -z "$FLAG_DEBUG" ]]; then
     DEBUG_ARG="-DCMAKE_BUILD_TYPE=Debug"
 fi
 
-cmake $DEBUG_ARG -H$SOURCE_PATH -B $BUILD_PATH $BUILD_TEST_ARG $BUILD_SANITIZE_ADDRESS_ARG $BUILD_SANITIZE_THREAD_ARG $BUILD_SHARED_ARG $BUILD_PLAIN $EXTRA_BUILD_ARGS
+cmake $DEBUG_ARG -H$SOURCE_PATH -B $BUILD_PATH $BUILD_TEST_ARG $BUILD_SANITIZE_ADDRESS_ARG $BUILD_SANITIZE_THREAD_ARG $BUILD_SHARED_ARG $BUILD_PLAIN $BUILD_EXCLUDE_C $EXTRA_BUILD_ARGS
 cmake --build $BUILD_PATH -j7
 cmake --install $BUILD_PATH --prefix "${INSTALL_PATH}"
 

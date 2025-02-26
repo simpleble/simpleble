@@ -16,6 +16,7 @@ include(GenerateExportHeader)
 include(GNUInstallDirs)
 
 option(SIMPLEBLE_PLAIN "Use plain version of SimpleBLE" OFF)
+option(SIMPLEBLE_EXCLUDE_C "Exclude C bindings from SimpleBLE" OFF)
 
 if(NOT TARGET fmt::fmt-header-only)
     option(LIBFMT_VENDORIZE "Enable vendorized libfmt" ON)
@@ -349,70 +350,73 @@ if(SIMPLEBLE_TEST)
         CXX_STANDARD 17
         POSITION_INDEPENDENT_CODE ON
         WINDOWS_EXPORT_ALL_SYMBOLS ON)
-        
+
     target_link_libraries(simpleble_test PRIVATE simpleble::simpleble GTest::gtest)
 endif()
 
-# Define simpleble-c target (moved to bottom)
-set(SIMPLEBLE_C_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src_c/simpleble.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src_c/adapter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src_c/peripheral.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src_c/logging.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src_c/utils.cpp)
+# *** SIMPLEBLE C BINDINGS ***
 
-add_library(simpleble-c ${SIMPLEBLE_C_SRC})
-add_library(simpleble::simpleble-c ALIAS simpleble-c)
+if(NOT SIMPLEBLE_EXCLUDE_C)
+    set(SIMPLEBLE_C_SRC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src_c/simpleble.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src_c/adapter.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src_c/peripheral.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src_c/logging.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src_c/utils.cpp)
 
-set_target_properties(simpleble-c PROPERTIES
-    C_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    POSITION_INDEPENDENT_CODE ON
-    DEFINE_SYMBOL simpleble_EXPORTS
-    VERSION "${PROJECT_VERSION}"
-    SOVERSION "${PROJECT_VERSION_MAJOR}"
-    EXPORT_NAME simpleble-c
-    OUTPUT_NAME simpleble-c
-    RELEASE_POSTFIX ""
-    RELWITHDEBINFO_POSTFIX "-relwithdebinfo"
-    MINSIZEREL_POSTFIX "-minsizerel"
-    DEBUG_POSTFIX "-debug")
+    add_library(simpleble-c ${SIMPLEBLE_C_SRC})
+    add_library(simpleble::simpleble-c ALIAS simpleble-c)
 
-# Configure include directories for simpleble-c
-target_include_directories(simpleble-c PRIVATE ${SIMPLEBLE_PRIVATE_INCLUDES})
-target_include_directories(simpleble-c INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-target_include_directories(simpleble-c SYSTEM PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/export>)
+    set_target_properties(simpleble-c PROPERTIES
+        C_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN YES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED YES
+        CXX_EXTENSIONS NO
+        POSITION_INDEPENDENT_CODE ON
+        DEFINE_SYMBOL simpleble_EXPORTS
+        VERSION "${PROJECT_VERSION}"
+        SOVERSION "${PROJECT_VERSION_MAJOR}"
+        EXPORT_NAME simpleble-c
+        OUTPUT_NAME simpleble-c
+        RELEASE_POSTFIX ""
+        RELWITHDEBINFO_POSTFIX "-relwithdebinfo"
+        MINSIZEREL_POSTFIX "-minsizerel"
+        DEBUG_POSTFIX "-debug")
 
-# Configure linked libraries for simpleble-c
-target_link_libraries(simpleble-c PRIVATE $<BUILD_INTERFACE:fmt::fmt-header-only>)
-target_link_libraries(simpleble-c PRIVATE simpleble::simpleble)
+    # Configure include directories for simpleble-c
+    target_include_directories(simpleble-c PRIVATE ${SIMPLEBLE_PRIVATE_INCLUDES})
+    target_include_directories(simpleble-c INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+    target_include_directories(simpleble-c SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/export>)
 
-# Apply OS-specific settings for simpleble-c
-if(SIMPLEBLE_BACKEND_LINUX)
-    set_property(TARGET simpleble-c PROPERTY INSTALL_RPATH $ORIGIN)
-elseif(SIMPLEBLE_BACKEND_MACOS)
-    set_property(TARGET simpleble-c PROPERTY INSTALL_RPATH @loader_path)
+    # Configure linked libraries for simpleble-c
+    target_link_libraries(simpleble-c PRIVATE $<BUILD_INTERFACE:fmt::fmt-header-only>)
+    target_link_libraries(simpleble-c PRIVATE simpleble::simpleble)
+
+    # Apply OS-specific settings for simpleble-c
+    if(SIMPLEBLE_BACKEND_LINUX)
+        set_property(TARGET simpleble-c PROPERTY INSTALL_RPATH $ORIGIN)
+    elseif(SIMPLEBLE_BACKEND_MACOS)
+        set_property(TARGET simpleble-c PROPERTY INSTALL_RPATH @loader_path)
+    endif()
+
+    apply_build_options(simpleble-c
+        "${PRIVATE_COMPILE_DEFINITIONS}"
+        "${PRIVATE_COMPILE_OPTIONS}"
+        "${PRIVATE_LINK_OPTIONS}"
+        "${PUBLIC_LINK_OPTIONS}")
+
+    install(
+        TARGETS simpleble-c
+        EXPORT simpleble-config
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+    install(
+        DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpleble_c/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble_c)
 endif()
-
-apply_build_options(simpleble-c
-    "${PRIVATE_COMPILE_DEFINITIONS}"
-    "${PRIVATE_COMPILE_OPTIONS}"
-    "${PRIVATE_LINK_OPTIONS}"
-    "${PUBLIC_LINK_OPTIONS}")
-
-install(
-    TARGETS simpleble-c
-    EXPORT simpleble-config
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-install(
-    DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpleble_c/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble_c)
