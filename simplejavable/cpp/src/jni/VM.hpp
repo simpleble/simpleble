@@ -9,10 +9,12 @@ namespace SimpleJNI {
 // Generic class to handle the Java Virtual Machine (JVM)
 class VM {
   public:
+
+    // TODO: Make the VM class transparent to the JavaVM pointer.
     static JavaVM* jvm() {
-        static std::mutex get_mutex;       // Static mutex to ensure thread safety when accessing the logger
+        static std::mutex get_mutex;       // Static mutex to ensure thread safety when accessing the VM
         std::scoped_lock lock(get_mutex);  // Unlock the mutex on function return
-        static VM instance;                // Static instance of the logger to ensure proper lifecycle management
+        static VM instance;                // Static instance of the VM to ensure proper lifecycle management
 
         if (instance._jvm == nullptr) {
             jsize count;
@@ -26,10 +28,38 @@ class VM {
     static JNIEnv* env() {
         JNIEnv* env = nullptr;
         JavaVM* jvm = VM::jvm();
-        if (jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
-            throw std::runtime_error("Failed to get the JNIEnv");
+
+        auto getEnvResult = jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+        switch (getEnvResult) {
+            case JNI_OK:
+                break;
+            case JNI_EDETACHED: {
+                auto result = jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), nullptr);
+                if (result != JNI_OK) {
+                    throw std::runtime_error("Failed to attach the current thread to the JVM");
+                }
+                break;
+            }
+            case JNI_EVERSION:
+                throw std::runtime_error("Failed to get the JNIEnv, JNI version not supported");
+            default:
+                throw std::runtime_error("Failed to get the JNIEnv, unknown error");
         }
         return env;
+    }
+
+    static void attach() {
+        JNIEnv* env = nullptr;
+        JavaVM* jvm = VM::jvm();
+        auto result = jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), nullptr);
+        if (result != JNI_OK) {
+            throw std::runtime_error("Failed to attach the current thread to the JVM");
+        }
+    }
+
+    static void detach() {
+        JavaVM* jvm = VM::jvm();
+        jvm->DetachCurrentThread();
     }
 
   private:

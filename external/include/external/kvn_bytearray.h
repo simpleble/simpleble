@@ -37,6 +37,15 @@ class bytearray {
     bytearray(const uint8_t* ptr, size_t size) : data_(ptr, ptr + size) {}
 
     /**
+     * @brief Constructs byte array from iterators.
+     * @tparam InputIt Iterator type.
+     * @param first Iterator to the first element.
+     * @param last Iterator to one past the last element.
+     */
+    template <typename InputIt>
+    bytearray(InputIt first, InputIt last) : data_(first, last) {}
+
+    /**
      * @brief Constructs byte array from a std::string.
      * @param byteArr A string containing byte data.
      */

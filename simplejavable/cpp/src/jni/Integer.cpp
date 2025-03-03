@@ -10,7 +10,7 @@ void Integer::initialize() {
     Env env;
 
     if (_cls.get() == nullptr) {
-        _cls = env.find_class("java/util/HashMap");
+        _cls = env.find_class("java/lang/Integer");
     }
 
     if (!_method_init) {

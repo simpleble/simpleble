@@ -29,6 +29,9 @@ find_package(JNI REQUIRED)
 
 add_library(
     ${CMAKE_PROJECT_NAME} SHARED
+    src/core/AdapterWrapper.cpp
+    src/core/Cache.cpp
+    src/core/PeripheralWrapper.cpp
     src/simplejavable.cpp
     src/utils.cpp
 )
