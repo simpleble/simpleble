@@ -63,8 +63,8 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeGet
         Cache::get().addAdapter(adapter_wrapper.getHash(), adapter_wrapper);
     }
 
-    LongArray<LocalRef> adapter_hashes_array(adapter_hashes);
-    return adapter_hashes_array.get();
+    LongArray<ReleasableLocalRef> adapter_hashes_array(adapter_hashes);
+    return adapter_hashes_array.release();
 }
 
 extern "C" JNIEXPORT
@@ -88,12 +88,12 @@ void JNICALL Java_org_simplejavable_Adapter_nativeAdapterRegister(JNIEnv *env, j
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapterIdentifier(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    return String<LocalRef>(adapter_wrapper->identifier()).get();
+    return String<ReleasableLocalRef>(adapter_wrapper->identifier()).release();
 }
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapterAddress(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    return String<LocalRef>(adapter_wrapper->address()).get();
+    return String<ReleasableLocalRef>(adapter_wrapper->address()).release();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanStart(JNIEnv *env, jobject thiz, jlong adapter_id) {
@@ -155,6 +155,7 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeAda
     // }
 
     // return j_peripheral_result;
+    return nullptr;
 }
 
 // PERIPHERAL

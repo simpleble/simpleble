@@ -67,6 +67,9 @@ class Object {
     // Access raw jobject
     JniType get() const { return _ref.get(); }
 
+    // Release ownership of the underlying reference
+    JniType release() noexcept { return _ref.release(); }
+
     explicit operator bool() const { return _ref.get() != nullptr; }
 
     jmethodID get_method(const char* name, const char* signature) {
@@ -122,7 +125,7 @@ class Object {
         return result;
     }
 
-  private:
+  protected:
     RefType<JniType> _ref;  // Holds LocalRef<JniType> or GlobalRef<JniType>
     RefType<jclass> _cls;   // Holds LocalRef<jclass> or GlobalRef<jclass>
 };
@@ -138,7 +141,9 @@ class ByteArray : public Object<RefType, jbyteArray> {
         JNIEnv* env = VM::env();
         jbyteArray jarr = env->NewByteArray(data.size());
         env->SetByteArrayRegion(jarr, 0, data.size(), reinterpret_cast<const jbyte*>(data.data()));
-        *this = ByteArray<RefType>(jarr);
+
+        this->_ref = RefType<jbyteArray>(jarr);
+        this->_cls = RefType<jclass>(env->FindClass("java/lang/Object"));
     }
 
     template <template <typename> class OtherRefType>
@@ -190,7 +195,9 @@ class LongArray : public Object<RefType, jlongArray> {
         JNIEnv* env = VM::env();
         jlongArray jarr = env->NewLongArray(data.size());
         env->SetLongArrayRegion(jarr, 0, data.size(), reinterpret_cast<const jlong*>(data.data()));
-        *this = LongArray<RefType>(jarr);
+
+        this->_ref = RefType<jlongArray>(jarr);
+        this->_cls = RefType<jclass>(env->FindClass("java/lang/Object"));
     }
 
     template <template <typename> class OtherRefType>
@@ -247,7 +254,9 @@ class String : public Object<RefType, jstring> {
     String(const std::string& data) : Object<RefType, jstring>() {
         JNIEnv* env = VM::env();
         jstring jstr = env->NewStringUTF(data.c_str());
-        *this = String<RefType>(jstr);
+
+        this->_ref = RefType<jstring>(jstr);
+        this->_cls = RefType<jclass>(env->FindClass("java/lang/Object"));
     }
 
     template <template <typename> class OtherRefType>

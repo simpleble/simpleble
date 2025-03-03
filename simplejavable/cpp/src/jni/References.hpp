@@ -91,6 +91,18 @@ class LocalRef {
     T _obj = nullptr;
 };
 
+// A type for references intended to be returned to JNI
+template <typename T>
+class ReleasableLocalRef : public LocalRef<T> {
+  public:
+    using LocalRef<T>::LocalRef;
+    T release() noexcept {
+        T obj = this->_obj;
+        this->_obj = nullptr;
+        return obj;
+    }
+};
+
 template <typename T>
 class WeakRef {
   public:
