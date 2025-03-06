@@ -13,16 +13,23 @@ class VM {
     // TODO: Make the VM class transparent to the JavaVM pointer.
     static JavaVM* jvm() {
         static std::mutex get_mutex;       // Static mutex to ensure thread safety when accessing the VM
-        std::scoped_lock lock(get_mutex);  // Unlock the mutex on function return
         static VM instance;                // Static instance of the VM to ensure proper lifecycle management
 
         if (instance._jvm == nullptr) {
+            std::scoped_lock lock(get_mutex);  // Unlock the mutex on function return
             jsize count;
             if (JNI_GetCreatedJavaVMs(&instance._jvm, 1, &count) != JNI_OK || count == 0) {
                 throw std::runtime_error("Failed to get the Java Virtual Machine");
             }
         }
         return instance._jvm;
+    }
+
+    static bool is_jvm_alive() {
+        JavaVM* jvm = VM::jvm();
+        if (!jvm) return false;
+        JNIEnv* env = nullptr;
+        return jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) == JNI_OK;
     }
 
     static JNIEnv* env() {

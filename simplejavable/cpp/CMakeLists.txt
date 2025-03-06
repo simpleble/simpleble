@@ -32,6 +32,8 @@ add_library(
     src/core/AdapterWrapper.cpp
     src/core/Cache.cpp
     src/core/PeripheralWrapper.cpp
+    src/org/simplejavable/AdapterCallback.cpp
+    src/org/simplejavable/PeripheralCallback.cpp
     src/simplejavable.cpp
     src/utils.cpp
 )
@@ -41,6 +43,7 @@ set_target_properties(
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
+    CMAKE_BUILD_TYPE Debug # TODO: Remove before release
 )
 
 target_include_directories(

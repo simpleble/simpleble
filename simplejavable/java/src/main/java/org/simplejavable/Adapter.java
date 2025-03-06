@@ -40,7 +40,6 @@ public class Adapter {
 
     private Adapter(long newInstanceId) {
         this.instanceId = newInstanceId;
-        System.out.println("Adapter " + this.hashCode() + ".init");
         nativeAdapterRegister(instanceId, callbacks);
     }
 
@@ -63,7 +62,6 @@ public class Adapter {
     }
 
     public void scanFor(int timeoutMs) throws Exception {
-        // Note: This would need proper coroutine handling in Java
         nativeAdapterScanFor(instanceId, timeoutMs);
     }
 

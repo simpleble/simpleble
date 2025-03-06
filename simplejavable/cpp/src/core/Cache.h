@@ -31,6 +31,3 @@ public:
     void removeAdapter(size_t adapter_id);
     void removePeripheral(size_t adapter_id, size_t peripheral_id);
 };
-
-// Global helper
-inline Cache& getCache();

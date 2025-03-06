@@ -7,12 +7,11 @@ import java.util.Map;
 public class Peripheral {
     private final long instanceId;
     private final long adapterId;
-    private PeripheralEventListener eventListener;
+    private EventListener eventListener;
 
     Peripheral(long newAdapterId, long newInstanceId) {
         this.instanceId = newInstanceId;
         this.adapterId = newAdapterId;
-        System.out.println("Peripheral " + this.hashCode() + ".init");
         nativePeripheralRegister(adapterId, instanceId, callbacks);
     }
 
@@ -32,7 +31,7 @@ public class Peripheral {
         }
     };
 
-    public void setEventListener(PeripheralEventListener listener) {
+    public void setEventListener(EventListener listener) {
         this.eventListener = listener;
     }
 
@@ -126,11 +125,6 @@ public class Peripheral {
         nativePeripheralDescriptorWrite(adapterId, instanceId, service.toString(), characteristic.toString(), descriptor.toString(), data);
     }
 
-    public interface PeripheralEventListener {
-        void onConnected();
-        void onDisconnected();
-    }
-
     public interface DataCallback {
         void onDataReceived(byte[] data);
     }
@@ -160,6 +154,11 @@ public class Peripheral {
     private native void nativePeripheralDescriptorWrite(long adapterId, long instanceId, String service, String characteristic, String descriptor, byte[] data);
 
     private interface Callback {
+        void onConnected();
+        void onDisconnected();
+    }
+
+    public interface EventListener {
         void onConnected();
         void onDisconnected();
     }

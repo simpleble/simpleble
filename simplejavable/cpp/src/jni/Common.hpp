@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <type_traits>
 
 #include "References.hpp"
 #include "VM.hpp"
@@ -71,6 +72,8 @@ class Object {
     JniType release() noexcept { return _ref.release(); }
 
     explicit operator bool() const { return _ref.get() != nullptr; }
+
+    bool is_valid() const { return _ref.is_valid(); }
 
     jmethodID get_method(const char* name, const char* signature) {
         JNIEnv* env = VM::env();
@@ -348,6 +351,8 @@ class Env {
     void operator=(const Env&) = delete;  // Remove the copy assignment
 
     JNIEnv* operator->() { return _env; }
+
+    operator JNIEnv*() { return _env; }
 
     // Class find_class(const std::string& name) {
     //     jclass jcls = _env->FindClass(name.c_str());

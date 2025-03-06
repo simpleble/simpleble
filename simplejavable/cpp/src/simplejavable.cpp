@@ -15,6 +15,8 @@
 #include "core/Cache.h"
 #include "core/AdapterWrapper.h"
 #include "jni/Common.hpp"
+#include "jni/Registry.hpp"
+#include "org/simplejavable/AdapterCallback.h"
 
 using namespace SimpleJNI;
 
@@ -29,19 +31,21 @@ static std::map<size_t, std::map<size_t, std::map<size_t, jobject>>> cached_peri
 static ThreadRunner threadRunner;
 static JavaVM *jvm;
 
-JNIEnv* get_env() {
-    JNIEnv *env;
-    jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-    return env;
-}
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     jvm = vm;
     threadRunner.set_jvm(vm);
 
+    SimpleJNI::Env env;
+
+    try {
+        SimpleJNI::Registrar::get().preload(env);
+    } catch (const std::exception& e) {
+        return JNI_ERR;
+    }
+
     return JNI_VERSION_1_6;
 }
-
 
 
 
@@ -69,21 +73,9 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeGet
 
 extern "C" JNIEXPORT
 void JNICALL Java_org_simplejavable_Adapter_nativeAdapterRegister(JNIEnv *env, jobject thiz, jlong adapter_id, jobject callback) {
-    // TODO: IDEA. We could store the callback object whenever the scan starts and then remove it when the scan stops,
-    //             to avoid having extra references lying around.
-
-    // Create a weak global reference to the Java callback object
-    // jweak weakCallbackRef = env->NewWeakGlobalRef(callback);
-
-    // // Store the weak reference in the cached_adapter_callbacks map
-    // cached_adapter_callbacks[adapter_id].push_back(weakCallbackRef);
-
-    // // Retrieve the adapter from the cached_adapters map
-    // auto adapter = cached_adapters.at(adapter_id);
-
-    // TODO: Remove any invalid objects before adding new ones.
-
-
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    Org::SimpleJavaBLE::AdapterCallback adapter_callback(callback);
+    adapter_wrapper->setCallback(adapter_callback);
 }
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapterIdentifier(JNIEnv *env, jobject thiz, jlong adapter_id) {
@@ -97,30 +89,18 @@ extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapte
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanStart(JNIEnv *env, jobject thiz, jlong adapter_id) {
-    // auto adapter = cached_adapters.at(adapter_id);
-    // bool success = adapter.scan_start();
-
-    // if (!success) {
-    //     throw_exception(env, "Failed to start scan");
-    // }
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    adapter_wrapper->scanStart();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanStop(JNIEnv *env, jobject thiz, jlong adapter_id) {
-    // auto adapter = cached_adapters.at(adapter_id);
-    // bool success = adapter.scan_stop();
-
-    // if (!success) {
-    //     throw_exception(env, "Failed to stop scan");
-    // }
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    adapter_wrapper->scanStop();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanFor(JNIEnv *env, jobject thiz, jlong adapter_id, jint timeout) {
-//     auto adapter = cached_adapters.at(adapter_id);
-//     bool success = adapter.scan_for(timeout);
-
-//     if (!success) {
-//         throw_exception(env, "Failed to scan for");
-//     }
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    adapter_wrapper->scanFor(timeout);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanIsActive(JNIEnv *env, jobject thiz, jlong adapter_id) {
@@ -164,20 +144,25 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralRegister(JNIEnv *env, jobject thiz,
                                                           jlong adapter_id, jlong peripheral_id, jobject callback) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    Org::SimpleJavaBLE::PeripheralCallback peripheral_callback(callback);
+    peripheral_wrapper->setCallback(peripheral_callback);
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralIdentifier(JNIEnv *env, jobject thiz,
                                                             jlong adapter_id, jlong peripheral_id) {
-    return nullptr;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return String<ReleasableLocalRef>(peripheral_wrapper->identifier()).release();
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralAddress(JNIEnv *env, jobject thiz,
                                                          jlong adapter_id, jlong peripheral_id) {
-    return nullptr;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return String<ReleasableLocalRef>(peripheral_wrapper->address()).release();
 }
 
 extern "C"

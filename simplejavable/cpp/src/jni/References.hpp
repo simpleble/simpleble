@@ -14,7 +14,7 @@ class GlobalRef {
     explicit GlobalRef(T obj) : _obj(obj ? static_cast<T>(VM::env()->NewGlobalRef(obj)) : nullptr) {}
 
     ~GlobalRef() {
-        if (_obj) VM::env()->DeleteGlobalRef(_obj);
+        if (_obj && VM::is_jvm_alive()) VM::env()->DeleteGlobalRef(_obj);
     }
 
     // Copy constructor
@@ -111,7 +111,7 @@ class WeakRef {
     explicit WeakRef(T obj) : _obj(obj ? static_cast<T>(VM::env()->NewWeakGlobalRef(obj)) : nullptr) {}
 
     ~WeakRef() {
-        if (_obj) VM::env()->DeleteWeakGlobalRef(_obj);
+        if (_obj && VM::is_jvm_alive()) VM::env()->DeleteWeakGlobalRef(_obj);
     }
 
     // Copy constructor
