@@ -83,8 +83,12 @@ public class Adapter {
     }
 
     public List<Peripheral> getPairedPeripherals() {
-        // TODO: Implement
-        return new ArrayList<>();
+        long[] results = nativeAdapterGetPairedPeripherals(instanceId);
+        List<Peripheral> peripherals = new ArrayList<>();
+        for (long id : results) {
+            peripherals.add(new Peripheral(instanceId, id));
+        }
+        return peripherals;
     }
 
     public static boolean isBluetoothEnabled() {
@@ -135,5 +139,9 @@ public class Adapter {
         } catch (IOException e) {
             throw new RuntimeException("Failed to load native library", e);
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("JVM shutdown initiated at " + System.currentTimeMillis());
+        }));
     }
 }

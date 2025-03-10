@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include "ThreadRunner.h"
 
 #include "core/Cache.h"
 #include "core/AdapterWrapper.h"
@@ -20,21 +19,11 @@
 
 using namespace SimpleJNI;
 
-// TODO: Switch to using regular SimpleBLE classes with try/catch blocks.
-
-static std::map<size_t, SimpleBLE::Safe::Adapter> cached_adapters;
-static std::map<size_t, std::vector<jweak>> cached_adapter_callbacks;
-
-static std::map<size_t, std::map<size_t, SimpleBLE::Safe::Peripheral>> cached_peripherals;
-static std::map<size_t, std::map<size_t, std::vector<jweak>>> cached_peripheral_callbacks;
-static std::map<size_t, std::map<size_t, std::map<size_t, jobject>>> cached_peripheral_data_callbacks;
-static ThreadRunner threadRunner;
 static JavaVM *jvm;
 
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     jvm = vm;
-    threadRunner.set_jvm(vm);
 
     SimpleJNI::Env env;
 
@@ -46,8 +35,6 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 
     return JNI_VERSION_1_6;
 }
-
-
 
 
 extern "C" JNIEXPORT
@@ -80,62 +67,62 @@ void JNICALL Java_org_simplejavable_Adapter_nativeAdapterRegister(JNIEnv *env, j
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapterIdentifier(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    return String<ReleasableLocalRef>(adapter_wrapper->identifier()).release();
+    return String<ReleasableLocalRef>(adapter_wrapper->get().identifier()).release();
 }
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapterAddress(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    return String<ReleasableLocalRef>(adapter_wrapper->address()).release();
+    return String<ReleasableLocalRef>(adapter_wrapper->get().address()).release();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanStart(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    adapter_wrapper->scanStart();
+    adapter_wrapper->get().scan_start();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanStop(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    adapter_wrapper->scanStop();
+    adapter_wrapper->get().scan_stop();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanFor(JNIEnv *env, jobject thiz, jlong adapter_id, jint timeout) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    adapter_wrapper->scanFor(timeout);
+    adapter_wrapper->get().scan_for(timeout);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanIsActive(JNIEnv *env, jobject thiz, jlong adapter_id) {
-    // auto adapter = cached_adapters.at(adapter_id);
-    // // TODO: Should throw exception in case of failure.
-    // return adapter.scan_is_active().value_or(false);
-    return JNI_FALSE;
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    return adapter_wrapper->get().scan_is_active();
 }
 
 extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanGetResults(JNIEnv *env, jobject thiz, jlong adapter_id) {
-    // auto adapter = cached_adapters.at(adapter_id);
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    std::vector<SimpleBLE::Peripheral> peripherals = adapter_wrapper->get().scan_get_results();
 
-    // auto peripherals = adapter.scan_get_results();
+    std::vector<int64_t> peripheral_hashes;
+    for (SimpleBLE::Peripheral &peripheral: peripherals) {
+        PeripheralWrapper peripheral_wrapper(peripheral);
+        peripheral_hashes.push_back(peripheral_wrapper.getHash());
+        Cache::get().addPeripheral(adapter_wrapper->getHash(), peripheral_wrapper.getHash(), peripheral_wrapper);
+    }
 
-    // // If an error occurred, return an empty list.
-    // if (!peripherals.has_value()) return env->NewLongArray(0);
+    LongArray<ReleasableLocalRef> peripheral_hashes_array(peripheral_hashes);
+    return peripheral_hashes_array.release();
+}
 
-    // jsize j_peripheral_index = 0;
-    // jlongArray j_peripheral_result = env->NewLongArray(static_cast<int>(peripherals.value().size()));
-    // for (auto &peripheral: peripherals.value()) {
-    //     size_t peripheral_hash = std::hash<std::string>{}(peripheral.address().value_or("UNKNOWN"));
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeAdapterGetPairedPeripherals(JNIEnv *env, jobject thiz, jlong adapter_id) {
+    AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
+    std::vector<SimpleBLE::Peripheral> peripherals = adapter_wrapper->get().paired_peripherals();
 
-    //     // Add to the cache if it doesn't exist
-    //     if (cached_peripherals[adapter_id].count(peripheral_hash) == 0) {
-    //         cached_peripherals[adapter_id].insert({peripheral_hash, peripheral});
-    //     }
+    std::vector<int64_t> peripheral_hashes;
+    for (SimpleBLE::Peripheral &peripheral: peripherals) {
+        PeripheralWrapper peripheral_wrapper(peripheral);
+        peripheral_hashes.push_back(peripheral_wrapper.getHash());
+        Cache::get().addPeripheral(adapter_wrapper->getHash(), peripheral_wrapper.getHash(), peripheral_wrapper);
+    }
 
-    //     // Add to the results
-    //     jlong j_peripheral_hash = peripheral_hash;
-    //     env->SetLongArrayRegion(j_peripheral_result, j_peripheral_index, 1, &j_peripheral_hash);
-    //     j_peripheral_index++;
-    // }
-
-    // return j_peripheral_result;
-    return nullptr;
+    LongArray<ReleasableLocalRef> peripheral_hashes_array(peripheral_hashes);
+    return peripheral_hashes_array.release();
 }
 
 // PERIPHERAL
@@ -154,7 +141,7 @@ JNIEXPORT jstring JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralIdentifier(JNIEnv *env, jobject thiz,
                                                             jlong adapter_id, jlong peripheral_id) {
     PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
-    return String<ReleasableLocalRef>(peripheral_wrapper->identifier()).release();
+    return String<ReleasableLocalRef>(peripheral_wrapper->get().identifier()).release();
 }
 
 extern "C"
@@ -162,7 +149,7 @@ JNIEXPORT jstring JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralAddress(JNIEnv *env, jobject thiz,
                                                          jlong adapter_id, jlong peripheral_id) {
     PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
-    return String<ReleasableLocalRef>(peripheral_wrapper->address()).release();
+    return String<ReleasableLocalRef>(peripheral_wrapper->get().address()).release();
 }
 
 extern "C"

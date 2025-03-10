@@ -51,6 +51,32 @@ public class Main {
 
         System.out.println("Scan is done.");
 
+        // TODO: There is a bug in MacOS that causes the app to hang once it finished executing.
+        // This is a workaround to prevent the app from hanging.
+        System.exit(0);
+
+        // TODO: These are helper functions to try to debug the issue.
+
+        // class CrashUtil {
+        //     private static final Unsafe unsafe;
+
+        //     static {
+        //         try {
+        //             Field f = Unsafe.class.getDeclaredField("theUnsafe");
+        //             f.setAccessible(true);
+        //             unsafe = (Unsafe) f.get(null);
+        //         } catch (Exception e) {
+        //             throw new RuntimeException(e);
+        //         }
+        //     }
+
+        //     public static void crash() {
+        //         // Write to an invalid memory address
+        //         unsafe.putInt(0L, 42);
+        //     }
+        // }
+
+
         // Map<Thread, StackTraceElement[]> allThreads = Thread.getAllStackTraces();
         // for (Map.Entry<Thread, StackTraceElement[]> entry : allThreads.entrySet()) {
         //     Thread thread = entry.getKey();
@@ -60,5 +86,7 @@ public class Main {
         //         System.out.println("\t" + element);
         //     }
         // }
+
+        // CrashUtil.crash();
     }
 }

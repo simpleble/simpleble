@@ -7,6 +7,7 @@ Cache& Cache::get() {
 
 void Cache::addAdapter(size_t adapter_id, const AdapterWrapper& adapter) {
     if (hasAdapter(adapter_id)) return;
+
     cached_adapters.emplace(adapter_id, adapter);
 }
 
@@ -24,6 +25,11 @@ void Cache::addPeripheral(size_t adapter_id, size_t peripheral_id, const Periphe
         // Optional: Log or throw
         return;
     }
+
+    if (hasPeripheral(adapter_id, peripheral_id)) {
+        return;
+    }
+
     cached_peripherals[adapter_id].emplace(peripheral_id, peripheral);
 }
 

@@ -11,11 +11,11 @@ AdapterWrapper::~AdapterWrapper() {
     _adapter.set_callback_on_scan_stop(nullptr);
 }
 
-SimpleBLE::Adapter& AdapterWrapper::getAdapter() {
+SimpleBLE::Adapter& AdapterWrapper::get() {
     return _adapter;
 }
 
-const SimpleBLE::Adapter& AdapterWrapper::getAdapter() const {
+const SimpleBLE::Adapter& AdapterWrapper::get() const {
     return _adapter;
 }
 
@@ -44,24 +44,4 @@ void AdapterWrapper::setCallback(Org::SimpleJavaBLE::AdapterCallback& callback) 
 
 size_t AdapterWrapper::getHash() {
     return std::hash<std::string>{}(_adapter.identifier());
-}
-
-std::string AdapterWrapper::identifier() {
-    return _adapter.identifier();
-}
-
-SimpleBLE::BluetoothAddress AdapterWrapper::address() {
-    return _adapter.address();
-}
-
-void AdapterWrapper::scanStart() {
-    _adapter.scan_start();
-}
-
-void AdapterWrapper::scanStop() {
-    _adapter.scan_stop();
-}
-
-void AdapterWrapper::scanFor(int timeout) {
-    _adapter.scan_for(timeout);
 }
