@@ -299,50 +299,6 @@ class String : public Object<RefType, jstring> {
     }
 };
 
-
-// class Class {
-//   public:
-//     Class() = default;
-//     Class(jclass cls) : _cls(cls) {}
-
-//     jclass get() { return _cls.get(); }
-
-//     template <typename... Args>
-//     Object call_static_method(const char* name, const char* signature, Args&&... args) {
-//         JNIEnv* env = VM::env();
-
-//         jmethodID method = env->GetStaticMethodID(_cls.get(), name, signature);
-//         jobject obj = env->CallStaticObjectMethod(_cls.get(), method, std::forward<Args>(args)...);
-
-//         return Object(obj, _cls.get());
-//     }
-
-//     template <typename... Args>
-//     Object call_static_method(jmethodID method, Args&&... args) {
-//         JNIEnv* env = VM::env();
-//         jobject obj = env->CallStaticObjectMethod(_cls.get(), method, std::forward<Args>(args)...);
-//         return Object(obj, _cls.get());
-//     }
-
-//     template <typename... Args>
-//     Object call_constructor(const char* signature, Args&&... args) {
-//         JNIEnv* env = VM::env();
-
-//         jmethodID method = env->GetMethodID(_cls.get(), "<init>", signature);
-//         jobject obj = env->NewObject(_cls.get(), method, std::forward<Args>(args)...);
-
-//         return Object(obj, _cls.get());
-//     }
-
-//     void register_natives(const JNINativeMethod* methods, int nMethods) {
-//         JNIEnv* env = VM::env();
-//         env->RegisterNatives(_cls.get(), methods, nMethods);
-//     }
-
-//   private:
-//     GlobalRef<jclass> _cls;
-// };
-
 class Env {
   public:
     Env() { _env = VM::env(); }

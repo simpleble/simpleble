@@ -16,6 +16,8 @@
 #include "jni/Common.hpp"
 #include "jni/Registry.hpp"
 #include "org/simplejavable/AdapterCallback.h"
+#include "org/simplejavable/PeripheralCallback.h"
+#include "org/simplejavable/DataCallback.h"
 
 using namespace SimpleJNI;
 
@@ -112,7 +114,7 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeAda
 
 extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Adapter_nativeAdapterGetPairedPeripherals(JNIEnv *env, jobject thiz, jlong adapter_id) {
     AdapterWrapper* adapter_wrapper = Cache::get().getAdapter(adapter_id);
-    std::vector<SimpleBLE::Peripheral> peripherals = adapter_wrapper->get().paired_peripherals();
+    std::vector<SimpleBLE::Peripheral> peripherals = adapter_wrapper->get().get_paired_peripherals();
 
     std::vector<int64_t> peripheral_hashes;
     for (SimpleBLE::Peripheral &peripheral: peripherals) {
@@ -156,40 +158,48 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralAddressType(JNIEnv *env, jobject thiz,
                                                              jlong adapter_id, jlong peripheral_id) {
-    return 0;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().address_type();
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralRssi(JNIEnv *env, jobject thiz,
                                                       jlong adapter_id, jlong peripheral_id) {
-    return 0;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().rssi();
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralTxPower(JNIEnv *env, jobject thiz,
                                                          jlong adapter_id, jlong peripheral_id) {
-    return 0;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().tx_power();
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralMtu(JNIEnv *env, jobject thiz,
                                                      jlong adapter_id, jlong peripheral_id) {
-    return 0;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().mtu();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralConnect(JNIEnv *env, jobject thiz,
                                                          jlong adapter_id, jlong peripheral_id) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    peripheral_wrapper->get().connect();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralDisconnect(JNIEnv *env, jobject thiz,
                                                             jlong adapter_id, jlong peripheral_id) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    peripheral_wrapper->get().disconnect();
 }
 
 extern "C"
@@ -198,6 +208,15 @@ Java_org_simplejavable_Peripheral_nativePeripheralNotify(JNIEnv *env, jobject th
                                                         jlong adapter_id, jlong peripheral_id,
                                                         jstring j_service, jstring j_characteristic,
                                                         jobject callback) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    Org::SimpleJavaBLE::DataCallback data_callback(callback);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    peripheral_wrapper->get().notify(service.str(), characteristic.str(), [data_callback](SimpleBLE::ByteArray payload){
+        Org::SimpleJavaBLE::DataCallback data_callback_local(data_callback);
+        ByteArray<ReleasableLocalRef> j_payload(payload);
+        data_callback_local.on_data_received(j_payload.release());
+    });
 }
 
 extern "C"
@@ -206,40 +225,57 @@ Java_org_simplejavable_Peripheral_nativePeripheralIndicate(JNIEnv *env, jobject 
                                                           jlong adapter_id, jlong peripheral_id,
                                                           jstring j_service, jstring j_characteristic,
                                                           jobject callback) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    Org::SimpleJavaBLE::DataCallback data_callback(callback);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    peripheral_wrapper->get().indicate(service.str(), characteristic.str(), [data_callback](SimpleBLE::ByteArray payload){
+        Org::SimpleJavaBLE::DataCallback data_callback_local(data_callback);
+        ByteArray<ReleasableLocalRef> j_payload(payload);
+        data_callback_local.on_data_received(j_payload.release());
+    });
 }
-
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralUnsubscribe(JNIEnv *env, jobject thiz,
                                                              jlong adapter_id, jlong peripheral_id,
                                                              jstring j_service, jstring j_characteristic) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    peripheral_wrapper->get().unsubscribe(service.str(), characteristic.str());
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralIsConnected(JNIEnv *env, jobject thiz,
-                                                             jlong adapter_id, jlong instance_id) {
-    return JNI_FALSE;
+                                                             jlong adapter_id, jlong peripheral_id) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().is_connected();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralIsConnectable(JNIEnv *env, jobject thiz,
-                                                               jlong adapter_id, jlong instance_id) {
-    return JNI_FALSE;
+                                                               jlong adapter_id, jlong peripheral_id) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().is_connectable();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralIsPaired(JNIEnv *env, jobject thiz,
-                                                          jlong adapter_id, jlong instance_id) {
-    return JNI_FALSE;
+                                                          jlong adapter_id, jlong peripheral_id) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    return peripheral_wrapper->get().is_paired();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralUnpair(JNIEnv *env, jobject thiz,
-                                                        jlong adapter_id, jlong instance_id) {
+                                                        jlong adapter_id, jlong peripheral_id) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    peripheral_wrapper->get().unpair();
 }
 
 extern "C"
@@ -261,38 +297,61 @@ JNIEXPORT jbyteArray JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralRead(JNIEnv *env, jobject thiz,
                                                       jlong adapter_id, jlong peripheral_id,
                                                       jstring j_service, jstring j_characteristic) {
-    return nullptr;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    return ByteArray<ReleasableLocalRef>(peripheral_wrapper->get().read(service.str(), characteristic.str())).release();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralWriteRequest(JNIEnv *env, jobject thiz,
-                                                              jlong adapter_id, jlong instance_id,
-                                                              jstring service, jstring characteristic,
-                                                              jbyteArray data) {
+                                                              jlong adapter_id, jlong peripheral_id,
+                                                              jstring j_service, jstring j_characteristic,
+                                                              jbyteArray j_data) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    ByteArray<LocalRef> data(j_data);
+    peripheral_wrapper->get().write_request(service.str(), characteristic.str(), data.bytes());
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralWriteCommand(JNIEnv *env, jobject thiz,
-                                                              jlong adapter_id, jlong instance_id,
-                                                              jstring service, jstring characteristic,
-                                                              jbyteArray data) {
+                                                              jlong adapter_id, jlong peripheral_id,
+                                                              jstring j_service, jstring j_characteristic,
+                                                              jbyteArray j_data) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    ByteArray<LocalRef> data(j_data);
+    peripheral_wrapper->get().write_command(service.str(), characteristic.str(), data.bytes());
 }
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralDescriptorRead(JNIEnv *env, jobject thiz,
-                                                                jlong adapter_id, jlong instance_id,
-                                                                jstring service, jstring characteristic,
-                                                                jstring descriptor) {
-    return nullptr;
+                                                                jlong adapter_id, jlong peripheral_id,
+                                                                jstring j_service, jstring j_characteristic,
+                                                                jstring j_descriptor) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    String<LocalRef> descriptor(j_descriptor);
+    return ByteArray<ReleasableLocalRef>(peripheral_wrapper->get().read(service.str(), characteristic.str(), descriptor.str())).release();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralDescriptorWrite(JNIEnv *env, jobject thiz,
-                                                                 jlong adapter_id, jlong instance_id,
-                                                                 jstring service, jstring characteristic,
-                                                                 jstring descriptor, jbyteArray data) {
+                                                                 jlong adapter_id, jlong peripheral_id,
+                                                                 jstring j_service, jstring j_characteristic,
+                                                                 jstring j_descriptor, jbyteArray j_data) {
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+    String<LocalRef> service(j_service);
+    String<LocalRef> characteristic(j_characteristic);
+    String<LocalRef> descriptor(j_descriptor);
+    ByteArray<LocalRef> data(j_data);
+    peripheral_wrapper->get().write(service.str(), characteristic.str(), descriptor.str(), data.bytes());
 }

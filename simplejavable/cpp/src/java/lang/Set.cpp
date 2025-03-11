@@ -1,0 +1,113 @@
+#include "Set.h"
+
+namespace Java::Util {
+
+template <template <typename> class RefType>
+SimpleJNI::GlobalRef<jclass> Set<RefType>::_cls;
+
+template <template <typename> class RefType>
+jmethodID Set<RefType>::_method_iterator = nullptr;
+
+template <template <typename> class RefType>
+jmethodID Set<RefType>::_method_add = nullptr;
+
+template <template <typename> class RefType>
+jmethodID Set<RefType>::_method_size = nullptr;
+
+template <template <typename> class RefType>
+jmethodID Set<RefType>::_method_contains = nullptr;
+
+template <template <typename> class RefType>
+const SimpleJNI::JNIDescriptor Set<RefType>::descriptor{
+    "java/util/Set",     // Java interface name
+    &_cls,               // Where to store the jclass
+    {                    // Methods to preload
+        {"iterator", "()Ljava/util/Iterator;", &_method_iterator},
+        {"add", "(Ljava/lang/Object;)Z", &_method_add},
+        {"size", "()I", &_method_size},
+        {"contains", "(Ljava/lang/Object;)Z", &_method_contains}
+    }
+};
+
+template <template <typename> class RefType>
+const SimpleJNI::AutoRegister<Set<RefType>> Set<RefType>::registrar{&descriptor};
+
+template <template <typename> class RefType>
+Set<RefType>::Set() : _obj() {}
+
+template <template <typename> class RefType>
+Set<RefType>::Set(jobject obj) : _obj(obj) {
+    if (!_cls.get()) {
+        throw std::runtime_error("Set JNI resources not preloaded");
+    }
+}
+
+template <template <typename> class RefType>
+template <template <typename> class OtherRefType>
+Set<RefType>::Set(const SimpleJNI::Object<OtherRefType, jobject>& obj) : _obj(obj.get()) {}
+
+template <template <typename> class RefType>
+Set<SimpleJNI::LocalRef> Set<RefType>::to_local() const {
+    if (!*this) return Set<SimpleJNI::LocalRef>();
+    return Set<SimpleJNI::LocalRef>(_obj.get());
+}
+
+template <template <typename> class RefType>
+Set<SimpleJNI::GlobalRef> Set<RefType>::to_global() const {
+    if (!*this) return Set<SimpleJNI::GlobalRef>();
+    return Set<SimpleJNI::GlobalRef>(_obj.get());
+}
+
+template <template <typename> class RefType>
+jobject Set<RefType>::get() const {
+    return _obj.get();
+}
+
+template <template <typename> class RefType>
+Set<RefType>::operator bool() const {
+    return _obj.get() != nullptr;
+}
+
+template <template <typename> class RefType>
+Iterator<SimpleJNI::LocalRef> Set<RefType>::iterator() const {
+    if (!*this) {
+        throw std::runtime_error("Set is not initialized");
+    }
+    JNIEnv* env = SimpleJNI::VM::env();
+    jobject iter = env->CallObjectMethod(_obj.get(), _method_iterator);
+    return Iterator<SimpleJNI::LocalRef>(iter);
+}
+
+template <template <typename> class RefType>
+bool Set<RefType>::add(const SimpleJNI::Object<RefType, jobject>& element) {
+    if (!*this) {
+        throw std::runtime_error("Set is not initialized");
+    }
+    JNIEnv* env = SimpleJNI::VM::env();
+    return env->CallBooleanMethod(_obj.get(), _method_add, element.get());
+}
+
+template <template <typename> class RefType>
+size_t Set<RefType>::size() const {
+    if (!*this) {
+        throw std::runtime_error("Set is not initialized");
+    }
+    JNIEnv* env = SimpleJNI::VM::env();
+    return static_cast<size_t>(env->CallIntMethod(_obj.get(), _method_size));
+}
+
+template <template <typename> class RefType>
+bool Set<RefType>::contains(const SimpleJNI::Object<RefType, jobject>& element) const {
+    if (!*this) {
+        throw std::runtime_error("Set is not initialized");
+    }
+    JNIEnv* env = SimpleJNI::VM::env();
+    return env->CallBooleanMethod(_obj.get(), _method_contains, element.get());
+}
+
+// Explicit template instantiations
+template class Set<SimpleJNI::LocalRef>;
+template class Set<SimpleJNI::GlobalRef>;
+template class Set<SimpleJNI::WeakRef>;
+
+}  // namespace Java::Util

@@ -26,7 +26,8 @@ public:
     // Peripheral management
     void addPeripheral(size_t adapter_id, size_t peripheral_id, const PeripheralWrapper& peripheral);
     PeripheralWrapper* getPeripheral(size_t adapter_id, size_t peripheral_id);
-
+    bool hasPeripheral(size_t adapter_id, size_t peripheral_id) const;
+    
     // Removal methods
     void removeAdapter(size_t adapter_id);
     void removePeripheral(size_t adapter_id, size_t peripheral_id);

@@ -20,6 +20,11 @@ bool Cache::hasAdapter(size_t adapter_id) const {
     return cached_adapters.find(adapter_id) != cached_adapters.end();
 }
 
+bool Cache::hasPeripheral(size_t adapter_id, size_t peripheral_id) const {
+    auto adapter_it = cached_peripherals.find(adapter_id);
+    return (adapter_it != cached_peripherals.end()) && (adapter_it->second.find(peripheral_id) != adapter_it->second.end());
+}
+
 void Cache::addPeripheral(size_t adapter_id, size_t peripheral_id, const PeripheralWrapper& peripheral) {
     if (!hasAdapter(adapter_id)) {
         // Optional: Log or throw

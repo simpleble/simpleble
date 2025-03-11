@@ -125,10 +125,6 @@ public class Peripheral {
         nativePeripheralDescriptorWrite(adapterId, instanceId, service.toString(), characteristic.toString(), descriptor.toString(), data);
     }
 
-    public interface DataCallback {
-        void onDataReceived(byte[] data);
-    }
-
     private native void nativePeripheralRegister(long adapterId, long instanceId, Callback callback);
     private native String nativePeripheralIdentifier(long adapterId, long instanceId);
     private native String nativePeripheralAddress(long adapterId, long instanceId);
@@ -152,6 +148,10 @@ public class Peripheral {
     private native void nativePeripheralUnsubscribe(long adapterId, long instanceId, String service, String characteristic);
     private native byte[] nativePeripheralDescriptorRead(long adapterId, long instanceId, String service, String characteristic, String descriptor);
     private native void nativePeripheralDescriptorWrite(long adapterId, long instanceId, String service, String characteristic, String descriptor, byte[] data);
+
+    public interface DataCallback {
+        void onDataReceived(byte[] data);
+    }
 
     private interface Callback {
         void onConnected();
