@@ -35,11 +35,13 @@ add_library(
     src/org/simplejavable/AdapterCallback.cpp
     src/org/simplejavable/PeripheralCallback.cpp
     src/org/simplejavable/DataCallback.cpp
+    src/org/simplejavable/Service.cpp
+    src/org/simplejavable/Characteristic.cpp
+    src/org/simplejavable/Descriptor.cpp
     src/java/lang/HashMap.cpp
     src/java/lang/Integer.cpp
     src/java/lang/Iterator.cpp
-    src/java/lang/List.cpp
-    src/java/lang/Set.cpp
+    src/java/lang/ArrayList.cpp
     src/simplejavable.cpp
     src/utils.cpp
 )

@@ -60,6 +60,12 @@ jobject HashMap<RefType>::get() const {
 }
 
 template <template <typename> class RefType>
+template <template <typename> class R>
+typename std::enable_if<std::is_same<R<jobject>, SimpleJNI::ReleasableLocalRef<jobject>>::value, jobject>::type HashMap<RefType>::release() {
+    return _obj.release();
+}
+
+template <template <typename> class RefType>
 HashMap<RefType>::operator bool() const {
     return _obj.get() != nullptr;
 }
@@ -86,5 +92,7 @@ template class HashMap<SimpleJNI::ReleasableLocalRef>;
 template SimpleJNI::Object<SimpleJNI::LocalRef, jobject> HashMap<SimpleJNI::ReleasableLocalRef>::put<SimpleJNI::LocalRef, SimpleJNI::LocalRef>(
     const SimpleJNI::Object<SimpleJNI::LocalRef, jobject>& key,
     const SimpleJNI::Object<SimpleJNI::LocalRef, jobject>& value);
+
+template jobject HashMap<SimpleJNI::ReleasableLocalRef>::release<SimpleJNI::ReleasableLocalRef>();
 
 }  // namespace Java::Util

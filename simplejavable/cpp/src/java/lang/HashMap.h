@@ -21,6 +21,10 @@ public:
     // Get the underlying jobject
     jobject get() const;
 
+    // Release the underlying jobject
+    template <template <typename> class R = RefType>
+    typename std::enable_if<std::is_same<R<jobject>, SimpleJNI::ReleasableLocalRef<jobject>>::value, jobject>::type release();
+
     // Check if the object is valid
     explicit operator bool() const;
 

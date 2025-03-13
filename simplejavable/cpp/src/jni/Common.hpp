@@ -17,6 +17,8 @@
 
 namespace SimpleJNI {
 
+// TODO: Implement a base class that handles common functionality of complicated Objects (see the ones in org/simplejavable)
+
 template <template <typename> class RefType, typename JniType = jobject>
 class Object {
   public:
@@ -45,6 +47,37 @@ class Object {
     // Copying depends on RefType's behavior (enabled by default)
     Object(const Object&) = default;
     Object& operator=(const Object&) = default;
+
+    // Template constructor for converting between different RefType templates
+    template <template <typename> class OtherRefType>
+    Object(const Object<OtherRefType, JniType>& other) {
+        if (other.get()) {
+            JNIEnv* env = VM::env();
+            _ref = RefType<JniType>(other.get());
+            _cls = RefType<jclass>(env->GetObjectClass(_ref.get()));
+        }
+    }
+
+    // Template assignment operator for converting between different RefType templates
+    template <template <typename> class OtherRefType>
+    Object& operator=(const Object<OtherRefType, JniType>& other) {
+        // Don't use pointer comparison for different template types
+        // Instead, check if the underlying JNI objects are the same
+        JNIEnv* env = VM::env();
+
+        // Only proceed with assignment if the objects are different
+        // or if other is null (in which case we reset this object)
+        if (!other.get() || !_ref.get() || !env->IsSameObject(_ref.get(), other.get())) {
+            if (other.get()) {
+                _ref = RefType<JniType>(other.get());
+                _cls = RefType<jclass>(env->GetObjectClass(_ref.get()));
+            } else {
+                _ref = RefType<JniType>();
+                _cls = RefType<jclass>();
+            }
+        }
+        return *this;
+    }
 
     // Conversion methods
     Object<LocalRef, JniType> to_local() const {
@@ -126,6 +159,13 @@ class Object {
         kvn::bytearray result(arr, arr + len);
         env->ReleaseByteArrayElements(jarr, arr, JNI_ABORT);
         return result;
+    }
+
+    template <typename... Args>
+    static Object<LocalRef, JniType> call_new_object(jclass cls, jmethodID method, Args&&... args) {
+        JNIEnv* env = VM::env();
+        JniType result = env->NewObject(cls, method, std::forward<Args>(args)...);
+        return Object<LocalRef, JniType>(result);
     }
 
   protected:

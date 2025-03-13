@@ -23,11 +23,11 @@ java {
 }
 
 val exampleClasses = listOf(
-    //"connect.ConnectExample",
+    "connect.ConnectExample",
     //"list_adapters.ListAdaptersExample",
     //"list_adapters_safe.ListAdaptersSafeExample",
     //"multiconnect.MultiConnectExample",
-    //"notify.NotifyExample",
+    "notify.NotifyExample",
     //"notify_multi.NotifyMultiExample",
     //"read.ReadExample",
     "scan.ScanExample",
