@@ -27,6 +27,9 @@ public:
     // Check if the object is valid
     explicit operator bool() const;
 
+    // Implicit conversion to SimpleJNI::Object
+    operator SimpleJNI::Object<RefType, jobject>() const;
+
     // List methods
     Iterator<SimpleJNI::LocalRef> iterator() const;
     void add(const SimpleJNI::Object<RefType, jobject>& element);

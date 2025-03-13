@@ -24,6 +24,9 @@ public:
     // Check if the object is valid
     explicit operator bool() const;
 
+    // Implicit conversion to SimpleJNI::Object
+    operator SimpleJNI::Object<RefType, jobject>() const;
+
     // Iterator methods
     bool has_next() const;
     SimpleJNI::Object<SimpleJNI::LocalRef> next();

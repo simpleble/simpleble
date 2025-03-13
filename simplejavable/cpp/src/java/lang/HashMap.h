@@ -24,6 +24,9 @@ public:
     // Check if the object is valid
     explicit operator bool() const;
 
+    // Implicit conversion to SimpleJNI::Object
+    operator SimpleJNI::Object<RefType, jobject>() const;
+
     // Put a key-value pair into the map
     template <template <typename> class KeyRefType, template <typename> class ValueRefType>
     SimpleJNI::Object<SimpleJNI::LocalRef> put(const SimpleJNI::Object<KeyRefType, jobject>& key,

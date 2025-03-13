@@ -25,11 +25,11 @@ public:
     // Check if the object is valid
     explicit operator bool() const;
 
+    // Implicit conversion to SimpleJNI::Object
+    operator SimpleJNI::Object<RefType, jobject>() const;
+
     // Integer methods
     int int_value() const;
-
-    // Static methods
-    static Integer<SimpleJNI::LocalRef> value_of(int value);
 
 private:
     // Underlying JNI object

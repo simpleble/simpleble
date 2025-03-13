@@ -73,10 +73,11 @@ tasks.jar {
         dependsOn("buildNativeCMake")
         from(cmakeBuildOutputPath) {
             include("**/*.so", "**/*.dll", "**/*.dylib")
-            eachFile {
-                // Only organize files for CMake build output
-                path = "native/$currentOs/$currentArch/$name"
-            }
+            into("native/$currentOs/$currentArch")
+            // eachFile {
+            //     // Only organize files for CMake build output
+            //     path = "native/$currentOs/$currentArch/$name"
+            // }
         }
     }
 }

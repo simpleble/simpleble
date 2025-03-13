@@ -40,6 +40,7 @@ Set<RefType>::Set(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("Set JNI resources not preloaded");
     }
+    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
 }
 
 template <template <typename> class RefType>
@@ -73,8 +74,7 @@ Iterator<SimpleJNI::LocalRef> Set<RefType>::iterator() const {
     if (!*this) {
         throw std::runtime_error("Set is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    jobject iter = env->CallObjectMethod(_obj.get(), _method_iterator);
+    jobject iter = _obj.call_object_method(_method_iterator).get();
     return Iterator<SimpleJNI::LocalRef>(iter);
 }
 
@@ -83,8 +83,7 @@ bool Set<RefType>::add(const SimpleJNI::Object<RefType, jobject>& element) {
     if (!*this) {
         throw std::runtime_error("Set is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    return env->CallBooleanMethod(_obj.get(), _method_add, element.get());
+    return _obj.call_boolean_method(_method_add, element.get());
 }
 
 template <template <typename> class RefType>
@@ -92,8 +91,7 @@ size_t Set<RefType>::size() const {
     if (!*this) {
         throw std::runtime_error("Set is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    return static_cast<size_t>(env->CallIntMethod(_obj.get(), _method_size));
+    return static_cast<size_t>(_obj.call_int_method(_method_size));
 }
 
 template <template <typename> class RefType>
@@ -101,13 +99,18 @@ bool Set<RefType>::contains(const SimpleJNI::Object<RefType, jobject>& element) 
     if (!*this) {
         throw std::runtime_error("Set is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    return env->CallBooleanMethod(_obj.get(), _method_contains, element.get());
+    return _obj.call_boolean_method(_method_contains, element.get());
+}
+
+template <template <typename> class RefType>
+Set<RefType>::operator SimpleJNI::Object<RefType, jobject>() const {
+    return _obj;
 }
 
 // Explicit template instantiations
 template class Set<SimpleJNI::LocalRef>;
 template class Set<SimpleJNI::GlobalRef>;
 template class Set<SimpleJNI::WeakRef>;
+template class Set<SimpleJNI::ReleasableLocalRef>;
 
 }  // namespace Java::Util

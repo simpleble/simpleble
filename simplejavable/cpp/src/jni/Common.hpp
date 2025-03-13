@@ -75,38 +75,38 @@ class Object {
 
     bool is_valid() const { return _ref.is_valid(); }
 
-    jmethodID get_method(const char* name, const char* signature) {
+    jmethodID get_method(const char* name, const char* signature) const {
         JNIEnv* env = VM::env();
         return env->GetMethodID(_cls.get(), name, signature);
     }
 
     template <typename... Args>
-    Object<LocalRef, JniType> call_object_method(jmethodID method, Args&&... args) {
+    Object<LocalRef, JniType> call_object_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         JniType result = env->CallObjectMethod(_ref.get(), method, std::forward<Args>(args)...);
         return Object<LocalRef, JniType>(result);
     }
 
     template <typename... Args>
-    void call_void_method(jmethodID method, Args&&... args) {
+    void call_void_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         env->CallVoidMethod(_ref.get(), method, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    bool call_boolean_method(jmethodID method, Args&&... args) {
+    bool call_boolean_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         return env->CallBooleanMethod(_ref.get(), method, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    int call_int_method(jmethodID method, Args&&... args) {
+    int call_int_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         return env->CallIntMethod(_ref.get(), method, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    std::string call_string_method(jmethodID method, Args&&... args) {
+    std::string call_string_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         auto jstr = static_cast<jstring>(env->CallObjectMethod(_ref.get(), method, std::forward<Args>(args)...));
         if (!jstr) return "";
@@ -117,7 +117,7 @@ class Object {
     }
 
     template <typename... Args>
-    kvn::bytearray call_byte_array_method(jmethodID method, Args&&... args) {
+    kvn::bytearray call_byte_array_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         auto jarr = static_cast<jbyteArray>(env->CallObjectMethod(_ref.get(), method, std::forward<Args>(args)...));
         if (!jarr) return {};
@@ -151,6 +151,11 @@ class ByteArray : public Object<RefType, jbyteArray> {
 
     template <template <typename> class OtherRefType>
     ByteArray(const Object<OtherRefType, jbyteArray>& obj) : Object<RefType, jbyteArray>(obj.get()) {}
+
+    // Add implicit conversion to Object<RefType, jobject>
+    operator Object<RefType, jobject>() const {
+        return Object<RefType, jobject>(static_cast<jobject>(this->get()), this->_cls.get());
+    }
 
     // Conversion methods
     ByteArray<LocalRef> to_local() const {
@@ -205,6 +210,11 @@ class LongArray : public Object<RefType, jlongArray> {
 
     template <template <typename> class OtherRefType>
     LongArray(const Object<OtherRefType, jlongArray>& obj) : Object<RefType, jlongArray>(obj.get()) {}
+
+    // Add implicit conversion to Object<RefType, jobject>
+    operator Object<RefType, jobject>() const {
+        return Object<RefType, jobject>(static_cast<jobject>(this->get()), this->_cls.get());
+    }
 
     // Conversion methods
     LongArray<LocalRef> to_local() const {
@@ -264,6 +274,11 @@ class String : public Object<RefType, jstring> {
 
     template <template <typename> class OtherRefType>
     String(const Object<OtherRefType, jstring>& obj) : Object<RefType, jstring>(obj.get()) {}
+
+    // Add implicit conversion to Object<RefType, jobject>
+    operator Object<RefType, jobject>() const {
+        return Object<RefType, jobject>(static_cast<jobject>(this->get()), this->_cls.get());
+    }
 
     // Conversion methods
     String<LocalRef> to_local() const {

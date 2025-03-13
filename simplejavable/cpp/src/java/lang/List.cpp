@@ -40,6 +40,7 @@ List<RefType>::List(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("List JNI resources not preloaded");
     }
+    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
 }
 
 template <template <typename> class RefType>
@@ -73,8 +74,7 @@ Iterator<SimpleJNI::LocalRef> List<RefType>::iterator() const {
     if (!*this) {
         throw std::runtime_error("List is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    jobject iter = env->CallObjectMethod(_obj.get(), _method_iterator);
+    jobject iter = _obj.call_object_method(_method_iterator).get();
     return Iterator<SimpleJNI::LocalRef>(iter);
 }
 
@@ -83,8 +83,7 @@ void List<RefType>::add(const SimpleJNI::Object<RefType, jobject>& element) {
     if (!*this) {
         throw std::runtime_error("List is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    env->CallBooleanMethod(_obj.get(), _method_add, element.get());
+    _obj.call_boolean_method(_method_add, element.get());
 }
 
 template <template <typename> class RefType>
@@ -92,8 +91,7 @@ size_t List<RefType>::size() const {
     if (!*this) {
         throw std::runtime_error("List is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    return static_cast<size_t>(env->CallIntMethod(_obj.get(), _method_size));
+    return static_cast<size_t>(_obj.call_int_method(_method_size));
 }
 
 template <template <typename> class RefType>
@@ -101,15 +99,18 @@ SimpleJNI::Object<SimpleJNI::LocalRef> List<RefType>::get(size_t index) const {
     if (!*this) {
         throw std::runtime_error("List is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    jobject result = env->CallObjectMethod(_obj.get(), _method_get,
-                                         static_cast<jint>(index));
-    return SimpleJNI::Object<SimpleJNI::LocalRef>(result);
+    return _obj.call_object_method(_method_get, static_cast<jint>(index));
+}
+
+template <template <typename> class RefType>
+List<RefType>::operator SimpleJNI::Object<RefType, jobject>() const {
+    return _obj;
 }
 
 // Explicit template instantiations
 template class List<SimpleJNI::LocalRef>;
 template class List<SimpleJNI::GlobalRef>;
 template class List<SimpleJNI::WeakRef>;
+template class List<SimpleJNI::ReleasableLocalRef>;
 
 }  // namespace Java::Util

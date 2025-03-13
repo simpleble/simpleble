@@ -32,6 +32,7 @@ Iterator<RefType>::Iterator(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("Iterator JNI resources not preloaded");
     }
+    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
 }
 
 template <template <typename> class RefType>
@@ -63,8 +64,7 @@ Iterator<RefType>::operator bool() const {
 template <template <typename> class RefType>
 bool Iterator<RefType>::has_next() const {
     if (!*this) return false;
-    JNIEnv* env = SimpleJNI::VM::env();
-    return env->CallBooleanMethod(_obj.get(), _method_has_next);
+    return _obj.call_boolean_method(_method_has_next);
 }
 
 template <template <typename> class RefType>
@@ -72,14 +72,17 @@ SimpleJNI::Object<SimpleJNI::LocalRef> Iterator<RefType>::next() {
     if (!*this) {
         throw std::runtime_error("Iterator is not initialized");
     }
-    JNIEnv* env = SimpleJNI::VM::env();
-    jobject result = env->CallObjectMethod(_obj.get(), _method_next);
-    return SimpleJNI::Object<SimpleJNI::LocalRef>(result);
+    return _obj.call_object_method(_method_next);
+}
+
+template <template <typename> class RefType>
+Iterator<RefType>::operator SimpleJNI::Object<RefType, jobject>() const {
+    return _obj;
 }
 
 // Explicit template instantiations
 template class Iterator<SimpleJNI::LocalRef>;
 template class Iterator<SimpleJNI::GlobalRef>;
 template class Iterator<SimpleJNI::WeakRef>;
-
+template class Iterator<SimpleJNI::ReleasableLocalRef>;
 }  // namespace Java::Util

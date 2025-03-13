@@ -18,6 +18,12 @@
 #include "org/simplejavable/AdapterCallback.h"
 #include "org/simplejavable/PeripheralCallback.h"
 #include "org/simplejavable/DataCallback.h"
+#include "java/lang/Integer.h"
+#include "java/lang/HashMap.h"
+#include "java/lang/Iterator.h"
+#include "java/lang/List.h"
+#include "java/lang/Set.h"
+
 
 using namespace SimpleJNI;
 
@@ -289,7 +295,14 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_org_simplejavable_Peripheral_nativePeripheralManufacturerData(JNIEnv* env, jobject thiz,
                                                                   jlong adapter_id, jlong instance_id) {
-    return nullptr;
+    PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, instance_id);
+    auto manufacturer_data = peripheral_wrapper->get().manufacturer_data();
+
+    Java::Util::HashMap<ReleasableLocalRef> hash_map;
+    for (const auto& [key, value] : manufacturer_data) {
+        hash_map.put<LocalRef, LocalRef>(Java::Util::Integer<LocalRef>(key), ByteArray<LocalRef>(value));
+    }
+    return hash_map.get();
 }
 
 extern "C"
