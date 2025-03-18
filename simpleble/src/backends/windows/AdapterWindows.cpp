@@ -36,101 +36,109 @@ AdapterWindows::AdapterWindows(std::string device_id)
     // Configure the scanner object
     scanner_ = Advertisement::BluetoothLEAdvertisementWatcher();
 
-    scanner_stopped_token_ = scanner_.Stopped(
-        [this](const auto& w, const Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs args) {
-            this->_scan_stopped_callback();
-        });
+    // Register member functions directly as callback handlers
+    scanner_stopped_token_ = scanner_.Stopped({this, &AdapterWindows::_on_scanner_stopped});
+    scanner_received_token_ = scanner_.Received({this, &AdapterWindows::_on_scanner_received});
+}
 
-    scanner_received_token_ = scanner_.Received(
-        [this](const auto& w, const Advertisement::BluetoothLEAdvertisementReceivedEventArgs args) {
-            std::lock_guard<std::mutex> lock(this->scan_update_mutex_);
-            if (!this->scan_is_active_) return;
+// Handler for scanner stopped events
+void AdapterWindows::_on_scanner_stopped(
+    const Advertisement::BluetoothLEAdvertisementWatcher& watcher,
+    const Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs args) {
+    this->_scan_stopped_callback();
+}
 
-            advertising_data_t data;
-            data.mac_address = _mac_address_to_str(args.BluetoothAddress());
-            Bluetooth::BluetoothAddressType addr_type_enum = args.BluetoothAddressType();
-            switch (addr_type_enum) {
-                case Bluetooth::BluetoothAddressType::Public:
-                    data.address_type = SimpleBLE::BluetoothAddressType::PUBLIC;
-                    break;
+// Handler for scanner received events
+void AdapterWindows::_on_scanner_received(
+    const Advertisement::BluetoothLEAdvertisementWatcher& watcher,
+    const Advertisement::BluetoothLEAdvertisementReceivedEventArgs args) {
+    std::lock_guard<std::mutex> lock(this->scan_update_mutex_);
+    if (!this->scan_is_active_) return;
 
-                case Bluetooth::BluetoothAddressType::Random:
-                    data.address_type = SimpleBLE::BluetoothAddressType::RANDOM;
-                    break;
+    advertising_data_t data;
+    data.mac_address = _mac_address_to_str(args.BluetoothAddress());
+    Bluetooth::BluetoothAddressType addr_type_enum = args.BluetoothAddressType();
+    switch (addr_type_enum) {
+        case Bluetooth::BluetoothAddressType::Public:
+            data.address_type = SimpleBLE::BluetoothAddressType::PUBLIC;
+            break;
 
-                case Bluetooth::BluetoothAddressType::Unspecified:
-                    data.address_type = SimpleBLE::BluetoothAddressType::UNSPECIFIED;
-                    break;
-            }
+        case Bluetooth::BluetoothAddressType::Random:
+            data.address_type = SimpleBLE::BluetoothAddressType::RANDOM;
+            break;
 
-            data.identifier = winrt::to_string(args.Advertisement().LocalName());
-            data.connectable = args.IsConnectable();
-            data.rssi = args.RawSignalStrengthInDBm();
+        case Bluetooth::BluetoothAddressType::Unspecified:
+            data.address_type = SimpleBLE::BluetoothAddressType::UNSPECIFIED;
+            break;
+    }
 
-            if (args.TransmitPowerLevelInDBm()) {
-                data.tx_power = args.TransmitPowerLevelInDBm().Value();
-            } else {
-                data.tx_power = INT16_MIN;
-            }
+    data.identifier = winrt::to_string(args.Advertisement().LocalName());
+    data.connectable = args.IsConnectable();
+    data.rssi = args.RawSignalStrengthInDBm();
 
-            // Parse manufacturer data
-            auto manufacturer_data = args.Advertisement().ManufacturerData();
-            for (auto& item : manufacturer_data) {
-                uint16_t company_id = item.CompanyId();
-                ByteArray manufacturer_data_buffer = ibuffer_to_bytearray(item.Data());
-                data.manufacturer_data[company_id] = manufacturer_data_buffer;
-            }
+    if (args.TransmitPowerLevelInDBm()) {
+        data.tx_power = args.TransmitPowerLevelInDBm().Value();
+    } else {
+        data.tx_power = INT16_MIN;
+    }
 
-            // Parse service data.
-            const auto& sections = args.Advertisement().DataSections();
-            for (const auto& section : sections) {
-                ByteArray section_data_buffer = ibuffer_to_bytearray(section.Data());
+    // Parse manufacturer data
+    auto manufacturer_data = args.Advertisement().ManufacturerData();
+    for (auto& item : manufacturer_data) {
+        uint16_t company_id = item.CompanyId();
+        ByteArray manufacturer_data_buffer = ibuffer_to_bytearray(item.Data());
+        data.manufacturer_data[company_id] = manufacturer_data_buffer;
+    }
 
-                std::string service_uuid;
-                ByteArray service_data;
+    // Parse service data.
+    const auto& sections = args.Advertisement().DataSections();
+    for (const auto& section : sections) {
+        ByteArray section_data_buffer = ibuffer_to_bytearray(section.Data());
 
-                if (section.DataType() == Advertisement::BluetoothLEAdvertisementDataTypes::ServiceData128BitUuids()) {
-                    service_uuid = fmt::format(
-                        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-"
-                        "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-                        (uint8_t)section_data_buffer[15], (uint8_t)section_data_buffer[14],
-                        (uint8_t)section_data_buffer[13], (uint8_t)section_data_buffer[12],
-                        (uint8_t)section_data_buffer[11], (uint8_t)section_data_buffer[10],
-                        (uint8_t)section_data_buffer[9], (uint8_t)section_data_buffer[8],
-                        (uint8_t)section_data_buffer[7], (uint8_t)section_data_buffer[6],
-                        (uint8_t)section_data_buffer[5], (uint8_t)section_data_buffer[4],
-                        (uint8_t)section_data_buffer[3], (uint8_t)section_data_buffer[2],
-                        (uint8_t)section_data_buffer[1], (uint8_t)section_data_buffer[0]);
-                    service_data = section_data_buffer.slice_from(16);
-                }
+        std::string service_uuid;
+        ByteArray service_data;
 
-                else if (section.DataType() ==
-                         Advertisement::BluetoothLEAdvertisementDataTypes::ServiceData32BitUuids()) {
-                    service_uuid = fmt::format("{:02x}{:02x}{:02x}{:02x}-0000-1000-8000-00805f9b34fb",
-                                               (uint8_t)section_data_buffer[3], (uint8_t)section_data_buffer[2],
-                                               (uint8_t)section_data_buffer[1], (uint8_t)section_data_buffer[0]);
-                    service_data = section_data_buffer.slice_from(4);
-                } else if (section.DataType() ==
-                           Advertisement::BluetoothLEAdvertisementDataTypes::ServiceData16BitUuids()) {
-                    service_uuid = fmt::format("0000{:02x}{:02x}-0000-1000-8000-00805f9b34fb",
-                                               (uint8_t)section_data_buffer[1], (uint8_t)section_data_buffer[0]);
-                    service_data = section_data_buffer.slice_from(2);
-                } else {
-                    continue;
-                }
+        if (section.DataType() == Advertisement::BluetoothLEAdvertisementDataTypes::ServiceData128BitUuids()) {
+            service_uuid = fmt::format(
+                "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-"
+                "{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+                (uint8_t)section_data_buffer[15], (uint8_t)section_data_buffer[14],
+                (uint8_t)section_data_buffer[13], (uint8_t)section_data_buffer[12],
+                (uint8_t)section_data_buffer[11], (uint8_t)section_data_buffer[10],
+                (uint8_t)section_data_buffer[9], (uint8_t)section_data_buffer[8],
+                (uint8_t)section_data_buffer[7], (uint8_t)section_data_buffer[6],
+                (uint8_t)section_data_buffer[5], (uint8_t)section_data_buffer[4],
+                (uint8_t)section_data_buffer[3], (uint8_t)section_data_buffer[2],
+                (uint8_t)section_data_buffer[1], (uint8_t)section_data_buffer[0]);
+            service_data = section_data_buffer.slice_from(16);
+        }
 
-                data.service_data.emplace(std::make_pair(service_uuid, service_data));
-            }
+        else if (section.DataType() ==
+                    Advertisement::BluetoothLEAdvertisementDataTypes::ServiceData32BitUuids()) {
+            service_uuid = fmt::format("{:02x}{:02x}{:02x}{:02x}-0000-1000-8000-00805f9b34fb",
+                                        (uint8_t)section_data_buffer[3], (uint8_t)section_data_buffer[2],
+                                        (uint8_t)section_data_buffer[1], (uint8_t)section_data_buffer[0]);
+            service_data = section_data_buffer.slice_from(4);
+        } else if (section.DataType() ==
+                    Advertisement::BluetoothLEAdvertisementDataTypes::ServiceData16BitUuids()) {
+            service_uuid = fmt::format("0000{:02x}{:02x}-0000-1000-8000-00805f9b34fb",
+                                        (uint8_t)section_data_buffer[1], (uint8_t)section_data_buffer[0]);
+            service_data = section_data_buffer.slice_from(2);
+        } else {
+            continue;
+        }
 
-            // Parse service uuids
-            auto service_data = args.Advertisement().ServiceUuids();
-            for (auto& service_guid : service_data) {
-                std::string service_uuid = guid_to_uuid(service_guid);
-                data.service_data.emplace(std::make_pair(service_uuid, ByteArray()));
-            }
+        data.service_data.emplace(std::make_pair(service_uuid, service_data));
+    }
 
-            this->_scan_received_callback(data);
-        });
+    // Parse service uuids
+    auto service_data = args.Advertisement().ServiceUuids();
+    for (auto& service_guid : service_data) {
+        std::string service_uuid = guid_to_uuid(service_guid);
+        data.service_data.emplace(std::make_pair(service_uuid, ByteArray()));
+    }
+
+    this->_scan_received_callback(data);
 }
 
 AdapterWindows::~AdapterWindows() {

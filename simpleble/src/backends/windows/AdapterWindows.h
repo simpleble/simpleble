@@ -69,6 +69,15 @@ class AdapterWindows : public AdapterBase {
     std::map<BluetoothAddress, std::shared_ptr<PeripheralWindows>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralBase>> seen_peripherals_;
 
+    // Event handler methods for scanner events
+    void _on_scanner_stopped(
+        const Advertisement::BluetoothLEAdvertisementWatcher& watcher,
+        const Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs args);
+
+    void _on_scanner_received(
+        const Advertisement::BluetoothLEAdvertisementWatcher& watcher,
+        const Advertisement::BluetoothLEAdvertisementReceivedEventArgs args);
+
     void _scan_stopped_callback();
     void _scan_received_callback(advertising_data_t data);
 
