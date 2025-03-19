@@ -247,6 +247,7 @@ elseif(SIMPLEBLE_BACKEND_WINDOWS)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/AdapterWindows.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/PeripheralWindows.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/BackendWinRT.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/MtaManager.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/Utils.cpp)
 
 elseif(SIMPLEBLE_BACKEND_MACOS)
