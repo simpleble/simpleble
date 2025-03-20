@@ -21,11 +21,13 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
   - `Peripheral::manufacturer_data()`
   - `Peripheral::advertised_services()`
 - (Java) Early preview of Java bindings.
+- Configuration class to control the behavior of SimpleBLE internals as well as experimental features.
 
 **Changed**
 
 - `Adapter::identifier()` method is non-const, as underlying const conditions can't be guaranteed.
 - (Android) Callback functions are not handled on a separate, dedicated thread.
+- (Windows) **(Experimental)** Calls to the WinRT backend can now be executed in a separate MTA apartment via feature flag.
 
 **Fixed**
 

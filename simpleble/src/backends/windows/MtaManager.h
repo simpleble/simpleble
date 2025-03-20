@@ -8,7 +8,10 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <simpleble/Config.h>
 
+namespace SimpleBLE {
+    namespace WinRT {
 class MtaManager {
 public:
     static MtaManager& get() {
@@ -21,6 +24,16 @@ public:
 
     template<typename T>
     T execute_sync(std::function<T()> task) {
+        // When flag is disabled, run in calling thread
+        if (!Config::WinRT::experimental_use_own_mta_apartment) {
+            try {
+                return task();
+            } catch (...) {
+                throw;  // Re-throw any exceptions
+            }
+        }
+
+        // Otherwise use the MTA thread
         std::promise<T> result_promise;
         auto result_future = result_promise.get_future();
         submit_task([&result_promise, task]() {
@@ -35,6 +48,17 @@ public:
     }
 
     void execute_sync(std::function<void()> task) {
+        // When flag is disabled, run in calling thread
+        if (!Config::WinRT::experimental_use_own_mta_apartment) {
+            try {
+                task();
+                return;
+            } catch (...) {
+                throw;  // Re-throw any exceptions
+            }
+        }
+
+        // Otherwise use the MTA thread
         std::promise<void> result_promise;
         auto result_future = result_promise.get_future();
         submit_task([&result_promise, task]() {
@@ -60,5 +84,7 @@ private:
     std::queue<std::function<void()>> task_queue_;
     std::atomic<bool> running_{true};
 
-    void mta_thread_func();
-};
+        void mta_thread_func();
+    };
+}  // namespace WinRT
+}  // namespace SimpleBLE

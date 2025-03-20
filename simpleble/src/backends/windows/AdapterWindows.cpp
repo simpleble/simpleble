@@ -26,6 +26,7 @@
 #include <vector>
 
 using namespace SimpleBLE;
+using namespace SimpleBLE::WinRT;
 using namespace std::chrono_literals;
 
 AdapterWindows::AdapterWindows(std::string device_id)

@@ -13,6 +13,8 @@
 
 namespace SimpleBLE {
 
+using namespace SimpleBLE::WinRT;
+
 std::shared_ptr<BackendBase> BACKEND_WINDOWS() { return BackendWinRT::get(); }
 
 BackendWinRT::BackendWinRT(buildToken) { initialize_winrt(); }
@@ -55,6 +57,6 @@ SharedPtrVector<AdapterBase> BackendWinRT::get_adapters() {
     });
 }
 
-std::string BackendWinRT::name() const noexcept { return "Windows"; }
+std::string BackendWinRT::name() const noexcept { return "WinRT"; }
 
 };  // namespace SimpleBLE

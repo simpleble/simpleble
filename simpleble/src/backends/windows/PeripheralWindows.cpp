@@ -23,6 +23,7 @@
 #include <iostream>
 
 using namespace SimpleBLE;
+using namespace SimpleBLE::WinRT;
 using namespace std::chrono_literals;
 
 PeripheralWindows::PeripheralWindows(advertising_data_t advertising_data) {

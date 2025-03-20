@@ -1,5 +1,8 @@
 #include "MtaManager.h"
 
+namespace SimpleBLE {
+namespace WinRT {
+
 MtaManager::MtaManager() {
     mta_thread_ = std::thread(&MtaManager::mta_thread_func, this);
 }
@@ -41,3 +44,6 @@ void MtaManager::mta_thread_func() {
         if (task) task();
     }
 }
+
+}  // namespace WinRT
+}  // namespace SimpleBLE

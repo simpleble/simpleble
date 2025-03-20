@@ -39,6 +39,6 @@ bool BackendCoreBluetooth::bluetooth_enabled() {
     return adapter.bluetooth_enabled();
 }
 
-std::string BackendCoreBluetooth::name() const noexcept { return "MacOS"; }
+std::string BackendCoreBluetooth::name() const noexcept { return "CoreBluetooth"; }
 
 }  // namespace SimpleBLE
