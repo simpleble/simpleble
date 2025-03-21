@@ -29,19 +29,19 @@ public:
             try {
                 return task();
             } catch (...) {
-                throw;  // Re-throw any exceptions
+                throw;
             }
         }
 
-        // Otherwise use the MTA thread
-        std::promise<T> result_promise;
-        auto result_future = result_promise.get_future();
-        submit_task([&result_promise, task]() {
+        // Move the promise into the lambda to extend its lifetime
+        auto result_promise = std::make_shared<std::promise<T>>(); // Use shared_ptr to manage lifetime
+        auto result_future = result_promise->get_future();
+        submit_task([promise = std::move(result_promise), task]() {
             try {
                 T result = task();
-                result_promise.set_value(result);
+                promise->set_value(result);
             } catch (...) {
-                result_promise.set_exception(std::current_exception());
+                promise->set_exception(std::current_exception());
             }
         });
         return result_future.get();
@@ -54,19 +54,19 @@ public:
                 task();
                 return;
             } catch (...) {
-                throw;  // Re-throw any exceptions
+                throw;
             }
         }
 
-        // Otherwise use the MTA thread
-        std::promise<void> result_promise;
-        auto result_future = result_promise.get_future();
-        submit_task([&result_promise, task]() {
+        // Move the promise into the lambda to extend its lifetime
+        auto result_promise = std::make_shared<std::promise<void>>(); // Use shared_ptr to manage lifetime
+        auto result_future = result_promise->get_future();
+        submit_task([promise = std::move(result_promise), task]() {
             try {
                 task();
-                result_promise.set_value();
+                promise->set_value();
             } catch (...) {
-                result_promise.set_exception(std::current_exception());
+                promise->set_exception(std::current_exception());
             }
         });
         result_future.get();

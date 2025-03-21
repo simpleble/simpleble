@@ -12,6 +12,7 @@ include simpleble/cmake/simpleble.pc.in
 include simpleble/include/simpleble/Adapter.h
 include simpleble/include/simpleble/AdapterSafe.h
 include simpleble/include/simpleble/Characteristic.h
+include simpleble/include/simpleble/Config.h
 include simpleble/include/simpleble/Descriptor.h
 include simpleble/include/simpleble/Exceptions.h
 include simpleble/include/simpleble/Logging.h
@@ -68,6 +69,8 @@ include simpleble/src/backends/windows/AdapterWindows.cpp
 include simpleble/src/backends/windows/AdapterWindows.h
 include simpleble/src/backends/windows/BackendWinRT.cpp
 include simpleble/src/backends/windows/BackendWinRT.h
+include simpleble/src/backends/windows/MtaManager.cpp
+include simpleble/src/backends/windows/MtaManager.h
 include simpleble/src/backends/windows/PeripheralWindows.cpp
 include simpleble/src/backends/windows/PeripheralWindows.h
 include simpleble/src/backends/windows/Utils.cpp
