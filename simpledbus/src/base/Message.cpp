@@ -199,66 +199,66 @@ void Message::_append_argument(DBusMessageIter* iter, const Holder& argument, co
             auto sig_next = signature.substr(1);
             DBusMessageIter sub_iter;
             dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY, sig_next.c_str(), &sub_iter);
-            if (sig_next[0] != DBUS_DICT_ENTRY_BEGIN_CHAR) {
-                auto array_contents = argument.get_array();
-                for (auto elem : array_contents) {
+            auto array_contents = argument.get_array();
+            for (auto elem : array_contents) {
+                if (sig_next[0] != DBUS_DICT_ENTRY_BEGIN_CHAR) {
                     _append_argument(&sub_iter, elem, sig_next);
-                }
-            } else {
-                sig_next = sig_next.substr(1, sig_next.length() - 2);
-                auto key_sig = sig_next[0];
-                auto value_sig = sig_next.substr(1);
+                } else {
+                    auto sig_dict = sig_next.substr(1, sig_next.length() - 2);
+                    auto key_sig = sig_dict[0];
+                    auto value_sig = sig_dict.substr(1);
 
-                switch (key_sig) {
-                    case DBUS_TYPE_BYTE: {
-                        auto dict_contents = argument.get_dict_uint8();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_INT16: {
-                        auto dict_contents = argument.get_dict_int16();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_UINT16: {
-                        auto dict_contents = argument.get_dict_uint16();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_INT32: {
-                        auto dict_contents = argument.get_dict_int32();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_UINT32: {
-                        auto dict_contents = argument.get_dict_uint32();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_INT64: {
-                        auto dict_contents = argument.get_dict_int64();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_UINT64: {
-                        auto dict_contents = argument.get_dict_uint64();
-                        MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_STRING: {
-                        auto dict_contents = argument.get_dict_string();
-                        MESSAGE_DICT_APPEND_KEY_STR(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_OBJECT_PATH: {
-                        auto dict_contents = argument.get_dict_object_path();
-                        MESSAGE_DICT_APPEND_KEY_STR(key_sig, dict_contents);
-                        break;
-                    }
-                    case DBUS_TYPE_SIGNATURE: {
-                        auto dict_contents = argument.get_dict_signature();
-                        MESSAGE_DICT_APPEND_KEY_STR(key_sig, dict_contents);
-                        break;
+                    switch (key_sig) {
+                        case DBUS_TYPE_BYTE: {
+                            auto dict_contents = elem.get_dict_uint8();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_INT16: {
+                            auto dict_contents = elem.get_dict_int16();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_UINT16: {
+                            auto dict_contents = elem.get_dict_uint16();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_INT32: {
+                            auto dict_contents = elem.get_dict_int32();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_UINT32: {
+                            auto dict_contents = elem.get_dict_uint32();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_INT64: {
+                            auto dict_contents = elem.get_dict_int64();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_UINT64: {
+                            auto dict_contents = elem.get_dict_uint64();
+                            MESSAGE_DICT_APPEND_KEY_NUM(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_STRING: {
+                            auto dict_contents = elem.get_dict_string();
+                            MESSAGE_DICT_APPEND_KEY_STR(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_OBJECT_PATH: {
+                            auto dict_contents = elem.get_dict_object_path();
+                            MESSAGE_DICT_APPEND_KEY_STR(key_sig, dict_contents);
+                            break;
+                        }
+                        case DBUS_TYPE_SIGNATURE: {
+                            auto dict_contents = elem.get_dict_signature();
+                            MESSAGE_DICT_APPEND_KEY_STR(key_sig, dict_contents);
+                            break;
+                        }
                     }
                 }
             }
