@@ -191,26 +191,45 @@ Android dependency module that includes some necessary bridge classes used by Si
 This is required because the Android JVM doesn't allow programatic definition of
 derived classes, which forces us to bring these definitions in externally.
 
-To include this dependency module, add the following to your `settings.gradle` file:
+As a module
+-----------
 
-```groovy
-includeBuild("path/to/simpleble/src/backends/android/simpleble-bridge") {
-    dependencySubstitution {
-        substitute module("org.simpleble.android.bridge:simpleble-bridge") with project(":")
+To include this dependency module, add the following to your ``settings.gradle`` file
+
+.. code-block:: groovy
+
+   includeBuild("path/to/simpleble/src/backends/android/simpleble-bridge") {
+      dependencySubstitution {
+         substitute module("org.simpleble.android.bridge:simpleble-bridge") with project(":")
+      }
+   }
+
+Or, in ``settings.gradle.kts``
+
+.. code-block:: kotlin
+
+   includeBuild("path/to/simpleble/src/backends/android/simpleble-bridge") {
+      dependencySubstitution {
+         substitute(module("org.simpleble.android.bridge:simpleble-bridge")).using(project(":"))
+      }
+   }
+
+.. note::
+   
+   We will provide Maven packages in the future.
+
+From AAR file
+-------------
+
+Place the package on your app's directory, and take note of its path. We'll use ``example-app/app/libs/simpleble-bridge.aar``.
+Then, declare the dependency on your app's ``build.gradle{.kts}`` file (note: relative paths begin from your app's module folder)
+
+.. code-block:: kotlin
+
+    dependencies {
+      /* ... */
+      implementation(files("libs/simpleble-bridge.aar"))
     }
-}
-```
-
-```kotlin
-includeBuild("path/to/simpleble/src/backends/android/simpleble-bridge") {
-    dependencySubstitution {
-        substitute(module("org.simpleble.android.bridge:simpleble-bridge")).using(project(":"))
-    }
-}
-```
-
-**NOTE:** We will provide Maven packages in the future.
-
 
 Build Examples
 ==============
