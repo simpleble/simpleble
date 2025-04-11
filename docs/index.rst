@@ -40,6 +40,7 @@ Table of Contents
    :caption: SimpleDroidBLE
 
    simpledroidble/usage
+   simpledroidble/tutorial
 
 .. toctree::
    :maxdepth: 2
