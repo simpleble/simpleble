@@ -9,7 +9,7 @@ Getting started
 ===============
 
 Your first step towards using SimpleBLE is to download and install the library
-following the instructions in the `usage <usage.html>`_ page. Once you have
+following the instructions in the `usage <usage.rst>`_ page. Once you have
 installed the library, you need to understand a few basic concepts about how
 SimpleBLE is organized.
 
@@ -229,20 +229,20 @@ Layers and their responsibilities
 
 .. _examples: https://github.com/simpleble/simpleble/tree/main/examples/simpleble
 
-.. _list_adapters: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/list_adapters/list_adapters.cpp
+.. _list_adapters: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/list_adapters.cpp
 
-.. _scan (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/scan/scan.cpp
+.. _scan (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/scan.cpp
 
-.. _connect (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/connect/connect.cpp
+.. _connect (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/connect.cpp
 
-.. _connect_safe (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/connect_safe/connect_safe.cpp
+.. _connect_safe (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/connect_safe.cpp
 
-.. _read: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/read/read.cpp
+.. _read: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/read.cpp
 
-.. _write: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/write/write.cpp
+.. _write: https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/write.cpp
 
-.. _notify (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/cpp/notify/notify.cpp
+.. _notify (cpp): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/notify.cpp
 
-.. _connect (c): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/c/connect.c
-.. _scan (c): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/c/scan.c
-.. _notify (c): https://github.com/simpleble/simpleble/blob/main/examples/simpleble/c/notify.c
+.. _connect (c): https://github.com/simpleble/simpleble/blob/main/examples/simplecble/c/connect.c
+.. _scan (c): https://github.com/simpleble/simpleble/blob/main/examples/simplecble/c/scan.c
+.. _notify (c): https://github.com/simpleble/simpleble/blob/main/examples/simplecble/c/notify.c
