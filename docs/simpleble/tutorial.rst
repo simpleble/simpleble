@@ -9,7 +9,7 @@ Getting started
 ===============
 
 Your first step towards using SimpleBLE is to download and install the library
-following the instructions in the `usage <usage.rst>`_ page. Once you have
+following the instructions in the `usage <usage.html>`_ page. Once you have
 installed the library, you need to understand a few basic concepts about how
 SimpleBLE is organized.
 
