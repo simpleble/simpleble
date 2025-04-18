@@ -31,6 +31,9 @@ add_library(
     android_utils.cpp
 )
 
+# Explicitly state that the JNI library depends on the AAR being built
+# add_dependencies(${CMAKE_PROJECT_NAME} build_aar)
+
 set_target_properties(
     ${CMAKE_PROJECT_NAME} PROPERTIES
     CXX_STANDARD 17

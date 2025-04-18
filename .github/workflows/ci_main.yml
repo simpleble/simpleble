@@ -259,7 +259,11 @@ jobs:
           merge-multiple: true
 
       - name: List all artifacts
-        run: find artifacts -type f -ls | sort
+        run: find artifacts -type f -ls
+
+      - name: Remove unwanted artifacts
+        run: |
+          rm -rf artifacts/libsimplejavable*
 
       - name: Upload artifacts to release
         uses: svenstaro/upload-release-action@v2

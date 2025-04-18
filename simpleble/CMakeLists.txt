@@ -269,7 +269,35 @@ elseif(SIMPLEBLE_BACKEND_MACOS)
 elseif(SIMPLEBLE_BACKEND_ANDROID)
     message(STATUS "Configuring for Android")
 
-    include_directories(${ANDROID_NDK}/sysroot/usr/include)
+    # NOTE, these are the options sent by gradle when calling externalNativeBuild, cmake
+    # -DCMAKE_SYSTEM_NAME=Android \
+    # -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    # -DCMAKE_SYSTEM_VERSION=31 \
+    # -DANDROID_PLATFORM=android-31 \
+    # -DANDROID_ABI=armeabi-v7a \
+    # -DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a \
+    # -DANDROID_NDK=/Users/kdewald/Library/Android/sdk/ndk/27.0.12077973 \
+    # -DCMAKE_ANDROID_NDK=/Users/kdewald/Library/Android/sdk/ndk/27.0.12077973 \
+    # -DCMAKE_TOOLCHAIN_FILE=/Users/kdewald/Library/Android/sdk/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+    # -DCMAKE_MAKE_PROGRAM=/Users/kdewald/Library/Android/sdk/cmake/3.22.1/bin/ninja \
+    # -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/Users/kdewald/Workspaces/Personal/SimpleBLE/simpledroidble/simpledroidble/build/intermediates/cxx/Debug/2m126g5n/obj/armeabi-v7a \
+    # -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/Users/kdewald/Workspaces/Personal/SimpleBLE/simpledroidble/simpledroidble/build/intermediates/cxx/Debug/2m126g5n/obj/armeabi-v7a \
+    # -DCMAKE_BUILD_TYPE=Debug \
+    # -B/Users/kdewald/Workspaces/Personal/SimpleBLE/simpledroidble/simpledroidble/.cxx/Debug/2m126g5n/armeabi-v7a \
+    # -GNinja
+
+    message(STATUS "ANDROID_NDK: ${ANDROID_NDK}")
+    message(STATUS "ANDROID_NATIVE_API_LEVEL: ${ANDROID_NATIVE_API_LEVEL}")
+    message(STATUS "ANDROID_ABI: ${ANDROID_ABI}")
+    message(STATUS "ANDROID_PLATFORM: ${ANDROID_PLATFORM}")
+    message(STATUS "CMAKE_ANDROID_NDK: ${CMAKE_ANDROID_NDK}")
+    message(STATUS "ANDROID_SDK_ROOT: ${ANDROID_SDK_ROOT}")
+    message(STATUS "CMAKE_ANDROID_API: ${CMAKE_ANDROID_API}")
+
+    # Throw an error to stop the build
+     message(FATAL_ERROR "Build stopped intentionally. Please check your Android configuration.")
+
+    # include_directories(${ANDROID_NDK}/sysroot/usr/include)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android)
 
     add_compile_options(-DANDROID -D__ANDROID_API__=${ANDROID_NATIVE_API_LEVEL})
@@ -298,6 +326,76 @@ elseif(SIMPLEBLE_BACKEND_ANDROID)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/jni/List.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/jni/Set.cpp)
     target_link_libraries(simpleble PUBLIC android nativehelper log)
+
+    # Build the simpleble-bridge library
+
+    # include(UseJava)
+    # find_package(Java COMPONENTS Development REQUIRED)
+
+    # set(ANDROID_SDK_ROOT ${CMAKE_ANDROID_NDK}/../../)
+    # message(STATUS "ANDROID_SDK_ROOT: ${ANDROID_SDK_ROOT}")
+    # set(ANDROID_JAR ${ANDROID_SDK_ROOT}/platforms/android-${CMAKE_ANDROID_API}/android.jar)
+    # message(STATUS "ANDROID_JAR: ${ANDROID_JAR}")
+
+    # set(JAVA_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/simpleble-bridge/src/main")
+    # set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/aar_output")
+    # set(AAR_NAME "simpleble-bridge.aar")
+
+    # set(JAVA_FILES
+    #     "${JAVA_SRC_DIR}/java/org/simpleble/android/bridge/BluetoothGattCallback.java"
+    #     "${JAVA_SRC_DIR}/java/org/simpleble/android/bridge/ScanCallback.java"
+    # )
+
+    # # Create classes.jar using add_jar
+    # add_jar(
+    #     simpleble_classes
+    #     SOURCES ${JAVA_FILES}
+    #     OUTPUT_DIR ${OUTPUT_DIR}
+    #     INCLUDE_JARS ${ANDROID_JAR}
+    # )
+
+    # # Copy AndroidManifest.xml
+    # add_custom_command(
+    #     OUTPUT ${OUTPUT_DIR}/AndroidManifest.xml
+    #     COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
+    #     COMMAND ${CMAKE_COMMAND} -E copy
+    #         ${JAVA_SRC_DIR}/AndroidManifest.xml
+    #         ${OUTPUT_DIR}/AndroidManifest.xml
+    #     DEPENDS ${JAVA_SRC_DIR}/AndroidManifest.xml
+    #     COMMENT "Copying AndroidManifest.xml"
+    # )
+
+    # # Create empty R.txt (no resources)
+    # add_custom_command(
+    #     OUTPUT ${OUTPUT_DIR}/R.txt
+    #     COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT_DIR}/R.txt
+    #     COMMENT "Creating empty R.txt"
+    # )
+
+    # # Package AAR
+    # add_custom_command(
+    #     OUTPUT ${OUTPUT_DIR}/${AAR_NAME}
+    #     COMMAND ${CMAKE_COMMAND} -E remove -f ${OUTPUT_DIR}/${AAR_NAME}
+    #     COMMAND ${CMAKE_COMMAND} -E chdir ${OUTPUT_DIR}
+    #         zip -j ${AAR_NAME}
+    #         AndroidManifest.xml
+    #         simpleble_classes.jar
+    #         R.txt
+    #     DEPENDS
+    #         simpleble_classes
+    #         ${OUTPUT_DIR}/AndroidManifest.xml
+    #         ${OUTPUT_DIR}/R.txt
+    #     COMMENT "Packaging ${AAR_NAME}"
+    # )
+
+    # # Define custom target
+    # add_custom_target(
+    #     build_aar ALL
+    #     DEPENDS ${OUTPUT_DIR}/${AAR_NAME}
+    #     COMMENT "Building ${AAR_NAME}"
+    # )
+
+
 endif()
 
 apply_build_options(simpleble

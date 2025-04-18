@@ -60,7 +60,7 @@ eval set -- "$PARAMS"
 PROJECT_ROOT=$(realpath $(dirname `realpath $0`)/..)
 SOURCE_PATH=$PROJECT_ROOT/simpleble
 BUILD_PATH=$PROJECT_ROOT/build_simpleble_android
-INSTALL_PATH=$BUILD_PATH/install
+INSTALL_PATH=$PROJECT_ROOT/install_simpleble_android
 
 EXAMPLE_BUILD_PATH=$PROJECT_ROOT/build_simpleble_android_examples
 EXAMPLE_SOURCE_PATH=$PROJECT_ROOT/examples/simpleble
@@ -68,6 +68,7 @@ EXAMPLE_SOURCE_PATH=$PROJECT_ROOT/examples/simpleble
 # If FLAG_CLEAN is set, clean the build directory
 if [[ ! -z "$FLAG_CLEAN" ]]; then
     rm -rf $BUILD_PATH
+    rm -rf $INSTALL_PATH
     rm -rf $EXAMPLE_BUILD_PATH
 fi
 
@@ -78,27 +79,28 @@ if [ -z "$ANDROID_NDK_HOME" ]; then
 fi
 
 # These are some hardcoded variables used for my test process. You can change them to fit your needs.
-ANDROID_ARCH_ABI="armeabi-v7a"
-ANDROID_API=21
+ANDROID_ARCH_ABI="arm64-v8a"
+ANDROID_API=31
 # NOTE: Also look at ANDROID_STL_TYPE
-ANDROID_ARGS="-DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_NDK=$ANDROID_NDK_HOME -DCMAKE_ANDROID_ARCH_ABI=$ANDROID_ARCH_ABI -DCMAKE_ANDROID_API=$ANDROID_API"
+# -DCMAKE_SYSTEM_VERSION=31
+ANDROID_ARGS="-DCMAKE_SYSTEM_NAME=Android -DCMAKE_ANDROID_NDK=$ANDROID_NDK_HOME -DCMAKE_ANDROID_ARCH_ABI=$ANDROID_ARCH_ABI -DCMAKE_ANDROID_API=$ANDROID_API -DSIMPLEBLE_EXCLUDE_C=ON"
 
 cmake -H$SOURCE_PATH -B $BUILD_PATH $ANDROID_ARGS
 cmake --build $BUILD_PATH -j7
 cmake --install $BUILD_PATH --prefix "${INSTALL_PATH}"
 
-if [[ ! -z "$FLAG_EXAMPLE" ]]; then
-    cmake -H$EXAMPLE_SOURCE_PATH -B $EXAMPLE_BUILD_PATH $ANDROID_ARGS
-    cmake --build $EXAMPLE_BUILD_PATH -j7
+# if [[ ! -z "$FLAG_EXAMPLE" ]]; then
+#     cmake -H$EXAMPLE_SOURCE_PATH -B $EXAMPLE_BUILD_PATH $ANDROID_ARGS
+#     cmake --build $EXAMPLE_BUILD_PATH -j7
 
-    if [[ ! -z "$FLAG_DEPLOY" ]]; then
-        adb shell rm -rf /data/local/tmp/simpleble
-        adb shell mkdir /data/local/tmp/simpleble
-        adb push $EXAMPLE_BUILD_PATH/bin/* /data/local/tmp/simpleble
-        adb shell chmod +x /data/local/tmp/simpleble/*
-    fi
+#     if [[ ! -z "$FLAG_DEPLOY" ]]; then
+#         adb shell rm -rf /data/local/tmp/simpleble
+#         adb shell mkdir /data/local/tmp/simpleble
+#         adb push $EXAMPLE_BUILD_PATH/bin/* /data/local/tmp/simpleble
+#         adb shell chmod +x /data/local/tmp/simpleble/*
+#     fi
 
-    if [[ ! -z "$FLAG_RUN" ]]; then
-        adb shell /data/local/tmp/simpleble/$FLAG_RUN
-    fi
-fi
+#     if [[ ! -z "$FLAG_RUN" ]]; then
+#         adb shell /data/local/tmp/simpleble/$FLAG_RUN
+#     fi
+# fi
