@@ -68,9 +68,7 @@ target_link_libraries(simpledbus PRIVATE $<BUILD_INTERFACE:fmt::fmt-header-only>
 target_include_directories(simpledbus PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(simpledbus INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    $<INSTALL_INTERFACE:${DBus1_INCLUDE_DIR}>
-    $<INSTALL_INTERFACE:${DBus1_ARCH_INCLUDE_DIR}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 append_sanitize_options("${SIMPLEDBUS_SANITIZE}")
 
@@ -87,14 +85,24 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpledbus.pc.in
 
 install(
     TARGETS simpledbus
-    EXPORT simpledbus-config
+    EXPORT simpledbus-targets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(
-    EXPORT simpledbus-config
+    EXPORT simpledbus-targets
     NAMESPACE simpledbus::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpledbus)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpledbus-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/simpledbus-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpledbus)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/simpledbus-config.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpledbus)
 
 install(

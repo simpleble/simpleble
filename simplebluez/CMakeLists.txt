@@ -106,9 +106,7 @@ target_include_directories(simplebluez INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../external/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    $<INSTALL_INTERFACE:${DBus1_INCLUDE_DIR}>
-    $<INSTALL_INTERFACE:${DBus1_ARCH_INCLUDE_DIR}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 append_sanitize_options("${SIMPLEBLUEZ_SANITIZE}")
 
@@ -125,14 +123,24 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simplebluez.pc.in
 
 install(
     TARGETS simplebluez
-    EXPORT simplebluez-config
+    EXPORT simplebluez-targets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(
-    EXPORT simplebluez-config
+    EXPORT simplebluez-targets
     NAMESPACE simplebluez::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simplebluez)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/simplebluez-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/simplebluez-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simplebluez)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/simplebluez-config.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simplebluez)
 
 install(
