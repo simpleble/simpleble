@@ -4,8 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <roapi.h>
 #include <sdkddkver.h>
-#include "../winrt/roapi.h"
 
 #include "LoggingInternal.h"
 
