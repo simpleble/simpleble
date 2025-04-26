@@ -118,7 +118,7 @@ void PeripheralWindows::disconnect() {
         });
 
         std::unique_lock<std::mutex> lock(disconnection_mutex_);
-        if (disconnection_cv_.wait_for(lock, 10s, [=] { return !this->is_connected(); })) {
+        if (disconnection_cv_.wait_for(lock, 10s, [=, this] { return !is_connected(); })) {
             // Disconnection successful
         } else {
             SIMPLEBLE_LOG_ERROR("Disconnection failed");
