@@ -7,7 +7,57 @@ Interface::Interface(std::shared_ptr<Connection> conn, const std::string& bus_na
                      const std::string& interface_name)
     : _conn(conn), _bus_name(bus_name), _path(path), _interface_name(interface_name), _loaded(true) {}
 
+
+// ----- PROPERTY INNER CLASS -----
+
+template<typename T>
+Interface::Property<T>::Property(Interface& interface, const std::string& name)
+    : _interface(interface), _name(name) {}
+
+
+template<typename T>
+T Interface::Property<T>::get() {
+     std::scoped_lock lock(_interface._property_update_mutex);
+    return _interface._properties[_name].template get<T>();
+}
+
+template<>
+std::vector<std::string> Interface::Property<std::vector<std::string>>::get() {
+    std::scoped_lock lock(_interface._property_update_mutex);
+
+    std::vector<std::string> items;
+    for (SimpleDBus::Holder& item : _interface._properties[_name].get_array()) {
+        items.push_back(item.get_string());
+    }
+
+    return items;
+}
+
+
+template<typename T>
+T Interface::Property<T>::refresh_and_get() {
+    _interface.property_refresh(_name);
+    return Interface::Property<T>::get();
+}
+
+template<typename T>
+void Interface::Property<T>::set(T value) {
+    std::scoped_lock lock(_interface._property_update_mutex);
+    _interface.property_set(_name, SimpleDBus::Holder::create<T>(value));
+}
+
+
 // ----- LIFE CYCLE -----
+
+template<typename T>
+Interface::Property<T> Interface::create_property(const std::string& name) {
+    return Property<T>(*this, name);
+}
+
+template<typename T>
+Interface::CachedProperty<T> Interface::create_cached_property(const std::string& name) {
+    return CachedProperty<T>(*this, name);
+}
 
 void Interface::load(Holder options) {
     _property_update_mutex.lock();

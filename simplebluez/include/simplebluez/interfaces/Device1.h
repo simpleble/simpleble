@@ -19,19 +19,21 @@ class Device1 : public SimpleDBus::Interface {
     void CancelPairing();
 
     // ----- PROPERTIES -----
-    int16_t RSSI();
-    int16_t TxPower();
-    uint16_t Appearance();  // On Bluez 5.53, this always returns 0.
-    std::string Address();
-    std::string AddressType();
-    std::string Alias();
-    std::string Name();
-    std::vector<std::string> UUIDs();
-    std::map<uint16_t, std::vector<uint8_t>> ManufacturerData(bool refresh = true);
-    std::map<std::string, std::vector<uint8_t>> ServiceData(bool refresh = true);
-    bool Paired(bool refresh = true);
-    bool Connected(bool refresh = true);
-    bool ServicesResolved(bool refresh = true);
+    CachedProperty<int16_t> TxPower = create_cached_property<int16_t>("TxPower");
+    CachedProperty<std::map<uint16_t, std::vector<uint8_t>>> ManufacturerData = 
+        create_cached_property<std::map<uint16_t, std::vector<uint8_t>>>("ManufacturerData");
+    CachedProperty<std::map<std::string, std::vector<uint8_t>>> ServiceData = 
+        create_cached_property<std::map<std::string, std::vector<uint8_t>>>("ServiceData");
+    Property<int16_t> RSSI = create_property<int16_t>("RSSI");
+    Property<uint16_t> Appearance = create_property<uint16_t>("Appearance");
+    Property<std::string> Address = create_property<std::string>("Address");
+    Property<std::string> AddressType = create_property<std::string>("AddressType");
+    Property<std::string> Alias = create_property<std::string>("Alias");
+    Property<std::string> Name = create_property<std::string>("Name");
+    Property<std::vector<std::string>> UUIDs = create_property<std::vector<std::string>>("UUIDs");
+    Property<bool> Paired = create_property<bool>("Paired");
+    Property<bool> Connected = create_property<bool>("Connected");
+    Property<bool> ServicesResolved = create_property<bool>("ServicesResolved");
 
     // ----- CALLBACKS -----
     kvn::safe_callback<void()> OnServicesResolved;

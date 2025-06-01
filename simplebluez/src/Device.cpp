@@ -61,29 +61,29 @@ void Device::connect() { device1()->Connect(); }
 
 void Device::disconnect() { device1()->Disconnect(); }
 
-std::string Device::address() { return device1()->Address(); }
+std::string Device::address() { return device1()->Address.get(); }
 
-std::string Device::address_type() { return device1()->AddressType(); }
+std::string Device::address_type() { return device1()->AddressType.get(); }
 
-std::string Device::name() { return device1()->Name(); }
+std::string Device::name() { return device1()->Name.get(); }
 
-std::string Device::alias() { return device1()->Alias(); }
+std::string Device::alias() { return device1()->Alias.get(); }
 
-int16_t Device::rssi() { return device1()->RSSI(); }
+int16_t Device::rssi() { return device1()->RSSI.get(); }
 
-int16_t Device::tx_power() { return device1()->TxPower(); }
+int16_t Device::tx_power() { return device1()->TxPower.get(); }
 
-std::vector<std::string> Device::uuids() { return device1()->UUIDs(); }
+std::vector<std::string> Device::uuids() { return device1()->UUIDs.get(); }
 
-std::map<uint16_t, std::vector<uint8_t>> Device::manufacturer_data() { return device1()->ManufacturerData(); }
+std::map<uint16_t, std::vector<uint8_t>> Device::manufacturer_data() { return device1()->ManufacturerData.refresh_and_get(); }
 
-std::map<std::string, std::vector<uint8_t>> Device::service_data() { return device1()->ServiceData(); }
+std::map<std::string, std::vector<uint8_t>> Device::service_data() { return device1()->ServiceData.get(); }
 
-bool Device::paired() { return device1()->Paired(); }
+bool Device::paired() { return device1()->Paired.get(); }
 
-bool Device::connected() { return device1()->Connected(); }
+bool Device::connected() { return device1()->Connected.get(); }
 
-bool Device::services_resolved() { return device1()->ServicesResolved(); }
+bool Device::services_resolved() { return device1()->ServicesResolved.get(); }
 
 void Device::set_on_disconnected(std::function<void()> callback) { device1()->OnDisconnected.load(callback); }
 
@@ -95,10 +95,10 @@ void Device::clear_on_services_resolved() { device1()->OnServicesResolved.unload
 
 bool Device::has_battery_interface() { return interface_exists("org.bluez.Battery1"); }
 
-uint8_t Device::battery_percentage() { return battery1()->Percentage(); }
+uint8_t Device::battery_percentage() { return battery1()->Percentage.get(); }
 
 void Device::set_on_battery_percentage_changed(std::function<void(uint8_t new_value)> callback) {
-    battery1()->OnPercentageChanged.load([this, callback]() { callback(battery1()->Percentage()); });
+    battery1()->OnPercentageChanged.load([this, callback]() { callback(battery1()->Percentage.get()); });
     // As the `property_changed` callback only occurs when the property is changed, we need to manually
     // call the callback once to make sure the callback is called with the current value.
     battery1()->OnPercentageChanged();

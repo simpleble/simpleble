@@ -23,20 +23,18 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     ByteArray ReadValue();
 
     // ----- PROPERTIES -----
-    std::string UUID();
-    ByteArray Value();
-    bool Notifying(bool refresh = true);
-    std::vector<std::string> Flags();
-    uint16_t MTU();
+    CachedProperty<std::string> UUID = create_cached_property<std::string>("UUID");
+    CachedProperty<ByteArray> Value = create_cached_property<ByteArray>("Value");
+    Property<bool> Notifying = create_property<bool>("Notifying");
+    Property<std::vector<std::string>> Flags = create_property<std::vector<std::string>>("Flags");
+    Property<uint16_t> MTU = create_property<uint16_t>("MTU");
 
     // ----- CALLBACKS -----
     kvn::safe_callback<void()> OnValueChanged;
 
   protected:
     void property_changed(std::string option_name) override;
-    void update_value(SimpleDBus::Holder& new_value);
 
-    std::string _uuid;
     ByteArray _value;
 };
 
