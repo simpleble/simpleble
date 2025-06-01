@@ -99,6 +99,7 @@ void Connection::remove_match(std::string rule) {
 }
 
 void Connection::read_write() {
+    // TODO: DEPRECATE
     if (!_initialized) {
         throw Exception::NotInitialized();
     }
@@ -109,7 +110,22 @@ void Connection::read_write() {
     dbus_connection_read_write(_conn, 0);
 }
 
+void Connection::read_write_dispatch() {
+    if (!_initialized) {
+        throw Exception::NotInitialized();
+    }
+
+    std::lock_guard<std::recursive_mutex> lock(_mutex);
+
+    // Non-blocking read of the next available message
+    dbus_connection_read_write(_conn, 0);
+
+    // Dispatch incoming messages
+    while (dbus_connection_dispatch(_conn) == DBUS_DISPATCH_DATA_REMAINS) {}
+}
+
 Message Connection::pop_message() {
+    // TODO: DEPRECATE
     if (!_initialized) {
         throw Exception::NotInitialized();
     }
@@ -161,4 +177,45 @@ std::string Connection::unique_name() {
     std::lock_guard<std::recursive_mutex> lock(_mutex);
 
     return std::string(dbus_bus_get_unique_name(_conn));
+}
+
+bool Connection::register_object_path(const std::string& path, std::function<void(Message&)> handler) {
+    if (!_initialized) {
+        return false;
+    }
+
+    std::lock_guard<std::recursive_mutex> lock(_mutex);
+    if (_message_handlers.find(path) == _message_handlers.end()) {
+        DBusObjectPathVTable vtable = {0};
+        vtable.message_function = &Connection::static_message_handler;
+        dbus_connection_register_object_path(_conn, path.c_str(), &vtable, this);
+        _message_handlers[path] = std::move(handler);
+    }
+
+    return true;
+}
+
+bool Connection::unregister_object_path(const std::string& path) {
+    std::lock_guard<std::recursive_mutex> lock(_mutex);
+    auto it = _message_handlers.find(path);
+    if (it != _message_handlers.end()) {
+        dbus_connection_unregister_object_path(_conn, path.c_str());
+        _message_handlers.erase(it);
+    }
+
+    return true;
+}
+
+DBusHandlerResult Connection::static_message_handler(DBusConnection* connection, DBusMessage* message, void* user_data) {
+    Connection* conn = static_cast<Connection*>(user_data);
+    Message msg = Message::from_retained(message);
+    std::string path = msg.get_path();
+
+    std::lock_guard<std::recursive_mutex> lock(conn->_mutex);
+    auto it = conn->_message_handlers.find(path);
+    if (it != conn->_message_handlers.end()) {
+        it->second(msg);
+    }
+
+    return DBUS_HANDLER_RESULT_HANDLED;
 }

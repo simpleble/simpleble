@@ -271,7 +271,16 @@ std::string Holder::_represent_type(Type type, std::any value) noexcept {
     return output.str();
 }
 
+void Holder::signature_override(const std::string& signature) {
+    // TODO: Check that the signature is valid for the Holder type and contents.
+    _signature = signature;
+}
+
 std::string Holder::signature() const {
+    if (_signature) {
+        return *_signature;
+    }
+
     std::string output;
     switch (_type) {
         case BOOLEAN:
@@ -343,7 +352,7 @@ std::string Holder::signature() const {
                     }
                 }
 
-                if (all_same_value_type) {
+                if (all_same_value_type && first_value_type != ARRAY && first_value_type != DICT) {
                     output += std::get<2>(holder_dict[0])._signature_simple();
                 } else {
                     output += DBUS_TYPE_VARIANT_AS_STRING;

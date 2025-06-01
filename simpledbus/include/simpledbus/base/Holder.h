@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any>
+#include <optional>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -61,6 +62,7 @@ class Holder {
     Type type() const;
     std::string represent() const;
     std::string signature() const;
+    void signature_override(const std::string& signature);
 
     // TODO: Deprecate these functions in favor of templated version.
     static Holder create_boolean(bool value);
@@ -120,11 +122,11 @@ class Holder {
 
   private:
     Type _type = NONE;
+    std::optional<std::string> _signature;
 
     bool holder_boolean = false;
     uint64_t holder_integer = 0;
     double holder_double = 0;
-
     std::string holder_string;
     std::vector<Holder> holder_array;
 
