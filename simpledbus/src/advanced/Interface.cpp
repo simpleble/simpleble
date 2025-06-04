@@ -38,6 +38,27 @@ Message Interface::create_method_call(const std::string& method_name) {
 
 // ----- PROPERTIES -----
 
+Holder Interface::property_collect() {
+    std::scoped_lock lock(_property_update_mutex);
+    SimpleDBus::Holder properties = SimpleDBus::Holder::create_dict();
+    for (const auto& [key, value] : _properties) {
+        properties.dict_append(SimpleDBus::Holder::Type::STRING, key, value);
+    }
+    return properties;
+}
+
+Holder Interface::property_collect_single(const std::string& property_name) {
+    std::scoped_lock lock(_property_update_mutex);
+    // TODO: Check if property exists
+    return _properties[property_name];
+}
+
+void Interface::property_modify(const std::string& property_name, const Holder& value) {
+    std::scoped_lock lock(_property_update_mutex);
+    _properties[property_name] = value;
+    property_changed(property_name);
+}
+
 Holder Interface::property_get_all() {
     Message query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Properties", "GetAll");
 

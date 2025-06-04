@@ -9,10 +9,10 @@
 
 namespace SimpleBluez {
 
-class ProxyOrgBluez : public SimpleDBus::Proxy {
+class BluezOrgBluez : public SimpleDBus::Proxy {
   public:
-    ProxyOrgBluez(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path);
-    virtual ~ProxyOrgBluez() = default;
+    BluezOrgBluez(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path);
+    virtual ~BluezOrgBluez() = default;
 
     void register_agent(std::shared_ptr<Agent> agent);
 

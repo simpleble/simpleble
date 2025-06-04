@@ -5,6 +5,8 @@
 #include <simplebluez/Device.h>
 #include <simplebluez/interfaces/Adapter1.h>
 
+#include <kvn/kvn_safe_callback.hpp>
+
 #include <functional>
 
 namespace SimpleBluez {
@@ -38,6 +40,8 @@ class Adapter : public SimpleDBus::Proxy {
     std::shared_ptr<SimpleDBus::Interface> interfaces_create(const std::string& interface_name) override;
 
     std::shared_ptr<Adapter1> adapter1();
+
+    kvn::safe_callback<void(std::shared_ptr<Device> device)> _on_device_updated;
 };
 
 }  // namespace SimpleBluez

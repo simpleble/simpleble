@@ -28,6 +28,12 @@ class Interface {
     // ----- PROPERTIES -----
     virtual void property_changed(std::string option_name);
 
+    // ! These functions are used by the Properties interface. We need better nomenclature!
+    Holder property_collect();
+    Holder property_collect_single(const std::string& property_name);
+    void property_modify(const std::string& property_name, const Holder& value);
+
+    // ! TODO: We need to figure out a good architecture to let any generic interface access the Properties object of its Proxy.
     Holder property_get_all();
     Holder property_get(const std::string& property_name);
     void property_set(const std::string& property_name, const Holder& value);

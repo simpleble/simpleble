@@ -177,16 +177,17 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/PeripheralLinux.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/BackendBluez.cpp
 
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/ProxyOrg.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Logging.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Agent.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Device.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Characteristic.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Exceptions.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/ProxyOrgBluez.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Service.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Adapter.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Bluez.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/BluezRoot.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/BluezOrg.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/BluezOrgBluez.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Descriptor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/Adapter1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/Agent1.cpp

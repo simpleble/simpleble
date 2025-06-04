@@ -12,6 +12,7 @@ Adapter::~Adapter() {}
 
 std::shared_ptr<SimpleDBus::Proxy> Adapter::path_create(const std::string& path) {
     auto child = std::make_shared<Device>(_conn, _bus_name, path);
+    child->on_signal_received.load([this, child]() { _on_device_updated(child); });
     return std::static_pointer_cast<SimpleDBus::Proxy>(child);
 }
 
@@ -70,18 +71,17 @@ std::vector<std::shared_ptr<Device>> Adapter::device_paired_get() {
 }
 
 void Adapter::set_on_device_updated(std::function<void(std::shared_ptr<Device> device)> callback) {
-    auto on_device_updated = [this, callback](std::string child_path) {
+    _on_device_updated.load(callback);
+
+    on_child_created.load([this, callback](std::string child_path) {
         auto device = device_get(child_path);
         if (device) {
-            callback(device);
+            _on_device_updated(device);
         }
-    };
-
-    on_child_created.load(on_device_updated);
-    on_child_signal_received.load(on_device_updated);
+    });
 }
 
 void Adapter::clear_on_device_updated() {
+    _on_device_updated.unload();
     on_child_created.unload();
-    on_child_signal_received.unload();
 }

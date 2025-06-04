@@ -18,6 +18,8 @@ project(
 # Run prelude script to set up environment
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/epilogue.cmake)
 
+include(GNUInstallDirs)
+
 find_package(DBus1 REQUIRED)
 
 if(NOT DEFINED SIMPLEDBUS_SANITIZE AND DEFINED SIMPLEBLUEZ_SANITIZE)
@@ -39,16 +41,17 @@ set(SIMPLEBLUEZ_INCLUDE
     ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/external)
 
 set(SIMPLEBLUEZ_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ProxyOrg.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Agent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Device.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Characteristic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ProxyOrgBluez.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Service.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Adapter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Bluez.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/BluezRoot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/BluezOrg.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/BluezOrgBluez.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Descriptor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Adapter1.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Agent1.cpp
@@ -116,8 +119,6 @@ apply_build_options(simplebluez
     "${PRIVATE_LINK_OPTIONS}"
     "${PUBLIC_LINK_OPTIONS}")
 
-include(GNUInstallDirs)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simplebluez.pc.in
             ${CMAKE_CURRENT_BINARY_DIR}/simplebluez.pc @ONLY)
 
@@ -144,6 +145,12 @@ install(
 install(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/include/simpledbus/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpledbus)
+
+install(
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/kvn_safe_callback.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/logfwd.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/kvn)
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/simplebluez.pc

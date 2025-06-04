@@ -3,6 +3,7 @@
 #include <simpledbus/advanced/Proxy.h>
 #include <simpledbus/interfaces/ObjectManager.h>
 
+#include <simplebluez/BluezRoot.h>
 #include <simplebluez/Adapter.h>
 #include <simplebluez/Agent.h>
 
@@ -10,10 +11,16 @@
 
 namespace SimpleBluez {
 
-class Bluez : public SimpleDBus::Proxy {
+class Bluez {
   public:
     Bluez();
     virtual ~Bluez();
+
+    // Delete copy and move operations
+    Bluez(const Bluez&) = delete;
+    Bluez& operator=(const Bluez&) = delete;
+    Bluez(Bluez&&) = delete;
+    Bluez& operator=(Bluez&&) = delete;
 
     void init();
     void run_async();
@@ -23,11 +30,8 @@ class Bluez : public SimpleDBus::Proxy {
     void register_agent();
 
   private:
-    std::shared_ptr<SimpleDBus::Proxy> path_create(const std::string& path) override;
-
-    std::shared_ptr<SimpleDBus::ObjectManager> object_manager();
-
-    std::shared_ptr<Agent> _agent;
+    std::shared_ptr<SimpleDBus::Connection> _conn;
+    std::shared_ptr<SimpleBluez::BluezRoot> _bluez_root;
 };
 
 }  // namespace SimpleBluez

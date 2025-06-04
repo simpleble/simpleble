@@ -18,6 +18,8 @@ project(
 # Run prelude script to set up environment
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/epilogue.cmake)
 
+include(GNUInstallDirs)
+
 find_package(DBus1 REQUIRED)
 
 # Load all variables that would eventually need to be exposed to downstream projects
@@ -55,9 +57,9 @@ set_target_properties(
 
 list(APPEND PRIVATE_COMPILE_DEFINITIONS SIMPLEDBUS_LOG_LEVEL=${SIMPLEDBUS_LOG_LEVEL})
 
-target_link_libraries(simpledbus PUBLIC ${DBus1_LIBRARIES})
-
 target_compile_definitions(simpledbus PRIVATE FMT_HEADER_ONLY)
+
+target_link_libraries(simpledbus PUBLIC ${DBus1_LIBRARIES})
 
 target_include_directories(simpledbus PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(simpledbus PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/external)
@@ -71,13 +73,13 @@ target_include_directories(simpledbus INTERFACE
 
 append_sanitize_options("${SIMPLEDBUS_SANITIZE}")
 
+set_property(TARGET simpledbus PROPERTY INSTALL_RPATH $ORIGIN)
+
 apply_build_options(simpledbus
     "${PRIVATE_COMPILE_DEFINITIONS}"
     "${PRIVATE_COMPILE_OPTIONS}"
     "${PRIVATE_LINK_OPTIONS}"
     "${PUBLIC_LINK_OPTIONS}")
-
-include(GNUInstallDirs)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpledbus.pc.in
             ${CMAKE_CURRENT_BINARY_DIR}/simpledbus.pc @ONLY)
