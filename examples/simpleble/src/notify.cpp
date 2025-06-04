@@ -54,7 +54,9 @@ int main() {
     std::vector<std::pair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID>> uuids;
     for (auto service : peripheral.services()) {
         for (auto characteristic : service.characteristics()) {
-            uuids.push_back(std::make_pair(service.uuid(), characteristic.uuid()));
+            if (characteristic.can_notify()) {
+                uuids.push_back(std::make_pair(service.uuid(), characteristic.uuid()));
+            }
         }
     }
 
@@ -63,7 +65,7 @@ int main() {
         std::cout << "[" << i << "] " << uuids[i].first << " " << uuids[i].second << std::endl;
     }
 
-    selection = Utils::getUserInputInt("Please select a characteristic to read", uuids.size() - 1);
+    selection = Utils::getUserInputInt("Please select a characteristic to notify", uuids.size() - 1);
 
     if (!selection.has_value()) {
         return EXIT_FAILURE;
