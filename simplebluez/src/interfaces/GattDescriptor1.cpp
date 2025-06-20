@@ -4,10 +4,12 @@ using namespace SimpleBluez;
 
 const SimpleDBus::AutoRegister<GattDescriptor1> GattDescriptor1::registry{
     "org.bluez.GattDescriptor1",
-    [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path,
-       const SimpleDBus::Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {
+    // clang-format off
+    [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path, const SimpleDBus::Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {
         return std::static_pointer_cast<SimpleDBus::Interface>(std::make_shared<GattDescriptor1>(conn, path));
-    }};
+    }
+    // clang-format on
+};
 
 GattDescriptor1::GattDescriptor1(std::shared_ptr<SimpleDBus::Connection> conn, std::string path)
     : SimpleDBus::Interface(conn, "org.bluez", path, "org.bluez.GattDescriptor1") {}
