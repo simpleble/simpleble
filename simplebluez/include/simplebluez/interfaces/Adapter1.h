@@ -1,6 +1,7 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
+#include <simpledbus/advanced/Registry.h>
 
 #include <optional>
 #include <string>
@@ -40,6 +41,9 @@ class Adapter1 : public SimpleDBus::Interface {
 
   protected:
     void property_changed(std::string option_name) override;
+
+  private:
+    static const SimpleDBus::AutoRegister<Adapter1> registry;
 };
 
 }  // namespace SimpleBluez

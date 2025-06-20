@@ -1,8 +1,9 @@
 #include "simpledbus/advanced/Proxy.h"
 
+#include <simpledbus/advanced/Registry.h>
 #include <simpledbus/base/Exceptions.h>
-#include <simpledbus/base/Path.h>
 #include <simpledbus/base/Logging.h>
+#include <simpledbus/base/Path.h>
 #include <algorithm>
 
 // #include <simpledbus/interfaces/Properties.h>
@@ -12,14 +13,15 @@ using namespace SimpleDBus;
 Proxy::Proxy(std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path)
     : _conn(conn), _bus_name(bus_name), _path(path), _valid(true), _registered(false) {
     // TODO: UNCOMMENT THIS WHEN MIGRATING TO NEW PROXY FORWARDING LOGIC
-    //register_object_path();
+    // register_object_path();
 
-    //_interfaces.emplace(std::make_pair("org.freedesktop.DBus.Properties", std::make_shared<Properties>(conn, bus_name, path)));
+    //_interfaces.emplace(std::make_pair("org.freedesktop.DBus.Properties", std::make_shared<Properties>(conn, bus_name,
+    //path)));
 }
 
 Proxy::~Proxy() {
     // TODO: UNCOMMENT THIS WHEN MIGRATING TO NEW PROXY FORWARDING LOGIC
-    //unregister_object_path();
+    // unregister_object_path();
     on_child_created.unload();
     on_signal_received.unload();
 }
@@ -37,7 +39,7 @@ bool Proxy::valid() const { return _valid; }
 void Proxy::invalidate() {
     _valid = false;
     // TODO: UNCOMMENT THIS WHEN MIGRATING TO NEW PROXY FORWARDING LOGIC
-    //unregister_object_path();
+    // unregister_object_path();
 }
 
 std::string Proxy::path() const { return _path; }
@@ -51,7 +53,8 @@ const std::map<std::string, std::shared_ptr<Interface>>& Proxy::interfaces() { r
 // ----- PATH HANDLING -----
 
 void Proxy::register_object_path() {
-    if (!_registered && _conn && _conn->register_object_path(_path, [this](Message& msg) { this->message_handle(msg); })) {
+    if (!_registered && _conn &&
+        _conn->register_object_path(_path, [this](Message& msg) { this->message_handle(msg); })) {
         _registered = true;
     }
 }
@@ -61,7 +64,6 @@ void Proxy::unregister_object_path() {
         _registered = false;
     }
 }
-
 
 // ----- INTROSPECTION -----
 
@@ -104,10 +106,11 @@ void Proxy::interfaces_load(Holder managed_interfaces) {
     for (auto& [iface_name, options] : managed_interface) {
         // If the interface has not been loaded, load it
         if (!interface_exists(iface_name)) {
-            _interfaces.emplace(std::make_pair(iface_name, interfaces_create(iface_name)));
+            _interfaces.emplace(std::make_pair(
+                iface_name, Registry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
+        } else {
+            _interfaces[iface_name]->load(options);
         }
-
-        _interfaces[iface_name]->load(options);
     }
 }
 
@@ -357,7 +360,7 @@ void Proxy::message_forward(Message& msg) {
 void Proxy::message_handle(Message& msg) {
     bool handled = false;
 
-   if (interface_exists(msg.get_interface())) {
+    if (interface_exists(msg.get_interface())) {
         interface_get(msg.get_interface())->message_handle(msg);
         handled = true;
     }

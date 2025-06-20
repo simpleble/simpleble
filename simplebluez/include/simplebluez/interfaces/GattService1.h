@@ -1,7 +1,7 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
-
+#include <simpledbus/advanced/Registry.h>
 #include <string>
 
 namespace SimpleBluez {
@@ -20,6 +20,9 @@ class GattService1 : public SimpleDBus::Interface {
     void property_changed(std::string option_name) override;
 
     std::string _uuid;
+
+  private:
+    static const SimpleDBus::AutoRegister<GattService1> registry;
 };
 
 }  // namespace SimpleBluez

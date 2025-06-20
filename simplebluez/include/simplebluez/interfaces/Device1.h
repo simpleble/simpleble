@@ -1,6 +1,8 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
+#include <simpledbus/advanced/Registry.h>
+
 #include "kvn/kvn_safe_callback.hpp"
 
 #include <string>
@@ -52,6 +54,9 @@ class Device1 : public SimpleDBus::Interface {
     bool _services_resolved;
     std::map<uint16_t, ByteArray> _manufacturer_data;
     std::map<std::string, ByteArray> _service_data;
+
+  private:
+    static const SimpleDBus::AutoRegister<Device1> registry;
 };
 
 }  // namespace SimpleBluez

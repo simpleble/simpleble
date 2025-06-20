@@ -1,6 +1,8 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
+#include <simpledbus/advanced/Registry.h>
+
 #include "kvn/kvn_safe_callback.hpp"
 
 #include <simplebluez/Types.h>
@@ -31,6 +33,9 @@ class GattDescriptor1 : public SimpleDBus::Interface {
 
     std::string _uuid;
     ByteArray _value;
+
+  private:
+    static const SimpleDBus::AutoRegister<GattDescriptor1> registry;
 };
 
 }  // namespace SimpleBluez

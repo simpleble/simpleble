@@ -2,6 +2,13 @@
 
 using namespace SimpleBluez;
 
+const SimpleDBus::AutoRegister<Agent1> Agent1::registry{
+    "org.bluez.Agent1",
+    [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path,
+       const SimpleDBus::Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {
+        return std::static_pointer_cast<SimpleDBus::Interface>(std::make_shared<Agent1>(conn, path));
+    }};
+
 Agent1::Agent1(std::shared_ptr<SimpleDBus::Connection> conn, std::string path)
     : SimpleDBus::Interface(conn, "org.bluez", path, "org.bluez.Agent1") {}
 

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
+#include <simpledbus/advanced/Registry.h>
+
 #include "kvn/kvn_safe_callback.hpp"
 
 #include <cstdint>
@@ -90,6 +92,9 @@ class Agent1 : public SimpleDBus::Interface {
     void message_handle(SimpleDBus::Message& msg) override;
 
     void reply_error(SimpleDBus::Message& msg, const std::string& error_name, const std::string& error_message);
+
+  private:
+    static const SimpleDBus::AutoRegister<Agent1> registry;
 };
 
 }  // namespace SimpleBluez
