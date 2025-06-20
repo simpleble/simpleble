@@ -26,10 +26,6 @@ Proxy::~Proxy() {
     on_signal_received.unload();
 }
 
-std::shared_ptr<Interface> Proxy::interfaces_create(const std::string& name) {
-    return std::make_shared<Interface>(_conn, _bus_name, _path, name);
-}
-
 std::shared_ptr<Proxy> Proxy::path_create(const std::string& path) {
     return std::make_shared<Proxy>(_conn, _bus_name, path);
 }
@@ -106,8 +102,12 @@ void Proxy::interfaces_load(Holder managed_interfaces) {
     for (auto& [iface_name, options] : managed_interface) {
         // If the interface has not been loaded, load it
         if (!interface_exists(iface_name)) {
-            _interfaces.emplace(std::make_pair(
-                iface_name, Registry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
+            if (Registry::getInstance().isRegistered(iface_name)) {
+                _interfaces.emplace(std::make_pair(
+                    iface_name, Registry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
+            } else {
+                LOG_WARN("Interface {} not registered within SimpleDBus", iface_name);
+            }
         } else {
             _interfaces[iface_name]->load(options);
         }

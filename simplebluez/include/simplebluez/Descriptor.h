@@ -27,8 +27,6 @@ class Descriptor : public SimpleDBus::Proxy {
     void clear_on_value_changed();
 
   private:
-    std::shared_ptr<SimpleDBus::Interface> interfaces_create(const std::string& interface_name) override;
-
     std::shared_ptr<GattDescriptor1> gattdescriptor1();
 };
 

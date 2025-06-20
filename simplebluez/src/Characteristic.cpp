@@ -15,15 +15,6 @@ std::shared_ptr<SimpleDBus::Proxy> Characteristic::path_create(const std::string
     return std::static_pointer_cast<SimpleDBus::Proxy>(child);
 }
 
-std::shared_ptr<SimpleDBus::Interface> Characteristic::interfaces_create(const std::string& interface_name) {
-    if (interface_name == "org.bluez.GattCharacteristic1") {
-        return std::static_pointer_cast<SimpleDBus::Interface>(std::make_shared<GattCharacteristic1>(_conn, _path));
-    }
-
-    auto interface = std::make_shared<SimpleDBus::Interface>(_conn, _bus_name, _path, interface_name);
-    return std::static_pointer_cast<SimpleDBus::Interface>(interface);
-}
-
 std::vector<std::shared_ptr<Descriptor>> Characteristic::descriptors() { return children_casted<Descriptor>(); }
 
 std::shared_ptr<GattCharacteristic1> Characteristic::gattcharacteristic1() {

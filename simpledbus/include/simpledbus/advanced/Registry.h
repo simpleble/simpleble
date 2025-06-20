@@ -31,6 +31,10 @@ class Registry {
         creators[key] = creator;
     }
 
+    bool isRegistered(const std::string& key) const {
+        return creators.find(key) != creators.end();
+    }
+
     // NOTES; We need a method inside Interfaces that will automatically retrieve the Interface name for the class.
     std::shared_ptr<Interface> create(const std::string& key, std::shared_ptr<Connection> conn,
                                       const std::string& bus_name, const std::string& path,

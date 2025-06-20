@@ -18,7 +18,3 @@ std::shared_ptr<SimpleDBus::Proxy> BluezOrg::path_create(const std::string& path
     auto child = std::make_shared<BluezOrgBluez>(_conn, _bus_name, path);
     return std::static_pointer_cast<SimpleDBus::Proxy>(child);
 }
-
-std::shared_ptr<SimpleDBus::Interface> BluezOrg::interfaces_create(const std::string& interface_name) {
-    return std::make_shared<SimpleDBus::Interface>(_conn, _bus_name, _path, interface_name);
-}
