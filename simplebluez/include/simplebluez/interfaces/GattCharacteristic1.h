@@ -1,7 +1,7 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
-#include <simpledbus/advanced/Registry.h>
+#include <simpledbus/advanced/InterfaceRegistry.h>
 
 #include "kvn/kvn_safe_callback.hpp"
 
@@ -42,7 +42,7 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     ByteArray _value;
 
   private:
-    static const SimpleDBus::AutoRegister<GattCharacteristic1> registry;
+    static const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> registry;
 };
 
 }  // namespace SimpleBluez

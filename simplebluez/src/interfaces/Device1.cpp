@@ -2,7 +2,7 @@
 
 using namespace SimpleBluez;
 
-const SimpleDBus::AutoRegister<Device1> Device1::registry{
+const SimpleDBus::AutoRegisterInterface<Device1> Device1::registry{
     "org.bluez.Device1",
     // clang-format off
     [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path, const SimpleDBus::Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {

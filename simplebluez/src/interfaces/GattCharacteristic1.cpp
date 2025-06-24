@@ -2,7 +2,7 @@
 
 using namespace SimpleBluez;
 
-const SimpleDBus::AutoRegister<GattCharacteristic1> GattCharacteristic1::registry{
+const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> GattCharacteristic1::registry{
     "org.bluez.GattCharacteristic1",
     // clang-format off
     [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path, const SimpleDBus::Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {

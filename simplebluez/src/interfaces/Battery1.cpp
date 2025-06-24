@@ -4,7 +4,7 @@
 
 using namespace SimpleBluez;
 
-const SimpleDBus::AutoRegister<Battery1> Battery1::registry{
+const SimpleDBus::AutoRegisterInterface<Battery1> Battery1::registry{
     "org.bluez.Battery1",
     // clang-format off
     [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path, const SimpleDBus::Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {

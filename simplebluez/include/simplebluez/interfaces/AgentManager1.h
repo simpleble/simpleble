@@ -1,7 +1,7 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
-#include <simpledbus/advanced/Registry.h>
+#include <simpledbus/advanced/InterfaceRegistry.h>
 
 #include <string>
 
@@ -18,7 +18,7 @@ class AgentManager1 : public SimpleDBus::Interface {
     void UnregisterAgent(std::string agent);
 
   private:
-    static const SimpleDBus::AutoRegister<AgentManager1> registry;
+    static const SimpleDBus::AutoRegisterInterface<AgentManager1> registry;
 };
 
 }  // namespace SimpleBluez

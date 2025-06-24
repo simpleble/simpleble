@@ -1,7 +1,7 @@
 #pragma once
 
 #include <simpledbus/advanced/Interface.h>
-#include <simpledbus/advanced/Registry.h>
+#include <simpledbus/advanced/InterfaceRegistry.h>
 
 #include "kvn/kvn_safe_callback.hpp"
 
@@ -26,7 +26,7 @@ class Battery1 : public SimpleDBus::Interface {
     void property_changed(std::string option_name) override;
 
   private:
-    static const SimpleDBus::AutoRegister<Battery1> registry;
+    static const SimpleDBus::AutoRegisterInterface<Battery1> registry;
 };
 
 }  // namespace SimpleBluez

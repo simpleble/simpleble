@@ -1,6 +1,6 @@
 #include "simpledbus/advanced/Proxy.h"
 
-#include <simpledbus/advanced/Registry.h>
+#include <simpledbus/advanced/InterfaceRegistry.h>
 #include <simpledbus/base/Exceptions.h>
 #include <simpledbus/base/Logging.h>
 #include <simpledbus/base/Path.h>
@@ -102,9 +102,9 @@ void Proxy::interfaces_load(Holder managed_interfaces) {
     for (auto& [iface_name, options] : managed_interface) {
         // If the interface has not been loaded, load it
         if (!interface_exists(iface_name)) {
-            if (Registry::getInstance().isRegistered(iface_name)) {
+            if (InterfaceRegistry::getInstance().isRegistered(iface_name)) {
                 _interfaces.emplace(std::make_pair(
-                    iface_name, Registry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
+                    iface_name, InterfaceRegistry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
             } else {
                 LOG_WARN("Interface {} not registered within SimpleDBus", iface_name);
             }

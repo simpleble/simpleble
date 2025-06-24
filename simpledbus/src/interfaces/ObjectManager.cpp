@@ -2,7 +2,7 @@
 
 using namespace SimpleDBus;
 
-const AutoRegister<ObjectManager> ObjectManager::registry{
+const AutoRegisterInterface<ObjectManager> ObjectManager::registry{
     "org.freedesktop.DBus.ObjectManager",
     // clang-format off
     [](std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path, const Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {

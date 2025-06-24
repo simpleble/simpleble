@@ -18,10 +18,10 @@ class Interface;
 using CreatorFunction = std::shared_ptr<Interface> (*)(std::shared_ptr<Connection>, const std::string&,
                                                        const std::string&, const Holder&);
 
-class Registry {
+class InterfaceRegistry {
   public:
-    static Registry& getInstance() {
-        static Registry instance;
+    static InterfaceRegistry& getInstance() {
+        static InterfaceRegistry instance;
         return instance;
     }
 
@@ -50,14 +50,14 @@ class Registry {
 
   private:
     std::unordered_map<std::string, CreatorFunction> creators;
-    Registry() = default;
+    InterfaceRegistry() = default;
 };
 
 template <typename T>
-struct AutoRegister {
-    AutoRegister(const std::string& key, CreatorFunction creator) {
+struct AutoRegisterInterface {
+    AutoRegisterInterface(const std::string& key, CreatorFunction creator) {
         static_assert(std::is_base_of<Interface, T>::value, "T must inherit from Interface");
-        Registry::getInstance().registerClass<T>(key, creator);
+        InterfaceRegistry::getInstance().registerClass<T>(key, creator);
         fmt::print("Registered class with key {}\n", key);
     }
 };
