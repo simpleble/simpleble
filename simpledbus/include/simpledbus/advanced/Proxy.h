@@ -91,7 +91,7 @@ class Proxy {
         std::vector<std::shared_ptr<T>> result;
         std::scoped_lock lock(_child_access_mutex);
         for (auto& [path, child] : _children) {
-            const std::string next_child = SimpleDBus::Path::next_child_strip(_path, path);
+            const std::string next_child = SimpleDBus::PathUtils::next_child_strip(_path, path);
             if (next_child.find(prefix) == 0) {
                 result.push_back(std::dynamic_pointer_cast<T>(child));
             }
@@ -112,6 +112,8 @@ class Proxy {
 
     std::recursive_mutex _interface_access_mutex;
     std::recursive_mutex _child_access_mutex;
+
+    static std::map<Path, std::unordered_map<std::string, std::shared_ptr<Interface>>> _global_interfaces;
 };
 
 }  // namespace SimpleDBus

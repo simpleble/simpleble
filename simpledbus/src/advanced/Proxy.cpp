@@ -160,7 +160,7 @@ std::shared_ptr<Proxy> Proxy::path_get(const std::string& path) {
 
 void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfaces) {
     // If the path is not a child of the current path, then we can't add it.
-    if (!Path::is_descendant(_path, path)) {
+    if (!PathUtils::is_descendant(_path, path)) {
         // TODO: Should an exception be thrown here?
         return;
     }
@@ -174,7 +174,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
     // As children will be extensively accessed, we need to lock the child access mutex.
     std::scoped_lock lock(_child_access_mutex);
 
-    if (Path::is_child(_path, path)) {
+    if (PathUtils::is_child(_path, path)) {
         // If the path is a direct child of the proxy path, create a new proxy for it.
         std::shared_ptr<Proxy> child = path_create(path);
         child->interfaces_load(managed_interfaces);
@@ -185,7 +185,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
         auto child_result = std::find_if(
             _children.begin(), _children.end(),
             [path](const std::pair<std::string, std::shared_ptr<Proxy>>& child_data) -> bool {
-                return Path::is_descendant(child_data.first, path);
+                return PathUtils::is_descendant(child_data.first, path);
             });
 
         if (child_result != _children.end()) {
@@ -194,7 +194,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
         } else {
             // If there is no child proxy for the new path, create the child and forward the path to it.
             // This path will be taken if an empty proxy object needs to be created for an intermediate path.
-            std::string child_path = Path::next_child(_path, path);
+            std::string child_path = PathUtils::next_child(_path, path);
             std::shared_ptr<Proxy> child = path_create(child_path);
             _children.emplace(std::make_pair(child_path, child));
             child->path_add(path, managed_interfaces);
@@ -213,7 +213,7 @@ bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
     }
 
     // If the path is not the current path nor a descendant, then there's nothing to do
-    if (!Path::is_descendant(_path, path)) {
+    if (!PathUtils::is_descendant(_path, path)) {
         return false;
     }
 
@@ -221,7 +221,7 @@ bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
     std::scoped_lock lock(_child_access_mutex);
 
     // If the path is a direct child of the proxy path, forward the request to the child proxy.
-    std::string child_path = Path::next_child(_path, path);
+    std::string child_path = PathUtils::next_child(_path, path);
     if (path_exists(child_path)) {
         bool must_erase = _children.at(child_path)->path_remove(path, options);
 
@@ -289,7 +289,7 @@ void Proxy::path_append_child(const std::string& path, std::shared_ptr<Proxy> ch
     // ! This function is used to manually add children to the proxy.
 
     // If the provided path is not a child of the current path, return silently.
-    if (!Path::is_child(_path, path)) {
+    if (!PathUtils::is_child(_path, path)) {
         // TODO: Should an exception be thrown here?
         return;
     }
@@ -303,7 +303,7 @@ void Proxy::path_remove_child(const std::string& path) {
     // ! This function is used to manually add children to the proxy.
 
     // If the provided path is not a child of the current path, return silently.
-    if (!Path::is_child(_path, path)) {
+    if (!PathUtils::is_child(_path, path)) {
         // TODO: Should an exception be thrown here?
         return;
     }
@@ -350,7 +350,7 @@ void Proxy::message_forward(Message& msg) {
             }
 
             return;
-        } else if (Path::is_descendant(child_path, msg.get_path())) {
+        } else if (PathUtils::is_descendant(child_path, msg.get_path())) {
             child->message_forward(msg);
             return;
         }
