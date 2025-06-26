@@ -7,18 +7,14 @@ namespace SimpleDBus {
 
 class Path {
   public:
-    // Constructor with path string, validates input
     explicit Path(const std::string& path = "/");
 
-    // Get the underlying path string
-    std::string str() const { return _path; }
+    operator std::string() const { return _path; }
 
-    // Comparison operators for std::map
     bool operator<(const Path& other) const { return _path < other._path; }
     bool operator==(const Path& other) const { return _path == other._path; }
     bool operator!=(const Path& other) const { return !(*this == other); }
 
-    // Member functions delegating to PathUtils
     size_t count_elements() const;
     std::string fetch_elements(size_t count) const;
     std::vector<std::string> split_elements() const;
