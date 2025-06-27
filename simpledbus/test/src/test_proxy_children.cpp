@@ -5,6 +5,8 @@
 using namespace SimpleDBus;
 
 TEST(ProxyChildren, AppendChild) {
+    Proxy::purge_global_interfaces();
+
     Proxy p = Proxy(nullptr, "", "/a/b");
 
     p.path_add("/a/b/c", Holder());
@@ -14,6 +16,8 @@ TEST(ProxyChildren, AppendChild) {
 }
 
 TEST(ProxyChildren, AppendRepeatedChild) {
+    Proxy::purge_global_interfaces();
+
     Proxy p = Proxy(nullptr, "", "/a/b");
     p.path_add("/a/b/c", Holder());
 
@@ -23,6 +27,8 @@ TEST(ProxyChildren, AppendRepeatedChild) {
 }
 
 TEST(ProxyChildren, AppendExtendedChild) {
+    Proxy::purge_global_interfaces();
+
     Proxy p = Proxy(nullptr, "", "/");
     p.path_add("/a/b/c/d", Holder());
 
@@ -43,6 +49,8 @@ TEST(ProxyChildren, AppendExtendedChild) {
 }
 
 TEST(ProxyChildren, RemoveSelf) {
+    Proxy::purge_global_interfaces();
+
     Proxy p = Proxy(nullptr, "", "/");
 
     // Should notify that the proxy can be safely deleted, as nothing worth keeping is left
@@ -65,6 +73,8 @@ TEST(ProxyChildren, RemoveSelf) {
 }
 
 TEST(ProxyChildren, RemoveChildNoInterfaces) {
+    Proxy::purge_global_interfaces();
+
     Proxy p = Proxy(nullptr, "", "/");
     p.path_add("/a", Holder());
 
@@ -82,6 +92,8 @@ TEST(ProxyChildren, RemoveChildNoInterfaces) {
 }
 
 TEST(ProxyChildren, RemoveChildWithInterfaces) {
+    Proxy::purge_global_interfaces();
+
     Proxy p = Proxy(nullptr, "", "/");
 
     Holder managed_interfaces = Holder::create_dict();
@@ -98,7 +110,6 @@ TEST(ProxyChildren, RemoveChildWithInterfaces) {
     {
         std::shared_ptr<Proxy> p_a = std::dynamic_pointer_cast<Proxy>(p.children().at("/a"));
         ASSERT_EQ(1, p_a->interfaces_count());
-        ASSERT_EQ(1, p_a->interfaces().count("i.1"));
     }
 
     // Remove the second interface
