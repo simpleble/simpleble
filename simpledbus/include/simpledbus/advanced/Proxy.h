@@ -99,6 +99,12 @@ class Proxy {
         return result;
     }
 
+    // NOTE: This method is used only for testing purposes.
+    static void purge_global_interfaces() {
+        std::scoped_lock lock(_global_interfaces_mutex);
+        _global_interfaces.clear();
+    }
+
   protected:
     bool _valid;
     bool _registered;
@@ -107,13 +113,12 @@ class Proxy {
 
     std::shared_ptr<Connection> _conn;
 
-    std::map<std::string, std::shared_ptr<Interface>> _interfaces;
     std::map<std::string, std::shared_ptr<Proxy>> _children;
 
-    std::recursive_mutex _interface_access_mutex;
     std::recursive_mutex _child_access_mutex;
 
     static std::map<Path, std::unordered_map<std::string, std::shared_ptr<Interface>>> _global_interfaces;
+    static std::recursive_mutex _global_interfaces_mutex;
 };
 
 }  // namespace SimpleDBus

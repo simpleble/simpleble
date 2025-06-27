@@ -6,9 +6,14 @@
 #include <simpledbus/base/Path.h>
 #include <algorithm>
 
+#include <fmt/core.h>
+
 // #include <simpledbus/interfaces/Properties.h>
 
 using namespace SimpleDBus;
+
+std::map<Path, std::unordered_map<std::string, std::shared_ptr<Interface>>> Proxy::_global_interfaces;
+std::recursive_mutex Proxy::_global_interfaces_mutex;
 
 Proxy::Proxy(std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path)
     : _conn(conn), _bus_name(bus_name), _path(path), _valid(true), _registered(false) {
@@ -44,8 +49,6 @@ std::string Proxy::bus_name() const { return _bus_name; }
 
 const std::map<std::string, std::shared_ptr<Proxy>>& Proxy::children() { return _children; }
 
-const std::map<std::string, std::shared_ptr<Interface>>& Proxy::interfaces() { return _interfaces; }
-
 // ----- PATH HANDLING -----
 
 void Proxy::register_object_path() {
@@ -72,22 +75,27 @@ std::string Proxy::introspect() {
 // ----- INTERFACE HANDLING -----
 
 bool Proxy::interface_exists(const std::string& name) {
-    std::scoped_lock lock(_interface_access_mutex);
-    return _interfaces.find(name) != _interfaces.end();
+    std::scoped_lock lock(_global_interfaces_mutex);
+    return _global_interfaces[Path(_path)].find(name) != _global_interfaces[Path(_path)].end();
 }
 
 std::shared_ptr<Interface> Proxy::interface_get(const std::string& name) {
-    std::scoped_lock lock(_interface_access_mutex);
-    if (!interface_exists(name)) {
-        throw Exception::InterfaceNotFoundException(_path, name);
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
+    auto iface_it = path_interfaces.find(name);
+    if (iface_it != path_interfaces.end()) {
+        return iface_it->second;
     }
-    return _interfaces[name];
+    throw Exception::InterfaceNotFoundException(_path, name);
 }
 
 size_t Proxy::interfaces_count() {
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
     size_t count = 0;
-    std::scoped_lock lock(_interface_access_mutex);
-    for (auto& [iface_name, interface] : _interfaces) {
+    for (auto& [iface_name, interface] : path_interfaces) {
         if (interface->is_loaded()) {
             count++;
         }
@@ -98,25 +106,30 @@ size_t Proxy::interfaces_count() {
 void Proxy::interfaces_load(Holder managed_interfaces) {
     auto managed_interface = managed_interfaces.get_dict_string();
 
-    std::scoped_lock lock(_interface_access_mutex);
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
     for (auto& [iface_name, options] : managed_interface) {
-        // If the interface has not been loaded, load it
-        if (!interface_exists(iface_name)) {
+        auto iface_it = path_interfaces.find(iface_name);
+        if (iface_it == path_interfaces.end()) {
+            // Interface doesn't exist, create it
             if (InterfaceRegistry::getInstance().isRegistered(iface_name)) {
-                _interfaces.emplace(std::make_pair(
-                    iface_name, InterfaceRegistry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
+                auto interface = InterfaceRegistry::getInstance().create(iface_name, _conn, _bus_name, _path, options);
+                path_interfaces[iface_name] = interface;
             } else {
                 LOG_WARN("Interface {} not registered within SimpleDBus", iface_name);
             }
         } else {
-            _interfaces[iface_name]->load(options);
+            // Interface exists, reload it
+            iface_it->second->load(options);
         }
     }
 }
 
 void Proxy::interfaces_reload(Holder managed_interfaces) {
-    std::scoped_lock lock(_interface_access_mutex);
-    for (auto& [iface_name, interface] : _interfaces) {
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+    for (auto& [iface_name, interface] : path_interfaces) {
         interface->unload();
     }
 
@@ -124,18 +137,22 @@ void Proxy::interfaces_reload(Holder managed_interfaces) {
 }
 
 void Proxy::interfaces_unload(SimpleDBus::Holder removed_interfaces) {
-    std::scoped_lock lock(_interface_access_mutex);
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
     for (auto& option : removed_interfaces.get_array()) {
         std::string iface_name = option.get_string();
-        if (interface_exists(iface_name)) {
-            _interfaces[iface_name]->unload();
+        auto iface_it = path_interfaces.find(iface_name);
+        if (iface_it != path_interfaces.end()) {
+            iface_it->second->unload();
         }
     }
 }
 
 bool Proxy::interfaces_loaded() {
-    std::scoped_lock lock(_interface_access_mutex);
-    for (auto& [iface_name, interface] : _interfaces) {
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
+    for (auto& [iface_name, interface] : path_interfaces) {
         if (interface->is_loaded()) {
             return true;
         }
@@ -253,6 +270,10 @@ bool Proxy::path_prune() {
     // For self to be pruned, the following conditions must be met:
     // 1. The proxy has no children
     // 2. The proxy has no interfaces or all interfaces are disabled.
+
+    fmt::print("Prune: {} children, {} interfaces\n", _children.size(), interfaces_count());
+    fmt::print("Interfaces: {}\n", interfaces_loaded());
+
     if (_children.empty() && !interfaces_loaded()) {
         return true;
     }
@@ -264,9 +285,14 @@ Holder Proxy::path_collect() {
     SimpleDBus::Holder result = SimpleDBus::Holder::create_dict();
     SimpleDBus::Holder interfaces = SimpleDBus::Holder::create_dict();
 
-    for (const auto& [interface_name, interface_ptr] : _interfaces) {
-        SimpleDBus::Holder properties = interface_ptr->property_collect();
-        interfaces.dict_append(SimpleDBus::Holder::Type::STRING, interface_name, std::move(properties));
+    // Use global interfaces instead of local _interfaces
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto path_it = _global_interfaces.find(Path(_path));
+    if (path_it != _global_interfaces.end()) {
+        for (const auto& [interface_name, interface_ptr] : path_it->second) {
+            SimpleDBus::Holder properties = interface_ptr->property_collect();
+            interfaces.dict_append(SimpleDBus::Holder::Type::STRING, interface_name, std::move(properties));
+        }
     }
 
     if (!interfaces.get_dict_string().empty()) {

@@ -6,8 +6,13 @@ using namespace SimpleBluez;
 
 Agent::Agent(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path)
     : Proxy(conn, bus_name, path) {
-    _interfaces.emplace(std::make_pair(
-        "org.bluez.Agent1", std::static_pointer_cast<SimpleDBus::Interface>(std::make_shared<Agent1>(_conn, _path))));
+
+    {
+        std::scoped_lock lock(_global_interfaces_mutex);
+        auto& path_interfaces = _global_interfaces[SimpleDBus::Path(_path)];
+        path_interfaces.emplace(std::make_pair(
+            "org.bluez.Agent1", std::static_pointer_cast<SimpleDBus::Interface>(std::make_shared<Agent1>(_conn, _path))));
+    }
 }
 
 std::string Agent::capabilities() const {
