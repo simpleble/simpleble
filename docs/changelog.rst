@@ -15,7 +15,8 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 
 **Added**
 
--
+- (Linux) Added frozen BlueZ backend in preparation for upcoming changes.
+- Configuration option to select which BlueZ backend to use.
 
 **Changed**
 
@@ -23,7 +24,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 
 **Fixed**
 
--
+- Improper handling of configuration settings when consuming SimpleBLE as a shared library.
 
 **Removed**
 

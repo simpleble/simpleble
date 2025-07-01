@@ -6,11 +6,14 @@
 
 #include "utils.hpp"
 
+#include "simpleble/Config.h"
 #include "simpleble/SimpleBLE.h"
 
 using namespace std::chrono_literals;
 
 int main() {
+    SimpleBLE::Config::SimpleBluez::use_legacy_bluez_backend = false;
+
     auto adapter_optional = Utils::getAdapter();
 
     if (!adapter_optional.has_value()) {

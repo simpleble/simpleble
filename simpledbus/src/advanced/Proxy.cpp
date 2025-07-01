@@ -220,12 +220,12 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
     }
 }
 
-bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
+bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder removed_interfaces) {
     // `options` contains an array of strings of the interfaces that need to be removed.
 
     if (path == _path) {
         invalidate();
-        interfaces_unload(options);
+        interfaces_unload(removed_interfaces);
         return path_prune();
     }
 
@@ -240,7 +240,7 @@ bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
     // If the path is a direct child of the proxy path, forward the request to the child proxy.
     std::string child_path = PathUtils::next_child(_path, path);
     if (path_exists(child_path)) {
-        bool must_erase = _children.at(child_path)->path_remove(path, options);
+        bool must_erase = _children.at(child_path)->path_remove(path, removed_interfaces);
 
         // if the child proxy is no longer needed and there is only one active instance of the child proxy,
         // then remove it.

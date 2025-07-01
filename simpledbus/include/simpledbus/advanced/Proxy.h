@@ -119,6 +119,9 @@ class Proxy {
 
     static std::map<Path, std::unordered_map<std::string, std::shared_ptr<Interface>>> _global_interfaces;
     static std::recursive_mutex _global_interfaces_mutex;
+
+    static std::map<Path, std::shared_ptr<Proxy>> _global_proxies;
+    static std::recursive_mutex _global_proxies_mutex;
 };
 
 }  // namespace SimpleDBus

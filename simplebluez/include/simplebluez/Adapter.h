@@ -5,6 +5,8 @@
 #include <simplebluez/Device.h>
 #include <simplebluez/interfaces/Adapter1.h>
 
+#include <simpledbus/advanced/ProxyRegistry.h>
+
 #include <kvn/kvn_safe_callback.hpp>
 
 #include <functional>
@@ -41,6 +43,8 @@ class Adapter : public SimpleDBus::Proxy {
     std::shared_ptr<Adapter1> adapter1();
 
     kvn::safe_callback<void(std::shared_ptr<Device> device)> _on_device_updated;
+
+    static const SimpleDBus::AutoRegisterProxy<Adapter> registry;
 };
 
 }  // namespace SimpleBluez
