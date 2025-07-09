@@ -7,6 +7,8 @@
 #include <simplebluez/interfaces/Battery1.h>
 #include <simplebluez/interfaces/Device1.h>
 
+#include <simpledbus/advanced/ProxyRegistry.h>
+
 namespace SimpleBluez {
 
 class Device : public SimpleDBus::Proxy {
@@ -59,6 +61,8 @@ class Device : public SimpleDBus::Proxy {
 
     std::shared_ptr<Device1> device1();
     std::shared_ptr<Battery1> battery1();
+
+    static const SimpleDBus::AutoRegisterProxy<Device> registry;
 };
 
 }  // namespace SimpleBluez

@@ -44,6 +44,8 @@ class InterfaceRegistry {
             iface->load(options);
             return iface;
         }
+
+        // TODO: Return a default interface.
         return nullptr;
     }
 

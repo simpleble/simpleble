@@ -6,9 +6,14 @@
 #include <simpledbus/base/Path.h>
 #include <algorithm>
 
+#include <fmt/core.h>
+
 // #include <simpledbus/interfaces/Properties.h>
 
 using namespace SimpleDBus;
+
+std::map<Path, std::unordered_map<std::string, std::shared_ptr<Interface>>> Proxy::_global_interfaces;
+std::recursive_mutex Proxy::_global_interfaces_mutex;
 
 Proxy::Proxy(std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path)
     : _conn(conn), _bus_name(bus_name), _path(path), _valid(true), _registered(false) {
@@ -44,8 +49,6 @@ std::string Proxy::bus_name() const { return _bus_name; }
 
 const std::map<std::string, std::shared_ptr<Proxy>>& Proxy::children() { return _children; }
 
-const std::map<std::string, std::shared_ptr<Interface>>& Proxy::interfaces() { return _interfaces; }
-
 // ----- PATH HANDLING -----
 
 void Proxy::register_object_path() {
@@ -72,22 +75,27 @@ std::string Proxy::introspect() {
 // ----- INTERFACE HANDLING -----
 
 bool Proxy::interface_exists(const std::string& name) {
-    std::scoped_lock lock(_interface_access_mutex);
-    return _interfaces.find(name) != _interfaces.end();
+    std::scoped_lock lock(_global_interfaces_mutex);
+    return _global_interfaces[Path(_path)].find(name) != _global_interfaces[Path(_path)].end();
 }
 
 std::shared_ptr<Interface> Proxy::interface_get(const std::string& name) {
-    std::scoped_lock lock(_interface_access_mutex);
-    if (!interface_exists(name)) {
-        throw Exception::InterfaceNotFoundException(_path, name);
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
+    auto iface_it = path_interfaces.find(name);
+    if (iface_it != path_interfaces.end()) {
+        return iface_it->second;
     }
-    return _interfaces[name];
+    throw Exception::InterfaceNotFoundException(_path, name);
 }
 
 size_t Proxy::interfaces_count() {
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
     size_t count = 0;
-    std::scoped_lock lock(_interface_access_mutex);
-    for (auto& [iface_name, interface] : _interfaces) {
+    for (auto& [iface_name, interface] : path_interfaces) {
         if (interface->is_loaded()) {
             count++;
         }
@@ -98,25 +106,30 @@ size_t Proxy::interfaces_count() {
 void Proxy::interfaces_load(Holder managed_interfaces) {
     auto managed_interface = managed_interfaces.get_dict_string();
 
-    std::scoped_lock lock(_interface_access_mutex);
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
     for (auto& [iface_name, options] : managed_interface) {
-        // If the interface has not been loaded, load it
-        if (!interface_exists(iface_name)) {
+        auto iface_it = path_interfaces.find(iface_name);
+        if (iface_it == path_interfaces.end()) {
+            // Interface doesn't exist, create it
             if (InterfaceRegistry::getInstance().isRegistered(iface_name)) {
-                _interfaces.emplace(std::make_pair(
-                    iface_name, InterfaceRegistry::getInstance().create(iface_name, _conn, _bus_name, _path, options)));
+                auto interface = InterfaceRegistry::getInstance().create(iface_name, _conn, _bus_name, _path, options);
+                path_interfaces[iface_name] = interface;
             } else {
                 LOG_WARN("Interface {} not registered within SimpleDBus", iface_name);
             }
         } else {
-            _interfaces[iface_name]->load(options);
+            // Interface exists, reload it
+            iface_it->second->load(options);
         }
     }
 }
 
 void Proxy::interfaces_reload(Holder managed_interfaces) {
-    std::scoped_lock lock(_interface_access_mutex);
-    for (auto& [iface_name, interface] : _interfaces) {
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+    for (auto& [iface_name, interface] : path_interfaces) {
         interface->unload();
     }
 
@@ -124,18 +137,22 @@ void Proxy::interfaces_reload(Holder managed_interfaces) {
 }
 
 void Proxy::interfaces_unload(SimpleDBus::Holder removed_interfaces) {
-    std::scoped_lock lock(_interface_access_mutex);
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
     for (auto& option : removed_interfaces.get_array()) {
         std::string iface_name = option.get_string();
-        if (interface_exists(iface_name)) {
-            _interfaces[iface_name]->unload();
+        auto iface_it = path_interfaces.find(iface_name);
+        if (iface_it != path_interfaces.end()) {
+            iface_it->second->unload();
         }
     }
 }
 
 bool Proxy::interfaces_loaded() {
-    std::scoped_lock lock(_interface_access_mutex);
-    for (auto& [iface_name, interface] : _interfaces) {
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto& path_interfaces = _global_interfaces[Path(_path)];
+
+    for (auto& [iface_name, interface] : path_interfaces) {
         if (interface->is_loaded()) {
             return true;
         }
@@ -160,7 +177,7 @@ std::shared_ptr<Proxy> Proxy::path_get(const std::string& path) {
 
 void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfaces) {
     // If the path is not a child of the current path, then we can't add it.
-    if (!Path::is_descendant(_path, path)) {
+    if (!PathUtils::is_descendant(_path, path)) {
         // TODO: Should an exception be thrown here?
         return;
     }
@@ -174,7 +191,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
     // As children will be extensively accessed, we need to lock the child access mutex.
     std::scoped_lock lock(_child_access_mutex);
 
-    if (Path::is_child(_path, path)) {
+    if (PathUtils::is_child(_path, path)) {
         // If the path is a direct child of the proxy path, create a new proxy for it.
         std::shared_ptr<Proxy> child = path_create(path);
         child->interfaces_load(managed_interfaces);
@@ -185,7 +202,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
         auto child_result = std::find_if(
             _children.begin(), _children.end(),
             [path](const std::pair<std::string, std::shared_ptr<Proxy>>& child_data) -> bool {
-                return Path::is_descendant(child_data.first, path);
+                return PathUtils::is_descendant(child_data.first, path);
             });
 
         if (child_result != _children.end()) {
@@ -194,7 +211,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
         } else {
             // If there is no child proxy for the new path, create the child and forward the path to it.
             // This path will be taken if an empty proxy object needs to be created for an intermediate path.
-            std::string child_path = Path::next_child(_path, path);
+            std::string child_path = PathUtils::next_child(_path, path);
             std::shared_ptr<Proxy> child = path_create(child_path);
             _children.emplace(std::make_pair(child_path, child));
             child->path_add(path, managed_interfaces);
@@ -203,17 +220,17 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
     }
 }
 
-bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
+bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder removed_interfaces) {
     // `options` contains an array of strings of the interfaces that need to be removed.
 
     if (path == _path) {
         invalidate();
-        interfaces_unload(options);
+        interfaces_unload(removed_interfaces);
         return path_prune();
     }
 
     // If the path is not the current path nor a descendant, then there's nothing to do
-    if (!Path::is_descendant(_path, path)) {
+    if (!PathUtils::is_descendant(_path, path)) {
         return false;
     }
 
@@ -221,9 +238,9 @@ bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
     std::scoped_lock lock(_child_access_mutex);
 
     // If the path is a direct child of the proxy path, forward the request to the child proxy.
-    std::string child_path = Path::next_child(_path, path);
+    std::string child_path = PathUtils::next_child(_path, path);
     if (path_exists(child_path)) {
-        bool must_erase = _children.at(child_path)->path_remove(path, options);
+        bool must_erase = _children.at(child_path)->path_remove(path, removed_interfaces);
 
         // if the child proxy is no longer needed and there is only one active instance of the child proxy,
         // then remove it.
@@ -253,6 +270,10 @@ bool Proxy::path_prune() {
     // For self to be pruned, the following conditions must be met:
     // 1. The proxy has no children
     // 2. The proxy has no interfaces or all interfaces are disabled.
+
+    fmt::print("Prune: {} children, {} interfaces\n", _children.size(), interfaces_count());
+    fmt::print("Interfaces: {}\n", interfaces_loaded());
+
     if (_children.empty() && !interfaces_loaded()) {
         return true;
     }
@@ -264,9 +285,14 @@ Holder Proxy::path_collect() {
     SimpleDBus::Holder result = SimpleDBus::Holder::create_dict();
     SimpleDBus::Holder interfaces = SimpleDBus::Holder::create_dict();
 
-    for (const auto& [interface_name, interface_ptr] : _interfaces) {
-        SimpleDBus::Holder properties = interface_ptr->property_collect();
-        interfaces.dict_append(SimpleDBus::Holder::Type::STRING, interface_name, std::move(properties));
+    // Use global interfaces instead of local _interfaces
+    std::scoped_lock lock(_global_interfaces_mutex);
+    auto path_it = _global_interfaces.find(Path(_path));
+    if (path_it != _global_interfaces.end()) {
+        for (const auto& [interface_name, interface_ptr] : path_it->second) {
+            SimpleDBus::Holder properties = interface_ptr->property_collect();
+            interfaces.dict_append(SimpleDBus::Holder::Type::STRING, interface_name, std::move(properties));
+        }
     }
 
     if (!interfaces.get_dict_string().empty()) {
@@ -289,7 +315,7 @@ void Proxy::path_append_child(const std::string& path, std::shared_ptr<Proxy> ch
     // ! This function is used to manually add children to the proxy.
 
     // If the provided path is not a child of the current path, return silently.
-    if (!Path::is_child(_path, path)) {
+    if (!PathUtils::is_child(_path, path)) {
         // TODO: Should an exception be thrown here?
         return;
     }
@@ -303,7 +329,7 @@ void Proxy::path_remove_child(const std::string& path) {
     // ! This function is used to manually add children to the proxy.
 
     // If the provided path is not a child of the current path, return silently.
-    if (!Path::is_child(_path, path)) {
+    if (!PathUtils::is_child(_path, path)) {
         // TODO: Should an exception be thrown here?
         return;
     }
@@ -350,7 +376,7 @@ void Proxy::message_forward(Message& msg) {
             }
 
             return;
-        } else if (Path::is_descendant(child_path, msg.get_path())) {
+        } else if (PathUtils::is_descendant(child_path, msg.get_path())) {
             child->message_forward(msg);
             return;
         }

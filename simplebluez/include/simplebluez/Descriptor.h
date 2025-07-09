@@ -5,6 +5,8 @@
 #include <simplebluez/Types.h>
 #include <simplebluez/interfaces/GattDescriptor1.h>
 
+#include <simpledbus/advanced/ProxyRegistry.h>
+
 #include <cstdlib>
 
 namespace SimpleBluez {
@@ -28,6 +30,8 @@ class Descriptor : public SimpleDBus::Proxy {
 
   private:
     std::shared_ptr<GattDescriptor1> gattdescriptor1();
+
+    static const SimpleDBus::AutoRegisterProxy<Descriptor> registry;
 };
 
 }  // namespace SimpleBluez

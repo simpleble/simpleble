@@ -7,7 +7,10 @@ using namespace SimpleBluez;
 BluezRoot::BluezRoot(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path)
     : Proxy(conn, bus_name, path) {
 
-    _interfaces.emplace(std::make_pair("org.freedesktop.DBus.ObjectManager", std::make_shared<SimpleDBus::ObjectManager>(conn, _bus_name, _path)));
+    {
+        std::scoped_lock lock(_global_interfaces_mutex);
+        _global_interfaces[SimpleDBus::Path(_path)].emplace(std::make_pair("org.freedesktop.DBus.ObjectManager", std::make_shared<SimpleDBus::ObjectManager>(conn, _bus_name, _path)));
+    }
 
     object_manager()->InterfacesAdded = [&](std::string path, SimpleDBus::Holder options) { path_add(path, options); };
     object_manager()->InterfacesRemoved = [&](std::string path, SimpleDBus::Holder options) {

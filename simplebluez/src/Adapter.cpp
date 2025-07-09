@@ -5,6 +5,13 @@
 
 using namespace SimpleBluez;
 
+const SimpleDBus::AutoRegisterProxy<Adapter> Adapter::registry{
+    "hci",
+    [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path) -> std::shared_ptr<SimpleDBus::Proxy> {
+        return std::static_pointer_cast<SimpleDBus::Proxy>(std::make_shared<Adapter>(conn, bus_name, path));
+    }
+};
+
 Adapter::Adapter(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path)
     : Proxy(conn, bus_name, path) {}
 

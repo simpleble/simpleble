@@ -5,6 +5,8 @@
 #include <simplebluez/Characteristic.h>
 #include <simplebluez/interfaces/GattService1.h>
 
+#include <simpledbus/advanced/ProxyRegistry.h>
+
 namespace SimpleBluez {
 
 class Service : public SimpleDBus::Proxy {
@@ -22,6 +24,8 @@ class Service : public SimpleDBus::Proxy {
   private:
     std::shared_ptr<SimpleDBus::Proxy> path_create(const std::string& path) override;
     std::shared_ptr<GattService1> gattservice1();
+
+    static const SimpleDBus::AutoRegisterProxy<Service> registry;
 };
 
 }  // namespace SimpleBluez

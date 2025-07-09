@@ -2,6 +2,13 @@
 
 using namespace SimpleBluez;
 
+const SimpleDBus::AutoRegisterProxy<Descriptor> Descriptor::registry{
+    "descriptor",
+    [](std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path) -> std::shared_ptr<SimpleDBus::Proxy> {
+        return std::static_pointer_cast<SimpleDBus::Proxy>(std::make_shared<Descriptor>(conn, bus_name, path));
+    }
+};
+
 Descriptor::Descriptor(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name,
                        const std::string& path)
     : Proxy(conn, bus_name, path) {}
