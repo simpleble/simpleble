@@ -7,6 +7,9 @@
 
 #include <types/android/bluetooth/BluetoothDevice.h>
 #include <types/android/bluetooth/le/ScanResult.h>
+#include "types/android/bluetooth/le/ScanSettings.h"
+#include "types/android/bluetooth/le/ScanFilter.h"
+#include "types/java/util/List.h"
 #include <android/log.h>
 #include <fmt/core.h>
 #include <jni.h>
@@ -14,9 +17,9 @@
 
 using namespace SimpleBLE;
 
-bool AdapterAndroid::bluetooth_enabled() { return BackendAndroid::get()->bluetooth_enabled(); }
+bool AdapterAndroid::bluetooth_enabled() { return backend_->bluetooth_enabled(); }
 
-AdapterAndroid::AdapterAndroid() {
+AdapterAndroid::AdapterAndroid(std::shared_ptr<BackendAndroid> backend) : backend_(backend) {
     _btScanCallback.set_callback_onScanResult([this](Android::ScanResult scan_result) {
         std::string address = scan_result.getDevice().getAddress();
 
@@ -68,7 +71,21 @@ bool AdapterAndroid::is_powered() { return _btAdapter.isEnabled(); }
 
 void AdapterAndroid::scan_start() {
     seen_peripherals_.clear();
-    _btScanner.startScan(_btScanCallback);
+
+    // Build the scan settings
+    SimpleBLE::Android::ScanSettings::Builder settings_builder;
+    settings_builder.setLegacy(false);
+    SimpleBLE::Android::ScanSettings settings = settings_builder.build();
+
+    // Build the scan filter
+    SimpleBLE::Android::ScanFilter::Builder filter_builder;
+    SimpleBLE::Android::ScanFilter filter = filter_builder.build();
+
+    // Create a list of filters
+    SimpleBLE::Android::List filters;
+    filters.add(filter);
+
+    _btScanner.startScan(filters, settings, _btScanCallback);
     scanning_ = true;
     SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
 }

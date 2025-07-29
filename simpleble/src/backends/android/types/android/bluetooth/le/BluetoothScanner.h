@@ -2,6 +2,9 @@
 
 #include "simplejni/Common.hpp"
 #include "bridge/ScanCallback.h"
+#include "ScanFilter.h"
+#include "ScanSettings.h"
+#include "backends/android/types/java/util/List.h"
 
 namespace SimpleBLE {
 namespace Android {
@@ -11,6 +14,7 @@ class BluetoothScanner {
     BluetoothScanner(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
 
     void startScan(Bridge::ScanCallback& callback);
+    void startScan(List& filters, ScanSettings& settings, Bridge::ScanCallback& callback);
     void stopScan(Bridge::ScanCallback& callback);
 
     std::string toString();
@@ -25,6 +29,7 @@ class BluetoothScanner {
     static SimpleJNI::GlobalRef<jclass> _cls;
     static jmethodID _constructor;
     static jmethodID _method_startScan;
+    static jmethodID _method_startScan_with_settings;
     static jmethodID _method_stopScan;
     static jmethodID _method_toString;
 

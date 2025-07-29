@@ -11,8 +11,10 @@ namespace Android {
 class List {
   public:
     List(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
-
+    List();
+    void add(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject>& obj);
     Iterator iterator();
+    jobject get() const;
 
   private:
     static SimpleJNI::GlobalRef<jclass> _cls;
