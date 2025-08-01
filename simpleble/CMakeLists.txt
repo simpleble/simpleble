@@ -335,6 +335,8 @@ elseif(SIMPLEBLE_BACKEND_ANDROID)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/os/ParcelUUID.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/ScanRecord.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/ScanResult.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/ScanFilter.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/ScanSettings.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/util/SparseArray.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/java/util/Iterator.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/java/util/List.cpp
