@@ -6,6 +6,8 @@
 #include <simplebluez/Types.h>
 #include <simplebluez/interfaces/GattCharacteristic1.h>
 
+#include <simpledbus/advanced/ProxyRegistry.h>
+
 #include <cstdlib>
 
 namespace SimpleBluez {
@@ -41,6 +43,8 @@ class Characteristic : public SimpleDBus::Proxy {
     std::shared_ptr<SimpleDBus::Proxy> path_create(const std::string& path) override;
 
     std::shared_ptr<GattCharacteristic1> gattcharacteristic1();
+
+    static const SimpleDBus::AutoRegisterProxy<Characteristic> registry;
 };
 
 }  // namespace SimpleBluez

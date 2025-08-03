@@ -44,7 +44,8 @@ class InterfaceRegistry {
             iface->load(options);
             return iface;
         }
-        return nullptr;
+
+        return std::make_shared<Interface>(conn, bus_name, path, key);
     }
 
   private:

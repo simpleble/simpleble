@@ -44,8 +44,8 @@ TEST(ProxyInterfaces, LoadInterfaces) {
     h.interfaces_load(managed_interfaces);
 
     EXPECT_TRUE(h.interfaces_loaded());
-    EXPECT_EQ(1, h.interfaces().size());
-    EXPECT_EQ(1, h.interfaces().count("i.1"));
+    EXPECT_EQ(1, h.interfaces_count());
+    EXPECT_TRUE(h.interface_exists("i.1"));
 }
 
 TEST(ProxyInterfaces, UnloadInterfaces) {
@@ -64,7 +64,7 @@ TEST(ProxyInterfaces, UnloadInterfaces) {
 
     EXPECT_EQ(2, h.interfaces_count());
     EXPECT_TRUE(h.interfaces_loaded());
-    EXPECT_FALSE(h.interfaces().at("i.3")->is_loaded());
+    EXPECT_FALSE(h.interface_get("i.3")->is_loaded());
 
     removed_interfaces = Holder::create_array();
     removed_interfaces.array_append(Holder::create_string("i.2"));
@@ -72,7 +72,7 @@ TEST(ProxyInterfaces, UnloadInterfaces) {
 
     EXPECT_EQ(1, h.interfaces_count());
     EXPECT_TRUE(h.interfaces_loaded());
-    EXPECT_FALSE(h.interfaces().at("i.2")->is_loaded());
+    EXPECT_FALSE(h.interface_get("i.2")->is_loaded());
 
     removed_interfaces = Holder::create_array();
     removed_interfaces.array_append(Holder::create_string("i.1"));
@@ -80,7 +80,7 @@ TEST(ProxyInterfaces, UnloadInterfaces) {
 
     EXPECT_EQ(0, h.interfaces_count());
     EXPECT_FALSE(h.interfaces_loaded());
-    EXPECT_FALSE(h.interfaces().at("i.1")->is_loaded());
+    EXPECT_FALSE(h.interface_get("i.1")->is_loaded());
 }
 
 TEST(ProxyInterfaces, ReloadInterfaces) {
