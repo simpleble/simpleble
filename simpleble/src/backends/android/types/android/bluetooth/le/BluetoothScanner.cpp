@@ -10,6 +10,7 @@ namespace Android {
 SimpleJNI::GlobalRef<jclass> BluetoothScanner::_cls;
 jmethodID BluetoothScanner::_constructor = nullptr;
 jmethodID BluetoothScanner::_method_startScan = nullptr;
+jmethodID BluetoothScanner::_method_startScan_with_settings = nullptr;
 jmethodID BluetoothScanner::_method_stopScan = nullptr;
 jmethodID BluetoothScanner::_method_toString = nullptr;
 
@@ -20,6 +21,7 @@ const SimpleJNI::JNIDescriptor BluetoothScanner::descriptor{
     {                                          // Methods to preload
      {"<init>", "()V", &_constructor},
      {"startScan", "(Landroid/bluetooth/le/ScanCallback;)V", &_method_startScan},
+     {"startScan", "(Ljava/util/List;Landroid/bluetooth/le/ScanSettings;Landroid/bluetooth/le/ScanCallback;)V", &_method_startScan_with_settings},
      {"stopScan", "(Landroid/bluetooth/le/ScanCallback;)V", &_method_stopScan},
      {"toString", "()Ljava/lang/String;", &_method_toString}
     }};
@@ -31,6 +33,12 @@ BluetoothScanner::BluetoothScanner(SimpleJNI::Object<SimpleJNI::GlobalRef, jobje
 void BluetoothScanner::startScan(Bridge::ScanCallback& callback) {
     if (!_obj) throw std::runtime_error("BluetoothScanner is not initialized");
     _obj.call_void_method(_method_startScan, callback.get());
+}
+
+void BluetoothScanner::startScan(List& filters, ScanSettings& settings,
+                                   Bridge::ScanCallback& callback) {
+    if (!_obj) throw std::runtime_error("BluetoothScanner is not initialized");
+    _obj.call_void_method(_method_startScan_with_settings, filters.get(), settings.get(), callback.get());
 }
 
 void BluetoothScanner::stopScan(Bridge::ScanCallback& callback) {
