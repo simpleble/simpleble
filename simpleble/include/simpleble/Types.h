@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "kvn/kvn_bluetooth_address.h"
 #include "kvn/kvn_bytearray.h"
 
 /**
@@ -12,7 +13,7 @@
 
 namespace SimpleBLE {
 
-using BluetoothAddress = std::string;
+using BluetoothAddress = kvn::bluetoothAddress;
 
 // IDEA: Extend BluetoothUUID to include a `uuid` function that
 // returns the same string, but provides a homogeneous interface.
