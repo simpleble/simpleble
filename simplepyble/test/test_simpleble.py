@@ -11,7 +11,7 @@ def test_get_adapters():
 
     adapter = adapters[0]
     assert adapter.identifier() == "Plain Adapter"
-    assert adapter.address() == "AA:BB:CC:DD:EE:FF"
+    assert adapter.address() == "aa:bb:cc:dd:ee:ff"
 
 
 def test_scan_blocking():

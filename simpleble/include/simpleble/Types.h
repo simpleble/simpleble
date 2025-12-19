@@ -59,16 +59,16 @@ class bluetoothAddress {
     std::string_view raw() const { return raw_; }
 
     /**
-     * @brief Returns the canonical (uppercase) address string.
-     * @return A string containing the uppercase address.
+     * @brief Returns the canonical (lowercase) address string.
+     * @return A string containing the lowercase address.
      */
-    std::string to_string() const { return to_upper_ascii(raw_); }
+    std::string to_string() const { return to_lower_ascii(raw_); }
 
     /**
      * @brief Conversion operator to convert bluetoothAddress to std::string.
      *
-     * @note This is provided to return the canonical (uppercase) address.
-     * @return The canonical (uppercase) address string.
+     * @note This is provided to return the canonical (lowercase) address.
+     * @return The canonical (lowercase) address string.
      */
     operator std::string() const { return to_string(); }
 
@@ -116,16 +116,16 @@ class bluetoothAddress {
     std::string raw_;
 
     //! @cond Doxygen_Suppress
-    static char upper_ascii(char c) {
-        if (c >= 'a' && c <= 'z') return static_cast<char>(c - ('a' - 'A'));
+    static char lower_ascii(char c) {
+        if (c >= 'A' && c <= 'Z') return static_cast<char>(c + ('a' - 'A'));
         return c;
     }
 
     static int compare_ci_ascii(std::string_view a, std::string_view b) {
         const size_t n = (a.size() < b.size()) ? a.size() : b.size();
         for (size_t i = 0; i < n; ++i) {
-            const char ca = upper_ascii(a[i]);
-            const char cb = upper_ascii(b[i]);
+            const char ca = lower_ascii(a[i]);
+            const char cb = lower_ascii(b[i]);
             if (ca < cb) return -1;
             if (ca > cb) return 1;
         }
@@ -134,10 +134,10 @@ class bluetoothAddress {
         return 0;
     }
 
-    static std::string to_upper_ascii(std::string_view s) {
+    static std::string to_lower_ascii(std::string_view s) {
         std::string out;
         out.reserve(s.size());
-        for (char c : s) out.push_back(upper_ascii(c));
+        for (char c : s) out.push_back(lower_ascii(c));
         return out;
     }
     //! @endcond
