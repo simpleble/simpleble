@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <ostream>
 #include <string_view>
 #include <stdexcept>
 #include "kvn/kvn_bytearray.h"
@@ -82,6 +83,16 @@ class bluetoothAddress {
     }
 
     /**
+     * @brief Inequality operator for case-insensitive comparison.
+     * @param a The first bluetoothAddress.
+     * @param b The second bluetoothAddress.
+     * @return True if addresses are not equal (case-insensitive), false otherwise.
+     */
+    friend bool operator!=(const bluetoothAddress& a, const bluetoothAddress& b) {
+        return !(a == b);
+    }
+
+    /**
      * @brief Less-than operator for case-insensitive comparison.
      * @param a The first bluetoothAddress.
      * @param b The second bluetoothAddress.
@@ -89,6 +100,16 @@ class bluetoothAddress {
      */
     friend bool operator<(const bluetoothAddress& a, const bluetoothAddress& b) {
         return compare_ci_ascii(a.raw_, b.raw_) < 0;
+    }
+
+    /**
+     * @brief Stream insertion operator for outputting bluetoothAddress to an ostream.
+     * @param os The output stream.
+     * @param addr The bluetoothAddress to output.
+     * @return Reference to the output stream.
+     */
+    friend std::ostream& operator<<(std::ostream& os, const bluetoothAddress& addr) {
+        return os << addr.to_string();
     }
 
   private:

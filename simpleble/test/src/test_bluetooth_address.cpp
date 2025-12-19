@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <simpleble/Types.h>
+#include <sstream>
 
 TEST(BluetoothAddressTest, DefaultConstructor) {
     SimpleBLE::bluetoothAddress addr;
@@ -104,6 +105,42 @@ TEST(BluetoothAddressTest, LessThanDifferentLengths) {
 TEST(BluetoothAddressTest, RawPreservesOriginalCase) {
     SimpleBLE::bluetoothAddress addr("aA:bB:cC:dD:eE:fF");
     EXPECT_EQ(addr.raw(), "aA:bB:cC:dD:eE:fF");
+}
+
+TEST(BluetoothAddressTest, StreamOperator) {
+    SimpleBLE::bluetoothAddress addr("aa:bb:cc:dd:ee:ff");
+    std::ostringstream oss;
+    oss << addr;
+    EXPECT_EQ(oss.str(), "AA:BB:CC:DD:EE:FF");
+}
+
+TEST(BluetoothAddressTest, StreamOperatorUppercase) {
+    SimpleBLE::bluetoothAddress addr("AA:BB:CC:DD:EE:FF");
+    std::ostringstream oss;
+    oss << addr;
+    EXPECT_EQ(oss.str(), "AA:BB:CC:DD:EE:FF");
+}
+
+TEST(BluetoothAddressTest, StreamOperatorMixedCase) {
+    SimpleBLE::bluetoothAddress addr("aA:bB:cC:dD:eE:fF");
+    std::ostringstream oss;
+    oss << addr;
+    EXPECT_EQ(oss.str(), "AA:BB:CC:DD:EE:FF");
+}
+
+TEST(BluetoothAddressTest, StreamOperatorEmpty) {
+    SimpleBLE::bluetoothAddress addr;
+    std::ostringstream oss;
+    oss << addr;
+    EXPECT_EQ(oss.str(), "");
+}
+
+TEST(BluetoothAddressTest, StreamOperatorChained) {
+    SimpleBLE::bluetoothAddress addr1("aa:bb:cc:dd:ee:ff");
+    SimpleBLE::bluetoothAddress addr2("11:22:33:44:55:66");
+    std::ostringstream oss;
+    oss << addr1 << " - " << addr2;
+    EXPECT_EQ(oss.str(), "AA:BB:CC:DD:EE:FF - 11:22:33:44:55:66");
 }
 
 
