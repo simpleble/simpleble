@@ -60,9 +60,11 @@ uint16_t PeripheralMac::mtu() {
 
 void PeripheralMac::update_advertising_data(advertising_data_t advertising_data) {
     is_connectable_ = advertising_data.connectable;
-    manufacturer_data_ = advertising_data.manufacturer_data;
     rssi_ = advertising_data.rssi;
     tx_power_ = advertising_data.tx_power;
+
+    advertising_data.manufacturer_data.merge(manufacturer_data_);
+    manufacturer_data_ = advertising_data.manufacturer_data;
 
     advertising_data.service_data.merge(service_data_);
     service_data_ = advertising_data.service_data;
