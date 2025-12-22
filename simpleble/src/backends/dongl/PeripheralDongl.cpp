@@ -416,9 +416,9 @@ void PeripheralDongl::notify_service_discovered(simpleble_ServiceDiscoveredEvt c
     }
 
     _services.emplace_back(ServiceDefinition{
-        .uuid = uuid,
-        .start_handle = evt.start_handle,
-        .end_handle = evt.end_handle,
+        uuid,
+        evt.start_handle,
+        evt.end_handle,
     });
 }
 
@@ -437,14 +437,14 @@ void PeripheralDongl::notify_characteristic_discovered(simpleble_CharacteristicD
     }
 
     service.characteristics.emplace_back(CharacteristicDefinition{
-        .uuid = uuid,
-        .handle_decl = evt.handle_decl,
-        .handle_value = evt.handle_value,
-        .can_read = evt.props.read,
-        .can_write_request = evt.props.write,
-        .can_write_command = evt.props.write_wo_resp,
-        .can_notify = evt.props.notify,
-        .can_indicate = evt.props.indicate,
+        uuid,
+        evt.handle_decl,
+        evt.handle_value,
+        evt.props.read,
+        evt.props.write,
+        evt.props.write_wo_resp,
+        evt.props.notify,
+        evt.props.indicate,
     });
 }
 
@@ -467,8 +467,8 @@ void PeripheralDongl::notify_descriptor_discovered(simpleble_DescriptorDiscovere
     for (auto it = service.characteristics.rbegin(); it != service.characteristics.rend(); ++it) {
         if (it->handle_value < evt.handle) {
             it->descriptors.emplace_back(DescriptorDefinition{
-                .uuid = _uuid_from_uuid16(evt.uuid16.uuid),
-                .handle = evt.handle,
+                _uuid_from_uuid16(evt.uuid16.uuid),
+                evt.handle,
             });
             break;
         }
