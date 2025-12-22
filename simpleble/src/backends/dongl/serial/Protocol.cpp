@@ -14,7 +14,8 @@ basic_WhoamiRsp Protocol::basic_whoami() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_basic_tag;
     command.cmd.basic.which_cmd = basic_Command_whoami_tag;
-    command.cmd.basic.cmd.whoami = basic_WhoamiCmd_init_default;
+    basic_WhoamiCmd whoami_cmd = basic_WhoamiCmd_init_default;
+    command.cmd.basic.cmd.whoami = whoami_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.basic.rsp.whoami;
@@ -24,7 +25,8 @@ basic_ResetRsp Protocol::basic_reset() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_basic_tag;
     command.cmd.basic.which_cmd = basic_Command_reset_tag;
-    command.cmd.basic.cmd.reset = basic_ResetCmd_init_default;
+    basic_ResetCmd reset_cmd = basic_ResetCmd_init_default;
+    command.cmd.basic.cmd.reset = reset_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.basic.rsp.reset;
@@ -34,7 +36,8 @@ basic_DfuStartRsp Protocol::basic_dfu_start() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_basic_tag;
     command.cmd.basic.which_cmd = basic_Command_dfu_start_tag;
-    command.cmd.basic.cmd.dfu_start = basic_DfuStartCmd_init_default;
+    basic_DfuStartCmd dfu_start_cmd = basic_DfuStartCmd_init_default;
+    command.cmd.basic.cmd.dfu_start = dfu_start_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.basic.rsp.dfu_start;
@@ -44,7 +47,8 @@ simpleble_InitRsp Protocol::simpleble_init() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_init_tag;
-    command.cmd.simpleble.cmd.init = simpleble_InitCmd_init_default;
+    simpleble_InitCmd init_cmd = simpleble_InitCmd_init_default;
+    command.cmd.simpleble.cmd.init = init_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.init;
@@ -54,7 +58,8 @@ simpleble_ScanStartRsp Protocol::simpleble_scan_start() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_scan_start_tag;
-    command.cmd.simpleble.cmd.scan_start = simpleble_ScanStartCmd_init_default;
+    simpleble_ScanStartCmd scan_start_cmd = simpleble_ScanStartCmd_init_default;
+    command.cmd.simpleble.cmd.scan_start = scan_start_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.scan_start;
@@ -64,7 +69,8 @@ simpleble_ScanStopRsp Protocol::simpleble_scan_stop() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_scan_stop_tag;
-    command.cmd.simpleble.cmd.scan_stop = simpleble_ScanStopCmd_init_default;
+    simpleble_ScanStopCmd scan_stop_cmd = simpleble_ScanStopCmd_init_default;
+    command.cmd.simpleble.cmd.scan_stop = scan_stop_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.scan_stop;
@@ -74,7 +80,8 @@ simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType 
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_connect_tag;
-    command.cmd.simpleble.cmd.connect = simpleble_ConnectCmd_init_default;
+    simpleble_ConnectCmd connect_cmd = simpleble_ConnectCmd_init_default;
+    command.cmd.simpleble.cmd.connect = connect_cmd;
 
     command.cmd.simpleble.cmd.connect.address_type = address_type;
     strncpy(command.cmd.simpleble.cmd.connect.address, address.c_str(), sizeof(command.cmd.simpleble.cmd.connect.address));
@@ -87,7 +94,8 @@ simpleble_DisconnectRsp Protocol::simpleble_disconnect(uint16_t conn_handle) {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_disconnect_tag;
-    command.cmd.simpleble.cmd.disconnect = simpleble_DisconnectCmd_init_default;
+    simpleble_DisconnectCmd disconnect_cmd = simpleble_DisconnectCmd_init_default;
+    command.cmd.simpleble.cmd.disconnect = disconnect_cmd;
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.disconnect;
@@ -97,7 +105,8 @@ simpleble_ReadRsp Protocol::simpleble_read(uint16_t conn_handle, uint16_t handle
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_read_tag;
-    command.cmd.simpleble.cmd.read = simpleble_ReadCmd_init_default;
+    simpleble_ReadCmd read_cmd = simpleble_ReadCmd_init_default;
+    command.cmd.simpleble.cmd.read = read_cmd;
     command.cmd.simpleble.cmd.read.conn_handle = conn_handle;
     command.cmd.simpleble.cmd.read.handle = handle;
 
@@ -111,7 +120,8 @@ simpleble_WriteRsp Protocol::simpleble_write(uint16_t conn_handle, uint16_t hand
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_write_tag;
-    command.cmd.simpleble.cmd.write = simpleble_WriteCmd_init_default;
+    simpleble_WriteCmd write_cmd = simpleble_WriteCmd_init_default;
+    command.cmd.simpleble.cmd.write = write_cmd;
     command.cmd.simpleble.cmd.write.conn_handle = conn_handle;
     command.cmd.simpleble.cmd.write.handle = handle;
     command.cmd.simpleble.cmd.write.op = operation;

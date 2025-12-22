@@ -467,8 +467,8 @@ void PeripheralDongl::notify_descriptor_discovered(simpleble_DescriptorDiscovere
     for (auto it = service.characteristics.rbegin(); it != service.characteristics.rend(); ++it) {
         if (it->handle_value < evt.handle) {
             it->descriptors.emplace_back(DescriptorDefinition{
-                .handle = evt.handle,
                 .uuid = _uuid_from_uuid16(evt.uuid16.uuid),
+                .handle = evt.handle,
             });
             break;
         }
