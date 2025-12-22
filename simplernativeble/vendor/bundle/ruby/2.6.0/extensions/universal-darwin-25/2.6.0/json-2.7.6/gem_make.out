@@ -1,0 +1,19 @@
+current directory: /Users/alejorojas/work/caos/simpleble/simplernativeble/vendor/bundle/ruby/2.6.0/gems/json-2.7.6/ext/json/ext/parser
+/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/bin/ruby -I /System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0 -r ./siteconf20251222-22184-19jsv9t.rb extconf.rb
+checking for rb_enc_raise() in ruby.h... yes
+checking for rb_enc_interned_str() in ruby.h... no
+checking for whether -std=c99 is accepted as CFLAGS... yes
+creating Makefile
+
+current directory: /Users/alejorojas/work/caos/simpleble/simplernativeble/vendor/bundle/ruby/2.6.0/gems/json-2.7.6/ext/json/ext/parser
+make "DESTDIR=" clean
+
+current directory: /Users/alejorojas/work/caos/simpleble/simplernativeble/vendor/bundle/ruby/2.6.0/gems/json-2.7.6/ext/json/ext/parser
+make "DESTDIR="
+compiling parser.c
+linking shared-object json/ext/parser.bundle
+ld: warning: search path '/AppleInternal/Library/BuildRoots/4~B_wougD4vG5BOnQ54x0HXY5H8Mwvp2HNvkZTy5c/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.1.Internal.sdk/usr/local/lib' not found
+
+current directory: /Users/alejorojas/work/caos/simpleble/simplernativeble/vendor/bundle/ruby/2.6.0/gems/json-2.7.6/ext/json/ext/parser
+make "DESTDIR=" install
+/usr/bin/install -c -m 0755 parser.bundle ./.gem.20251222-22184-t0vdca/json/ext
