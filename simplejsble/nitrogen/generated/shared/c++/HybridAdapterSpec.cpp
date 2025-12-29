@@ -14,7 +14,7 @@ namespace margelo::nitro::simplejsble {
     HybridObject::loadHybridMethods();
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
-      prototype.registerHybridMethod("getAdapters", &HybridAdapterSpec::getAdapters);
+      prototype.registerHybridMethod("greet", &HybridAdapterSpec::greet);
     });
   }
 

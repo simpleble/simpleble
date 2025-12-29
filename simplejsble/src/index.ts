@@ -1,4 +1,5 @@
-// TODO: Export all HybridObjects here for the user
-import type { Adapter } from './specs/adapter.nitro'
+import { NitroModules } from "react-native-nitro-modules";
+import type { Adapter } from "./specs/Adapter.nitro";
 
-export type { Adapter }
+
+export const HybridAdapter = NitroModules.createHybridObject<Adapter>("Adapter");

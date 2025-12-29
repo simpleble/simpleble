@@ -13,12 +13,9 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-// Forward declaration of `HybridAdapterSpec` to properly resolve imports.
-namespace margelo::nitro::simplejsble { class HybridAdapterSpec; }
 
-#include <memory>
-#include "HybridAdapterSpec.hpp"
-#include <vector>
+
+#include <string>
 
 namespace margelo::nitro::simplejsble {
 
@@ -51,7 +48,7 @@ namespace margelo::nitro::simplejsble {
 
     public:
       // Methods
-      virtual std::vector<std::shared_ptr<HybridAdapterSpec>> getAdapters() = 0;
+      virtual std::string greet(const std::string& name) = 0;
 
     protected:
       // Hybrid Setup

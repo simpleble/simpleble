@@ -22,12 +22,6 @@ Pod::Spec.new do |s|
     "cpp/**/*.{hpp,cpp}",
   ]
 
-  # Add SimpleBLE include directory
-  s.pod_target_xcconfig = {
-    'HEADER_SEARCH_PATHS' => '$(inherited) ${PODS_ROOT}/../simpleble/include',
-    'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
-  }
-
   load 'nitrogen/generated/ios/NitroSimplejsble+autolinking.rb'
   add_nitrogen_files(s)
 
