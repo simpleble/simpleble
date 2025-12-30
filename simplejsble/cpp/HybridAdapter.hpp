@@ -1,16 +1,22 @@
 #pragma once
 
-#include "HybridAdapterSpec.hpp"
+#include <simpleble/SimpleBLE.h>
 #include <string>
-#include <iostream>
+#include "HybridAdapterSpec.hpp"
 
 namespace margelo::nitro::simplejsble {
 
-    class HybridAdapter: public HybridAdapterSpec {
-        public:
-            HybridAdapter(): HybridObject(TAG) {}
+class HybridAdapter : public HybridAdapterSpec {
+  public:
+    HybridAdapter() : HybridObject(TAG) {}
+    HybridAdapter(SimpleBLE::Adapter adapter) : HybridObject(TAG), _adapter(adapter) {}
 
-            std::string greet(const std::string& name) override;
-    };
+    std::string greet(const std::string& name) override;
+    std::vector<std::shared_ptr<HybridAdapterSpec>> get_adapters() override;
+    bool bluetooth_enabled() override;
 
-} // namespace margelo::nitro::simplejsble
+  private:
+    SimpleBLE::Adapter _adapter;
+};
+
+}  // namespace margelo::nitro::simplejsble

@@ -14,6 +14,9 @@ add_library(${PACKAGE_NAME} SHARED
 # Add Nitrogen specs :)
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroSimplejsble+autolinking.cmake)
 
+# Add SimpleBLE as subdirectory (following Python pattern)
+add_subdirectory(${CMAKE_SOURCE_DIR}/../../simpleble ${CMAKE_BINARY_DIR}/simpleble)
+
 # Set up local includes
 include_directories(
         "src/main/cpp"
@@ -26,5 +29,6 @@ find_library(LOG_LIB log)
 target_link_libraries(
         ${PACKAGE_NAME}
         ${LOG_LIB}
+        simpleble::simpleble                      # <-- SimpleBLE library
         android                                   # <-- Android core
 )

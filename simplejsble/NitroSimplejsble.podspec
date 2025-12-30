@@ -11,7 +11,8 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => min_ios_version_supported, :visionos => 1.0 }
-  s.source       = { :git => "https://github.com/mrousavy/nitro.git", :tag => "#{s.version}" }
+  
+  s.source = { :git => "https://github.com/simpleble/simpleble.git", :tag => "#{s.version}" }
 
   s.source_files = [
     # Implementation (Swift)
@@ -28,4 +29,9 @@ Pod::Spec.new do |s|
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
   install_modules_dependencies(s)
+
+  current_pod_target_xcconfig = s.attributes_hash['pod_target_xcconfig'] || {}
+  s.pod_target_xcconfig = current_pod_target_xcconfig.merge({
+    'HEADER_SEARCH_PATHS' => %Q["$(inherited)" "#{simpleble_include_path}" "$(PODS_TARGET_SRCROOT)/../simpleble/include"]
+  })
 end

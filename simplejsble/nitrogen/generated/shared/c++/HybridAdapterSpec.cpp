@@ -15,6 +15,8 @@ namespace margelo::nitro::simplejsble {
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
       prototype.registerHybridMethod("greet", &HybridAdapterSpec::greet);
+      prototype.registerHybridMethod("get_adapters", &HybridAdapterSpec::get_adapters);
+      prototype.registerHybridMethod("bluetooth_enabled", &HybridAdapterSpec::bluetooth_enabled);
     });
   }
 

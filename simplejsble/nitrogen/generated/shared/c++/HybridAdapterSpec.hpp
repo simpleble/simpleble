@@ -13,9 +13,13 @@
 #error NitroModules cannot be found! Are you sure you installed NitroModules properly?
 #endif
 
-
+// Forward declaration of `HybridAdapterSpec` to properly resolve imports.
+namespace margelo::nitro::simplejsble { class HybridAdapterSpec; }
 
 #include <string>
+#include <memory>
+#include "HybridAdapterSpec.hpp"
+#include <vector>
 
 namespace margelo::nitro::simplejsble {
 
@@ -49,6 +53,8 @@ namespace margelo::nitro::simplejsble {
     public:
       // Methods
       virtual std::string greet(const std::string& name) = 0;
+      virtual std::vector<std::shared_ptr<HybridAdapterSpec>> get_adapters() = 0;
+      virtual bool bluetooth_enabled() = 0;
 
     protected:
       // Hybrid Setup

@@ -8,6 +8,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const message = HybridAdapter.greet('Alejo');
     setGreeting(message);
+
   }, []);
 
   return (
