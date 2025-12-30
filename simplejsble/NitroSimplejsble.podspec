@@ -32,6 +32,6 @@ Pod::Spec.new do |s|
 
   current_pod_target_xcconfig = s.attributes_hash['pod_target_xcconfig'] || {}
   s.pod_target_xcconfig = current_pod_target_xcconfig.merge({
-    'HEADER_SEARCH_PATHS' => %Q["$(inherited)" "#{simpleble_include_path}" "$(PODS_TARGET_SRCROOT)/../simpleble/include"]
+    'HEADER_SEARCH_PATHS' => %Q["$(inherited)" "$(PODS_TARGET_SRCROOT)/../simpleble/include"]
   })
 end

@@ -6,6 +6,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "simplejsble": [
+        "../src/index"
       ]
     }
   },

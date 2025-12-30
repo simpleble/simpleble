@@ -1,8 +1,8 @@
 #pragma once
 
+#include "HybridAdapterSpec.hpp"
 #include <simpleble/SimpleBLE.h>
 #include <string>
-#include "HybridAdapterSpec.hpp"
 
 namespace margelo::nitro::simplejsble {
 
