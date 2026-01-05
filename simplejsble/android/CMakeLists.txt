@@ -14,7 +14,8 @@ add_library(${PACKAGE_NAME} SHARED
 # Add Nitrogen specs :)
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroSimplejsble+autolinking.cmake)
 
-# Add SimpleBLE as subdirectory (following Python pattern)
+# Add simpleble 
+# Esto si deberia funcionar 
 add_subdirectory(${CMAKE_SOURCE_DIR}/../../simpleble ${CMAKE_BINARY_DIR}/simpleble)
 
 # Set up local includes

@@ -4,16 +4,28 @@ import { HybridAdapter } from 'simplejsble';
 
 export default function HomeScreen() {
   const [greeting, setGreeting] = useState<string>('');
+  const [isBluetoothEnabled, setIsBluetoothEnabled] = useState<boolean>(false);
+  const [adapters, setAdapters] = useState<typeof HybridAdapter[]>([]);
 
   useEffect(() => {
     const message = HybridAdapter.greet('Alejo');
     setGreeting(message);
+
+    const isBluetoothEnabled = HybridAdapter.bluetooth_enabled();
+    console.log('isBluetoothEnabled', isBluetoothEnabled);
+    setIsBluetoothEnabled(isBluetoothEnabled);
+
+    const adapters = HybridAdapter.get_adapters();
+    console.log('adapters', adapters);
+    setAdapters(adapters);
 
   }, []);
 
   return (
     <View style={styles.container}>
       {greeting ? <Text style={styles.greeting}>{greeting}</Text> : null}
+      {isBluetoothEnabled ? <Text style={styles.greeting}>Bluetooth is enabled</Text> : <Text style={styles.greeting}>Bluetooth is disabled</Text>}
+      {adapters.map((adapter) => <Text key={adapter.name} style={styles.greeting}>{adapter.name}</Text>)}
     </View>
   );
 }

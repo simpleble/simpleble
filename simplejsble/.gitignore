@@ -81,3 +81,8 @@ lib/
 .eslintcache
 .cache
 *.tsbuildinfo
+
+# SimpleBLE iOS build artifacts
+ios/build_*/
+ios/simpleble_*/
+ios/SimpleBLE.xcframework/
