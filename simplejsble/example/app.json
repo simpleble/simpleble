@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.example"
+      "bundleIdentifier": "com.caos.simplejsble",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "This app needs Bluetooth access to scan and connect to BLE devices.",
+        "NSBluetoothPeripheralUsageDescription": "This app needs Bluetooth access to scan and connect to BLE devices."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.example"
+      "package": "com.caos.simplejsble"
     },
     "web": {
       "output": "static",
