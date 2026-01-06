@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+# Path: packages/simplejsble/ios → ../../../.. → repo root (where simpleble/ lives)
+set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../..)
 set(BUILD_SHARED_LIBS OFF)  # Static library for iOS
 
 include(${PROJECT_ROOT_DIR}/cmake/prelude.cmake)

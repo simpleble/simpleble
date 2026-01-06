@@ -1,107 +1,29 @@
 {
-  "name": "simplejsble",
-  "version": "0.0.1",
-  "description": "simplejsble",
-  "main": "lib/index",
-  "module": "lib/index",
-  "types": "lib/index.d.ts",
-  "react-native": "src/index",
-  "source": "src/index",
-  "files": [
-    "src",
-    "react-native.config.js",
-    "lib",
-    "nitrogen",
-    "android/build.gradle",
-    "android/gradle.properties",
-    "android/fix-prefab.gradle",
-    "android/CMakeLists.txt",
-    "android/src",
-    "ios/**/*.h",
-    "ios/**/*.m",
-    "ios/**/*.mm",
-    "ios/**/*.cpp",
-    "ios/**/*.swift",
-    "app.plugin.js",
-    "nitro.json",
-    "*.podspec",
-    "README.md"
-  ],
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf android/build node_modules/**/android/build lib",
-    "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
-    "lint-ci": "eslint \"**/*.{js,ts,tsx}\" -f @jamesacarr/github-actions",
-    "typescript": "tsc",
-    "specs": "tsc --noEmit false && nitrogen --logLevel=\"debug\""
-  },
-  "keywords": [
-    "react-native",
-    "nitro"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mrousavy/nitro.git"
-  },
-  "author": "Marc Rousavy <me@mrousavy.com> (https://github.com/mrousavy)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/mrousavy/nitro/issues"
-  },
-  "homepage": "https://github.com/mrousavy/nitro#readme",
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
-  "devDependencies": {
-    "@react-native/eslint-config": "0.82.0",
-    "@types/react": "^19.1.03",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "nitrogen": "*",
-    "prettier": "^3.3.3",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-nitro-modules": "*",
-    "typescript": "^5.8.3"
-  },
-  "peerDependencies": {
-    "react": "*",
-    "react-native": "*",
-    "react-native-nitro-modules": "*"
-  },
-  "eslintConfig": {
-    "root": true,
-    "extends": [
-      "@react-native",
-      "prettier"
+    "name": "simplejsble",
+    "private": true,
+    "workspaces": [
+        "packages/simplejsble",
+        "example"
     ],
-    "plugins": [
-      "prettier"
-    ],
-    "rules": {
-      "prettier/prettier": [
-        "warn",
-        {
-          "quoteProps": "consistent",
-          "singleQuote": true,
-          "tabWidth": 2,
-          "trailingComma": "es5",
-          "useTabs": false
-        }
-      ]
+    "scripts": {
+        "simplejsble": "npm --prefix packages/simplejsble",
+        "example": "npm --prefix example",
+        "specs": "npm run simplejsble specs",
+        "typecheck": "npm run simplejsble typecheck",
+        "build": "npm run simplejsble build",
+        "clean": "npm run simplejsble clean && rm -rf example/android/build example/android/.gradle",
+        "postinstall": "patch-package",
+        "prepublish": "npm run build",
+        "publish:dry": "cd packages/simplejsble && npm publish --dry-run",
+        "publish:patch": "cd packages/simplejsble && npm version patch && npm publish",
+        "publish:minor": "cd packages/simplejsble && npm version minor && npm publish",
+        "publish:major": "cd packages/simplejsble && npm version major && npm publish"
+    },
+    "devDependencies": {
+        "patch-package": "^8.0.1",
+        "postinstall-postinstall": "^2.1.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
     }
-  },
-  "eslintIgnore": [
-    "node_modules/",
-    "lib/"
-  ],
-  "prettier": {
-    "quoteProps": "consistent",
-    "singleQuote": true,
-    "tabWidth": 2,
-    "trailingComma": "es5",
-    "useTabs": false,
-    "semi": false
-  }
 }

@@ -1,0 +1,5 @@
+# Files copied by prepack script (should not be committed)
+simpleble/
+cmake/
+dependencies/
+VERSION

@@ -14,11 +14,16 @@ Pod::Spec.new do |s|
 
   s.source = { :path => "." }
 
-  # Build SimpleBLE from source using CMake during pod install
+  # Build SimpleBLE from source only if XCFramework doesn't exist
+  # When installed from npm, the pre-built XCFramework is already included
   s.prepare_command = <<-CMD
-    echo "Building SimpleBLE for iOS..."
-    chmod +x ios/build_simpleble.sh
-    ios/build_simpleble.sh
+    if [ -d "ios/SimpleBLE.xcframework" ]; then
+      echo "SimpleBLE.xcframework already exists, skipping build"
+    else
+      echo "Building SimpleBLE for iOS..."
+      chmod +x ios/build_simpleble.sh
+      ios/build_simpleble.sh
+    fi
   CMD
 
   s.source_files = [
