@@ -15,6 +15,7 @@ const dirsToClean = [
 // Directories/files to copy from repo root
 const itemsToCopy = [
   'simpleble',
+  'simpledroidbridge',
   'cmake',
   'dependencies',
   'VERSION',

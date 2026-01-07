@@ -113,6 +113,9 @@ android {
 
   sourceSets {
     main {
+      // Include simpledroidbridge Java sources (BluetoothGattCallback, ScanCallback)
+      java.srcDirs += ["../simpledroidbridge/src/main/java"]
+
       if (isNewArchitectureEnabled()) {
         java.srcDirs += [
           // React Codegen files

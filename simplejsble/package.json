@@ -6,8 +6,8 @@
         "example"
     ],
     "scripts": {
-        "simplejsble": "npm --prefix packages/simplejsble",
-        "example": "npm --prefix example",
+        "simplejsble": "npm --prefix packages/simplejsble run",
+        "example": "npm --prefix example run",
         "specs": "npm run simplejsble specs",
         "typecheck": "npm run simplejsble typecheck",
         "build": "npm run simplejsble build",

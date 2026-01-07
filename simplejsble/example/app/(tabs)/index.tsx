@@ -8,7 +8,7 @@ export default function HomeScreen() {
   const [adapters, setAdapters] = useState<typeof HybridAdapter[]>([]);
 
   useEffect(() => {
-    const message = HybridAdapter.greet('Alejo');
+    const message = HybridAdapter.greet('Android');
     setGreeting(message);
 
     const isBluetoothEnabled = HybridAdapter.bluetooth_enabled();
