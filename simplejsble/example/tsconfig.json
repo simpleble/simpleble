@@ -8,7 +8,7 @@
         "./*"
       ],
       "simplejsble": [
-        "../src/index"
+        "../packages/simplejsble/src/index"
       ]
     }
   },
