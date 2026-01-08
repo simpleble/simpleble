@@ -21,7 +21,6 @@ class VM {
             }
             instance._jvm = jvm_override;
         } else if (instance._jvm == nullptr) {
-            throw std::runtime_error("JavaVM not set. Call set_jvm() in JNI_OnLoad first.");
             jsize count;
             if (JNI_GetCreatedJavaVMs(&instance._jvm, 1, &count) != JNI_OK || count == 0) {
                 throw std::runtime_error("Failed to retrieve the Java Virtual Machine");
