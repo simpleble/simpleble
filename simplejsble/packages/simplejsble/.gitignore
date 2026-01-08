@@ -3,3 +3,12 @@ simpleble/
 cmake/
 dependencies/
 VERSION
+simpledroidbridge/
+
+# iOS build intermediates (XCFramework is committed for npm distribution)
+ios/build_*/
+ios/simpleble_*/
+
+# macOS build intermediates (XCFramework is committed for npm distribution)
+macos/build_*/
+macos/simpleble_*/
