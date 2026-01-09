@@ -1,0 +1,28 @@
+{
+    "name": "simplejsble",
+    "private": true,
+    "workspaces": [
+        "packages/simplejsble",
+        "example"
+    ],
+    "scripts": {
+        "simplejsble": "npm --prefix packages/simplejsble run",
+        "specs": "npm run simplejsble specs",
+        "typecheck": "npm run simplejsble typecheck",
+        "build": "npm run simplejsble build",
+        "clean": "npm run simplejsble clean && rm -rf examples/expo-ios-android/android/build examples/expo-ios-android/android/.gradle",
+        "postinstall": "patch-package",
+        "prepublish": "npm run build",
+        "publish:dry": "cd packages/simplejsble && npm publish --dry-run",
+        "publish:patch": "cd packages/simplejsble && npm version patch && npm publish",
+        "publish:minor": "cd packages/simplejsble && npm version minor && npm publish",
+        "publish:major": "cd packages/simplejsble && npm version major && npm publish"
+    },
+    "devDependencies": {
+        "patch-package": "^8.0.1",
+        "postinstall-postinstall": "^2.1.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
