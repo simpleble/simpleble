@@ -5,9 +5,11 @@ dependencies/
 VERSION
 simpledroidbridge/
 
-# iOS build intermediates (XCFramework is committed for npm distribution)
+# iOS build intermediates and binaries
 ios/build_*/
 ios/simpleble_*/
+ios/**/*.a
+ios/**/*.xcframework
 
 # macOS build intermediates (XCFramework is committed for npm distribution)
 macos/build_*/
