@@ -22,6 +22,7 @@
     "react-native.config.js",
     "nitro.json",
     "*.podspec",
+    "app.plugin.js",
     "README.md"
   ],
   "scripts": {

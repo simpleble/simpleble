@@ -2,8 +2,7 @@
     "name": "simplejsble",
     "private": true,
     "workspaces": [
-        "packages/simplejsble",
-        "example"
+        "packages/simplejsble"
     ],
     "scripts": {
         "simplejsble": "npm --prefix packages/simplejsble run",
