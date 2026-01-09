@@ -14,3 +14,6 @@ ios/**/*.xcframework
 # macOS build intermediates (XCFramework is committed for npm distribution)
 macos/build_*/
 macos/simpleble_*/
+
+# Nitrogen generated files (regenerated on each `npx nitrogen` run)
+nitrogen/generated/
