@@ -5,7 +5,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${PACKAGE_DIR}/../../.." && pwd)"
-IOS_DIR="${PACKAGE_DIR}/ios"
+APPLE_DIR="${PACKAGE_DIR}/apple"
 
 # Deployment targets
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-13.4}"
@@ -16,7 +16,7 @@ DIRS_TO_CLEAN=(
   "android/build"
   "android/.cxx"
   "android/.gradle"
-  "ios/build"
+  "apple/build"
 )
 
 # Directories/files to copy from repo root
@@ -83,13 +83,13 @@ build_for_ios_platform() {
     local PLATFORM=$1  # iphoneos or iphonesimulator
     local ARCH=$2      # arm64 or x86_64
 
-    local BUILD_DIR="${IOS_DIR}/build_${PLATFORM}_${ARCH}"
-    local INSTALL_DIR="${IOS_DIR}/simpleble_${PLATFORM}_${ARCH}"
+    local BUILD_DIR="${APPLE_DIR}/build_${PLATFORM}_${ARCH}"
+    local INSTALL_DIR="${APPLE_DIR}/simpleble_${PLATFORM}_${ARCH}"
 
     echo ""
     echo "Building SimpleBLE for ${PLATFORM} (${ARCH})..."
 
-    cmake -B "${BUILD_DIR}" -S "${IOS_DIR}" \
+    cmake -B "${BUILD_DIR}" -S "${APPLE_DIR}" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_SYSTEM_NAME=iOS \
         -DCMAKE_OSX_SYSROOT="${PLATFORM}" \
@@ -109,13 +109,13 @@ build_for_ios_platform() {
 build_for_macos_platform() {
     local ARCH=$1  # arm64 or x86_64
 
-    local BUILD_DIR="${IOS_DIR}/build_macosx_${ARCH}"
-    local INSTALL_DIR="${IOS_DIR}/simpleble_macosx_${ARCH}"
+    local BUILD_DIR="${APPLE_DIR}/build_macosx_${ARCH}"
+    local INSTALL_DIR="${APPLE_DIR}/simpleble_macosx_${ARCH}"
 
     echo ""
     echo "Building SimpleBLE for macOS (${ARCH})..."
 
-    cmake -B "${BUILD_DIR}" -S "${IOS_DIR}" \
+    cmake -B "${BUILD_DIR}" -S "${APPLE_DIR}" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_SYSTEM_NAME=Darwin \
         -DCMAKE_OSX_SYSROOT="macosx" \
@@ -146,25 +146,25 @@ build_for_macos_platform "x86_64"
 # Create universal macOS library
 echo ""
 echo "Creating universal macOS library..."
-MACOS_UNIVERSAL_DIR="${IOS_DIR}/simpleble_macosx_universal"
+MACOS_UNIVERSAL_DIR="${APPLE_DIR}/simpleble_macosx_universal"
 mkdir -p "${MACOS_UNIVERSAL_DIR}/lib"
-cp -r "${IOS_DIR}/simpleble_macosx_arm64/include" "${MACOS_UNIVERSAL_DIR}/"
+cp -r "${APPLE_DIR}/simpleble_macosx_arm64/include" "${MACOS_UNIVERSAL_DIR}/"
 lipo -create \
-    "${IOS_DIR}/simpleble_macosx_arm64/lib/libsimpleble.a" \
-    "${IOS_DIR}/simpleble_macosx_x86_64/lib/libsimpleble.a" \
+    "${APPLE_DIR}/simpleble_macosx_arm64/lib/libsimpleble.a" \
+    "${APPLE_DIR}/simpleble_macosx_x86_64/lib/libsimpleble.a" \
     -output "${MACOS_UNIVERSAL_DIR}/lib/libsimpleble.a"
 
 # Create XCFramework from the static libraries (iOS + macOS)
 echo ""
 echo "Creating XCFramework..."
-XCFRAMEWORK_PATH="${IOS_DIR}/SimpleBLE.xcframework"
+XCFRAMEWORK_PATH="${APPLE_DIR}/SimpleBLE.xcframework"
 rm -rf "${XCFRAMEWORK_PATH}"
 
 xcodebuild -create-xcframework \
-    -library "${IOS_DIR}/simpleble_iphoneos_arm64/lib/libsimpleble.a" \
-    -headers "${IOS_DIR}/simpleble_iphoneos_arm64/include" \
-    -library "${IOS_DIR}/simpleble_iphonesimulator_arm64/lib/libsimpleble.a" \
-    -headers "${IOS_DIR}/simpleble_iphonesimulator_arm64/include" \
+    -library "${APPLE_DIR}/simpleble_iphoneos_arm64/lib/libsimpleble.a" \
+    -headers "${APPLE_DIR}/simpleble_iphoneos_arm64/include" \
+    -library "${APPLE_DIR}/simpleble_iphonesimulator_arm64/lib/libsimpleble.a" \
+    -headers "${APPLE_DIR}/simpleble_iphonesimulator_arm64/include" \
     -library "${MACOS_UNIVERSAL_DIR}/lib/libsimpleble.a" \
     -headers "${MACOS_UNIVERSAL_DIR}/include" \
     -output "${XCFRAMEWORK_PATH}"
@@ -176,15 +176,15 @@ echo "XCFramework created at: ${XCFRAMEWORK_PATH}"
 # Clean up intermediate build directories to reduce package size
 echo ""
 echo "Cleaning up intermediate build directories..."
-rm -rf "${IOS_DIR}/build_iphoneos_arm64"
-rm -rf "${IOS_DIR}/build_iphonesimulator_arm64"
-rm -rf "${IOS_DIR}/build_macosx_arm64"
-rm -rf "${IOS_DIR}/build_macosx_x86_64"
-rm -rf "${IOS_DIR}/simpleble_iphoneos_arm64"
-rm -rf "${IOS_DIR}/simpleble_iphonesimulator_arm64"
-rm -rf "${IOS_DIR}/simpleble_macosx_arm64"
-rm -rf "${IOS_DIR}/simpleble_macosx_x86_64"
-rm -rf "${IOS_DIR}/simpleble_macosx_universal"
+rm -rf "${APPLE_DIR}/build_iphoneos_arm64"
+rm -rf "${APPLE_DIR}/build_iphonesimulator_arm64"
+rm -rf "${APPLE_DIR}/build_macosx_arm64"
+rm -rf "${APPLE_DIR}/build_macosx_x86_64"
+rm -rf "${APPLE_DIR}/simpleble_iphoneos_arm64"
+rm -rf "${APPLE_DIR}/simpleble_iphonesimulator_arm64"
+rm -rf "${APPLE_DIR}/simpleble_macosx_arm64"
+rm -rf "${APPLE_DIR}/simpleble_macosx_x86_64"
+rm -rf "${APPLE_DIR}/simpleble_macosx_universal"
 
 echo ""
 echo "Package preparation complete!"

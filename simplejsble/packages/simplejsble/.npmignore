@@ -3,8 +3,8 @@ node_modules/
 android/build/
 android/.cxx/
 android/.gradle/
-ios/build_*/
-ios/simpleble_*/
+apple/build_*/
+apple/simpleble_*/
 *.tsbuildinfo
 
 # Ignore example app

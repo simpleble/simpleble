@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 
 # Determine if we're in the SimpleBLE monorepo or npm package
-# In monorepo: packages/simplejsble/ios → ../../../.. has cmake/
-# In npm: node_modules/simplejsble/ios → .. has cmake/ (bundled)
+# In monorepo: packages/simplejsble/apple → ../../../.. has cmake/
+# In npm: node_modules/simplejsble/apple → .. has cmake/ (bundled)
 # This is used by the podspec's prepare_command when building the XCFramework
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/prelude.cmake")
     # npm package - bundled cmake

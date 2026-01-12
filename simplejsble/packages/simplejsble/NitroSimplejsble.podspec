@@ -22,15 +22,15 @@ Pod::Spec.new do |s|
 
   s.source_files = [
     # Implementation (Swift)
-    "ios/**/*.{swift}",
+    "apple/**/*.{swift}",
     # Autolinking/Registration (Objective-C++)
-    "ios/**/*.{m,mm}",
+    "apple/**/*.{m,mm}",
     # Implementation (C++ objects)
     "cpp/**/*.{hpp,cpp}",
   ]
 
   # Exclude CMakeLists.txt from source files
-  s.exclude_files = ["ios/CMakeLists.txt"]
+  s.exclude_files = ["apple/CMakeLists.txt"]
 
   load 'nitrogen/generated/ios/NitroSimplejsble+autolinking.rb'
   add_nitrogen_files(s)
@@ -45,8 +45,8 @@ Pod::Spec.new do |s|
   s.osx.frameworks = ['Foundation', 'CoreBluetooth', 'IOBluetooth', 'IOKit']
 
   # Vendored XCFramework containing all architectures (iOS + macOS)
-  s.ios.vendored_frameworks = 'ios/SimpleBLE.xcframework'
-  s.osx.vendored_frameworks = 'ios/SimpleBLE.xcframework'
+  s.ios.vendored_frameworks = 'apple/SimpleBLE.xcframework'
+  s.osx.vendored_frameworks = 'apple/SimpleBLE.xcframework'
 
   # Configure header search paths for SimpleBLE XCFramework
   # Headers are inside the XCFramework slices - we include all platforms so it works for any target
@@ -55,9 +55,9 @@ Pod::Spec.new do |s|
     'HEADER_SEARCH_PATHS' => [
       '"$(inherited)"',
       # XCFramework headers for each platform slice
-      '"$(PODS_TARGET_SRCROOT)/ios/SimpleBLE.xcframework/ios-arm64/Headers"',
-      '"$(PODS_TARGET_SRCROOT)/ios/SimpleBLE.xcframework/ios-arm64-simulator/Headers"',
-      '"$(PODS_TARGET_SRCROOT)/ios/SimpleBLE.xcframework/macos-arm64_x86_64/Headers"',
+      '"$(PODS_TARGET_SRCROOT)/apple/SimpleBLE.xcframework/ios-arm64/Headers"',
+      '"$(PODS_TARGET_SRCROOT)/apple/SimpleBLE.xcframework/ios-arm64-simulator/Headers"',
+      '"$(PODS_TARGET_SRCROOT)/apple/SimpleBLE.xcframework/macos-arm64_x86_64/Headers"',
     ].join(' '),
   })
 end
