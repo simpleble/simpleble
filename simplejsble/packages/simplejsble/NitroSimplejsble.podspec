@@ -10,69 +10,15 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => min_ios_version_supported }
+  s.platforms    = {
+    :ios => '13.4',
+    :osx => '10.13'
+  }
 
   s.source = { :path => "." }
 
-  # Build SimpleBLE from source only if XCFramework doesn't exist
-  # When installed from npm, the pre-built XCFramework is already included
-  s.prepare_command = <<-CMD
-    # Build iOS XCFramework if not present
-    if [ -d "ios/SimpleBLE.xcframework" ]; then
-      echo "SimpleBLE.xcframework (iOS) already exists, skipping build"
-    else
-      echo "Building SimpleBLE for iOS..."
-      set -e
-      IOS_DIR="ios"
-      IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-13.4}"
-      
-      build_for_platform() {
-          local PLATFORM=$1  # iphoneos or iphonesimulator
-          local ARCH=$2      # arm64 or x86_64
-      
-          local BUILD_DIR="${IOS_DIR}/build_${PLATFORM}_${ARCH}"
-          local INSTALL_DIR="${IOS_DIR}/simpleble_${PLATFORM}_${ARCH}"
-      
-          echo "Building SimpleBLE for ${PLATFORM} (${ARCH})..."
-      
-          cmake -B "${BUILD_DIR}" -S "${IOS_DIR}" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_SYSTEM_NAME=iOS \
-              -DCMAKE_OSX_SYSROOT="${PLATFORM}" \
-              -DCMAKE_OSX_ARCHITECTURES="${ARCH}" \
-              -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
-              -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DSIMPLEBLE_EXCLUDE_C=ON
-      
-          cmake --build "${BUILD_DIR}" --config Release --parallel
-          cmake --install "${BUILD_DIR}" --config Release
-      
-          echo "Installed to ${INSTALL_DIR}"
-      }
-      
-      # Build for device
-      build_for_platform "iphoneos" "arm64"
-      
-      # Build for simulator (Apple Silicon)
-      build_for_platform "iphonesimulator" "arm64"
-      
-      # Create XCFramework from the static libraries
-      echo "Creating XCFramework..."
-      XCFRAMEWORK_PATH="${IOS_DIR}/SimpleBLE.xcframework"
-      rm -rf "${XCFRAMEWORK_PATH}"
-      
-      xcodebuild -create-xcframework \
-          -library "${IOS_DIR}/simpleble_iphoneos_arm64/lib/libsimpleble.a" \
-          -headers "${IOS_DIR}/simpleble_iphoneos_arm64/include" \
-          -library "${IOS_DIR}/simpleble_iphonesimulator_arm64/lib/libsimpleble.a" \
-          -headers "${IOS_DIR}/simpleble_iphonesimulator_arm64/include" \
-          -output "${XCFRAMEWORK_PATH}"
-      
-      echo "SimpleBLE build complete!"
-      echo "XCFramework created at: ${XCFRAMEWORK_PATH}"
-    fi
-  CMD
+  # XCFramework is pre-built during npm publish (scripts/build-xcframework.sh)
+  # No prepare_command needed - the XCFramework is included in the npm package
 
   s.source_files = [
     # Implementation (Swift)
@@ -95,18 +41,23 @@ Pod::Spec.new do |s|
 
   # Required frameworks for SimpleBLE
   s.frameworks = ['Foundation', 'CoreBluetooth']
+  # macOS requires additional frameworks for classic Bluetooth support
+  s.osx.frameworks = ['Foundation', 'CoreBluetooth', 'IOBluetooth', 'IOKit']
 
-  # Vendored XCFramework containing all architectures
+  # Vendored XCFramework containing all architectures (iOS + macOS)
   s.ios.vendored_frameworks = 'ios/SimpleBLE.xcframework'
+  s.osx.vendored_frameworks = 'ios/SimpleBLE.xcframework'
 
-  # Configure header search paths for SimpleBLE
+  # Configure header search paths for SimpleBLE XCFramework
+  # Headers are inside the XCFramework slices - we include all platforms so it works for any target
   current_pod_target_xcconfig = s.attributes_hash['pod_target_xcconfig'] || {}
   s.pod_target_xcconfig = current_pod_target_xcconfig.merge({
     'HEADER_SEARCH_PATHS' => [
       '"$(inherited)"',
-      # iOS header paths
-      '"$(PODS_TARGET_SRCROOT)/ios/simpleble_iphoneos_arm64/include"',
-      '"$(PODS_TARGET_SRCROOT)/ios/simpleble_iphonesimulator_arm64/include"',
+      # XCFramework headers for each platform slice
+      '"$(PODS_TARGET_SRCROOT)/ios/SimpleBLE.xcframework/ios-arm64/Headers"',
+      '"$(PODS_TARGET_SRCROOT)/ios/SimpleBLE.xcframework/ios-arm64-simulator/Headers"',
+      '"$(PODS_TARGET_SRCROOT)/ios/SimpleBLE.xcframework/macos-arm64_x86_64/Headers"',
     ].join(' '),
   })
 end
