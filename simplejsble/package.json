@@ -5,11 +5,11 @@
         "packages/simplejsble"
     ],
     "scripts": {
-        "simplejsble": "npm --prefix packages/simplejsble run",
-        "specs": "npm run simplejsble specs",
-        "typecheck": "npm run simplejsble typecheck",
-        "build": "npm run simplejsble build",
-        "clean": "npm run simplejsble clean && rm -rf examples/expo-ios-android/android/build examples/expo-ios-android/android/.gradle",
+        "specs": "npm --prefix packages/simplejsble run specs",
+        "typecheck": "npm --prefix packages/simplejsble run typecheck",
+        "build": "npm --prefix packages/simplejsble run build",
+        "clean": "npm --prefix packages/simplejsble run clean",
+        "lint": "npm --prefix packages/simplejsble run lint",
         "postinstall": "patch-package",
         "prepublish": "npm run build",
         "publish:dry": "cd packages/simplejsble && npm publish --dry-run",

@@ -4,7 +4,7 @@ android/build/
 android/.cxx/
 android/.gradle/
 ios/build_*/
-ios/SimpleBLE.xcframework/
+ios/simpleble_*/
 *.tsbuildinfo
 
 # Ignore example app

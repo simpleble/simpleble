@@ -1,6 +1,6 @@
 {
   "name": "simplejsble",
-  "version": "0.0.16",
+  "version": "0.0.28",
   "description": "React Native Bluetooth Low Energy library using SimpleBLE with Nitro Modules",
   "main": "lib/index",
   "module": "lib/index",
@@ -26,12 +26,13 @@
     "README.md"
   ],
   "scripts": {
-    "prepack": "node scripts/prepare-package.js",
+    "prepack": "npm run build && npx nitrogen && bash scripts/prepare-package.sh",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit false",
-    "clean": "rm -rf android/build android/.cxx android/.gradle lib",
+    "build": "tsc",
+    "clean": "rm -rf simpleble simpledroidbridge cmake dependencies VERSION nitrogen lib android/build android/.cxx android/.gradle ios/build_iphoneos_arm64 ios/build_iphonesimulator_arm64 ios/simpleble_iphoneos_arm64 ios/simpleble_iphonesimulator_arm64 ios/SimpleBLE.xcframework",
     "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run typecheck",
+    "postpublish": "npm run clean",
     "specs": "tsc --noEmit false && nitrogen --logLevel=\"debug\""
   },
   "keywords": [

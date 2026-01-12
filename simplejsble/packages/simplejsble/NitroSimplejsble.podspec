@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => min_ios_version_supported, :osx => '13.0' }
+  s.platforms    = { :ios => min_ios_version_supported }
 
   s.source = { :path => "." }
 
@@ -72,24 +72,13 @@ Pod::Spec.new do |s|
       echo "SimpleBLE build complete!"
       echo "XCFramework created at: ${XCFRAMEWORK_PATH}"
     fi
-
-    # Build macOS XCFramework if not present
-    if [ -d "macos/SimpleBLE-macos.xcframework" ]; then
-      echo "SimpleBLE-macos.xcframework already exists, skipping build"
-    else
-      echo "Building SimpleBLE for macOS..."
-      chmod +x macos/build_simpleble.sh
-      macos/build_simpleble.sh
-    fi
   CMD
 
   s.source_files = [
     # Implementation (Swift)
     "ios/**/*.{swift}",
-    "macos/**/*.{swift}",
     # Autolinking/Registration (Objective-C++)
     "ios/**/*.{m,mm}",
-    "macos/**/*.{m,mm}",
     # Implementation (C++ objects)
     "cpp/**/*.{hpp,cpp}",
   ]
@@ -104,15 +93,11 @@ Pod::Spec.new do |s|
   s.dependency 'React-callinvoker'
   install_modules_dependencies(s)
 
-  # Required frameworks for SimpleBLE (shared by iOS and macOS)
+  # Required frameworks for SimpleBLE
   s.frameworks = ['Foundation', 'CoreBluetooth']
-
-  # macOS-specific frameworks (IOBluetooth/IOKit for USB dongle support)
-  s.osx.frameworks = ['Foundation', 'CoreBluetooth', 'IOBluetooth', 'IOKit']
 
   # Vendored XCFramework containing all architectures
   s.ios.vendored_frameworks = 'ios/SimpleBLE.xcframework'
-  s.osx.vendored_frameworks = 'macos/SimpleBLE-macos.xcframework'
 
   # Configure header search paths for SimpleBLE
   current_pod_target_xcconfig = s.attributes_hash['pod_target_xcconfig'] || {}
@@ -122,9 +107,6 @@ Pod::Spec.new do |s|
       # iOS header paths
       '"$(PODS_TARGET_SRCROOT)/ios/simpleble_iphoneos_arm64/include"',
       '"$(PODS_TARGET_SRCROOT)/ios/simpleble_iphonesimulator_arm64/include"',
-      # macOS header paths
-      '"$(PODS_TARGET_SRCROOT)/macos/simpleble_macosx_arm64/include"',
-      '"$(PODS_TARGET_SRCROOT)/macos/simpleble_macosx_x86_64/include"',
     ].join(' '),
   })
 end
