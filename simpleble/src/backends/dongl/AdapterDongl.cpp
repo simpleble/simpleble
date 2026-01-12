@@ -31,9 +31,6 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
 
     _serial_protocol->set_event_callback([this](const dongl_Event& event) {
         switch (event.which_evt) {
-            case dongl_Event_softdevice_tag:
-                _on_softdevice_event(event.evt.softdevice);
-                break;
             case dongl_Event_simpleble_tag:
                 _on_simpleble_event(event.evt.simpleble);
                 break;
@@ -225,145 +222,15 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             }
             break;
         }
+
+        case simpleble_Event_value_changed_evt_tag: {
+            for (auto& [address, peripheral] : this->peripherals_) {
+                if (peripheral->conn_handle() == event.evt.value_changed_evt.conn_handle) {
+                    peripheral->notify_value_changed(event.evt.value_changed_evt);
+                    break;
+                }
+            }
+            break;
+        }
     }
-}
-
-void AdapterDongl::_on_softdevice_event(const sd_Event& event) {
-    // //fmt::print("Received event: {}\n", event.which_evt);
-
-    // switch (event.which_evt) {
-    //     case sd_Event_gap_adv_report_tag: {
-    //         BluetoothAddress mac_address = fmt::format(
-    //             "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}", event.evt.gap_adv_report.peer_addr.addr[0],
-    //             event.evt.gap_adv_report.peer_addr.addr[1], event.evt.gap_adv_report.peer_addr.addr[2],
-    //             event.evt.gap_adv_report.peer_addr.addr[3], event.evt.gap_adv_report.peer_addr.addr[4],
-    //             event.evt.gap_adv_report.peer_addr.addr[5]);
-
-    //         BluetoothAddressType address_type = SimpleBLE::BluetoothAddressType::UNSPECIFIED;
-    //         if (event.evt.gap_adv_report.peer_addr.addr_type == sd_types_BleGapAddrType_BLE_GAP_ADDR_TYPE_PUBLIC) {
-    //             address_type = SimpleBLE::BluetoothAddressType::PUBLIC;
-    //         } else if (event.evt.gap_adv_report.peer_addr.addr_type ==
-    //                        sd_types_BleGapAddrType_BLE_GAP_ADDR_TYPE_RANDOM_STATIC ||
-    //                    event.evt.gap_adv_report.peer_addr.addr_type ==
-    //                        sd_types_BleGapAddrType_BLE_GAP_ADDR_TYPE_RANDOM_PRIVATE_RESOLVABLE) {
-    //             address_type = SimpleBLE::BluetoothAddressType::RANDOM;
-    //         }
-
-    //         std::string identifier = "";
-    //         std::map<uint16_t, ByteArray> manufacturer_data = {};
-    //         std::map<BluetoothUUID, ByteArray> service_data = {};
-
-    //         // Parse the advertising data
-    //         size_t offset = 0;
-    //         while (offset < event.evt.gap_adv_report.data.len) {
-    //             if (offset + 1 >= event.evt.gap_adv_report.data.len) break;
-
-    //             uint8_t length = event.evt.gap_adv_report.data.data.bytes[offset++];
-    //             if (length == 0 || offset + length > event.evt.gap_adv_report.data.len) break;
-
-    //             if (offset >= event.evt.gap_adv_report.data.len) break;
-    //             uint8_t ad_type = event.evt.gap_adv_report.data.data.bytes[offset++];
-
-    //             size_t data_length = length - 1;  // AD Type takes 1 byte
-    //             if (data_length == 0 || offset + data_length > event.evt.gap_adv_report.data.len) break;
-
-    //             switch (ad_type) {
-    //                 case 0x08:  // Shortened Local Name
-    //                 case 0x09:  // Complete Local Name
-    //                     if (data_length > 0) {
-    //                         identifier = std::string(
-    //                             reinterpret_cast<const char*>(&event.evt.gap_adv_report.data.data.bytes[offset]),
-    //                             data_length);
-    //                     }
-    //                     break;
-
-    //                 case 0xFF:  // Manufacturer Specific Data
-    //                     if (data_length >= 2) {  // Need at least company ID (2 bytes)
-    //                         uint16_t company_id = event.evt.gap_adv_report.data.data.bytes[offset] |
-    //                                              (event.evt.gap_adv_report.data.data.bytes[offset + 1] << 8);
-    //                         ByteArray manufacturer_bytes(
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + 2],
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + data_length]);
-    //                         manufacturer_data[company_id] = manufacturer_bytes;
-    //                     }
-    //                     break;
-
-    //                 case 0x16:  // Service Data - 16-bit UUID
-    //                     if (data_length >= 2) {  // Need at least UUID (2 bytes)
-    //                         uint16_t service_uuid_16 = event.evt.gap_adv_report.data.data.bytes[offset] |
-    //                                                   (event.evt.gap_adv_report.data.data.bytes[offset + 1] << 8);
-    //                         BluetoothUUID service_uuid = fmt::format("{:04x}", service_uuid_16);
-    //                         ByteArray service_bytes(
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + 2],
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + data_length]);
-    //                         service_data[service_uuid] = service_bytes;
-    //                     }
-    //                     break;
-
-    //                 case 0x20:  // Service Data - 32-bit UUID
-    //                     if (data_length >= 4) {  // Need at least UUID (4 bytes)
-    //                         uint32_t service_uuid_32 = event.evt.gap_adv_report.data.data.bytes[offset] |
-    //                                                   (event.evt.gap_adv_report.data.data.bytes[offset + 1] << 8) |
-    //                                                   (event.evt.gap_adv_report.data.data.bytes[offset + 2] << 16) |
-    //                                                   (event.evt.gap_adv_report.data.data.bytes[offset + 3] << 24);
-    //                         BluetoothUUID service_uuid = fmt::format("{:08x}", service_uuid_32);
-    //                         ByteArray service_bytes(
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + 4],
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + data_length]);
-    //                         service_data[service_uuid] = service_bytes;
-    //                     }
-    //                     break;
-
-    //                 case 0x21:  // Service Data - 128-bit UUID
-    //                     if (data_length >= 16) {  // Need at least UUID (16 bytes)
-    //                         // Convert to UUID string format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    //                         BluetoothUUID service_uuid = fmt::format(
-    //                             "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 15],  // Little endian byte order
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 14],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 13],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 12],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 11],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 10],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 9],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 8],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 7],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 6],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 5],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 4],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 3],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 2],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset + 1],
-    //                             event.evt.gap_adv_report.data.data.bytes[offset]);
-    //                         ByteArray service_bytes(
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + 16],
-    //                             &event.evt.gap_adv_report.data.data.bytes[offset + data_length]);
-    //                         service_data[service_uuid] = service_bytes;
-    //                     }
-    //                     break;
-
-    //                 default:
-    //                     // Skip unknown AD types
-    //                     break;
-    //             }
-
-    //             offset += data_length;
-    //         }
-
-    //         auto advertising_data = advertising_data_t{
-    //             .identifier = identifier,
-    //             .address_type = address_type,
-    //             .mac_address = mac_address,
-    //             .connectable = event.evt.gap_adv_report.type.connectable,
-    //             .rssi = event.evt.gap_adv_report.rssi,
-    //             .tx_power = event.evt.gap_adv_report.tx_power,
-    //             .manufacturer_data = manufacturer_data,
-    //             .service_data = service_data,
-    //         };
-    //         _scan_received_callback(advertising_data);
-    //         break;
-    //     }
-    //     default:
-    //         break;
-    // }
 }

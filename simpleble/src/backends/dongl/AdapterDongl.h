@@ -48,7 +48,6 @@ class AdapterDongl : public AdapterBase {
 
   private:
     void _scan_received_callback(advertising_data_t data);
-    void _on_softdevice_event(const sd_Event& event);
     void _on_simpleble_event(const simpleble_Event& event);
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;

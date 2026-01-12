@@ -1,9 +1,24 @@
 # SimpleBLE License
 
-Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1).
-This means that the project is now free to use for non-commercial purposes, but requires a commercial
-license for commercial use. Each version of SimpleBLE will convert to the GNU General Public License
-version 3 after four years of its initial release.
+SimpleBLE is available under the Business Source License 1.1 (BUSL-1.1).
+
+This means that the project is free to use for non-commercial purposes, but requires a commercial
+license for production or commercial use. Each version of SimpleBLE will convert to the GNU General
+Public License version 3 after four years of its initial release.
+
+**Change Date:** The fourth anniversary of the first publicly available distribution of a specific
+version of SimpleBLE under this License.
+
+**Change License:** GNU General Public License version 3.0 (GPL-3.0)
+
+**Non-Commercial Perpetual Use Grant:** After the Change Date, non-commercial users (individuals,
+hobbyists, educational institutions, and revenue-free open-source projects) are granted
+perpetual rights to use this specific version under the original BUSL-1.1 terms, notwithstanding the
+automatic conversion to GPL-3.
+
+## Frequently Asked Questions
+
+If you have any questions regarding licensing, please [email us](mailto:contact@simpleble.org) or [leave us a message on our website](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleble_license).
 
 **I would like to use SimpleBLE commercially, and don't have a commercial license. What should I do?**
 
@@ -11,9 +26,17 @@ Please [email us](mailto:contact@simpleble.org) or [leave us a message on our we
 and we can discuss the specifics of your situation. We have a free commercial license option for small
 projects and early-stage companies and very flexible commercial licensing options for larger projects.
 
-**I already have a commercial license. What happens with this latest license change?**
+**I already have a commercial license. Do any Business Source License 1.1 terms affect me?**
 
-Nothing changes. You can continue using SimpleBLE under the terms of your commercial license.
+No, you are only bound to the terms of the commercial license you hold. The Business Source License
+1.1 terms only apply to users who do not have a commercial license.
+
+**What exactly can I do with SimpleBLE for free under non-commercial use?**
+
+The Business Source License 1.1 (BUSL-1.1) allows free non-commercial use of the software, including
+copying, modifying, creating derivatives, redistributing, and non-production activities like
+development, testing, or personal/hobby projects. For purely non-commercial scenarios with no financial
+gain, these rights are available without needing extra permission.
 
 **What does the Business Source License 1.1 allow and restrict?**
 
@@ -23,6 +46,32 @@ revenue-generating projects, or customer-facing deployments) requires purchasing
 
 After four years of the initial release of a given version of SimpleBLE, the license automatically
 converts to the GNU General Public License version 3.
+
+For details on what counts as free non-commercial use and distribution requirements, see the FAQs below.
+
+**Can I include SimpleBLE in my own open-source project and release it under MIT/Apache/BSD?**
+
+When distributing any version that includes SimpleBLE code (whether unchanged, modified, or as part
+of a larger project), downstream users must include the full BUSL-1.1 license text prominently with
+their distribution and ensure that the SimpleBLE portion remains under the same BUSL terms for recipients.
+
+This applies even if your overall project uses a permissive license like MIT or Apache. The SimpleBLE
+code cannot be re-licensed to recipients under MIT/Apache alone. Recipients must still receive the
+SimpleBLE portion under BUSL-1.1 (typically by including the BUSL license file and any required notices).
+
+After the Change Date, GPL-3.0 rules apply for everyone except qualifying non-commercial users, who
+may continue using and distributing under the original BUSL-1.1 terms per the Non-Commercial Perpetual
+Use Grant.
+
+**What does the "Non-Commercial Perpetual Use Grant" mean?**
+
+After the Change Date (four years after a version's release), that version automatically converts to
+GPL-3.0 for everyone. However, purely non-commercial users (individuals, hobbyists, educational
+institutions, and revenue-free open-source projects) may continue using that specific version
+indefinitely under the original BUSL-1.1 terms instead of switching to GPL-3.0.
+
+This means you can keep the more permissive BUSL-style rights (e.g., no requirement to license your
+derivatives under GPL) as long as your use remains strictly non-commercial.
 
 **What do you consider "commercial use"?**
 
@@ -47,7 +96,7 @@ can continue providing the level of reliability and support that commercial appl
 # Business Source License 1.1
 
 License text copyright © 2017 MariaDB Corporation Ab, All Rights Reserved. "Business Source License"
- is a trademark of MariaDB Corporation Ab.
+is a trademark of MariaDB Corporation Ab.
 
 ## Terms
 
@@ -86,4 +135,4 @@ WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMEN
 
 # SimpleBLE Commercial License Agreement
 
-You can find more information on our commercial licenses [on our website](https://simpleble.org/license/development/?utm_source=github&utm_medium=referral&utm_campaign=simpleble_license)
+Please [email us](mailto:contact@simpleble.org) or [leave us a message on our website](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleble_license) if you would like to purchase a commercial license or would like more information.

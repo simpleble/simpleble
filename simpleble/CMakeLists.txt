@@ -166,12 +166,7 @@ set(SIMPLEBLE_DONGL_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/d2h.pb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/h2d.pb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/basic.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/simpleble.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_gap.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_gattc.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_gatts.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_types.pb.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/simpleble.pb.c)
 
 if(SIMPLEBLE_PLAIN)
     list(APPEND SIMPLEBLE_DONGL_SOURCES

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -29,6 +30,12 @@ class bytearray {
      * @param vec A vector of uint8_t.
      */
     bytearray(const std::vector<uint8_t>& vec) : data_(vec) {}
+
+    /**
+     * @brief Constructs byte array from an initializer list of uint8_t.
+     * @param list An initializer list of uint8_t.
+     */
+    bytearray(std::initializer_list<uint8_t> list) : data_(list) {}
 
     /**
      * @brief Constructs byte array from a raw pointer and size.

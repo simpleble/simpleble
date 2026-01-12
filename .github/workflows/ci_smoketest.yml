@@ -107,13 +107,13 @@ jobs:
         run: pip install -r simplepyble/requirements.txt
 
       - name: Build wheel
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: pypa/cibuildwheel@v3.3.1
         env:
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_BUILD: cp312*
+          CIBW_BUILD: cp314*
           CIBW_BEFORE_ALL_LINUX: "yum update -y && yum group install -y \"Development Tools\" && yum install -y dbus-devel"
           CIBW_ARCHS: ${{ matrix.config.arch }}
-          CIBW_SKIP: "*musllinux_* pp* cp36-* cp37-*"
+          CIBW_SKIP: "*musllinux_* pp*"
           CIBW_TEST_SKIP: "*"
 
   build-android-plugins:

@@ -18,6 +18,13 @@ TEST(ByteArrayTest, VectorConstructor) {
     EXPECT_EQ(byteArray[3], 4);
 }
 
+TEST(ByteArrayTest, InitializerListConstructor) {
+    bytearray byteArray = {0x01, 0x00};
+    EXPECT_EQ(byteArray.size(), 2);
+    EXPECT_EQ(byteArray[0], 0x01);
+    EXPECT_EQ(byteArray[1], 0x00);
+}
+
 TEST(ByteArrayTest, PointerConstructor) {
     uint8_t data[] = {1, 2, 3, 4};
     bytearray byteArray(data, 4);
