@@ -11,8 +11,8 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = {
-    :ios => '13.4',
-    :osx => '10.13'
+    :ios => '15.8',
+    :osx => '13.0'
   }
 
   s.source = { :path => "." }
