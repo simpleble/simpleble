@@ -40,6 +40,7 @@ local.properties
 node_modules/
 npm-debug.log
 yarn-error.log
+package-lock.json
 
 # fastlane
 #
@@ -59,6 +60,8 @@ yarn-error.log
 # Ruby / CocoaPods
 **/Pods/
 /vendor/bundle/
+.bundle/
+**/Podfile.lock
 
 
 # Temporary files created by Metro to check the health of the file watcher
