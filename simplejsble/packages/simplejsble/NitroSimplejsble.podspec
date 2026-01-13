@@ -10,10 +10,8 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = {
-    :ios => '15.8',
-    :osx => '13.0'
-  }
+  s.ios.deployment_target = '15.8'
+  s.macos.deployment_target = '13.0'
 
   s.source = { :path => "." }
 

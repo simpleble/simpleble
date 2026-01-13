@@ -1,24 +1,71 @@
 import {StyleSheet, Text, View} from 'react-native';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 import {HybridAdapter} from 'simplejsble';
+
+interface AdapterInfo {
+  name: string;
+  index: number;
+}
 
 export default function HomeScreen() {
   const [greeting, setGreeting] = useState<string>('');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState<boolean>(false);
-  const [adapters, setAdapters] = useState<(typeof HybridAdapter)[]>([]);
+  const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
+  const hasInitialized = useRef(false);
+  // Store full adapter references in a ref to avoid Fast Refresh issues
+  // Access via: adapterRefs.current[index]
+  const adapterRefs = useRef<any[]>([]);
+  const adapterMapByName = useRef<Map<string, any>>(new Map());
+
+  // Helper function to get adapter by index
+  const getAdapterByIndex = (index: number) => {
+    return adapterRefs.current[index];
+  };
 
   useEffect(() => {
-    const message = HybridAdapter.greet('Alejo Android');
+    // Prevent multiple initializations that could cause infinite reloads
+    if (hasInitialized.current) {
+      return;
+    }
+    hasInitialized.current = true;
+
+    const message = HybridAdapter.greet('Alejo macOS');
     setGreeting(message);
 
     const isBluetoothEnabled = HybridAdapter.bluetooth_enabled();
     console.log('isBluetoothEnabled', isBluetoothEnabled);
     setIsBluetoothEnabled(isBluetoothEnabled);
 
-    const adapters = HybridAdapter.get_adapters();
-    console.log('adapters', adapters);
-    setAdapters(adapters);
+    const adapterObjects = HybridAdapter.get_adapters();
+    console.log('adapters', adapterObjects);
+    
+    // Store full adapter references in refs (outside React state)
+    // This prevents Fast Refresh from detecting changes and causing infinite reloads
+    adapterRefs.current = adapterObjects;
+    adapterMapByName.current.clear();
+    
+    // Extract only the data we need for rendering (to avoid storing hybrid objects in state)
+    const adapterData: AdapterInfo[] = adapterObjects.map((adapter: any, index: number) => {
+      const name = adapter.name || 'Unknown';
+      // Store reference in map for easy lookup by name
+      adapterMapByName.current.set(name, adapter);
+      return {
+        name,
+        index,
+      };
+    });
+    
+    setAdapters(adapterData);
   }, []);
+
+  // Example: Use adapter methods when needed
+  // const handleUseAdapter = (index: number) => {
+  //   const adapter = getAdapterByIndex(index);
+  //   if (adapter) {
+  //     // Use adapter methods here
+  //     // adapter.someMethod();
+  //   }
+  // };
 
   return (
     <View style={styles.container}>
@@ -28,8 +75,8 @@ export default function HomeScreen() {
       ) : (
         <Text style={styles.greeting}>Bluetooth is disabled</Text>
       )}
-      {adapters.map(adapter => (
-        <Text key={adapter.name} style={styles.greeting}>
+      {adapters.map((adapter) => (
+        <Text key={`${adapter.name}-${adapter.index}`} style={styles.greeting}>
           {adapter.name}
         </Text>
       ))}

@@ -1,6 +1,6 @@
 {
   "name": "simplejsble",
-  "version": "0.0.35",
+  "version": "0.0.41",
   "description": "React Native Bluetooth Low Energy library using SimpleBLE with Nitro Modules",
   "main": "lib/index",
   "module": "lib/index",
@@ -14,6 +14,7 @@
     "android/",
     "apple/",
     "cpp/",
+    "scripts/",
     "simpleble/",
     "simpledroidbridge/",
     "cmake/",
@@ -26,6 +27,7 @@
     "README.md"
   ],
   "scripts": {
+    "postinstall": "bash scripts/patch-platforms-definition.sh",
     "prepack": "npm run build && npx nitrogen && bash scripts/prepare-package.sh",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
@@ -62,6 +64,9 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
+  "dependencies": {
+    "react-native-nitro-modules": ">=0.20.0"
+  },
   "devDependencies": {
     "@react-native/eslint-config": "0.82.0",
     "@types/react": "^19.1.03",
@@ -77,13 +82,7 @@
   },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*",
-    "react-native-nitro-modules": ">=0.20.0"
-  },
-  "peerDependenciesMeta": {
-    "react-native-nitro-modules": {
-      "optional": false
-    }
+    "react-native": "*"
   },
   "eslintConfig": {
     "root": true,
