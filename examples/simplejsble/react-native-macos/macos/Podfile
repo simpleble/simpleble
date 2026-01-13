@@ -1,0 +1,45 @@
+require 'pathname'
+
+ws_dir = Pathname.new(__dir__)
+ws_dir = ws_dir.parent until
+  File.exist?("#{ws_dir}/node_modules/react-native-macos/scripts/react_native_pods.rb") ||
+  ws_dir.expand_path.to_s == '/'
+require "#{ws_dir}/node_modules/react-native-macos/scripts/react_native_pods.rb"
+
+prepare_react_native_project!
+
+target 'reactNativeMacos-macOS' do
+  platform :macos, '14.0'
+  use_native_modules!
+
+  # Flags change depending on the env values.
+  flags = get_default_flags()
+
+  use_react_native!(
+    :path => '../node_modules/react-native-macos',
+    :hermes_enabled => false,
+    :fabric_enabled => ENV['RCT_NEW_ARCH_ENABLED'] == '1',
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    react_native_post_install(installer)
+    rct_bridge_module_h = File.join(installer.sandbox.root, 'Headers/Public/React-Core/React/RCTBridgeModule.h')
+    
+    # Fix RCTBridgeModule.h dispatch_queue_t property issue
+    # See: https://github.com/facebook/react-native/issues/29681
+    if File.exist?(rct_bridge_module_h)
+      text = File.read(rct_bridge_module_h)
+      new_contents = text.gsub(
+        /@property \(nonatomic, strong, readonly\) dispatch_queue_t methodQueue RCT_DEPRECATED;/,
+        '@property (nonatomic, assign, readonly) dispatch_queue_t methodQueue RCT_DEPRECATED;'
+      )
+      
+      if text != new_contents
+        File.open(rct_bridge_module_h, "w") { |file| file.puts new_contents }
+        puts "✓ Patched RCTBridgeModule.h methodQueue property (strong -> assign)"
+      end
+    end
+  end
+end
