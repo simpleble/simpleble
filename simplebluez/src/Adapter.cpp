@@ -25,11 +25,11 @@ std::string Adapter::identifier() const {
     return _path.substr(start + 1);
 }
 
-std::string Adapter::address() { return adapter1()->Address(); }
+std::string Adapter::address() { return adapter1()->Address; }
 
-bool Adapter::discovering() { return adapter1()->Discovering(); }
+bool Adapter::discovering() { return adapter1()->Discovering.refresh(); }
 
-bool Adapter::powered() { return adapter1()->Powered(); }
+bool Adapter::powered() { return adapter1()->Powered.refresh(); }
 
 void Adapter::discovery_filter(const DiscoveryFilter& filter) { adapter1()->SetDiscoveryFilter(filter); }
 

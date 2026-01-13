@@ -18,13 +18,25 @@ std::shared_ptr<Proxy> Interface::proxy() const { return _proxy.lock(); }
 // ----- LIFE CYCLE -----
 
 void Interface::load(Holder options) {
-    _property_update_mutex.lock();
     auto changed_options = options.get_dict_string();
+    
+    // LEGACY PROPERTY UPDATE
+    _property_update_mutex.lock();
     for (auto& [name, value] : changed_options) {
         _properties[name] = value;
         _property_valid_map[name] = true;
     }
     _property_update_mutex.unlock();
+
+    // NEW PROPERTY UPDATE
+    // Note: Properties that have not been defined inside _property_bases will explicitly be ignored.
+    for (auto& [name, value] : changed_options) {
+        if (_property_bases.find(name) == _property_bases.end()) {
+            continue;
+        }
+
+        _property_bases[name]->update(value);
+    }
 
     // Notify the user of all properties that have been created.
     for (auto& [name, value] : changed_options) {
@@ -79,8 +91,6 @@ void Interface::property_refresh(const std::string& property_name) {
     }
 }
 
-void Interface::property_changed(std::string option_name) {}
-
 // ----- SIGNALS -----
 
 void Interface::signal_property_changed(Holder changed_properties, Holder invalidated_properties) {
@@ -103,6 +113,30 @@ void Interface::signal_property_changed(Holder changed_properties, Holder invali
     }
 }
 
-// ----- MESSAGES -----
+// ----- HANDLES -----
 
-void Interface::message_handle(Message& msg) {}
+void Interface::handle_properties_changed(Holder changed_properties, Holder invalidated_properties) {
+    auto changed_options = changed_properties.get_dict_string();
+    for (auto& [name, value] : changed_options) {
+        if (_property_bases.find(name) == _property_bases.end()) {
+            continue;
+        }
+
+        _property_bases[name]->update(value);
+    }
+
+    auto removed_options = invalidated_properties.get_array();
+    for (auto& removed_option : removed_options) {
+        if (_property_bases.find(removed_option.get_string()) == _property_bases.end()) {
+            continue;
+        }
+
+        _property_bases[removed_option.get_string()]->invalidate();
+    }
+
+    // ! TODO: Enable once signal_property_changed has been deprecated
+    // // Once all properties have been updated, notify the user.
+    // for (auto& [name, value] : changed_options) {
+    //     property_changed(name);
+    // }
+}

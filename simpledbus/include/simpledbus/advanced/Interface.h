@@ -12,8 +12,80 @@ namespace SimpleDBus {
 
 class Proxy;
 
+class Interface;
+class PropertyBase;
+template <typename T>
+class Property;
+
 class Interface {
   public:
+    class PropertyBase {
+      public:
+        PropertyBase(Interface& interface, const std::string& name) : _interface(interface), _name(name), _valid(false) {}
+
+        virtual ~PropertyBase() = default;
+
+        // Delete copy, allow move
+        PropertyBase(const PropertyBase&) = delete;
+        PropertyBase& operator=(const PropertyBase&) = delete;
+        PropertyBase(PropertyBase&&) noexcept = delete;
+        PropertyBase& operator=(PropertyBase&&) noexcept = delete;
+
+        PropertyBase& refresh() {
+            _interface.property_refresh(_name);
+            return *this;
+        }
+
+        void update(Holder value) {
+            std::scoped_lock lock(_mutex);
+            _value = value;
+            _valid = true;
+        }
+
+        bool valid() {
+            std::scoped_lock lock(_mutex);
+            return _valid;
+        }
+
+        void invalidate() {
+            std::scoped_lock lock(_mutex);
+            _valid = false;
+        }
+
+      protected:
+        Interface& _interface;
+        const std::string& _name;
+        mutable std::recursive_mutex _mutex;
+        Holder _value;
+        bool _valid;
+    };
+
+    template <typename T>
+    class Property : public PropertyBase {
+      public:
+        Property(Interface& interface, const std::string& name) : PropertyBase(interface, name) {}
+
+        T operator()() const { return get(); }
+        operator T() const { return get(); }
+        void operator()(const T& value) { set(value); }
+
+        Property& refresh() {
+            PropertyBase::refresh();
+            return *this;
+        }
+
+        T get() const {
+            std::scoped_lock lock(_mutex);
+            return _value.get<T>();
+        }
+
+        void set(T value) {
+            std::scoped_lock lock(_mutex);
+            _value = SimpleDBus::Holder::create<T>(value);
+            _valid = true;
+        }
+    };
+
     Interface(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy, const std::string& interface_name);
 
     virtual ~Interface() = default;
@@ -27,8 +99,7 @@ class Interface {
     Message create_method_call(const std::string& method_name);
 
     // ----- PROPERTIES -----
-    virtual void property_changed(std::string option_name);
-
+    virtual void property_changed(std::string option_name) {}
 
     // ! TODO: We need to figure out a good architecture to let any generic interface access the Properties object of its Proxy.
     void property_refresh(const std::string& property_name);
@@ -37,12 +108,23 @@ class Interface {
     void signal_property_changed(Holder changed_properties, Holder invalidated_properties);
 
     // ----- MESSAGES -----
-    virtual void message_handle(Message& msg);
+    virtual void message_handle(Message& msg) {}
+
+    // ----- HANDLES -----
+    void handle_properties_changed(Holder changed_properties, Holder invalidated_properties);
 
     // ! The following properties are set as public to allow access to the Properties interface.
     std::recursive_mutex _property_update_mutex;
     std::map<std::string, bool> _property_valid_map;
     std::map<std::string, Holder> _properties;
+
+    template <typename T>
+    Property<T>& create_property(const std::string& name) {
+        std::unique_ptr<PropertyBase> property_ptr = std::make_unique<Property<T>>(*this, name);
+        Property<T>& property = dynamic_cast<Property<T>&>(*property_ptr);
+        _property_bases.emplace(name, std::move(property_ptr));
+        return property;
+    }
 
   protected:
     std::atomic_bool _loaded{true};
@@ -54,6 +136,11 @@ class Interface {
     std::weak_ptr<Proxy> _proxy;
 
     std::shared_ptr<Proxy> proxy() const;
+
+    // IMPORTANT: Never erase from _property_bases during lifetime of Interface.
+    // "Removal" of a property means: invalidate it via invalidate() or set _valid = false.
+    // The entry must remain so that permanent references in derived classes stay valid.
+    std::map<std::string, std::unique_ptr<PropertyBase>> _property_bases;
 };
 
 }  // namespace SimpleDBus

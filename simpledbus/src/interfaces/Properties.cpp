@@ -174,6 +174,7 @@ void Properties::message_handle(Message& msg) {
             return;
         }
 
-        proxy()->interface_get(iface_name)->signal_property_changed(changed_properties, invalidated_properties);
+        proxy()->interface_get(iface_name)->signal_property_changed(changed_properties, invalidated_properties); // ! TODO: Deprecate
+        proxy()->interface_get(iface_name)->handle_properties_changed(changed_properties, invalidated_properties);
     }
 }

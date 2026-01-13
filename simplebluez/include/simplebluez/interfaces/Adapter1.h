@@ -35,9 +35,14 @@ class Adapter1 : public SimpleDBus::Interface {
     SimpleDBus::Holder GetDiscoveryFilters();
 
     // ----- PROPERTIES -----
-    bool Discovering(bool refresh = true);
-    bool Powered(bool refresh = true);
-    std::string Address();
+
+    Property<bool>& Discovering = create_property<bool>("Discovering");
+    Property<bool>& Powered = create_property<bool>("Powered");
+    Property<std::string>& Address = create_property<std::string>("Address");
+
+    // bool Discovering(bool refresh = true);
+    // bool Powered(bool refresh = true);
+    // std::string Address();
 
   protected:
     void property_changed(std::string option_name) override;
