@@ -120,6 +120,7 @@ if(SIMPLEDBUS_TEST)
     add_executable(simpledbus_test
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_holder.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_holder_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_message.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_proxy_interfaces.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_proxy_children.cpp

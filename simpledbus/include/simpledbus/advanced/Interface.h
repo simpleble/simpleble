@@ -35,7 +35,7 @@ class Interface {
         PropertyBase& operator=(PropertyBase&&) noexcept = delete;
 
         PropertyBase& refresh() {
-            _interface.property_refresh(_name);
+            _interface.property_refresh_new(_name);
             return *this;
         }
 
@@ -55,9 +55,16 @@ class Interface {
             _valid = false;
         }
 
+        bool operator==(const Holder& other) const {
+            std::scoped_lock lock(_mutex);
+            return _value == other;
+        }
+
+        bool operator!=(const Holder& other) const { return !(*this == other); }
+
       protected:
         Interface& _interface;
-        const std::string& _name;
+        const std::string _name;
         mutable std::recursive_mutex _mutex;
         Holder _value;
         bool _valid;
@@ -138,6 +145,7 @@ class Interface {
 
     // ! TODO: We need to figure out a good architecture to let any generic interface access the Properties object of its Proxy.
     void property_refresh(const std::string& property_name);
+    void property_refresh_new(const std::string& property_name);
 
     // ----- SIGNALS -----
     void signal_property_changed(Holder changed_properties, Holder invalidated_properties);

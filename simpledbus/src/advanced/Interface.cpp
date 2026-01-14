@@ -19,7 +19,7 @@ std::shared_ptr<Proxy> Interface::proxy() const { return _proxy.lock(); }
 
 void Interface::load(Holder options) {
     auto changed_options = options.get_dict_string();
-    
+
     // LEGACY PROPERTY UPDATE
     _property_update_mutex.lock();
     for (auto& [name, value] : changed_options) {
@@ -70,7 +70,8 @@ void Interface::property_refresh(const std::string& property_name) {
         //       they can be removed before the callback reaches back (race condition),
         //       `property_get` can sometimes fail. Because of this, the update
         //       statement is surrounded by a try-catch statement.
-        auto properties_interface = std::dynamic_pointer_cast<SimpleDBus::Interfaces::Properties>(proxy()->interface_get("org.freedesktop.DBus.Properties"));
+        auto properties_interface = std::dynamic_pointer_cast<SimpleDBus::Interfaces::Properties>(
+            proxy()->interface_get("org.freedesktop.DBus.Properties"));
         Holder property_latest = properties_interface->Get(_interface_name, property_name);
 
         _property_update_mutex.lock();
@@ -84,6 +85,35 @@ void Interface::property_refresh(const std::string& property_name) {
         _property_update_mutex.lock();
         _property_valid_map[property_name] = true;
         _property_update_mutex.unlock();
+    }
+
+    if (cb_property_changed_required) {
+        property_changed(property_name);
+    }
+}
+
+void Interface::property_refresh_new(const std::string& property_name) {
+    if (!_loaded || _property_bases.count(property_name) == 0) {
+        return;
+    }
+
+    bool cb_property_changed_required = false;
+
+    try {
+        // NOTE: Due to the way Bluez handles underlying devices and the fact that
+        //       they can be removed before the callback reaches back (race condition),
+        //       `property_get` can sometimes fail. Because of this, the update
+        //       statement is surrounded by a try-catch statement.
+        auto properties_interface = std::dynamic_pointer_cast<SimpleDBus::Interfaces::Properties>(
+            proxy()->interface_get("org.freedesktop.DBus.Properties"));
+        Holder property_latest = properties_interface->Get(_interface_name, property_name);
+
+        if (*_property_bases[property_name] != property_latest) {
+            _property_bases[property_name]->update(property_latest);
+            cb_property_changed_required = true;
+        }
+    } catch (const Exception::SendFailed& e) {
+        // TODO: Log error
     }
 
     if (cb_property_changed_required) {
