@@ -3,7 +3,7 @@
 namespace SimpleBLE {
 namespace Config {
     namespace SimpleBluez {
-        bool use_legacy_bluez_backend = true;
+        bool use_legacy_bluez_backend = false;
         std::chrono::steady_clock::duration connection_timeout = std::chrono::seconds(2);
         std::chrono::steady_clock::duration disconnection_timeout = std::chrono::seconds(1);
     }  // namespace SimpleBluez
