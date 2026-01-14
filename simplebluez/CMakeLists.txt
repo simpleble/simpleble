@@ -66,6 +66,7 @@ set(SIMPLEBLUEZ_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Connection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Holder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/HolderUtils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Message.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Path.cpp

@@ -39,103 +39,103 @@ void Device1::CancelPairing() {
     _conn->send_with_reply_and_block(msg);
 }
 
-int16_t Device1::RSSI() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["RSSI"].get_int16();
-}
+// int16_t Device1::RSSI() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["RSSI"].get_int16();
+// }
 
-int16_t Device1::TxPower() { return _tx_power; }
+// int16_t Device1::TxPower() { return _tx_power; }
 
-uint16_t Device1::Appearance() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Appearance"].get_uint16();
-}
+// uint16_t Device1::Appearance() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Appearance"].get_uint16();
+// }
 
-std::string Device1::Address() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Address"].get_string();
-}
+// std::string Device1::Address() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Address"].get_string();
+// }
 
-std::string Device1::AddressType() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["AddressType"].get_string();
-}
+// std::string Device1::AddressType() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["AddressType"].get_string();
+// }
 
-std::string Device1::Alias() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Alias"].get_string();
-}
+// std::string Device1::Alias() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Alias"].get_string();
+// }
 
-std::string Device1::Name() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Name"].get_string();
-}
+// std::string Device1::Name() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Name"].get_string();
+// }
 
-std::vector<std::string> Device1::UUIDs() {
-    std::scoped_lock lock(_property_update_mutex);
+// std::vector<std::string> Device1::UUIDs() {
+//     std::scoped_lock lock(_property_update_mutex);
 
-    std::vector<std::string> uuids;
-    for (SimpleDBus::Holder& uuid : _properties["UUIDs"].get_array()) {
-        uuids.push_back(uuid.get_string());
-    }
+//     std::vector<std::string> uuids;
+//     for (SimpleDBus::Holder& uuid : _properties["UUIDs"].get_array()) {
+//         uuids.push_back(uuid.get_string());
+//     }
 
-    return uuids;
-}
+//     return uuids;
+// }
 
-std::map<uint16_t, ByteArray> Device1::ManufacturerData(bool refresh) {
-    if (refresh) {
-        property_refresh("ManufacturerData");
-    }
+// std::map<uint16_t, ByteArray> Device1::ManufacturerData(bool refresh) {
+//     if (refresh) {
+//         property_refresh("ManufacturerData");
+//     }
 
-    // Use the locally cached version to avoid parsing the map multiple times.
-    std::scoped_lock lock(_property_update_mutex);
-    return _manufacturer_data;
-}
+//     // Use the locally cached version to avoid parsing the map multiple times.
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _manufacturer_data;
+// }
 
-std::map<std::string, ByteArray> Device1::ServiceData(bool refresh) {
-    if (refresh) {
-        property_refresh("ServiceData");
-    }
+// std::map<std::string, ByteArray> Device1::ServiceData(bool refresh) {
+//     if (refresh) {
+//         property_refresh("ServiceData");
+//     }
 
-    // Use the locally cached version to avoid parsing the map multiple times.
-    std::scoped_lock lock(_property_update_mutex);
-    return _service_data;
-}
+//     // Use the locally cached version to avoid parsing the map multiple times.
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _service_data;
+// }
 
-bool Device1::Paired(bool refresh) {
-    if (refresh) {
-        property_refresh("Paired");
-    }
+// bool Device1::Paired(bool refresh) {
+//     if (refresh) {
+//         property_refresh("Paired");
+//     }
 
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Paired"].get_boolean();
-}
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Paired"].get_boolean();
+// }
 
-bool Device1::Connected(bool refresh) {
-    if (refresh) {
-        property_refresh("Connected");
-    }
+// bool Device1::Connected(bool refresh) {
+//     if (refresh) {
+//         property_refresh("Connected");
+//     }
 
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Connected"].get_boolean();
-}
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Connected"].get_boolean();
+// }
 
-bool Device1::ServicesResolved(bool refresh) {
-    if (refresh) {
-        property_refresh("ServicesResolved");
-    }
+// bool Device1::ServicesResolved(bool refresh) {
+//     if (refresh) {
+//         property_refresh("ServicesResolved");
+//     }
 
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["ServicesResolved"].get_boolean();
-}
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["ServicesResolved"].get_boolean();
+// }
 
 void Device1::property_changed(std::string option_name) {
     if (option_name == "Connected") {
-        if (!Connected(false)) {
+        if (!Connected) {
             OnDisconnected();
         }
     } else if (option_name == "ServicesResolved") {
-        if (ServicesResolved(false)) {
+        if (ServicesResolved) {
             OnServicesResolved();
         }
     } else if (option_name == "ManufacturerData") {

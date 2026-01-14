@@ -57,29 +57,29 @@ void Device::connect() { device1()->Connect(); }
 
 void Device::disconnect() { device1()->Disconnect(); }
 
-std::string Device::address() { return device1()->Address(); }
+std::string Device::address() { return device1()->Address; }
 
-std::string Device::address_type() { return device1()->AddressType(); }
+std::string Device::address_type() { return device1()->AddressType; }
 
-std::string Device::name() { return device1()->Name(); }
+std::string Device::name() { return device1()->Name; }
 
-std::string Device::alias() { return device1()->Alias(); }
+std::string Device::alias() { return device1()->Alias; }
 
-int16_t Device::rssi() { return device1()->RSSI(); }
+int16_t Device::rssi() { return device1()->RSSI; }
 
-int16_t Device::tx_power() { return device1()->TxPower(); }
+int16_t Device::tx_power() { return device1()->TxPower; }
 
-std::vector<std::string> Device::uuids() { return device1()->UUIDs(); }
+std::vector<std::string> Device::uuids() { return device1()->UUIDs.refresh(); }
 
-std::map<uint16_t, ByteArray> Device::manufacturer_data() { return device1()->ManufacturerData(); }
+std::map<uint16_t, ByteArray> Device::manufacturer_data() { return device1()->ManufacturerData.refresh(); }
 
-std::map<std::string, ByteArray> Device::service_data() { return device1()->ServiceData(); }
+std::map<std::string, ByteArray> Device::service_data() { return device1()->ServiceData.refresh(); }
 
-bool Device::paired() { return device1()->Paired(); }
+bool Device::paired() { return device1()->Paired.refresh(); }
 
-bool Device::connected() { return device1()->Connected(); }
+bool Device::connected() { return device1()->Connected.refresh(); }
 
-bool Device::services_resolved() { return device1()->ServicesResolved(); }
+bool Device::services_resolved() { return device1()->ServicesResolved.refresh(); }
 
 void Device::set_on_disconnected(std::function<void()> callback) { device1()->OnDisconnected.load(callback); }
 

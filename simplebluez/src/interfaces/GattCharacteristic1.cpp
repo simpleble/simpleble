@@ -59,41 +59,41 @@ ByteArray GattCharacteristic1::ReadValue() {
     return Value();
 }
 
-std::string GattCharacteristic1::UUID() {
-    // As the UUID property doesn't change, we can cache it
-    std::scoped_lock lock(_property_update_mutex);
-    return _uuid;
-}
+// std::string GattCharacteristic1::UUID() {
+//     // As the UUID property doesn't change, we can cache it
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _uuid;
+// }
 
-ByteArray GattCharacteristic1::Value() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _value;
-}
+// ByteArray GattCharacteristic1::Value() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _value;
+// }
 
-std::vector<std::string> GattCharacteristic1::Flags() {
-    std::scoped_lock lock(_property_update_mutex);
+// std::vector<std::string> GattCharacteristic1::Flags() {
+//     std::scoped_lock lock(_property_update_mutex);
 
-    std::vector<std::string> flags;
-    for (SimpleDBus::Holder& flag : _properties["Flags"].get_array()) {
-        flags.push_back(flag.get_string());
-    }
+//     std::vector<std::string> flags;
+//     for (SimpleDBus::Holder& flag : _properties["Flags"].get_array()) {
+//         flags.push_back(flag.get_string());
+//     }
 
-    return flags;
-}
+//     return flags;
+// }
 
-uint16_t GattCharacteristic1::MTU() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["MTU"].get_uint16();
-}
+// uint16_t GattCharacteristic1::MTU() {
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["MTU"].get_uint16();
+// }
 
-bool GattCharacteristic1::Notifying(bool refresh) {
-    if (refresh) {
-        property_refresh("Notifying");
-    }
+// bool GattCharacteristic1::Notifying(bool refresh) {
+//     if (refresh) {
+//         property_refresh("Notifying");
+//     }
 
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Notifying"].get_boolean();
-}
+//     std::scoped_lock lock(_property_update_mutex);
+//     return _properties["Notifying"].get_boolean();
+// }
 
 void GattCharacteristic1::property_changed(std::string option_name) {
     if (option_name == "UUID") {

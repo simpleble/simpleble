@@ -14,12 +14,10 @@ class GattService1 : public SimpleDBus::Interface {
     // ----- METHODS -----
 
     // ----- PROPERTIES -----
-    std::string UUID();
+    Property<std::string>& UUID = create_property<std::string>("UUID");
 
   protected:
     void property_changed(std::string option_name) override;
-
-    std::string _uuid;
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattService1> registry;

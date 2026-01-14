@@ -33,6 +33,7 @@ set(SIMPLEDBUS_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Connection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Holder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/base/HolderUtils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Message.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Path.cpp

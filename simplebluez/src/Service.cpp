@@ -29,4 +29,4 @@ std::shared_ptr<Characteristic> Service::get_characteristic(const std::string& u
     throw Exception::CharacteristicNotFoundException(uuid);
 }
 
-std::string Service::uuid() { return gattservice1()->UUID(); }
+std::string Service::uuid() { return gattservice1()->UUID; }

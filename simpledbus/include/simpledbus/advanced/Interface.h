@@ -3,6 +3,7 @@
 #include <simpledbus/base/Connection.h>
 
 #include <atomic>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -16,6 +17,8 @@ class Interface;
 class PropertyBase;
 template <typename T>
 class Property;
+template <typename T>
+class CustomProperty;
 
 class Interface {
   public:
@@ -86,6 +89,38 @@ class Interface {
         }
     };
 
+    template <typename T>
+    class CustomProperty : public PropertyBase {
+      public:
+        CustomProperty(Interface& interface, const std::string& name, std::function<SimpleDBus::Holder(T)> to_holder,
+                       std::function<T(SimpleDBus::Holder)> from_holder)
+            : PropertyBase(interface, name), _to_holder(to_holder), _from_holder(from_holder) {}
+
+        T operator()() const { return get(); }
+        operator T() const { return get(); }
+        void operator()(const T& value) { set(value); }
+
+        CustomProperty& refresh() {
+            PropertyBase::refresh();
+            return *this;
+        }
+
+        T get() const {
+            std::scoped_lock lock(_mutex);
+            return _from_holder(_value);
+        }
+
+        void set(T value) {
+            std::scoped_lock lock(_mutex);
+            _value = _to_holder(value);
+            _valid = true;
+        }
+
+      private:
+        std::function<SimpleDBus::Holder(T)> _to_holder;
+        std::function<T(SimpleDBus::Holder)> _from_holder;
+    };
+
     Interface(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy, const std::string& interface_name);
 
     virtual ~Interface() = default;
@@ -122,6 +157,15 @@ class Interface {
     Property<T>& create_property(const std::string& name) {
         std::unique_ptr<PropertyBase> property_ptr = std::make_unique<Property<T>>(*this, name);
         Property<T>& property = dynamic_cast<Property<T>&>(*property_ptr);
+        _property_bases.emplace(name, std::move(property_ptr));
+        return property;
+    }
+
+    template <typename T>
+    CustomProperty<T>& create_custom_property(const std::string& name, std::function<SimpleDBus::Holder(T)> to_holder,
+                                              std::function<T(SimpleDBus::Holder)> from_holder) {
+        std::unique_ptr<PropertyBase> property_ptr = std::make_unique<CustomProperty<T>>(*this, name, to_holder, from_holder);
+        CustomProperty<T>& property = dynamic_cast<CustomProperty<T>&>(*property_ptr);
         _property_bases.emplace(name, std::move(property_ptr));
         return property;
     }
