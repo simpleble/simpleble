@@ -9,9 +9,6 @@ export default function HomeScreen() {
 
 
   useEffect(() => {
-    const message = HybridAdapter.greet('Android');
-    setGreeting(message);
-
     const isBluetoothEnabled = HybridAdapter.bluetooth_enabled();
     console.log('isBluetoothEnabled', isBluetoothEnabled);
     setIsBluetoothEnabled(isBluetoothEnabled);
