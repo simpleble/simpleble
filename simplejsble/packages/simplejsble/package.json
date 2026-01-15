@@ -64,9 +64,6 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "dependencies": {
-    "react-native-nitro-modules": ">=0.20.0"
-  },
   "devDependencies": {
     "@react-native/eslint-config": "0.82.0",
     "@types/react": "^19.1.03",
@@ -77,12 +74,12 @@
     "prettier": "^3.3.3",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-nitro-modules": "*",
     "typescript": "^5.8.3"
   },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-nitro-modules": ">=0.20.0"
   },
   "eslintConfig": {
     "root": true,
