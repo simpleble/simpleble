@@ -93,11 +93,4 @@ export interface Adapter
    *   or those you've connected to.
    */
   get_paired_peripherals(): Peripheral[]
-
-  /**
-   * Retrieve a list of all connected peripherals.
-   * Currently only implemented on Windows.
-   * Note: This could potentially be implemented on Android/iOS but is not yet available.
-   */
-  get_connected_peripherals(): Peripheral[]
 }

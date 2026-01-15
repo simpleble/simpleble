@@ -102,12 +102,4 @@ std::vector<std::shared_ptr<HybridPeripheralSpec>> HybridAdapter::get_paired_per
     return result;
 }
 
-std::vector<std::shared_ptr<HybridPeripheralSpec>> HybridAdapter::get_connected_peripherals() {
-    std::vector<std::shared_ptr<HybridPeripheralSpec>> result;
-    for (auto& peripheral : _adapter.get_connected_peripherals()) {
-        result.push_back(std::make_shared<HybridPeripheral>(std::move(peripheral)));
-    }
-    return result;
-}
-
 }  // namespace margelo::nitro::simplejsble

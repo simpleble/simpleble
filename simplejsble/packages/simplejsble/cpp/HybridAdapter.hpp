@@ -38,7 +38,6 @@ class HybridAdapter : public HybridAdapterSpec {
         const std::function<void(const std::shared_ptr<HybridPeripheralSpec>&)>& callback) override;
 
     std::vector<std::shared_ptr<HybridPeripheralSpec>> get_paired_peripherals() override;
-    std::vector<std::shared_ptr<HybridPeripheralSpec>> get_connected_peripherals() override;
 
   private:
     SimpleBLE::Adapter _adapter;
