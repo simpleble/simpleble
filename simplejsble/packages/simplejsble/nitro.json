@@ -15,6 +15,9 @@
   "autolinking": {
     "Adapter": {
       "cpp": "HybridAdapter"
+    },
+    "Peripheral": {
+      "cpp": "HybridPeripheral"
     }
   },
   "ignorePaths": [
