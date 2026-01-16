@@ -39,6 +39,11 @@ class Interface {
             return *this;
         }
 
+        Holder get() const {
+            std::scoped_lock lock(_mutex);
+            return _value;
+        }
+
         void update(Holder value) {
             std::scoped_lock lock(_mutex);
             _value = value;
@@ -143,23 +148,19 @@ class Interface {
     // ----- PROPERTIES -----
     virtual void property_changed(std::string option_name) {}
 
-    // ! TODO: We need to figure out a good architecture to let any generic interface access the Properties object of its Proxy.
-    void property_refresh(const std::string& property_name);
-    void property_refresh_new(const std::string& property_name);
+    bool property_exists(const std::string& property_name);
 
-    // ----- SIGNALS -----
-    void signal_property_changed(Holder changed_properties, Holder invalidated_properties);
+    // ! TODO: We need to figure out a good architecture to let any generic interface access the Properties object of its Proxy.
+    void property_refresh_new(const std::string& property_name);
 
     // ----- MESSAGES -----
     virtual void message_handle(Message& msg) {}
 
     // ----- HANDLES -----
     void handle_properties_changed(Holder changed_properties, Holder invalidated_properties);
-
-    // ! The following properties are set as public to allow access to the Properties interface.
-    std::recursive_mutex _property_update_mutex;
-    std::map<std::string, bool> _property_valid_map;
-    std::map<std::string, Holder> _properties;
+    void handle_property_set(std::string property_name, Holder value);
+    Holder handle_property_get(std::string property_name);
+    Holder handle_property_get_all();
 
     template <typename T>
     Property<T>& create_property(const std::string& name) {

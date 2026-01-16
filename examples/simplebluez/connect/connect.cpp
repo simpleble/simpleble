@@ -85,9 +85,16 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        for (int i = 0; i < 5; i++) {
+            if (!peripheral->connected() || !peripheral->services_resolved()) {
+                millisecond_delay(1000);
+            }
+        }
+
         if (!peripheral->connected() || !peripheral->services_resolved()) {
             std::cout << "Failed to connect to " << peripheral->name() << " [" << peripheral->address() << "]"
                       << std::endl;
+            peripheral->disconnect();
             return 1;
         }
 

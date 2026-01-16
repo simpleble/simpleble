@@ -63,17 +63,6 @@ class Device1 : public SimpleDBus::Interface {
   protected:
     void property_changed(std::string option_name) override;
 
-    int16_t _rssi = INT16_MIN;
-    int16_t _tx_power = INT16_MIN;
-    std::string _name;
-    std::string _alias;
-    std::string _address;
-    std::string _address_type;
-    bool _connected;
-    bool _services_resolved;
-    std::map<uint16_t, ByteArray> _manufacturer_data;
-    std::map<std::string, ByteArray> _service_data;
-
   private:
     static const SimpleDBus::AutoRegisterInterface<Device1> registry;
 };

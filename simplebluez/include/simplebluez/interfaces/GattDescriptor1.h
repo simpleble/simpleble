@@ -33,10 +33,6 @@ class GattDescriptor1 : public SimpleDBus::Interface {
 
   protected:
     void property_changed(std::string option_name) override;
-    void update_value(SimpleDBus::Holder& new_value);
-
-    std::string _uuid;
-    ByteArray _value;
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattDescriptor1> registry;
