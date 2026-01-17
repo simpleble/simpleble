@@ -56,13 +56,6 @@ class Device1 : public SimpleDBus::Interface {
     Property<bool>& Connected = create_property<bool>("Connected");
     Property<bool>& ServicesResolved = create_property<bool>("ServicesResolved");
 
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnServicesResolved;
-    kvn::safe_callback<void()> OnDisconnected;
-
-  protected:
-    void property_changed(std::string option_name) override;
-
   private:
     static const SimpleDBus::AutoRegisterInterface<Device1> registry;
 };

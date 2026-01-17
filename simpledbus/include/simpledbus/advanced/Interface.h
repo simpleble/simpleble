@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include "kvn/kvn_safe_callback.hpp"
 
 namespace SimpleDBus {
 
@@ -35,7 +36,7 @@ class Interface {
         PropertyBase& operator=(PropertyBase&&) noexcept = delete;
 
         PropertyBase& refresh() {
-            _interface.property_refresh_new(_name);
+            _interface.property_refresh(_name);
             return *this;
         }
 
@@ -44,10 +45,11 @@ class Interface {
             return _value;
         }
 
-        void update(Holder value) {
+        void set(Holder value) {
             std::scoped_lock lock(_mutex);
             _value = value;
             _valid = true;
+            notify_changed();
         }
 
         bool valid() {
@@ -67,6 +69,8 @@ class Interface {
 
         bool operator!=(const Holder& other) const { return !(*this == other); }
 
+        virtual void notify_changed() {}
+
       protected:
         Interface& _interface;
         const std::string _name;
@@ -80,9 +84,15 @@ class Interface {
       public:
         Property(Interface& interface, const std::string& name) : PropertyBase(interface, name) {}
 
+        virtual ~Property() {
+            on_changed.unload();
+        }
+
         T operator()() const { return get(); }
         operator T() const { return get(); }
         void operator()(const T& value) { set(value); }
+
+        using PropertyBase::set;
 
         Property& refresh() {
             PropertyBase::refresh();
@@ -99,6 +109,12 @@ class Interface {
             _value = SimpleDBus::Holder::create<T>(value);
             _valid = true;
         }
+
+        kvn::safe_callback<void(T)> on_changed;
+
+        void notify_changed() override {
+            on_changed(get());
+        }
     };
 
     template <typename T>
@@ -108,9 +124,15 @@ class Interface {
                        std::function<T(SimpleDBus::Holder)> from_holder)
             : PropertyBase(interface, name), _to_holder(to_holder), _from_holder(from_holder) {}
 
+        virtual ~CustomProperty() {
+            on_changed.unload();
+        }
+
         T operator()() const { return get(); }
         operator T() const { return get(); }
         void operator()(const T& value) { set(value); }
+
+        using PropertyBase::set;
 
         CustomProperty& refresh() {
             PropertyBase::refresh();
@@ -126,6 +148,12 @@ class Interface {
             std::scoped_lock lock(_mutex);
             _value = _to_holder(value);
             _valid = true;
+        }
+
+        kvn::safe_callback<void(T)> on_changed;
+
+        void notify_changed() override {
+            on_changed(get());
         }
 
       private:
@@ -146,12 +174,10 @@ class Interface {
     Message create_method_call(const std::string& method_name);
 
     // ----- PROPERTIES -----
-    virtual void property_changed(std::string option_name) {}
-
     bool property_exists(const std::string& property_name);
 
     // ! TODO: We need to figure out a good architecture to let any generic interface access the Properties object of its Proxy.
-    void property_refresh_new(const std::string& property_name);
+    void property_refresh(const std::string& property_name);
 
     // ----- MESSAGES -----
     virtual void message_handle(Message& msg) {}

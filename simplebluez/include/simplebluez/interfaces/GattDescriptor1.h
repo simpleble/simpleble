@@ -28,11 +28,6 @@ class GattDescriptor1 : public SimpleDBus::Interface {
         "Value", [](ByteArray value) { return SimpleDBus::HolderUtils::from_byte_array(value); },
         [](SimpleDBus::Holder new_value) { return SimpleDBus::HolderUtils::to_byte_array(new_value); });
 
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnValueChanged;
-
-  protected:
-    void property_changed(std::string option_name) override;
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattDescriptor1> registry;

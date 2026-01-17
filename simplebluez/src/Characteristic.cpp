@@ -57,7 +57,7 @@ std::shared_ptr<Descriptor> Characteristic::get_descriptor(const std::string& uu
 }
 
 void Characteristic::set_on_value_changed(std::function<void(ByteArray new_value)> callback) {
-    gattcharacteristic1()->OnValueChanged.load([this, callback]() { callback(gattcharacteristic1()->Value()); });
+    gattcharacteristic1()->Value.on_changed.load(callback);
 }
 
-void Characteristic::clear_on_value_changed() { gattcharacteristic1()->OnValueChanged.unload(); }
+void Characteristic::clear_on_value_changed() { gattcharacteristic1()->Value.on_changed.unload(); }

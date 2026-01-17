@@ -21,7 +21,7 @@ ByteArray Descriptor::read() { return gattdescriptor1()->ReadValue(); }
 void Descriptor::write(ByteArray value) { gattdescriptor1()->WriteValue(value); }
 
 void Descriptor::set_on_value_changed(std::function<void(ByteArray new_value)> callback) {
-    gattdescriptor1()->OnValueChanged.load([this, callback]() { callback(gattdescriptor1()->Value()); });
+    gattdescriptor1()->Value.on_changed.load(callback);
 }
 
-void Descriptor::clear_on_value_changed() { gattdescriptor1()->OnValueChanged.unload(); }
+void Descriptor::clear_on_value_changed() { gattdescriptor1()->Value.on_changed.unload(); }

@@ -13,5 +13,3 @@ const SimpleDBus::AutoRegisterInterface<GattService1> GattService1::registry{
 
 GattService1::GattService1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.GattService1") {}
-
-void GattService1::property_changed(std::string option_name) {}

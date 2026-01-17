@@ -96,5 +96,3 @@ void Adapter1::RemoveDevice(std::string device_path) {
     msg.append_argument(SimpleDBus::Holder::create_object_path(device_path), "o");
     _conn->send_with_reply_and_block(msg);
 }
-
-void Adapter1::property_changed(std::string option_name) {}

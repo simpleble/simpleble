@@ -3,6 +3,7 @@
 #include <simplebluez/Service.h>
 
 #include <simpledbus/base/Path.h>
+#include "simplebluez/interfaces/Battery1.h"
 
 using namespace SimpleBluez;
 
@@ -81,23 +82,35 @@ bool Device::connected() { return device1()->Connected.refresh(); }
 
 bool Device::services_resolved() { return device1()->ServicesResolved.refresh(); }
 
-void Device::set_on_disconnected(std::function<void()> callback) { device1()->OnDisconnected.load(callback); }
+void Device::set_on_disconnected(std::function<void()> callback) {
+    device1()->Connected.on_changed.load([callback](bool connected) {
+        if (!connected) {
+            callback();
+        }
+    });
+}
 
-void Device::clear_on_disconnected() { device1()->OnDisconnected.unload(); }
+void Device::clear_on_disconnected() { device1()->Connected.on_changed.unload(); }
 
-void Device::set_on_services_resolved(std::function<void()> callback) { device1()->OnServicesResolved.load(callback); }
+void Device::set_on_services_resolved(std::function<void()> callback) {
+    device1()->ServicesResolved.on_changed.load([callback](bool services_resolved) {
+        if (services_resolved) {
+            callback();
+        }
+    });
+}
 
-void Device::clear_on_services_resolved() { device1()->OnServicesResolved.unload(); }
+void Device::clear_on_services_resolved() { device1()->ServicesResolved.on_changed.unload(); }
 
 bool Device::has_battery_interface() { return interface_exists("org.bluez.Battery1"); }
 
 uint8_t Device::battery_percentage() { return battery1()->Percentage(); }
 
 void Device::set_on_battery_percentage_changed(std::function<void(uint8_t new_value)> callback) {
-    battery1()->OnPercentageChanged.load([this, callback]() { callback(battery1()->Percentage()); });
+    battery1()->Percentage.on_changed.load([this, callback](uint8_t new_value) { callback(new_value); });
     // As the `property_changed` callback only occurs when the property is changed, we need to manually
     // call the callback once to make sure the callback is called with the current value.
-    battery1()->OnPercentageChanged();
+    battery1()->Percentage.notify_changed();
 }
 
-void Device::clear_on_battery_percentage_changed() { battery1()->OnPercentageChanged.unload(); }
+void Device::clear_on_battery_percentage_changed() { battery1()->Percentage.on_changed.unload(); }

@@ -14,7 +14,7 @@ const SimpleDBus::AutoRegisterInterface<GattDescriptor1> GattDescriptor1::regist
 GattDescriptor1::GattDescriptor1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.GattDescriptor1") {}
 
-GattDescriptor1::~GattDescriptor1() { OnValueChanged.unload(); }
+GattDescriptor1::~GattDescriptor1() {}
 
 void GattDescriptor1::WriteValue(const ByteArray& value) {
     SimpleDBus::Holder value_data = SimpleDBus::Holder::create_array();
@@ -39,13 +39,7 @@ ByteArray GattDescriptor1::ReadValue() {
 
     SimpleDBus::Message reply_msg = _conn->send_with_reply_and_block(msg);
     SimpleDBus::Holder value = reply_msg.extract();
-    Value.update(value);
+    Value.set(value);
 
     return Value();
-}
-
-void GattDescriptor1::property_changed(std::string option_name) {
-    if (option_name == "Value") {
-        OnValueChanged();
-    }
 }

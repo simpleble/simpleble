@@ -11,10 +11,11 @@ const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> GattCharacteristic1
     // clang-format on
 };
 
-GattCharacteristic1::GattCharacteristic1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
+GattCharacteristic1::GattCharacteristic1(std::shared_ptr<SimpleDBus::Connection> conn,
+                                         std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.GattCharacteristic1") {}
 
-GattCharacteristic1::~GattCharacteristic1() { OnValueChanged.unload(); }
+GattCharacteristic1::~GattCharacteristic1() {}
 
 void GattCharacteristic1::StartNotify() {
     auto msg = create_method_call("StartNotify");
@@ -55,12 +56,6 @@ ByteArray GattCharacteristic1::ReadValue() {
     SimpleDBus::Message reply_msg = _conn->send_with_reply_and_block(msg);
     SimpleDBus::Holder value = reply_msg.extract();
 
-    Value.update(value);
+    Value.set(value);
     return Value();
-}
-
-void GattCharacteristic1::property_changed(std::string option_name) {
-    if (option_name == "Value") {
-        OnValueChanged();
-    }
 }

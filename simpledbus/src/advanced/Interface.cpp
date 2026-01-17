@@ -25,12 +25,7 @@ void Interface::load(Holder options) {
     for (auto& [name, value] : changed_options) {
         if (_property_bases.find(name) == _property_bases.end()) continue;
 
-        _property_bases[name]->update(value);
-    }
-
-    // Notify the user of all properties that have been created.
-    for (auto& [name, value] : changed_options) {
-        property_changed(name);
+        _property_bases[name]->set(value);
     }
 
     _loaded = true;
@@ -48,12 +43,10 @@ Message Interface::create_method_call(const std::string& method_name) {
 
 // ----- PROPERTIES -----
 
-void Interface::property_refresh_new(const std::string& property_name) {
+void Interface::property_refresh(const std::string& property_name) {
     if (!_loaded || _property_bases.count(property_name) == 0) {
         return;
     }
-
-    bool cb_property_changed_required = false;
 
     try {
         // NOTE: Due to the way Bluez handles underlying devices and the fact that
@@ -65,21 +58,14 @@ void Interface::property_refresh_new(const std::string& property_name) {
         Holder property_latest = properties_interface->Get(_interface_name, property_name);
 
         if (*_property_bases[property_name] != property_latest) {
-            _property_bases[property_name]->update(property_latest);
-            cb_property_changed_required = true;
+            _property_bases[property_name]->set(property_latest);
         }
     } catch (const Exception::SendFailed& e) {
         // TODO: Log error
     }
-
-    if (cb_property_changed_required) {
-        property_changed(property_name);
-    }
 }
 
-bool Interface::property_exists(const std::string& property_name) {
-    return _property_bases.count(property_name) > 0;
-}
+bool Interface::property_exists(const std::string& property_name) { return _property_bases.count(property_name) > 0; }
 
 // ----- HANDLES -----
 
@@ -88,7 +74,7 @@ void Interface::handle_properties_changed(Holder changed_properties, Holder inva
     for (auto& [name, value] : changed_options) {
         if (_property_bases.find(name) == _property_bases.end()) continue;
 
-        _property_bases[name]->update(value);
+        _property_bases[name]->set(value);
     }
 
     auto removed_options = invalidated_properties.get_array();
@@ -97,18 +83,12 @@ void Interface::handle_properties_changed(Holder changed_properties, Holder inva
 
         _property_bases[removed_option.get_string()]->invalidate();
     }
-
-    // Once all properties have been updated, notify the user.
-    for (auto& [name, value] : changed_options) {
-        property_changed(name);
-    }
 }
 
 void Interface::handle_property_set(std::string property_name, Holder value) {
     if (_property_bases.find(property_name) == _property_bases.end()) return;
 
-    _property_bases[property_name]->update(value);
-    property_changed(property_name);
+    _property_bases[property_name]->set(value);
 }
 
 Holder Interface::handle_property_get(std::string property_name) {

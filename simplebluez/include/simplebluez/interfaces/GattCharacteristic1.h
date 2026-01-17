@@ -37,12 +37,6 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
         [](SimpleDBus::Holder value) { return SimpleDBus::HolderUtils::to_string_array(value); });
     Property<uint16_t>& MTU = create_property<uint16_t>("MTU");
 
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnValueChanged;
-
-  protected:
-    void property_changed(std::string option_name) override;
-
   private:
     static const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> registry;
 };

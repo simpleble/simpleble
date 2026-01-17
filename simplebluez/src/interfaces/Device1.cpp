@@ -15,8 +15,6 @@ Device1::Device1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<S
     : SimpleDBus::Interface(conn, proxy, "org.bluez.Device1") {}
 
 Device1::~Device1() {
-    OnDisconnected.unload();
-    OnServicesResolved.unload();
 }
 
 void Device1::Connect() {
@@ -37,16 +35,4 @@ void Device1::Pair() {
 void Device1::CancelPairing() {
     auto msg = create_method_call("CancelPairing");
     _conn->send_with_reply_and_block(msg);
-}
-
-void Device1::property_changed(std::string option_name) {
-    if (option_name == "Connected") {
-        if (!Connected) {
-            OnDisconnected();
-        }
-    } else if (option_name == "ServicesResolved") {
-        if (ServicesResolved) {
-            OnServicesResolved();
-        }
-    }
 }

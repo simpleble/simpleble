@@ -16,10 +16,5 @@ const SimpleDBus::AutoRegisterInterface<Battery1> Battery1::registry{
 Battery1::Battery1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.Battery1") {}
 
-Battery1::~Battery1() { OnPercentageChanged.unload(); }
+Battery1::~Battery1() {}
 
-void Battery1::property_changed(std::string option_name) {
-    if (option_name == "Percentage") {
-        OnPercentageChanged();
-    }
-}

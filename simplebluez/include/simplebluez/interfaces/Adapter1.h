@@ -39,9 +39,6 @@ class Adapter1 : public SimpleDBus::Interface {
     Property<bool>& Powered = create_property<bool>("Powered");
     Property<std::string>& Address = create_property<std::string>("Address");
 
-  protected:
-    void property_changed(std::string option_name) override;
-
   private:
     static const SimpleDBus::AutoRegisterInterface<Adapter1> registry;
 };

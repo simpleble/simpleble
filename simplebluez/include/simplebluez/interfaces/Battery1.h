@@ -19,12 +19,6 @@ class Battery1 : public SimpleDBus::Interface {
     // ----- PROPERTIES -----
     Property<uint8_t>& Percentage = create_property<uint8_t>("Percentage");
 
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnPercentageChanged;
-
-  protected:
-    void property_changed(std::string option_name) override;
-
   private:
     static const SimpleDBus::AutoRegisterInterface<Battery1> registry;
 };
