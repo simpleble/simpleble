@@ -10,7 +10,7 @@ namespace SimpleDBus::Interfaces {
 class ObjectManager : public Interface {
   public:
     ObjectManager(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy);
-    virtual ~ObjectManager() = default;
+    virtual ~ObjectManager();
 
     // Names are made matching the ones from the DBus specification
     Holder GetManagedObjects(bool use_callbacks = false);

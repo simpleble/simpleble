@@ -16,6 +16,11 @@ const AutoRegisterInterface<Properties> Properties::registry {
 Properties::Properties(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy)
     : Interface(conn, proxy, "org.freedesktop.DBus.Properties") {}
 
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+Properties::~Properties() = default;
+
 Holder Properties::Get(const std::string& interface_name, const std::string& property_name) {
     Message query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Properties", "Get");
 

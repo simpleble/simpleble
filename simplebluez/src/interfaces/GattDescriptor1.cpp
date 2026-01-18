@@ -14,7 +14,10 @@ const SimpleDBus::AutoRegisterInterface<GattDescriptor1> GattDescriptor1::regist
 GattDescriptor1::GattDescriptor1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.GattDescriptor1") {}
 
-GattDescriptor1::~GattDescriptor1() {}
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+GattDescriptor1::~GattDescriptor1() = default;
 
 void GattDescriptor1::WriteValue(const ByteArray& value) {
     SimpleDBus::Holder value_data = SimpleDBus::Holder::create_array();

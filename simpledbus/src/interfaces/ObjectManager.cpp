@@ -16,6 +16,11 @@ const AutoRegisterInterface<ObjectManager> ObjectManager::registry{
 ObjectManager::ObjectManager(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy)
     : Interface(conn, proxy, "org.freedesktop.DBus.ObjectManager") {}
 
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+ObjectManager::~ObjectManager() = default;
+
 Holder ObjectManager::GetManagedObjects(bool use_callbacks) {
     Message query_msg = Message::create_method_call(_bus_name, _path, _interface_name, "GetManagedObjects");
     Message reply_msg = _conn->send_with_reply_and_block(query_msg);

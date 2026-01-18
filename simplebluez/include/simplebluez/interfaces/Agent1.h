@@ -13,7 +13,7 @@ namespace SimpleBluez {
 class Agent1 : public SimpleDBus::Interface {
   public:
     Agent1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy);
-    virtual ~Agent1() = default;
+    virtual ~Agent1();
 
     // ----- METHODS -----
 

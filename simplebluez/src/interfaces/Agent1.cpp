@@ -14,6 +14,11 @@ const SimpleDBus::AutoRegisterInterface<Agent1> Agent1::registry{
 Agent1::Agent1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.Agent1") {}
 
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+Agent1::~Agent1() = default;
+
 void Agent1::message_handle(SimpleDBus::Message& msg) {
     if (msg.get_type() == SimpleDBus::Message::Type::METHOD_CALL) {
         // To minimize the amount of repeated code, create a method return object that will be

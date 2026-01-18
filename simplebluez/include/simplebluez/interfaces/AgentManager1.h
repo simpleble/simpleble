@@ -10,7 +10,7 @@ namespace SimpleBluez {
 class AgentManager1 : public SimpleDBus::Interface {
   public:
     AgentManager1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy);
-    virtual ~AgentManager1() = default;
+    virtual ~AgentManager1();
 
     // ----- METHODS -----
     void RegisterAgent(std::string agent, std::string capability);
