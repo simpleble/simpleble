@@ -1,114 +1,660 @@
-import {StyleSheet, Text, View} from 'react-native';
-import {useState, useEffect, useRef} from 'react';
-import {HybridAdapter} from 'simplejsble';
-
-interface AdapterInfo {
-  name: string;
-  index: number;
-}
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { HybridAdapter, type Adapter, type Peripheral } from 'simplejsble';
 
 export default function HomeScreen() {
-  const [greeting, setGreeting] = useState<string>('');
+  const [adapter, setAdapter] = useState<Adapter | null>(null);
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState<boolean>(false);
-  const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
-  const hasInitialized = useRef(false);
-  // Store full adapter references in a ref to avoid Fast Refresh issues
-  // Access via: adapterRefs.current[index]
-  const adapterRefs = useRef<any[]>([]);
-  const adapterMapByName = useRef<Map<string, any>>(new Map());
-
-  // Helper function to get adapter by index
-  const getAdapterByIndex = (index: number) => {
-    return adapterRefs.current[index];
-  };
+  const [scanning, setScanning] = useState<boolean>(false);
+  const [peripherals, setPeripherals] = useState<Peripheral[]>([]);
+  const [connectedPeripheral, setConnectedPeripheral] = useState<Peripheral | null>(null);
+  const [mtu, setMtu] = useState<number>(0);
+  const [statusMessage, setStatusMessage] = useState<string>('Initializing...');
+  const [connectionVerified, setConnectionVerified] = useState<boolean>(false);
+  const [connectionDetails, setConnectionDetails] = useState<{
+    isConnected: boolean;
+    rssi: number;
+    addressType: string;
+    isConnectable: boolean;
+  } | null>(null);
+  
+  const adapterRef = useRef<Adapter | null>(null);
 
   useEffect(() => {
-    // Prevent multiple initializations that could cause infinite reloads
-    if (hasInitialized.current) {
-      return;
-    }
-    hasInitialized.current = true;
+    const initAdapter = () => {
+      try {
+        console.log('[App] Initializing adapter...');
+        const isEnabled = HybridAdapter.bluetooth_enabled();
+        console.log('[App] Bluetooth enabled:', isEnabled);
+        setIsBluetoothEnabled(isEnabled);
+        
+        if (!isEnabled) {
+          setStatusMessage('Bluetooth is disabled. Please enable Bluetooth.');
+          return;
+        }
 
-    const message = HybridAdapter.greet('Alejo macOS');
-    setGreeting(message);
+        console.log('[App] Getting adapters...');
+        const adapters = HybridAdapter.get_adapters();
+        console.log('[App] Found adapters:', adapters.length);
+        
+        if (adapters.length === 0) {
+          setStatusMessage('No Bluetooth adapters found.');
+          return;
+        }
 
-    const isBluetoothEnabled = HybridAdapter.bluetooth_enabled();
-    console.log('isBluetoothEnabled', isBluetoothEnabled);
-    setIsBluetoothEnabled(isBluetoothEnabled);
+        const firstAdapter = adapters[0] as Adapter;
+        console.log('[App] Using adapter:', firstAdapter.identifier());
+        adapterRef.current = firstAdapter;
+        setAdapter(firstAdapter);
+        setStatusMessage('Ready to scan. Press "Scan for Devices" to start.');
+      } catch (error) {
+        console.error('[App] Error initializing adapter:', error);
+        setStatusMessage(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
 
-    const adapterObjects = HybridAdapter.get_adapters();
-    console.log('adapters', adapterObjects);
-    
-    // Store full adapter references in refs (outside React state)
-    // This prevents Fast Refresh from detecting changes and causing infinite reloads
-    adapterRefs.current = adapterObjects;
-    adapterMapByName.current.clear();
-    
-    // Extract only the data we need for rendering (to avoid storing hybrid objects in state)
-    const adapterData: AdapterInfo[] = adapterObjects.map((adapter: any, index: number) => {
-      const name = adapter.name || 'Unknown';
-      // Store reference in map for easy lookup by name
-      adapterMapByName.current.set(name, adapter);
-      return {
-        name,
-        index,
-      };
-    });
-    
-    setAdapters(adapterData);
+    // Add a small delay to ensure React Native is fully initialized
+    const timer = setTimeout(() => {
+      initAdapter();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  // Example: Use adapter methods when needed
-  // const handleUseAdapter = (index: number) => {
-  //   const adapter = getAdapterByIndex(index);
-  //   if (adapter) {
-  //     // Use adapter methods here
-  //     // adapter.someMethod();
-  //   }
-  // };
+  const startScan = () => {
+    if (!adapter || scanning) return;
+
+    setPeripherals([]);
+    setStatusMessage('Starting scan...');
+    setScanning(true);
+
+    try {
+      adapter.set_callback_on_scan_start(() => {
+        console.log('Scan started.');
+        setStatusMessage('Scanning...');
+      });
+
+      adapter.set_callback_on_scan_stop(() => {
+        console.log('Scan stopped.');
+        setScanning(false);
+        const results = adapter.scan_get_results();
+        const connectableCount = results.filter((p: Peripheral) => p.is_connectable()).length;
+        setStatusMessage(`Scan complete. Found ${connectableCount} connectable device${connectableCount !== 1 ? 's' : ''}.`);
+      });
+
+      adapter.set_callback_on_scan_found((peripheral: Peripheral) => {
+        try {
+          const identifier = peripheral?.identifier() || 'Unknown';
+          const address = peripheral?.address() || 'Unknown';
+          console.log(`[App] Found device: ${identifier} [${address}]`);
+          
+          if (peripheral.is_connectable()) {
+            setPeripherals(prev => {
+              try {
+                const addressToCheck = address;
+                const exists = prev.some(p => {
+                  try {
+                    return p?.address() === addressToCheck;
+                  } catch (e) {
+                    return false;
+                  }
+                });
+                
+                if (!exists) {
+                  return [...prev, peripheral];
+                }
+                return prev;
+              } catch (error) {
+                console.error('[App] Error updating peripherals:', error);
+                return prev;
+              }
+            });
+          }
+        } catch (error) {
+          console.error('[App] Error processing found peripheral:', error);
+        }
+      });
+
+      adapter.scan_start();
+      
+      setTimeout(() => {
+        if (adapter.scan_is_active()) {
+          adapter.scan_stop();
+        }
+      }, 5000);
+    } catch (error) {
+      console.error('Error during scan:', error);
+      setScanning(false);
+      setStatusMessage('Error during scan.');
+    }
+  };
+
+  const connectToDevice = (peripheral: Peripheral) => {
+    if (connectedPeripheral) {
+      setStatusMessage('Please disconnect from current device first.');
+      return;
+    }
+
+    setStatusMessage(`Connecting to ${peripheral.identifier()}...`);
+
+    try {
+      peripheral.set_callback_on_connected(() => {
+        console.log('Successfully connected.');
+        setConnectedPeripheral(peripheral);
+        
+        setTimeout(() => {
+          verifyConnection(peripheral);
+        }, 500);
+      });
+
+      peripheral.set_callback_on_disconnected(() => {
+        console.log('Disconnected.');
+        setConnectedPeripheral(null);
+        setMtu(0);
+        setConnectionVerified(false);
+        setConnectionDetails(null);
+        setStatusMessage('Disconnected.');
+      });
+
+      peripheral.connect();
+    } catch (error) {
+      console.error('Error connecting to device:', error);
+      setStatusMessage('Error connecting to device.');
+    }
+  };
+
+  const verifyConnection = (peripheral: Peripheral) => {
+    try {
+      const isConnected = peripheral.is_connected();
+      const currentMtu = peripheral.mtu();
+      const rssi = peripheral.rssi();
+      const addressType = peripheral.address_type();
+      const isConnectable = peripheral.is_connectable();
+
+      setMtu(currentMtu);
+      setConnectionVerified(isConnected);
+      setConnectionDetails({
+        isConnected,
+        rssi,
+        addressType,
+        isConnectable,
+      });
+
+      if (isConnected) {
+        setStatusMessage(`✅ Connected to ${peripheral.identifier()}. MTU: ${currentMtu}`);
+      } else {
+        setStatusMessage(`❌ Connection verification failed`);
+      }
+    } catch (error) {
+      console.error('Error verifying connection:', error);
+      setConnectionVerified(false);
+      setStatusMessage('Error verifying connection.');
+    }
+  };
+
+  const disconnect = () => {
+    if (!connectedPeripheral) return;
+
+    try {
+      connectedPeripheral.disconnect();
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+      setStatusMessage('Error disconnecting.');
+    }
+  };
+
+  console.log('[App] Rendering, adapter:', adapter ? 'present' : 'null', 'status:', statusMessage);
 
   return (
-    <View style={styles.container}>
-      {greeting ? <Text style={styles.greeting}>{greeting}</Text> : null}
-      {isBluetoothEnabled ? (
-        <Text style={styles.greeting}>Bluetooth is enabled</Text>
-      ) : (
-        <Text style={styles.greeting}>Bluetooth is disabled</Text>
-      )}
-      {adapters.map((adapter) => (
-        <Text key={`${adapter.name}-${adapter.index}`} style={styles.greeting}>
-          {adapter.name}
-        </Text>
-      ))}
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
+        <Text style={styles.title}>BLE Connect Example</Text>
+        
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusLabel}>Status:</Text>
+          <Text style={styles.statusText}>{statusMessage}</Text>
+        </View>
+
+        {!isBluetoothEnabled && (
+          <View style={styles.warningContainer}>
+            <Text style={styles.warningText}>⚠️ Bluetooth is disabled</Text>
+          </View>
+        )}
+
+        {scanning && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Scanning for devices...</Text>
+            <Text style={styles.loadingSubtext}>Please wait, this may take a few seconds</Text>
+          </View>
+        )}
+
+        {adapter && (
+          <>
+
+            {!connectedPeripheral && (
+              <TouchableOpacity
+                style={[styles.button, scanning && styles.buttonDisabled]}
+                onPress={startScan}
+                disabled={scanning}
+              >
+                {scanning ? (
+                  <View style={styles.buttonContent}>
+                    <ActivityIndicator size="small" color="#ffffff" />
+                    <Text style={[styles.buttonText, { marginLeft: 10 }]}>Scanning...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.buttonText}>Scan for Devices</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {connectedPeripheral && (
+              <View style={styles.connectedContainer}>
+                <View style={styles.connectionHeader}>
+                  <View style={[
+                    styles.connectionIndicator,
+                    connectionVerified === true ? styles.connectionIndicatorActive : styles.connectionIndicatorInactive
+                  ]}>
+                    <Text style={styles.connectionIndicatorText}>
+                      {connectionVerified ? '🟢' : '🟡'}
+                    </Text>
+                  </View>
+                  <Text style={styles.connectedTitle}>
+                    {connectionVerified ? 'Connected & Verified' : 'Connecting...'}
+                  </Text>
+                </View>
+
+                <View style={styles.deviceDetailsSection}>
+                  <Text style={styles.sectionTitle}>Device Information</Text>
+                  <Text style={styles.deviceInfo}>
+                    <Text style={styles.deviceInfoLabel}>Name:</Text> {connectedPeripheral.identifier()}
+                  </Text>
+                  <Text style={styles.deviceInfo}>
+                    <Text style={styles.deviceInfoLabel}>Address:</Text> {connectedPeripheral.address()}
+                  </Text>
+                  {connectionDetails && (
+                    <>
+                      <Text style={styles.deviceInfo}>
+                        <Text style={styles.deviceInfoLabel}>Address Type:</Text> {connectionDetails.addressType}
+                      </Text>
+                      <Text style={styles.deviceInfo}>
+                        <Text style={styles.deviceInfoLabel}>RSSI:</Text> {connectionDetails.rssi} dBm
+                      </Text>
+                      <Text style={styles.deviceInfo}>
+                        <Text style={styles.deviceInfoLabel}>Connectable:</Text> {connectionDetails.isConnectable ? 'Yes' : 'No'}
+                      </Text>
+                    </>
+                  )}
+                  <Text style={styles.deviceInfo}>
+                    <Text style={styles.deviceInfoLabel}>MTU:</Text> {mtu} bytes
+                  </Text>
+                  <Text style={styles.deviceInfo}>
+                    <Text style={styles.deviceInfoLabel}>Connection Status:</Text>{' '}
+                    <Text style={[
+                      styles.statusBadge,
+                      connectionVerified === true ? styles.statusBadgeSuccess : styles.statusBadgeWarning
+                    ]}>
+                      {connectionVerified ? 'VERIFIED ✓' : 'PENDING...'}
+                    </Text>
+                  </Text>
+                </View>
+
+                {connectionVerified && (
+                  <View style={styles.verificationSection}>
+                    <Text style={styles.verificationTitle}>✅ Connection Verified</Text>
+                    <Text style={styles.verificationText}>
+                      Your iPhone is connected to {connectedPeripheral.identifier()}.
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.verifyButton, { marginRight: 5, marginBottom: 0 }]}
+                    onPress={() => verifyConnection(connectedPeripheral)}
+                  >
+                    <Text style={styles.buttonText}>🔄 Verify</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.disconnectButton, { marginLeft: 5, marginBottom: 0 }]}
+                    onPress={disconnect}
+                  >
+                    <Text style={styles.buttonText}>Disconnect</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {!connectedPeripheral && peripherals.length > 0 && (
+              <View style={styles.devicesContainer}>
+                <Text style={styles.devicesTitle}>
+                  Connectable Devices ({peripherals.length}):
+                </Text>
+                <ScrollView 
+                  style={styles.devicesList}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {peripherals.map((peripheral, index) => {
+                    try {
+                      const address = peripheral?.address() || `unknown-${index}`;
+                      const identifier = peripheral?.identifier() || `Device ${index}`;
+                      const key = `device-${address}-${index}`;
+                      
+                      return (
+                        <View key={key} style={styles.deviceItem}>
+                          <View style={styles.deviceInfoContainer}>
+                            <Text style={styles.deviceName}>
+                              [{index}] {identifier}
+                            </Text>
+                            <Text style={styles.deviceAddress}>
+                              {address}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.connectButton}
+                            onPress={() => connectToDevice(peripheral)}
+                          >
+                            <Text style={styles.connectButtonText}>Connect</Text>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    } catch (error) {
+                      console.error(`[App] Error rendering peripheral at index ${index}:`, error);
+                      return null;
+                    }
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  greeting: {
-    marginTop: 16,
-    fontSize: 18,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+  },
+  statusContainer: {
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  statusLabel: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#666',
+    marginBottom: 5,
   },
-  titleContainer: {
+  statusText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  warningContainer: {
+    backgroundColor: '#fff3cd',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ffc107',
+  },
+  warningText: {
+    fontSize: 16,
+    color: '#856404',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 15,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  spinner: {
+    marginRight: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  connectedContainer: {
+    backgroundColor: '#ffffff',
+    padding: 20,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  connectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  connectionIndicator: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  connectionIndicatorActive: {
+    backgroundColor: '#d4edda',
+  },
+  connectionIndicatorInactive: {
+    backgroundColor: '#fff3cd',
+  },
+  connectionIndicatorText: {
+    fontSize: 20,
+  },
+  connectedTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  deviceDetailsSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  deviceInfo: {
+    fontSize: 15,
+    marginBottom: 8,
+    color: '#666',
+    lineHeight: 22,
+  },
+  deviceInfoLabel: {
+    fontWeight: '600',
+    color: '#333',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    overflow: 'hidden',
+  },
+  statusBadgeSuccess: {
+    backgroundColor: '#d4edda',
+    color: '#155724',
+  },
+  statusBadgeWarning: {
+    backgroundColor: '#fff3cd',
+    color: '#856404',
+  },
+  verificationSection: {
+    backgroundColor: '#e8f5e9',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4caf50',
+  },
+  verificationTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2e7d32',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  verificationText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 12,
+  },
+  verificationSubtext: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  codeBlock: {
+    backgroundColor: '#263238',
+    padding: 12,
+    borderRadius: 6,
+    marginVertical: 8,
+  },
+  codeText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: '#aed581',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    marginTop: 15,
+    justifyContent: 'space-between',
+    marginBottom: 0,
+  },
+  verifyButton: {
+    backgroundColor: '#007AFF',
+    flex: 1,
+  },
+  disconnectButton: {
+    backgroundColor: '#FF3B30',
+    flex: 1,
+  },
+  devicesContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    maxHeight: 400,
+  },
+  devicesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  devicesList: {
+    maxHeight: 350,
+  },
+  deviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  deviceInfoContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  deviceName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+  deviceAddress: {
+    fontSize: 14,
+    color: '#666',
+  },
+  connectButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 6,
+  },
+  connectButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    backgroundColor: '#ffffff',
+    padding: 30,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 15,
+    marginBottom: 5,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });
