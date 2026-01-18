@@ -2,14 +2,9 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "jsx": "react-native",
     "paths": {
       "@/*": [
         "./*"
-      ],
-      // Only for local development, if you're using the published npm package, you can remove this
-      "simplejsble": [ 
-        "../../../simplejsble/packages/simplejsble/src/index.ts" 
       ]
     }
   },
