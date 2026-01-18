@@ -1,4 +1,5 @@
 import { type HybridObject } from 'react-native-nitro-modules'
+import { type Service } from './Service.nitro'
 
 /**
  * Bluetooth address type enumeration.
@@ -91,4 +92,89 @@ export interface Peripheral
    * Set callback to be invoked when the peripheral disconnects.
    */
   set_callback_on_disconnected(callback: () => void): void
+
+  /**
+   * Get all services available on the peripheral.
+   * Requires an active connection.
+   */
+  services(): Service[]
+
+  /**
+   * Get manufacturer data from the peripheral's advertisement.
+   * Returns a map of manufacturer ID (number) to data (ArrayBuffer).
+   */
+  manufacturer_data(): Record<number, ArrayBuffer>
+
+  /**
+   * Read a characteristic value.
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @returns ArrayBuffer containing the characteristic data
+   */
+  read(service: string, characteristic: string): ArrayBuffer
+
+  /**
+   * Write to a characteristic using write-request (with response).
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @param data Data to write as ArrayBuffer
+   */
+  write_request(service: string, characteristic: string, data: ArrayBuffer): void
+
+  /**
+   * Write to a characteristic using write-command (without response).
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @param data Data to write as ArrayBuffer
+   */
+  write_command(service: string, characteristic: string, data: ArrayBuffer): void
+
+  /**
+   * Subscribe to notifications from a characteristic.
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @param callback Callback to receive notification data as ArrayBuffer
+   */
+  notify(service: string, characteristic: string, callback: (data: ArrayBuffer) => void): void
+
+  /**
+   * Subscribe to indications from a characteristic.
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @param callback Callback to receive indication data as ArrayBuffer
+   */
+  indicate(service: string, characteristic: string, callback: (data: ArrayBuffer) => void): void
+
+  /**
+   * Unsubscribe from notifications or indications on a characteristic.
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   */
+  unsubscribe(service: string, characteristic: string): void
+
+  /**
+   * Read a descriptor value.
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @param descriptor Descriptor UUID
+   * @returns ArrayBuffer containing the descriptor data
+   */
+  read_descriptor(service: string, characteristic: string, descriptor: string): ArrayBuffer
+
+  /**
+   * Write to a descriptor.
+   * Requires an active connection.
+   * @param service Service UUID
+   * @param characteristic Characteristic UUID
+   * @param descriptor Descriptor UUID
+   * @param data Data to write as ArrayBuffer
+   */
+  write_descriptor(service: string, characteristic: string, descriptor: string, data: ArrayBuffer): void
 }
