@@ -9,6 +9,20 @@ export default function RootLayout() {
     <ThemeProvider value={DefaultTheme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="connect" 
+          options={{ 
+            title: 'Connect Example',
+            headerShown: true,
+          }} 
+        />
+        <Stack.Screen 
+          name="read" 
+          options={{ 
+            title: 'Read Example',
+            headerShown: true,
+          }} 
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
