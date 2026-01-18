@@ -11,9 +11,9 @@ std::string HybridCharacteristic::uuid() {
     return _characteristic.uuid();
 }
 
-std::vector<std::shared_ptr<HybridDescriptor>> HybridCharacteristic::descriptors() {
+std::vector<std::shared_ptr<HybridDescriptorSpec>> HybridCharacteristic::descriptors() {
     std::vector<SimpleBLE::Descriptor> characteristic_descriptors = _characteristic.descriptors();
-    std::vector<std::shared_ptr<HybridDescriptor>> hybrid_descriptors;
+    std::vector<std::shared_ptr<HybridDescriptorSpec>> hybrid_descriptors;
     hybrid_descriptors.reserve(characteristic_descriptors.size());
     
     for (auto& descriptor : characteristic_descriptors) {

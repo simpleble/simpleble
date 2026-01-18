@@ -2,12 +2,13 @@
 
 #include "HybridServiceSpec.hpp"
 #include <simpleble/SimpleBLE.h>
+#include <NitroModules/ArrayBuffer.hpp>
 #include <memory>
 #include <vector>
 
 namespace margelo::nitro::simplejsble {
 
-class HybridCharacteristic;
+class HybridCharacteristicSpec;
 
 class HybridService : public HybridServiceSpec {
   public:
@@ -17,8 +18,8 @@ class HybridService : public HybridServiceSpec {
 
     bool initialized() override;
     std::string uuid() override;
-    ArrayBuffer data() override;
-    std::vector<std::shared_ptr<HybridCharacteristic>> characteristics() override;
+    std::shared_ptr<ArrayBuffer> data() override;
+    std::vector<std::shared_ptr<HybridCharacteristicSpec>> characteristics() override;
 
     SimpleBLE::Service& getInternal() { return _service; }
     const SimpleBLE::Service& getInternal() const { return _service; }

@@ -101,9 +101,10 @@ export interface Peripheral
 
   /**
    * Get manufacturer data from the peripheral's advertisement.
-   * Returns a map of manufacturer ID (number) to data (ArrayBuffer).
+   * Returns a map of manufacturer ID (string) to data (ArrayBuffer).
+   * The manufacturer ID is a string representation of the 16-bit company identifier.
    */
-  manufacturer_data(): Record<number, ArrayBuffer>
+  manufacturer_data(): Record<string, ArrayBuffer>
 
   /**
    * Read a characteristic value.

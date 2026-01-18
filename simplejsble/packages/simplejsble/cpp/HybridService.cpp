@@ -11,14 +11,14 @@ std::string HybridService::uuid() {
     return _service.uuid();
 }
 
-ArrayBuffer HybridService::data() {
+std::shared_ptr<ArrayBuffer> HybridService::data() {
     SimpleBLE::ByteArray bytes = _service.data();
-    return ArrayBuffer(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size());
+    return ArrayBuffer::copy(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size());
 }
 
-std::vector<std::shared_ptr<HybridCharacteristic>> HybridService::characteristics() {
+std::vector<std::shared_ptr<HybridCharacteristicSpec>> HybridService::characteristics() {
     std::vector<SimpleBLE::Characteristic> service_characteristics = _service.characteristics();
-    std::vector<std::shared_ptr<HybridCharacteristic>> hybrid_characteristics;
+    std::vector<std::shared_ptr<HybridCharacteristicSpec>> hybrid_characteristics;
     hybrid_characteristics.reserve(service_characteristics.size());
     
     for (auto& characteristic : service_characteristics) {

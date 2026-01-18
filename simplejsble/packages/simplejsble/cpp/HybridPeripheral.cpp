@@ -81,9 +81,9 @@ void HybridPeripheral::set_callback_on_disconnected(const std::function<void()>&
     });
 }
 
-std::vector<std::shared_ptr<HybridService>> HybridPeripheral::services() {
+std::vector<std::shared_ptr<HybridServiceSpec>> HybridPeripheral::services() {
     std::vector<SimpleBLE::Service> peripheral_services = _peripheral.services();
-    std::vector<std::shared_ptr<HybridService>> hybrid_services;
+    std::vector<std::shared_ptr<HybridServiceSpec>> hybrid_services;
     hybrid_services.reserve(peripheral_services.size());
     
     for (auto& service : peripheral_services) {
@@ -93,34 +93,34 @@ std::vector<std::shared_ptr<HybridService>> HybridPeripheral::services() {
     return hybrid_services;
 }
 
-std::unordered_map<double, ArrayBuffer> HybridPeripheral::manufacturer_data() {
+std::unordered_map<std::string, std::shared_ptr<ArrayBuffer>> HybridPeripheral::manufacturer_data() {
     std::map<uint16_t, SimpleBLE::ByteArray> peripheral_manufacturer_data = _peripheral.manufacturer_data();
-    std::unordered_map<double, ArrayBuffer> manufacturer_array_buffer_map;
-    
+    std::unordered_map<std::string, std::shared_ptr<ArrayBuffer>> manufacturer_array_buffer_map;
+
     for (const auto& pair : peripheral_manufacturer_data) {
-        manufacturer_array_buffer_map[static_cast<double>(pair.first)] = toArrayBuffer(pair.second);
+        manufacturer_array_buffer_map[std::to_string(pair.first)] = toArrayBuffer(pair.second);
     }
-    
+
     return manufacturer_array_buffer_map;
 }
 
-ArrayBuffer HybridPeripheral::read(const std::string& service, const std::string& characteristic) {
+std::shared_ptr<ArrayBuffer> HybridPeripheral::read(const std::string& service, const std::string& characteristic) {
     SimpleBLE::ByteArray peripheral_read_data = _peripheral.read(service, characteristic);
     return toArrayBuffer(peripheral_read_data);
 }
 
-void HybridPeripheral::write_request(const std::string& service, const std::string& characteristic, ArrayBuffer data) {
+void HybridPeripheral::write_request(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) {
     SimpleBLE::ByteArray bytes = fromArrayBuffer(data);
     _peripheral.write_request(service, characteristic, bytes);
 }
 
-void HybridPeripheral::write_command(const std::string& service, const std::string& characteristic, ArrayBuffer data) {
+void HybridPeripheral::write_command(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) {
     SimpleBLE::ByteArray bytes = fromArrayBuffer(data);
     _peripheral.write_command(service, characteristic, bytes);
 }
 
 void HybridPeripheral::notify(const std::string& service, const std::string& characteristic, 
-                              const std::function<void(ArrayBuffer)>& callback) {
+                              const std::function<void(const std::shared_ptr<ArrayBuffer>&)>& callback) {
     auto key = std::make_pair(service, characteristic);
     _notifyCallbacks[key] = callback;
     
@@ -133,7 +133,7 @@ void HybridPeripheral::notify(const std::string& service, const std::string& cha
 }
 
 void HybridPeripheral::indicate(const std::string& service, const std::string& characteristic, 
-                                const std::function<void(ArrayBuffer)>& callback) {
+                                const std::function<void(const std::shared_ptr<ArrayBuffer>&)>& callback) {
     auto key = std::make_pair(service, characteristic);
     _notifyCallbacks[key] = callback; //@alejo: verify if its necessary to store our own reference to the callback
     
@@ -151,27 +151,27 @@ void HybridPeripheral::unsubscribe(const std::string& service, const std::string
     _peripheral.unsubscribe(service, characteristic);
 }
 
-ArrayBuffer HybridPeripheral::read_descriptor(const std::string& service, const std::string& characteristic, 
+std::shared_ptr<ArrayBuffer> HybridPeripheral::read_descriptor(const std::string& service, const std::string& characteristic, 
                                               const std::string& descriptor) {
     SimpleBLE::ByteArray peripheral_descriptor_data = _peripheral.read(service, characteristic, descriptor);
     return toArrayBuffer(peripheral_descriptor_data);
 }
 
 void HybridPeripheral::write_descriptor(const std::string& service, const std::string& characteristic, 
-                                       const std::string& descriptor, ArrayBuffer data) {
+                                       const std::string& descriptor, const std::shared_ptr<ArrayBuffer>& data) {
     SimpleBLE::ByteArray bytes = fromArrayBuffer(data);
     _peripheral.write(service, characteristic, descriptor, bytes);
 }
 
 // Helper methods to cast between SimpleBLE::ByteArray and ArrayBuffer (NitroModules native type)
-ArrayBuffer HybridPeripheral::toArrayBuffer(const SimpleBLE::ByteArray& data) {
-    return ArrayBuffer(reinterpret_cast<const uint8_t*>(data.data()), data.size());
+std::shared_ptr<ArrayBuffer> HybridPeripheral::toArrayBuffer(const SimpleBLE::ByteArray& data) {
+    return ArrayBuffer::copy(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 }
 
-SimpleBLE::ByteArray HybridPeripheral::fromArrayBuffer(const ArrayBuffer& buffer) {
+SimpleBLE::ByteArray HybridPeripheral::fromArrayBuffer(const std::shared_ptr<ArrayBuffer>& buffer) {
     return SimpleBLE::ByteArray(
-        static_cast<const uint8_t*>(buffer.data()), 
-        buffer.size()
+        static_cast<const uint8_t*>(buffer->data()), 
+        buffer->size()
     );
 }
 

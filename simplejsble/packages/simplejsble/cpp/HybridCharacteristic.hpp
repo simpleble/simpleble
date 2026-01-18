@@ -9,7 +9,7 @@
 namespace margelo::nitro::simplejsble {
 
 // Forward declaration
-class HybridDescriptor;
+class HybridDescriptorSpec;
 
 class HybridCharacteristic : public HybridCharacteristicSpec {
   public:
@@ -19,7 +19,7 @@ class HybridCharacteristic : public HybridCharacteristicSpec {
 
     bool initialized() override;
     std::string uuid() override;
-    std::vector<std::shared_ptr<HybridDescriptor>> descriptors() override;
+    std::vector<std::shared_ptr<HybridDescriptorSpec>> descriptors() override;
     std::vector<std::string> capabilities() override;
     bool can_read() override;
     bool can_write_request() override;

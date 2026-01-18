@@ -6,11 +6,12 @@
 #include <functional>
 #include <string>
 #include <map>
+#include <unordered_map>
 #include <utility>
 
 namespace margelo::nitro::simplejsble {
 
-class HybridService;
+class HybridServiceSpec;
 
 class HybridPeripheral : public HybridPeripheralSpec {
   public:
@@ -36,22 +37,22 @@ class HybridPeripheral : public HybridPeripheralSpec {
     void set_callback_on_connected(const std::function<void()>& callback) override;
     void set_callback_on_disconnected(const std::function<void()>& callback) override;
 
-    std::vector<std::shared_ptr<HybridService>> services() override;
-    std::unordered_map<double, ArrayBuffer> manufacturer_data() override;
+    std::vector<std::shared_ptr<HybridServiceSpec>> services() override;
+    std::unordered_map<std::string, std::shared_ptr<ArrayBuffer>> manufacturer_data() override;
 
-    ArrayBuffer read(const std::string& service, const std::string& characteristic) override;
-    void write_request(const std::string& service, const std::string& characteristic, ArrayBuffer data) override;
-    void write_command(const std::string& service, const std::string& characteristic, ArrayBuffer data) override;
+    std::shared_ptr<ArrayBuffer> read(const std::string& service, const std::string& characteristic) override;
+    void write_request(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) override;
+    void write_command(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) override;
     void notify(const std::string& service, const std::string& characteristic, 
-                const std::function<void(ArrayBuffer)>& callback) override;
+                const std::function<void(const std::shared_ptr<ArrayBuffer>&)>& callback) override;
     void indicate(const std::string& service, const std::string& characteristic, 
-                  const std::function<void(ArrayBuffer)>& callback) override;
+                  const std::function<void(const std::shared_ptr<ArrayBuffer>&)>& callback) override;
     void unsubscribe(const std::string& service, const std::string& characteristic) override;
 
-    ArrayBuffer read_descriptor(const std::string& service, const std::string& characteristic, 
+    std::shared_ptr<ArrayBuffer> read_descriptor(const std::string& service, const std::string& characteristic, 
                                 const std::string& descriptor) override;
     void write_descriptor(const std::string& service, const std::string& characteristic, 
-                         const std::string& descriptor, ArrayBuffer data) override;
+                         const std::string& descriptor, const std::shared_ptr<ArrayBuffer>& data) override;
 
     SimpleBLE::Peripheral& getInternal() { return _peripheral; }
     const SimpleBLE::Peripheral& getInternal() const { return _peripheral; }
@@ -62,11 +63,11 @@ class HybridPeripheral : public HybridPeripheralSpec {
     std::function<void()> _onConnected;
     std::function<void()> _onDisconnected;
 
-    std::map<std::pair<std::string, std::string>, std::function<void(ArrayBuffer)>> _notifyCallbacks;
+    std::map<std::pair<std::string, std::string>, std::function<void(const std::shared_ptr<ArrayBuffer>&)>> _notifyCallbacks;
 
     // Helper methods to cast between SimpleBLE::ByteArray and ArrayBuffer (NitroModules native type)
-    static ArrayBuffer toArrayBuffer(const SimpleBLE::ByteArray& data);
-    static SimpleBLE::ByteArray fromArrayBuffer(const ArrayBuffer& buffer);
+    static std::shared_ptr<ArrayBuffer> toArrayBuffer(const SimpleBLE::ByteArray& data);
+    static SimpleBLE::ByteArray fromArrayBuffer(const std::shared_ptr<ArrayBuffer>& buffer);
 };
 
 }  // namespace margelo::nitro::simplejsble
