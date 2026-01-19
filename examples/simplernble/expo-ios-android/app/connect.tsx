@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HybridAdapter, type Adapter, type Peripheral } from 'simplernble';
@@ -18,8 +18,6 @@ export default function ConnectExample() {
     addressType: string;
     isConnectable: boolean;
   } | null>(null);
-  
-  const adapterRef = useRef<Adapter | null>(null);
 
   useEffect(() => {
     const initAdapter = async () => {
@@ -39,7 +37,6 @@ export default function ConnectExample() {
         }
 
         const firstAdapter = adapters[0] as Adapter;
-        adapterRef.current = firstAdapter;
         setAdapter(firstAdapter);
         setStatusMessage('Ready to scan. Press "Scan for Devices" to start.');
       } catch (error) {

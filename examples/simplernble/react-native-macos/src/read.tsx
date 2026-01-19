@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { HybridAdapter, toHex, type Adapter, type Characteristic, type Peripheral, type Service } from 'simplernble';
 
@@ -30,8 +30,6 @@ export default function ReadExample({ onBack }: ReadExampleProps) {
   const [selectedCharacteristic, setSelectedCharacteristic] = useState<CharacteristicPair | null>(null);
   const [readResults, setReadResults] = useState<ReadResult[]>([]);
   const [isReading, setIsReading] = useState<boolean>(false);
-  
-  const adapterRef = useRef<Adapter | null>(null);
 
   useEffect(() => {
     const initAdapter = async () => {
@@ -55,7 +53,6 @@ export default function ReadExample({ onBack }: ReadExampleProps) {
         }
 
         const firstAdapter = adapters[0] as Adapter;
-        adapterRef.current = firstAdapter;
         setAdapter(firstAdapter);
         setStatusMessage('Ready to scan. Press "Scan for Devices" to start.');
       } catch (error) {

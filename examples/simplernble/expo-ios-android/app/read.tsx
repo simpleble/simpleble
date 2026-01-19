@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { HybridAdapter, type Adapter, type Peripheral, type Service, type Characteristic, toHex } from 'simplernble';
 
 interface CharacteristicPair {
@@ -26,8 +26,6 @@ export default function ReadExample() {
   const [selectedCharacteristic, setSelectedCharacteristic] = useState<CharacteristicPair | null>(null);
   const [readResults, setReadResults] = useState<ReadResult[]>([]);
   const [isReading, setIsReading] = useState<boolean>(false);
-  
-  const adapterRef = useRef<Adapter | null>(null);
 
   useEffect(() => {
     const initAdapter = async () => {
@@ -47,7 +45,6 @@ export default function ReadExample() {
         }
 
         const firstAdapter = adapters[0] as Adapter;
-        adapterRef.current = firstAdapter;
         setAdapter(firstAdapter);
         setStatusMessage('Ready to scan. Press "Scan for Devices" to start.');
       } catch (error) {
