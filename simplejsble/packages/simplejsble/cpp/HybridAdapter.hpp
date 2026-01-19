@@ -2,6 +2,7 @@
 
 #include "HybridAdapterSpec.hpp"
 #include "HybridPeripheral.hpp"
+#include <NitroModules/Promise.hpp>
 #include <simpleble/SimpleBLE.h>
 #include <functional>
 #include <string>
@@ -16,8 +17,8 @@ class HybridAdapter : public HybridAdapterSpec {
     explicit HybridAdapter(SimpleBLE::Adapter adapter)
         : HybridObject(TAG), _adapter(std::move(adapter)) {}
 
-    bool bluetooth_enabled() override;
-    std::vector<std::shared_ptr<HybridAdapterSpec>> get_adapters() override;
+    std::shared_ptr<Promise<bool>> bluetooth_enabled() override;
+    std::shared_ptr<Promise<std::vector<std::shared_ptr<HybridAdapterSpec>>>> get_adapters() override;
 
     bool initialized() override;
     std::string identifier() override;
@@ -27,7 +28,7 @@ class HybridAdapter : public HybridAdapterSpec {
 
     void scan_start() override;
     void scan_stop() override;
-    void scan_for(double timeout_ms) override;
+    std::shared_ptr<Promise<void>> scan_for(double timeout_ms) override;
     bool scan_is_active() override;
     std::vector<std::shared_ptr<HybridPeripheralSpec>> scan_get_results() override;
     void set_callback_on_scan_start(const std::function<void()>& callback) override;

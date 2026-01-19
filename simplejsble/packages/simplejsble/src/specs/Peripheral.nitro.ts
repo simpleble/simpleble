@@ -55,13 +55,15 @@ export interface Peripheral
 
   /**
    * Initiate a connection to the peripheral.
+   * Returns a Promise to avoid blocking the JS thread during connection.
    */
-  connect(): void
+  connect(): Promise<void>
 
   /**
    * Disconnect from the peripheral.
+   * Returns a Promise to avoid blocking the JS thread during disconnection.
    */
-  disconnect(): void
+  disconnect(): Promise<void>
 
   /**
    * Check if the peripheral is currently connected.
@@ -109,20 +111,22 @@ export interface Peripheral
   /**
    * Read a characteristic value.
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during the read operation.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
-   * @returns ArrayBuffer containing the characteristic data
+   * @returns Promise resolving to ArrayBuffer containing the characteristic data
    */
-  read(service: string, characteristic: string): ArrayBuffer
+  read(service: string, characteristic: string): Promise<ArrayBuffer>
 
   /**
    * Write to a characteristic using write-request (with response).
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during the write operation.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
    * @param data Data to write as ArrayBuffer
    */
-  write_request(service: string, characteristic: string, data: ArrayBuffer): void
+  write_request(service: string, characteristic: string, data: ArrayBuffer): Promise<void>
 
   /**
    * Write to a characteristic using write-command (without response).
@@ -136,46 +140,51 @@ export interface Peripheral
   /**
    * Subscribe to notifications from a characteristic.
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during subscription setup.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
    * @param callback Callback to receive notification data as ArrayBuffer
    */
-  notify(service: string, characteristic: string, callback: (data: ArrayBuffer) => void): void
+  notify(service: string, characteristic: string, callback: (data: ArrayBuffer) => void): Promise<void>
 
   /**
    * Subscribe to indications from a characteristic.
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during subscription setup.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
    * @param callback Callback to receive indication data as ArrayBuffer
    */
-  indicate(service: string, characteristic: string, callback: (data: ArrayBuffer) => void): void
+  indicate(service: string, characteristic: string, callback: (data: ArrayBuffer) => void): Promise<void>
 
   /**
    * Unsubscribe from notifications or indications on a characteristic.
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during unsubscription.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
    */
-  unsubscribe(service: string, characteristic: string): void
+  unsubscribe(service: string, characteristic: string): Promise<void>
 
   /**
    * Read a descriptor value.
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during the read operation.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
    * @param descriptor Descriptor UUID
-   * @returns ArrayBuffer containing the descriptor data
+   * @returns Promise resolving to ArrayBuffer containing the descriptor data
    */
-  read_descriptor(service: string, characteristic: string, descriptor: string): ArrayBuffer
+  read_descriptor(service: string, characteristic: string, descriptor: string): Promise<ArrayBuffer>
 
   /**
    * Write to a descriptor.
    * Requires an active connection.
+   * Returns a Promise to avoid blocking the JS thread during the write operation.
    * @param service Service UUID
    * @param characteristic Characteristic UUID
    * @param descriptor Descriptor UUID
    * @param data Data to write as ArrayBuffer
    */
-  write_descriptor(service: string, characteristic: string, descriptor: string, data: ArrayBuffer): void
+  write_descriptor(service: string, characteristic: string, descriptor: string, data: ArrayBuffer): Promise<void>
 }

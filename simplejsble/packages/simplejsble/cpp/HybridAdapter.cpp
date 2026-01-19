@@ -2,16 +2,20 @@
 
 namespace margelo::nitro::simplejsble {
 
-bool HybridAdapter::bluetooth_enabled() {
-    return SimpleBLE::Adapter::bluetooth_enabled();
+std::shared_ptr<Promise<bool>> HybridAdapter::bluetooth_enabled() {
+    return Promise<bool>::async([]() -> bool {
+        return SimpleBLE::Adapter::bluetooth_enabled();
+    });
 }
 
-std::vector<std::shared_ptr<HybridAdapterSpec>> HybridAdapter::get_adapters() {
-    std::vector<std::shared_ptr<HybridAdapterSpec>> result;
-    for (auto& adapter : SimpleBLE::Adapter::get_adapters()) {
-        result.push_back(std::make_shared<HybridAdapter>(std::move(adapter)));
-    }
-    return result;
+std::shared_ptr<Promise<std::vector<std::shared_ptr<HybridAdapterSpec>>>> HybridAdapter::get_adapters() {
+    return Promise<std::vector<std::shared_ptr<HybridAdapterSpec>>>::async([]() {
+        std::vector<std::shared_ptr<HybridAdapterSpec>> result;
+        for (auto& adapter : SimpleBLE::Adapter::get_adapters()) {
+            result.push_back(std::make_shared<HybridAdapter>(std::move(adapter)));
+        }
+        return result;
+    });
 }
 
 bool HybridAdapter::initialized() {
@@ -38,8 +42,11 @@ void HybridAdapter::scan_stop() {
     _adapter.scan_stop();
 }
 
-void HybridAdapter::scan_for(double timeout_ms) {
-    _adapter.scan_for(static_cast<int>(timeout_ms));
+std::shared_ptr<Promise<void>> HybridAdapter::scan_for(double timeout_ms) {
+    int timeout = static_cast<int>(timeout_ms);
+    return Promise<void>::async([this, timeout]() {
+        _adapter.scan_for(timeout);
+    });
 }
 
 bool HybridAdapter::scan_is_active() {

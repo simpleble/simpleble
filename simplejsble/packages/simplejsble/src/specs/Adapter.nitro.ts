@@ -11,13 +11,15 @@ export interface Adapter
   }> {
   /**
    * Check if Bluetooth is enabled on the system.
+   * Returns a Promise to avoid blocking the JS thread during initialization.
    */
-  bluetooth_enabled(): boolean
+  bluetooth_enabled(): Promise<boolean>
 
   /**
    * Retrieve a list of all available Bluetooth adapters.
+   * Returns a Promise to avoid blocking the JS thread during initialization.
    */
-  get_adapters(): Adapter[]
+  get_adapters(): Promise<Adapter[]>
 
   /**
    * Check if the adapter is initialized (has a valid internal handle).
@@ -50,10 +52,11 @@ export interface Adapter
   scan_stop(): void
 
   /**
-   * Scan for peripherals for a specified duration (blocking).
+   * Scan for peripherals for a specified duration.
+   * Returns a Promise to avoid blocking the JS thread during the scan.
    * @param timeout_ms Duration in milliseconds.
    */
-  scan_for(timeout_ms: number): void
+  scan_for(timeout_ms: number): Promise<void>
 
   /**
    * Check if a scan is currently in progress.

@@ -2,6 +2,7 @@
 
 #include "HybridPeripheralSpec.hpp"
 #include "BluetoothAddressType.hpp"
+#include <NitroModules/Promise.hpp>
 #include <simpleble/SimpleBLE.h>
 #include <functional>
 #include <string>
@@ -27,8 +28,8 @@ class HybridPeripheral : public HybridPeripheralSpec {
     double tx_power() override;
     double mtu() override;
 
-    void connect() override;
-    void disconnect() override;
+    std::shared_ptr<Promise<void>> connect() override;
+    std::shared_ptr<Promise<void>> disconnect() override;
     bool is_connected() override;
     bool is_connectable() override;
     bool is_paired() override;
@@ -40,18 +41,18 @@ class HybridPeripheral : public HybridPeripheralSpec {
     std::vector<std::shared_ptr<HybridServiceSpec>> services() override;
     std::unordered_map<std::string, std::shared_ptr<ArrayBuffer>> manufacturer_data() override;
 
-    std::shared_ptr<ArrayBuffer> read(const std::string& service, const std::string& characteristic) override;
-    void write_request(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) override;
+    std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>> read(const std::string& service, const std::string& characteristic) override;
+    std::shared_ptr<Promise<void>> write_request(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) override;
     void write_command(const std::string& service, const std::string& characteristic, const std::shared_ptr<ArrayBuffer>& data) override;
-    void notify(const std::string& service, const std::string& characteristic, 
+    std::shared_ptr<Promise<void>> notify(const std::string& service, const std::string& characteristic, 
                 const std::function<void(const std::shared_ptr<ArrayBuffer>&)>& callback) override;
-    void indicate(const std::string& service, const std::string& characteristic, 
+    std::shared_ptr<Promise<void>> indicate(const std::string& service, const std::string& characteristic, 
                   const std::function<void(const std::shared_ptr<ArrayBuffer>&)>& callback) override;
-    void unsubscribe(const std::string& service, const std::string& characteristic) override;
+    std::shared_ptr<Promise<void>> unsubscribe(const std::string& service, const std::string& characteristic) override;
 
-    std::shared_ptr<ArrayBuffer> read_descriptor(const std::string& service, const std::string& characteristic, 
+    std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>> read_descriptor(const std::string& service, const std::string& characteristic, 
                                 const std::string& descriptor) override;
-    void write_descriptor(const std::string& service, const std::string& characteristic, 
+    std::shared_ptr<Promise<void>> write_descriptor(const std::string& service, const std::string& characteristic, 
                          const std::string& descriptor, const std::shared_ptr<ArrayBuffer>& data) override;
 
     SimpleBLE::Peripheral& getInternal() { return _peripheral; }

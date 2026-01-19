@@ -1,6 +1,6 @@
 {
   "name": "simplejsble",
-  "version": "0.0.52",
+  "version": "0.0.57",
   "description": "React Native Bluetooth Low Energy library using SimpleBLE with Nitro Modules",
   "main": "lib/index",
   "module": "lib/index",
