@@ -1,0 +1,27 @@
+{
+    "name": "simplernble",
+    "private": true,
+    "workspaces": [
+        "packages/simplernble"
+    ],
+    "scripts": {
+        "specs": "npm --prefix packages/simplernble run specs",
+        "typecheck": "npm --prefix packages/simplernble run typecheck",
+        "build": "npm --prefix packages/simplernble run build",
+        "clean": "npm --prefix packages/simplernble run clean",
+        "lint": "npm --prefix packages/simplernble run lint",
+        "postinstall": "patch-package",
+        "prepublish": "npm run build",
+        "publish:dry": "cd packages/simplernble && npm publish --dry-run",
+        "publish:patch": "cd packages/simplernble && npm version patch && npm publish",
+        "publish:minor": "cd packages/simplernble && npm version minor && npm publish",
+        "publish:major": "cd packages/simplernble && npm version major && npm publish"
+    },
+    "devDependencies": {
+        "patch-package": "^8.0.1",
+        "postinstall-postinstall": "^2.1.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
