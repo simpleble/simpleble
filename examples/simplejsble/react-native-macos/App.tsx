@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import HomeScreen from './screens/HomeScreen';
-import ConnectExample from './screens/ConnectExample';
-import ReadExample from './screens/ReadExample';
+import HomeScreen from './screens/home';
+import ConnectExample from './screens/connect';
+import ReadExample from './screens/read';
 
 type Screen = 'Home' | 'Connect' | 'Read';
 

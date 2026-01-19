@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView } from 'react-native';
-import { useState, useEffect, useRef } from 'react';
-import { HybridAdapter, type Adapter, type Peripheral, type Service, type Characteristic, toHex } from 'simplejsble';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { HybridAdapter, toHex, type Adapter, type Characteristic, type Peripheral, type Service } from 'simplejsble';
 
 interface ReadExampleProps {
   onBack: () => void;
