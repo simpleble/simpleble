@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, SafeAreaView } from 'react-native';
-import { HybridAdapter, type Adapter, type Peripheral } from 'simplejsble';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { HybridAdapter, type Adapter, type Peripheral } from 'simplernble';
 
 interface ConnectExampleProps {
   onBack: () => void;

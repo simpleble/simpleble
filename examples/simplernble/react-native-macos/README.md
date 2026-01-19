@@ -1,139 +1,97 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# SimpleRNBLE Example (React Native macOS)
 
-# Getting Started
+## Overview
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+This example is a **React Native macOS** app that uses **SimpleRNBLE** (the `simplernble` package) to scan, connect, and read data from Bluetooth Low Energy (BLE) peripherals.
 
-## Step 1: Start Metro
+## Get started
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+1. Install dependencies
 
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+```bash
+npm install
 ```
 
-## Step 2: Build and run your app
+2. Install CocoaPods dependencies (first clone, or after native dependency changes)
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-Navigate to the `ios` directory and install the CocoaPods dependencies:
-
-```sh
-cd ios
+```bash
+cd macos
 pod install
 cd ..
 ```
 
-**Important:** Make sure you have Bluetooth permissions configured in your `Info.plist` file. The app needs `NSBluetoothAlwaysUsageDescription` key with a description of why your app uses Bluetooth. This is required for BLE functionality.
+3. Start Metro
 
-The `Info.plist` file is typically located at `ios/[YourAppName]/Info.plist`. Example:
-
-```xml
-<key>NSBluetoothAlwaysUsageDescription</key>
-<string>This app uses Bluetooth to connect to BLE devices.</string>
+```bash
+npm start
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+4. Build and run the macOS app
 
-Then run the app:
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+```bash
+npm run macos
 ```
+
+Start hacking by editing `src/app.tsx`.
+
+## Platform requirements
 
 ### macOS
 
-For macOS, you need to install CocoaPods dependencies in the `macos` directory.
+This example requires **macOS 13.0+** (see `MACOSX_DEPLOYMENT_TARGET` in the Xcode project build settings).
 
-First, navigate to the `macos` directory:
+## Bluetooth permissions
 
-```sh
-cd macos
-```
+This app requires Bluetooth permissions to be configured for BLE scanning/connecting to work.
 
-Then install the CocoaPods dependencies:
+### macOS usage description (required)
 
-```sh
-pod install
-```
+Add `NSBluetoothAlwaysUsageDescription` to `macos/reactNativeMacos-macOS/Info.plist`:
 
-**Important:** Make sure you have Bluetooth permissions configured in your `Info.plist` file. The app needs `NSBluetoothAlwaysUsageDescription` key with a description of why your app uses Bluetooth. This is required for BLE functionality.
-
-The `Info.plist` file is located at `macos/reactNativeMacos-macOS/Info.plist`. Example:
+Open `macos/reactNativeMacos-macOS/Info.plist` in a text editor and add the following entry:
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>This app uses Bluetooth to connect to BLE devices.</string>
+<string>This app needs Bluetooth access to scan and connect to BLE devices.</string>
 ```
 
-After setting up CocoaPods and permissions, you can run the app:
+### macOS sandbox entitlement (only if App Sandbox is enabled)
 
-```sh
-# From the project root
-npm run macos
+If you enable **App Sandbox** in Xcode, also enable **Bluetooth** hardware access (Signing & Capabilities → App Sandbox → Bluetooth).
 
-# OR using Yarn
-yarn macos
+Concretely, this corresponds to the entitlement key:
+
+- `com.apple.security.device.bluetooth` = `true`
+
+In this repo, entitlements live at:
+
+- `macos/reactNativeMacos-macOS/reactNativeMacos.entitlements`
+
+Example:
+
+```xml
+<key>com.apple.security.device.bluetooth</key>
+<true/>
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, macOS app, or your connected device.
+Without this entitlement, Bluetooth access may fail even if the usage description is present.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+### System permission prompt
 
-## Step 3: Modify your app
+On first use, macOS will prompt for Bluetooth access. If you previously denied it, re-enable it in System Settings → Privacy & Security → Bluetooth.
 
-Now that you have successfully run the app, let's make changes!
+### Privacy manifest (recommended for distribution)
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+This project includes a privacy manifest at `macos/PrivacyInfo.xcprivacy`. If you change native code or add new native dependencies, review/update this file before distributing the app.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## Troubleshooting
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+- If you previously denied Bluetooth permissions, re-enable them in the OS settings and relaunch the app.
+- If App Sandbox is enabled and Bluetooth doesn’t work, confirm the Bluetooth entitlement (`com.apple.security.device.bluetooth`) is enabled for the app target.
 
-## Congratulations! :tada:
+## Learn more
 
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- [SimpleBLE documentation](https://simpleble.readthedocs.io/en/latest/)
+- [SimpleBLE tutorial](https://simpleble.readthedocs.io/en/latest/simpleble/tutorial.html)
+- [React Native macOS: Get Started](https://microsoft.github.io/react-native-macos/docs/getting-started)
+- [React Native macOS docs](https://microsoft.github.io/react-native-macos/)

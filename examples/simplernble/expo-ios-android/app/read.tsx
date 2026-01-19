@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
-import { HybridAdapter, type Adapter, type Peripheral, type Service, type Characteristic, toHex } from 'simplejsble';
+import { HybridAdapter, type Adapter, type Peripheral, type Service, type Characteristic, toHex } from 'simplernble';
 
 interface CharacteristicPair {
   serviceUuid: string;
