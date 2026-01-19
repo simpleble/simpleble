@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type Screen = 'Home' | 'Connect' | 'Read';
 
@@ -6,7 +6,7 @@ interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
 }
 
-export default function HomeScreen({ onNavigate }: HomeScreenProps) {
+export default function Home({ onNavigate }: HomeScreenProps) {
   const examples = [
     {
       id: 'connect',
