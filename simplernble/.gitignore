@@ -86,3 +86,7 @@ lib/
 ios/build_*/
 ios/simpleble_*/
 ios/SimpleBLE.xcframework/
+
+
+# License files
+LICENSE.md
