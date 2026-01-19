@@ -13,6 +13,9 @@
       "bundleIdentifier": "com.simpleble.expoexample"
     },
     "android": {
+      "minSdkVersion": 31,
+      "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
