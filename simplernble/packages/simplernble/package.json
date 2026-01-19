@@ -1,6 +1,6 @@
 {
   "name": "simplernble",
-  "version": "0.0.57",
+  "version": "0.0.5",
   "description": "SimpleBLE for React Native",
   "main": "lib/index",
   "module": "lib/index",

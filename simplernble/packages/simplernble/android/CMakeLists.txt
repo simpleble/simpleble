@@ -20,7 +20,7 @@ string(STRIP "${VERSION_FILE_CONTENTS}" SIMPLEBLE_VERSION_BASE)
 # Include SimpleBLE prelude
 include(${PROJECT_ROOT_DIR}/cmake/prelude.cmake)
 
-project(NitroSimplejsble VERSION ${SIMPLEBLE_VERSION_BASE} LANGUAGES CXX)
+project(NitroSimplernble VERSION ${SIMPLEBLE_VERSION_BASE} LANGUAGES CXX)
 
 # Include SimpleBLE epilogue
 include(${PROJECT_ROOT_DIR}/cmake/epilogue.cmake)
@@ -48,16 +48,16 @@ endif()
 file(GLOB_RECURSE SHARED_CPP_FILES "../cpp/*.cpp")
 
 # Define C++ library and add all sources
-add_library(NitroSimplejsble SHARED
+add_library(NitroSimplernble SHARED
     src/main/cpp/cpp-adapter.cpp
     ${SHARED_CPP_FILES}
 )
 
 # Add Nitrogen specs
-include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroSimplejsble+autolinking.cmake)
+include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroSimplernble+autolinking.cmake)
 
 # Set up local includes
-target_include_directories(NitroSimplejsble PRIVATE
+target_include_directories(NitroSimplernble PRIVATE
     src/main/cpp
     ../cpp
 )
@@ -65,7 +65,7 @@ target_include_directories(NitroSimplejsble PRIVATE
 find_library(LOG_LIB log)
 
 # Link all libraries together
-target_link_libraries(NitroSimplejsble
+target_link_libraries(NitroSimplernble
     ${LOG_LIB}
     simpleble::simpleble
     android
@@ -73,9 +73,9 @@ target_link_libraries(NitroSimplejsble
 )
 
 # Allow undefined JNI symbols (resolved at runtime)
-set_target_properties(NitroSimplejsble PROPERTIES
+set_target_properties(NitroSimplernble PROPERTIES
     LINK_FLAGS "-Wl,--allow-shlib-undefined -Wl,--unresolved-symbols=ignore-in-object-files"
 )
 
 # Add SimpleBLE compile definitions
-target_compile_definitions(NitroSimplejsble PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0 __REACT_NATIVE_ANDROID__=1)
+target_compile_definitions(NitroSimplernble PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0 __REACT_NATIVE_ANDROID__=1)
