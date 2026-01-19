@@ -33,10 +33,6 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(${PROJECT_ROOT_DIR}/simpleble ${CMAKE_BINARY_DIR}/simpleble)
 set(BUILD_SHARED_LIBS ON)
 
-# Add React Native Android define to simpleble (for JNI_GetCreatedJavaVMs workaround)
-# JNI_GetCreatedJavaVMs is not available in React Native environments
-target_compile_definitions(simpleble PRIVATE __REACT_NATIVE_ANDROID__=1)
-
 # Remove nativehelper from SimpleBLE (not available in React Native)
 get_target_property(SIMPLEBLE_LINK_LIBS simpleble INTERFACE_LINK_LIBRARIES)
 if(SIMPLEBLE_LINK_LIBS)
@@ -78,4 +74,4 @@ set_target_properties(NitroSimplernble PROPERTIES
 )
 
 # Add SimpleBLE compile definitions
-target_compile_definitions(NitroSimplernble PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0 __REACT_NATIVE_ANDROID__=1)
+target_compile_definitions(NitroSimplernble PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0)
