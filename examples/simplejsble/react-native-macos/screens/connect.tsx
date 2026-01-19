@@ -117,7 +117,7 @@ export default function ConnectExample({ onBack }: ConnectExampleProps) {
     }
   };
 
-  const connectToDevice = (peripheral: Peripheral) => {
+  const connectToDevice = async (peripheral: Peripheral) => {
     if (connectedPeripheral) {
       setStatusMessage('Please disconnect from current device first.');
       return;
@@ -149,7 +149,7 @@ export default function ConnectExample({ onBack }: ConnectExampleProps) {
         setStatusMessage('Disconnected.');
       });
 
-      peripheral.connect();
+      await peripheral.connect();
     } catch (error) {
       console.error('Error connecting to device:', error);
       setStatusMessage('Error connecting to device.');
@@ -185,11 +185,11 @@ export default function ConnectExample({ onBack }: ConnectExampleProps) {
     }
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
     if (!connectedPeripheral) return;
 
     try {
-      connectedPeripheral.disconnect();
+      await connectedPeripheral.disconnect();
     } catch (error) {
       console.error('Error disconnecting:', error);
       setStatusMessage('Error disconnecting.');

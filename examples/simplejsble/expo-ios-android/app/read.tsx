@@ -30,9 +30,9 @@ export default function ReadExample() {
   const adapterRef = useRef<Adapter | null>(null);
 
   useEffect(() => {
-    const initAdapter = () => {
+    const initAdapter = async () => {
       try {
-        const isEnabled = HybridAdapter.bluetooth_enabled();
+        const isEnabled = await HybridAdapter.bluetooth_enabled();
         setIsBluetoothEnabled(isEnabled);
         
         if (!isEnabled) {
@@ -40,7 +40,7 @@ export default function ReadExample() {
           return;
         }
 
-        const adapters = HybridAdapter.get_adapters();
+        const adapters = await HybridAdapter.get_adapters();
         if (adapters.length === 0) {
           setStatusMessage('No Bluetooth adapters found.');
           return;
@@ -109,7 +109,7 @@ export default function ReadExample() {
     }
   };
 
-  const connectToDevice = (peripheral: Peripheral) => {
+  const connectToDevice = async (peripheral: Peripheral) => {
     if (connectedPeripheral) {
       setStatusMessage('Please disconnect from current device first.');
       return;
@@ -137,7 +137,7 @@ export default function ReadExample() {
         setStatusMessage('Disconnected.');
       });
 
-      peripheral.connect();
+      await peripheral.connect();
     } catch (error) {
       console.error('Error connecting to device:', error);
       setStatusMessage('Error connecting to device.');
@@ -180,7 +180,7 @@ export default function ReadExample() {
 
     try {
       for (let i = 0; i < 5; i++) {
-        const data: ArrayBuffer = connectedPeripheral.read(char.serviceUuid, char.characteristicUuid);
+        const data: ArrayBuffer = await connectedPeripheral.read(char.serviceUuid, char.characteristicUuid);
         const uint8Data = new Uint8Array(data);
         const hexString = toHex(uint8Data, true);
         const timestamp = new Date().toLocaleTimeString();
@@ -206,11 +206,11 @@ export default function ReadExample() {
     }
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
     if (!connectedPeripheral) return;
 
     try {
-      connectedPeripheral.disconnect();
+      await connectedPeripheral.disconnect();
     } catch (error) {
       console.error('Error disconnecting:', error);
       setStatusMessage('Error disconnecting.');

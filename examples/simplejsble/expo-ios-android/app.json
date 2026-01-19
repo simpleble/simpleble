@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.simpleble.expoexample"
+      "bundleIdentifier": "com.simpleble.expoexample",
+      "deploymentTarget": "15.8"
     },
     "android": {
       "minSdkVersion": 31,

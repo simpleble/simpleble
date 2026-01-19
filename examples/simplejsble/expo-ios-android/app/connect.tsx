@@ -22,9 +22,9 @@ export default function ConnectExample() {
   const adapterRef = useRef<Adapter | null>(null);
 
   useEffect(() => {
-    const initAdapter = () => {
+    const initAdapter = async () => {
       try {
-        const isEnabled = HybridAdapter.bluetooth_enabled();
+        const isEnabled = await HybridAdapter.bluetooth_enabled();
         setIsBluetoothEnabled(isEnabled);
         
         if (!isEnabled) {
@@ -32,7 +32,7 @@ export default function ConnectExample() {
           return;
         }
 
-        const adapters = HybridAdapter.get_adapters();
+        const adapters = await HybridAdapter.get_adapters();
         if (adapters.length === 0) {
           setStatusMessage('No Bluetooth adapters found.');
           return;
@@ -107,7 +107,7 @@ export default function ConnectExample() {
     }
   };
 
-  const connectToDevice = (peripheral: Peripheral) => {
+  const connectToDevice = async (peripheral: Peripheral) => {
     if (connectedPeripheral) {
       setStatusMessage('Please disconnect from current device first.');
       return;
@@ -139,7 +139,7 @@ export default function ConnectExample() {
         setStatusMessage('Disconnected.');
       });
 
-      peripheral.connect();
+      await peripheral.connect();
     } catch (error) {
       console.error('Error connecting to device:', error);
       setStatusMessage('Error connecting to device.');
@@ -175,11 +175,11 @@ export default function ConnectExample() {
     }
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
     if (!connectedPeripheral) return;
 
     try {
-      connectedPeripheral.disconnect();
+      await connectedPeripheral.disconnect();
     } catch (error) {
       console.error('Error disconnecting:', error);
       setStatusMessage('Error disconnecting.');
