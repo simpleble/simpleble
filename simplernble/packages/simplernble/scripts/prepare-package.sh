@@ -8,8 +8,8 @@ REPO_ROOT="$(cd "${PACKAGE_DIR}/../../.." && pwd)"
 APPLE_DIR="${PACKAGE_DIR}/apple"
 
 # Deployment targets
-IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-13.4}"
-MACOS_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET:-10.13}"
+IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.8}"
+MACOS_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET:-13}"
 
 # Directories to clean before packing (native build artifacts only, not lib/)
 DIRS_TO_CLEAN=(
