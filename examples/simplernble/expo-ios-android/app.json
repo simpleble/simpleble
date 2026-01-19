@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "expo-example",
+    "slug": "expo-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "expoexample",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.simpleble.expoexample",
+      "deploymentTarget": "15.8"
+    },
+    "android": {
+      "minSdkVersion": 31,
+      "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.simpleble.expoexample"
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

@@ -16,3 +16,5 @@ wheelhouse
 
 target
 .cache
+
+node_modules/
