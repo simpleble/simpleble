@@ -21,19 +21,10 @@ class VM {
             }
             instance._jvm = jvm_override;
         } else if (instance._jvm == nullptr) {
-#ifdef __REACT_NATIVE_ANDROID__
-            // On React Native/Expo Android, JNI_GetCreatedJavaVMs is not available.
-            // The JVM must be set via set_jvm() from JNI_OnLoad.
-            throw std::runtime_error(
-                "JavaVM not initialized. Ensure JNI_OnLoad calls "
-                "SimpleBLE::Advanced::Android::set_jvm(vm) before any SimpleBLE operations"
-            );
-#else
             jsize count;
             if (JNI_GetCreatedJavaVMs(&instance._jvm, 1, &count) != JNI_OK || count == 0) {
                 throw std::runtime_error("Failed to retrieve the Java Virtual Machine");
             }
-#endif
         }
         return instance._jvm;
     }
