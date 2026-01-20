@@ -5,7 +5,7 @@ buildscript {
   }
 
   dependencies {
-    classpath "com.android.tools.build:gradle:8.13.2"
+    classpath "com.android.tools.build:gradle:9.0.0"
   }
 }
 
@@ -45,16 +45,16 @@ android {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
     buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
-    multiDexEnabled true
 
     externalNativeBuild {
       cmake {
         cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
         arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*reactNativeArchitectures()) 
 
         buildTypes {
           debug {
-            cppFlags "-O1 -g"
+            cppFlags "-O1 -g" 
           }
           release {
             cppFlags "-O2"
@@ -75,6 +75,7 @@ android {
             "META-INF",
             "META-INF/**",
             "**/libc++_shared.so",
+            "**/libNitroModules.so",
             "**/libfbjni.so",
             "**/libjsi.so",
             "**/libfolly_json.so",
