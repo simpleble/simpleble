@@ -15,7 +15,7 @@
     "react": "19.0.0",
     "react-native": "0.79.6",
     "react-native-macos": "^0.79.1",
-    "simplernble": "^0.0.2"
+    "simplernble": "0.0.6-beta.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

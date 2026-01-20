@@ -4,6 +4,18 @@
 
 This example is an **Expo** app that uses **SimpleRNBLE** (the `simplernble` package) to scan, connect, and read data from Bluetooth Low Energy (BLE) peripherals.
 
+## Prerequisites
+
+Make sure your machine is set up for React Native development. Follow the official guide: [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment).
+
+Quick checklist:
+
+- Node.js
+- Watchman (macOS)
+- JDK (for Android builds)
+- Android Studio + Android SDK (for Android)
+- Xcode + CocoaPods (for iOS)
+
 ## Get started
 
 1. Install dependencies

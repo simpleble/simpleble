@@ -14,8 +14,16 @@ npm install
 
 2. Install CocoaPods dependencies (first clone, or after native dependency changes)
 
+Before starting, make sure you've configured **Versions** (see the section below).
+
 ```bash
 cd macos
+pod install
+cd ..
+```
+
+```bash
+cd ios
 pod install
 cd ..
 ```
@@ -26,10 +34,20 @@ cd ..
 npm start
 ```
 
-4. Build and run the macOS app
+4. Build and run
+
+Before starting, make sure you've configured **Bluetooth permissions** (see the section below).
 
 ```bash
 npm run macos
+```
+
+```bash
+npm run ios
+```
+
+```bash
+npm run android
 ```
 
 Start hacking by editing `src/app.tsx`.
@@ -75,14 +93,6 @@ Example:
 ```
 
 Without this entitlement, Bluetooth access may fail even if the usage description is present.
-
-### System permission prompt
-
-On first use, macOS will prompt for Bluetooth access. If you previously denied it, re-enable it in System Settings → Privacy & Security → Bluetooth.
-
-### Privacy manifest (recommended for distribution)
-
-This project includes a privacy manifest at `macos/PrivacyInfo.xcprivacy`. If you change native code or add new native dependencies, review/update this file before distributing the app.
 
 ## Troubleshooting
 
