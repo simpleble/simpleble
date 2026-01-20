@@ -4,7 +4,7 @@ set -e
 # Get script directory and calculate paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-REPO_ROOT="$(cd "${PACKAGE_DIR}/../../.." && pwd)"
+REPO_ROOT="$(cd "${PACKAGE_DIR}/.." && pwd)"
 APPLE_DIR="${PACKAGE_DIR}/apple"
 
 # Deployment targets
