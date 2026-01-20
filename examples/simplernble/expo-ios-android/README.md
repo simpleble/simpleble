@@ -38,8 +38,6 @@ For iOS:
 npm run ios
 ```
 
-**Note:** This example uses native code and requires a [development build](https://docs.expo.dev/develop/development-builds/introduction/). It will **not work** with Expo Go.
-
 Start hacking by editing the files inside the `app/` directory.
 
 ## Platform requirements
@@ -103,6 +101,10 @@ Add a Bluetooth usage description to `ios/<YourApp>/Info.plist`:
 
 ## Troubleshooting
 - If you previously denied Bluetooth permissions, re-enable them in the OS settings and relaunch the app.
+
+## Notes
+
+This example uses native code and requires a [development build](https://docs.expo.dev/develop/development-builds/introduction/). It will **not work** with Expo Go.
 
 ## Learn more
 
