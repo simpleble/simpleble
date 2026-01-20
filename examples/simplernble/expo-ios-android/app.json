@@ -9,13 +9,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.simpleble.expoexample",
-      "deploymentTarget": "15.8"
+      "bundleIdentifier": "com.simpleble.expoexample"
     },
     "android": {
-      "minSdkVersion": 31,
-      "targetSdkVersion": 35,
-      "compileSdkVersion": 35,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.simpleble.expoexample"
@@ -24,7 +20,20 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 31,
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35
+          },
+          "ios": {
+            "deploymentTarget": "15.8"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

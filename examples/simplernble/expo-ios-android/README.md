@@ -14,6 +14,8 @@ npm install
 
 2. Start the app
 
+Before starting, make sure you've configured **Versions** and **Bluetooth permissions** (see the sections below).
+
 For Android:
 ```bash
 npm run android
@@ -30,82 +32,64 @@ Start hacking by editing the files inside the `app/` directory.
 
 ## Platform requirements
 
-### Android (SDK levels)
+### Versions
 
-Android SDK versions are configured in `app.json` under `expo.android`:
+Native build versions are configured using the `expo-build-properties` config plugin (it runs during prebuild) in `app.json` under `expo.plugins`.
 
-- `minSdkVersion`: minimum Android SDK version supported
-- `targetSdkVersion`: target Android SDK version
-- `compileSdkVersion`: Android SDK version used for compilation
+```bash
+npx expo install expo-build-properties
+```
 
-These are required and must be configured in `app.json`:
+This project configures Android + iOS versions like this:
 
 ```json
 {
   "expo": {
-    "android": {
-      "minSdkVersion": 31,
-      "targetSdkVersion": 35,
-      "compileSdkVersion": 35
-    }
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 31,
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35
+          },
+          "ios": {
+            "deploymentTarget": "15.8"
+          }
+        }
+      ]
+    ]
   }
 }
 ```
 
-### iOS (deployment target)
-
-The minimum iOS deployment target is required and must be configured in `app.json` under `expo.ios.deploymentTarget`:
-
-```json
-{
-  "expo": {
-    "ios": {
-      "deploymentTarget": "15.8"
-    }
-  }
-}
-```
+After changing versions, run `npx expo prebuild` to apply them.
 
 ## Bluetooth permissions
 
-This app requires Bluetooth permissions to be configured in `app.json` for BLE scanning/connecting to work.
+This app requires Bluetooth permissions to be configured at the native layer for BLE scanning/connecting to work.
 
-### Android (Android 12+ / API 31+)
+### Configure for Android
 
-Add the following permissions under `expo.android.permissions` in `app.json`:
+Add the following permissions to `android/app/src/main/AndroidManifest.xml`:
 
-```json
-{
-  "expo": {
-    "android": {
-      "permissions": [
-        "BLUETOOTH_SCAN",
-        "BLUETOOTH_CONNECT"
-      ]
-    }
-  }
-}
+```xml
+<!-- Required permissions for BLE on Android 12+ (API 31+) -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 ```
 
-### iOS
+### Configure for iOS
 
-Add a Bluetooth usage description under `expo.ios.infoPlist` in `app.json`:
+Add a Bluetooth usage description to `ios/<YourApp>/Info.plist`:
 
-```json
-{
-  "expo": {
-    "ios": {
-      "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "This app needs Bluetooth access to scan and connect to BLE devices."
-      }
-    }
-  }
-}
+```xml
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>This app needs Bluetooth access to scan and connect to BLE devices.</string>
 ```
 
 ## Troubleshooting
-
-- If scanning/connecting fails on Android, confirm **Nearby devices** permissions are granted in system settings (Android can deny/block Bluetooth runtime permissions even if the manifest entries exist).
 - If you previously denied Bluetooth permissions, re-enable them in the OS settings and relaunch the app.
 
 ## Learn more
