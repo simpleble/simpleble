@@ -1,6 +1,6 @@
 {
   "name": "simplernble",
-  "version": "0.0.5",
+  "version": "0.0.6-beta.3",
   "description": "SimpleBLE for React Native",
   "main": "lib/index",
   "module": "lib/index",
@@ -28,7 +28,6 @@
     "README.md"
   ],
   "scripts": {
-    "postinstall": "bash scripts/patch-platforms-definition.sh",
     "nitrogen": "npx nitrogen",
     "prepack": "npm run build && npm run nitrogen && bash scripts/prepare-package.sh",
     "typecheck": "tsc --noEmit",
@@ -37,7 +36,11 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "prepublishOnly": "npm run typecheck",
     "postpublish": "npm run clean",
-    "specs": "tsc --noEmit false && nitrogen --logLevel=\"debug\""
+    "specs": "tsc --noEmit false && nitrogen --logLevel=\"debug\"",
+    "publish:patch": "npm version patch && npm publish",
+    "publish:minor": "npm version minor && npm publish",
+    "publish:major": "npm version major && npm publish",
+    "publish:beta": "npm version prerelease --preid beta && npm publish --tag beta"
   },
   "keywords": [
     "react-native",
@@ -56,7 +59,7 @@
     "url": "git+https://github.com/simpleble/simpleble.git",
     "directory": "simplernble/packages/simplernble"
   },
-  "author": "SimpleBLE Contributors",
+  "author": "SimpleBLE by The California Open Source Company",
   "license": "BUSL-1.1",
   "bugs": {
     "url": "https://github.com/simpleble/simpleble/issues"
@@ -76,7 +79,9 @@
     "prettier": "^3.3.3",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0"
   },
   "peerDependencies": {
     "react": "*",
