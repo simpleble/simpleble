@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { HybridAdapter, type Adapter, type Peripheral, type Service, type Characteristic, toHex } from 'simplernble';
+import { Adapter, Peripheral, Service, Characteristic, toHex } from 'simplernble';
 
 interface CharacteristicPair {
   serviceUuid: string;
@@ -16,11 +16,11 @@ interface ReadResult {
 }
 
 export default function ReadExample() {
-  const [adapter, setAdapter] = useState<Adapter | null>(null);
+  const [adapter, setAdapter] = useState<typeof Adapter | null>(null);
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState<boolean>(false);
   const [scanning, setScanning] = useState<boolean>(false);
-  const [peripherals, setPeripherals] = useState<Peripheral[]>([]);
-  const [connectedPeripheral, setConnectedPeripheral] = useState<Peripheral | null>(null);
+  const [peripherals, setPeripherals] = useState<typeof Peripheral[]>([]);
+  const [connectedPeripheral, setConnectedPeripheral] = useState<typeof Peripheral | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('Initializing...');
   const [characteristics, setCharacteristics] = useState<CharacteristicPair[]>([]);
   const [selectedCharacteristic, setSelectedCharacteristic] = useState<CharacteristicPair | null>(null);
@@ -30,7 +30,7 @@ export default function ReadExample() {
   useEffect(() => {
     const initAdapter = async () => {
       try {
-        const isEnabled = await HybridAdapter.bluetooth_enabled();
+        const isEnabled = await Adapter.bluetooth_enabled();
         setIsBluetoothEnabled(isEnabled);
         
         if (!isEnabled) {
@@ -38,13 +38,13 @@ export default function ReadExample() {
           return;
         }
 
-        const adapters = await HybridAdapter.get_adapters();
+        const adapters = await Adapter.get_adapters();
         if (adapters.length === 0) {
           setStatusMessage('No Bluetooth adapters found.');
           return;
         }
 
-        const firstAdapter = adapters[0] as Adapter;
+        const firstAdapter = adapters[0] as typeof Adapter;
         setAdapter(firstAdapter);
         setStatusMessage('Ready to scan. Press "Scan for Devices" to start.');
       } catch (error) {
@@ -73,11 +73,11 @@ export default function ReadExample() {
         console.log('Scan stopped.');
         setScanning(false);
         const results = adapter.scan_get_results();
-        const connectableCount = results.filter((p: Peripheral) => p.is_connectable()).length;
+        const connectableCount = results.filter((p: typeof Peripheral) => p.is_connectable()).length;
         setStatusMessage(`Scan complete. Found ${connectableCount} connectable device${connectableCount !== 1 ? 's' : ''}.`);
       });
 
-      adapter.set_callback_on_scan_found((peripheral: Peripheral) => {
+      adapter.set_callback_on_scan_found((peripheral: typeof Peripheral) => {
         console.log(`Found device: ${peripheral.identifier()} [${peripheral.address()}]`);
         if (peripheral.is_connectable()) {
           setPeripherals(prev => {
@@ -106,7 +106,7 @@ export default function ReadExample() {
     }
   };
 
-  const connectToDevice = async (peripheral: Peripheral) => {
+  const connectToDevice = async (peripheral: typeof Peripheral) => {
     if (connectedPeripheral) {
       setStatusMessage('Please disconnect from current device first.');
       return;
@@ -141,14 +141,14 @@ export default function ReadExample() {
     }
   };
 
-  const discoverCharacteristics = (peripheral: Peripheral) => {
+  const discoverCharacteristics = (peripheral: typeof Peripheral) => {
     try {
-      const services: Service[] = peripheral.services();
+      const services: typeof Service[] = peripheral.services();
       const charPairs: CharacteristicPair[] = [];
 
       for (const service of services) {
         const serviceUuid = service.uuid();
-        const chars: Characteristic[] = service.characteristics();
+        const chars: typeof Characteristic[] = service.characteristics();
         
         for (const char of chars) {
           charPairs.push({
