@@ -18,6 +18,15 @@
     },
     "Peripheral": {
       "cpp": "HybridPeripheral"
+    },
+    "Service": {
+      "cpp": "HybridService"
+    },
+    "Characteristic": {
+      "cpp": "HybridCharacteristic"
+    },
+    "Descriptor": {
+      "cpp": "HybridDescriptor"
     }
   },
   "ignorePaths": [
