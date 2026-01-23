@@ -68,6 +68,12 @@ TEST(BluetoothAddressTest, EqualityCaseInsensitive) {
     EXPECT_TRUE(a == b);
 }
 
+TEST(BluetoothAddressTest, EqualityBothLowercase) {
+    SimpleBLE::bluetoothAddress a("aa:bb:cc:dd:ee:ff");
+    SimpleBLE::bluetoothAddress b("aa:bb:cc:dd:ee:ff");
+    EXPECT_TRUE(a == b);
+}
+
 TEST(BluetoothAddressTest, EqualityMixedCase) {
     SimpleBLE::bluetoothAddress a("aA:bB:cC:dD:eE:fF");
     SimpleBLE::bluetoothAddress b("Aa:Bb:Cc:Dd:Ee:Ff");
