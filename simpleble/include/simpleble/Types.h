@@ -16,41 +16,41 @@
 namespace SimpleBLE {
 
 /**
- * @class bluetoothAddress
+ * @class BluetoothAddress
  * @brief A class to handle Bluetooth addresses.
  */
-class bluetoothAddress {
+class BluetoothAddress {
   public:
     /**
      * @brief Default constructor.
      */
-    bluetoothAddress() = default;
+    BluetoothAddress() = default;
 
     /**
-     * @brief Constructs a bluetoothAddress from a C-style string.
+     * @brief Constructs a BluetoothAddress from a C-style string.
      * @param s A C-style string representing the address.
      * @throws std::invalid_argument If the pointer is null.
      */
-    bluetoothAddress(const char* s)
+    BluetoothAddress(const char* s)
         : raw_(s ? s : throw std::invalid_argument("Bluetooth address pointer cannot be null")) {}
 
     /**
-     * @brief Constructs a bluetoothAddress from a std::string.
+     * @brief Constructs a BluetoothAddress from a std::string.
      * @param s A string representing the address.
      */
-    bluetoothAddress(const std::string& s) : raw_(s) {}
+    BluetoothAddress(const std::string& s) : raw_(s) {}
 
     /**
-     * @brief Constructs a bluetoothAddress from a std::string (move).
+     * @brief Constructs a BluetoothAddress from a std::string (move).
      * @param s A string representing the address.
      */
-    bluetoothAddress(std::string&& s) : raw_(std::move(s)) {}
+    BluetoothAddress(std::string&& s) : raw_(std::move(s)) {}
 
     /**
-     * @brief Constructs a bluetoothAddress from a std::string_view.
+     * @brief Constructs a BluetoothAddress from a std::string_view.
      * @param s A string_view representing the address.
      */
-    bluetoothAddress(std::string_view s) : raw_(s) {}
+    BluetoothAddress(std::string_view s) : raw_(s) {}
 
     /**
      * @brief Returns the raw address string.
@@ -62,10 +62,10 @@ class bluetoothAddress {
      * @brief Returns the canonical (lowercase) address string.
      * @return A string containing the lowercase address.
      */
-    std::string to_string() const { return to_lower_ascii(raw_); }
+    std::string to_string() const { return _to_lower_ascii(raw_); }
 
     /**
-     * @brief Conversion operator to convert bluetoothAddress to std::string.
+     * @brief Conversion operator to convert BluetoothAddress to std::string.
      *
      * @note This is provided to return the canonical (lowercase) address.
      * @return The canonical (lowercase) address string.
@@ -74,98 +74,138 @@ class bluetoothAddress {
 
     /**
      * @brief Equality operator for case-insensitive comparison.
-     * @param a The first bluetoothAddress.
-     * @param b The second bluetoothAddress.
+     * @param a The first BluetoothAddress.
+     * @param b The second BluetoothAddress.
      * @return True if addresses are equal (case-insensitive), false otherwise.
      */
-    friend bool operator==(const bluetoothAddress& a, const bluetoothAddress& b) {
-        return compare_ci_ascii(a.raw_, b.raw_) == 0;
+    friend bool operator==(const BluetoothAddress& a, const BluetoothAddress& b) {
+        return _compare_ci_ascii(a.raw_, b.raw_) == 0;
     }
 
     /**
      * @brief Inequality operator for case-insensitive comparison.
-     * @param a The first bluetoothAddress.
-     * @param b The second bluetoothAddress.
+     * @param a The first BluetoothAddress.
+     * @param b The second BluetoothAddress.
      * @return True if addresses are not equal (case-insensitive), false otherwise.
      */
-    friend bool operator!=(const bluetoothAddress& a, const bluetoothAddress& b) {
+    friend bool operator!=(const BluetoothAddress& a, const BluetoothAddress& b) {
         return !(a == b);
     }
 
     /**
      * @brief Less-than operator for case-insensitive comparison.
-     * @param a The first bluetoothAddress.
-     * @param b The second bluetoothAddress.
+     * @param a The first BluetoothAddress.
+     * @param b The second BluetoothAddress.
      * @return True if a is less than b (case-insensitive), false otherwise.
      */
-    friend bool operator<(const bluetoothAddress& a, const bluetoothAddress& b) {
-        return compare_ci_ascii(a.raw_, b.raw_) < 0;
+    friend bool operator<(const BluetoothAddress& a, const BluetoothAddress& b) {
+        return _compare_ci_ascii(a.raw_, b.raw_) < 0;
     }
 
     /**
-     * @brief Stream insertion operator for outputting bluetoothAddress to an ostream.
+     * @brief Stream insertion operator for outputting BluetoothAddress to an ostream.
      * @param os The output stream.
-     * @param addr The bluetoothAddress to output.
+     * @param addr The BluetoothAddress to output.
      * @return Reference to the output stream.
      */
-    friend std::ostream& operator<<(std::ostream& os, const bluetoothAddress& addr) {
+    friend std::ostream& operator<<(std::ostream& os, const BluetoothAddress& addr) {
         return os << addr.to_string();
     }
 
     /**
-     * @brief String concatenation operator for std::string + bluetoothAddress.
+     * @brief String concatenation operator for std::string + BluetoothAddress.
      * @param str The left-hand side string.
-     * @param addr The right-hand side bluetoothAddress.
+     * @param addr The right-hand side BluetoothAddress.
      * @return A new string containing the concatenated result.
      */
-    friend std::string operator+(const std::string& str, const bluetoothAddress& addr) {
+    friend std::string operator+(const std::string& str, const BluetoothAddress& addr) {
         return str + addr.to_string();
     }
 
     /**
-     * @brief String concatenation operator for bluetoothAddress + std::string.
-     * @param addr The left-hand side bluetoothAddress.
+     * @brief String concatenation operator for BluetoothAddress + std::string.
+     * @param addr The left-hand side BluetoothAddress.
      * @param str The right-hand side string.
      * @return A new string containing the concatenated result.
      */
-    friend std::string operator+(const bluetoothAddress& addr, const std::string& str) {
+    friend std::string operator+(const BluetoothAddress& addr, const std::string& str) {
         return addr.to_string() + str;
     }
 
     /**
-     * @brief String concatenation operator for const char* + bluetoothAddress.
+     * @brief String concatenation operator for const char* + BluetoothAddress.
      * @param cstr The left-hand side C-style string.
-     * @param addr The right-hand side bluetoothAddress.
+     * @param addr The right-hand side BluetoothAddress.
      * @return A new string containing the concatenated result.
      */
-    friend std::string operator+(const char* cstr, const bluetoothAddress& addr) {
+    friend std::string operator+(const char* cstr, const BluetoothAddress& addr) {
         return std::string(cstr) + addr.to_string();
     }
 
     /**
-     * @brief String concatenation operator for bluetoothAddress + const char*.
-     * @param addr The left-hand side bluetoothAddress.
+     * @brief String concatenation operator for BluetoothAddress + const char*.
+     * @param addr The left-hand side BluetoothAddress.
      * @param cstr The right-hand side C-style string.
      * @return A new string containing the concatenated result.
      */
-    friend std::string operator+(const bluetoothAddress& addr, const char* cstr) {
+    friend std::string operator+(const BluetoothAddress& addr, const char* cstr) {
         return addr.to_string() + cstr;
+    }
+
+    /**
+     * @brief Equality operator for comparing std::string with BluetoothAddress.
+     * @param str The left-hand side string.
+     * @param addr The right-hand side BluetoothAddress.
+     * @return True if addresses are equal (case-insensitive), false otherwise.
+     */
+    friend bool operator==(const std::string& str, const BluetoothAddress& addr) {
+        return BluetoothAddress(str) == addr;
+    }
+
+    /**
+     * @brief Equality operator for comparing BluetoothAddress with std::string.
+     * @param addr The left-hand side BluetoothAddress.
+     * @param str The right-hand side string.
+     * @return True if addresses are equal (case-insensitive), false otherwise.
+     */
+    friend bool operator==(const BluetoothAddress& addr, const std::string& str) {
+        return addr == BluetoothAddress(str);
+    }
+
+    /**
+     * @brief Inequality operator for comparing std::string with BluetoothAddress.
+     * @param str The left-hand side string.
+     * @param addr The right-hand side BluetoothAddress.
+     * @return True if addresses are not equal (case-insensitive), false otherwise.
+     */
+    friend bool operator!=(const std::string& str, const BluetoothAddress& addr) {
+        return !(str == addr);
+    }
+
+    /**
+     * @brief Inequality operator for comparing BluetoothAddress with std::string.
+     * @param addr The left-hand side BluetoothAddress.
+     * @param str The right-hand side string.
+     * @return True if addresses are not equal (case-insensitive), false otherwise.
+     */
+    friend bool operator!=(const BluetoothAddress& addr, const std::string& str) {
+        return !(addr == str);
     }
 
   private:
     std::string raw_;
 
     //! @cond Doxygen_Suppress
-    static char lower_ascii(char c) {
+    static char _lower_ascii(char c) {
         if (c >= 'A' && c <= 'Z') return static_cast<char>(c + ('a' - 'A'));
         return c;
     }
 
-    static int compare_ci_ascii(std::string_view a, std::string_view b) {
+    static int _compare_ci_ascii(std::string_view a, std::string_view b) {
         const size_t n = (a.size() < b.size()) ? a.size() : b.size();
         for (size_t i = 0; i < n; ++i) {
-            const char ca = lower_ascii(a[i]);
-            const char cb = lower_ascii(b[i]);
+            const char ca = _lower_ascii(a[i]);
+            const char cb = _lower_ascii(b[i]);
             if (ca < cb) return -1;
             if (ca > cb) return 1;
         }
@@ -174,16 +214,14 @@ class bluetoothAddress {
         return 0;
     }
 
-    static std::string to_lower_ascii(std::string_view s) {
+    static std::string _to_lower_ascii(std::string_view s) {
         std::string out;
         out.reserve(s.size());
-        for (char c : s) out.push_back(lower_ascii(c));
+        for (char c : s) out.push_back(_lower_ascii(c));
         return out;
     }
     //! @endcond
 };
-
-using BluetoothAddress = bluetoothAddress;
 
 // IDEA: Extend BluetoothUUID to include a `uuid` function that
 // returns the same string, but provides a homogeneous interface.
