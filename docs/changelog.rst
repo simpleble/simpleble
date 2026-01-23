@@ -10,7 +10,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 
 **Notes**
 
-- 
+- Custom formatters like `fmt::format` require explicit conversion using `.to_string()` when formatting `BluetoothAddress` values. Standard streams work directly without conversion. 
 
 **Added**
 
