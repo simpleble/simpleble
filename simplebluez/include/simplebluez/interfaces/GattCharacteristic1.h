@@ -2,8 +2,7 @@
 
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
-
-#include "kvn/kvn_safe_callback.hpp"
+#include <simpledbus/base/HolderUtils.h>
 
 #include <simplebluez/Types.h>
 
@@ -25,21 +24,23 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     ByteArray ReadValue();
 
     // ----- PROPERTIES -----
-    std::string UUID();
-    ByteArray Value();
-    bool Notifying(bool refresh = true);
-    std::vector<std::string> Flags();
-    uint16_t MTU();
+    Property<std::string>& UUID = property<std::string>("UUID");
+    Property<std::string>& Service = property<std::string>("Service");
+    CustomProperty<ByteArray>& Value = property<ByteArray>("Value", SimpleDBus::HolderUtils::from_byte_array,
+                                                           SimpleDBus::HolderUtils::to_byte_array);
+    Property<bool>& Notifying = property<bool>("Notifying");
+    CustomProperty<std::vector<std::string>>& Flags = property<std::vector<std::string>>(
+        "Flags", SimpleDBus::HolderUtils::from_string_array, SimpleDBus::HolderUtils::to_string_array);
+    Property<uint16_t>& MTU = property<uint16_t>("MTU");
 
     // ----- CALLBACKS -----
     kvn::safe_callback<void()> OnValueChanged;
+    kvn::safe_callback<void(ByteArray value)> OnWriteValue;
+    kvn::safe_callback<void()> OnReadValue;
+    kvn::safe_callback<void()> OnStartNotify;
+    kvn::safe_callback<void()> OnStopNotify;
 
-  protected:
-    void property_changed(std::string option_name) override;
-    void update_value(SimpleDBus::Holder& new_value);
-
-    std::string _uuid;
-    ByteArray _value;
+    void message_handle(SimpleDBus::Message& msg) override;
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> registry;

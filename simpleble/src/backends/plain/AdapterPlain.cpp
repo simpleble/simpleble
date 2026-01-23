@@ -31,16 +31,16 @@ bool AdapterPlain::is_powered() { return true; }
 
 void AdapterPlain::scan_start() {
     is_scanning_ = true;
-    SAFE_CALLBACK_CALL(this->_callback_on_scan_start_);
+    SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
 
     Peripheral peripheral = Factory::build(std::make_shared<PeripheralPlain>());
-    SAFE_CALLBACK_CALL(this->_callback_on_scan_found_, peripheral);
-    SAFE_CALLBACK_CALL(this->_callback_on_scan_updated_, peripheral);
+    SAFE_CALLBACK_CALL(this->_callback_on_scan_found, peripheral);
+    SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, peripheral);
 }
 
 void AdapterPlain::scan_stop() {
     is_scanning_ = false;
-    SAFE_CALLBACK_CALL(this->_callback_on_scan_stop_);
+    SAFE_CALLBACK_CALL(this->_callback_on_scan_stop);
 }
 
 void AdapterPlain::scan_for(int timeout_ms) {

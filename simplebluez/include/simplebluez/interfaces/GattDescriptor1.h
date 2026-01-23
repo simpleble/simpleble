@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include <simpledbus/base/HolderUtils.h>
+
 namespace SimpleBluez {
 
 class GattDescriptor1 : public SimpleDBus::Interface {
@@ -21,18 +23,9 @@ class GattDescriptor1 : public SimpleDBus::Interface {
     ByteArray ReadValue();
 
     // ----- PROPERTIES -----
-    std::string UUID();
-    ByteArray Value();
-
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnValueChanged;
-
-  protected:
-    void property_changed(std::string option_name) override;
-    void update_value(SimpleDBus::Holder& new_value);
-
-    std::string _uuid;
-    ByteArray _value;
+    Property<std::string>& UUID = property<std::string>("UUID");
+    CustomProperty<ByteArray>& Value = property<ByteArray>("Value", SimpleDBus::HolderUtils::from_byte_array,
+                                                           SimpleDBus::HolderUtils::to_byte_array);
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattDescriptor1> registry;

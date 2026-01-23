@@ -6,7 +6,6 @@
 #include "nanopb/pb.h"
 #include "protocol/basic.pb.h"
 #include "protocol/simpleble.pb.h"
-#include "protocol/softdevice.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
 #error Regenerate this file with the current version of nanopb generator.
@@ -19,14 +18,12 @@ typedef struct _dongl_Response {
     union {
         basic_Response basic;
         simpleble_Response simpleble;
-        sd_Response softdevice;
     } rsp;
 } dongl_Response;
 
 typedef struct _dongl_Event {
     pb_size_t which_evt;
     union {
-        sd_Event softdevice;
         simpleble_Event simpleble;
     } evt;
 } dongl_Event;
@@ -46,38 +43,32 @@ extern "C" {
 
 /* Initializer values for message structs */
 #define dongl_Response_init_default              {0, {basic_Response_init_default}}
-#define dongl_Event_init_default                 {0, {sd_Event_init_default}}
+#define dongl_Event_init_default                 {0, {simpleble_Event_init_default}}
 #define dongl_D2H_init_default                   {0, {dongl_Response_init_default}}
 #define dongl_Response_init_zero                 {0, {basic_Response_init_zero}}
-#define dongl_Event_init_zero                    {0, {sd_Event_init_zero}}
+#define dongl_Event_init_zero                    {0, {simpleble_Event_init_zero}}
 #define dongl_D2H_init_zero                      {0, {dongl_Response_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define dongl_Response_basic_tag                 1
 #define dongl_Response_simpleble_tag             2
-#define dongl_Response_softdevice_tag            3
-#define dongl_Event_softdevice_tag               2
-#define dongl_Event_simpleble_tag                3
+#define dongl_Event_simpleble_tag                2
 #define dongl_D2H_rsp_tag                        1
 #define dongl_D2H_evt_tag                        2
 
 /* Struct field encoding specification for nanopb */
 #define dongl_Response_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,basic,rsp.basic),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,simpleble,rsp.simpleble),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,softdevice,rsp.softdevice),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,simpleble,rsp.simpleble),   2)
 #define dongl_Response_CALLBACK NULL
 #define dongl_Response_DEFAULT NULL
 #define dongl_Response_rsp_basic_MSGTYPE basic_Response
 #define dongl_Response_rsp_simpleble_MSGTYPE simpleble_Response
-#define dongl_Response_rsp_softdevice_MSGTYPE sd_Response
 
 #define dongl_Event_FIELDLIST(X, a) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (evt,softdevice,evt.softdevice),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (evt,simpleble,evt.simpleble),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (evt,simpleble,evt.simpleble),   2)
 #define dongl_Event_CALLBACK NULL
 #define dongl_Event_DEFAULT NULL
-#define dongl_Event_evt_softdevice_MSGTYPE sd_Event
 #define dongl_Event_evt_simpleble_MSGTYPE simpleble_Event
 
 #define dongl_D2H_FIELDLIST(X, a) \
@@ -98,18 +89,10 @@ extern const pb_msgdesc_t dongl_D2H_msg;
 #define dongl_D2H_fields &dongl_D2H_msg
 
 /* Maximum encoded size of messages (where known) */
-#if defined(sd_Event_size)
-union dongl_Event_evt_size_union {char f2[(6 + sd_Event_size)]; char f0[531];};
-#endif
-#if defined(sd_Event_size)
-union dongl_D2H_type_size_union {char f2[(6 + sizeof(union dongl_Event_evt_size_union))]; char f0[549];};
-#endif
-#define DONGL_D2H_PB_H_MAX_SIZE                  dongl_Response_size
-#define dongl_Response_size                      546
-#if defined(sd_Event_size)
-#define dongl_D2H_size                           (0 + sizeof(union dongl_D2H_type_size_union))
-#define dongl_Event_size                         (0 + sizeof(union dongl_Event_evt_size_union))
-#endif
+#define DONGL_D2H_PB_H_MAX_SIZE                  dongl_D2H_size
+#define dongl_D2H_size                           534
+#define dongl_Event_size                         531
+#define dongl_Response_size                      531
 
 #ifdef __cplusplus
 } /* extern "C" */

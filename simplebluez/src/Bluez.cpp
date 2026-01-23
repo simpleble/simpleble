@@ -23,14 +23,18 @@ void Bluez::init() {
 
     _bluez_root = SimpleDBus::Proxy::create<BluezRoot>(_conn, "org.bluez", "/");
     _bluez_root->load_managed_objects();
+
+    _custom_root = SimpleDBus::Proxy::create<CustomRoot>(_conn, "org.simplebluez", "/");
 }
 
 void Bluez::run_async() {
     _conn->read_write_dispatch();
 }
 
+std::shared_ptr<CustomRoot> Bluez::root_custom() { return _custom_root; }
+
+std::shared_ptr<BluezRoot> Bluez::root_bluez() { return _bluez_root; }
+
 std::vector<std::shared_ptr<Adapter>> Bluez::get_adapters() { return _bluez_root->get_adapters(); }
 
-std::shared_ptr<Agent> Bluez::get_agent() { return _bluez_root->get_agent(); }
-
-void Bluez::register_agent() { _bluez_root->register_agent(); }
+void Bluez::register_agent(std::shared_ptr<Agent> agent) { _bluez_root->register_agent(agent); }

@@ -14,7 +14,13 @@ const SimpleDBus::AutoRegisterInterface<Agent1> Agent1::registry{
 Agent1::Agent1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.Agent1") {}
 
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+Agent1::~Agent1() = default;
+
 void Agent1::message_handle(SimpleDBus::Message& msg) {
+
     if (msg.get_type() == SimpleDBus::Message::Type::METHOD_CALL) {
         // To minimize the amount of repeated code, create a method return object that will be
         // used to send the reply.
@@ -22,13 +28,17 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
         if (msg.get_member() == "Release") {
             // Nothing to do
+            if (OnRelease) {
+                OnRelease();
+            }
 
         } else if (msg.get_member() == "RequestPinCode") {
             // std::cout << "Agent1::message_handle() RequestPinCode" << std::endl;
+            SimpleDBus::Holder arg_device = msg.extract();
 
             std::string pin_code = "abc123";
             if (OnRequestPinCode) {
-                pin_code = OnRequestPinCode();
+                pin_code = OnRequestPinCode(arg_device.get_string());
             }
 
             if (!pin_code.empty()) {
@@ -40,10 +50,10 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
         } else if (msg.get_member() == "RequestPasskey") {
             // std::cout << "Agent1::message_handle() RequestPasskey" << std::endl;
-
+            SimpleDBus::Holder arg_device = msg.extract();
             int32_t passkey = 123456;
             if (OnRequestPasskey) {
-                passkey = OnRequestPasskey();
+                passkey = OnRequestPasskey(arg_device.get_string());
             }
 
             if (passkey >= 0 && passkey <= 999999) {
@@ -57,11 +67,12 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
         } else if (msg.get_member() == "DisplayPinCode") {
             // std::cout << "Agent1::message_handle() DisplayPinCode" << std::endl;
             SimpleDBus::Holder arg_device = msg.extract();
+            msg.extract_next();
             SimpleDBus::Holder arg_pin_code = msg.extract();
 
             bool success = true;
             if (OnDisplayPinCode) {
-                success = OnDisplayPinCode(arg_pin_code.get_string());
+                success = OnDisplayPinCode(arg_device.get_string(), arg_pin_code.get_string());
             }
 
             if (!success) {
@@ -72,21 +83,24 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
         } else if (msg.get_member() == "DisplayPasskey") {
             // std::cout << "Agent1::message_handle() DisplayPasskey" << std::endl;
             SimpleDBus::Holder arg_device = msg.extract();
+            msg.extract_next();
             SimpleDBus::Holder arg_passkey = msg.extract();
+            msg.extract_next();
             SimpleDBus::Holder arg_entered = msg.extract();
 
             if (OnDisplayPasskey) {
-                OnDisplayPasskey(arg_passkey.get_uint32(), arg_entered.get_uint16());
+                OnDisplayPasskey(arg_device.get_string(), arg_passkey.get_uint32(), arg_entered.get_uint16());
             }
 
         } else if (msg.get_member() == "RequestConfirmation") {
             // std::cout << "Agent1::message_handle() RequestConfirmation" << std::endl;
             SimpleDBus::Holder arg_device = msg.extract();
+            msg.extract_next();
             SimpleDBus::Holder arg_passkey = msg.extract();
 
             bool success = true;
             if (OnRequestConfirmation) {
-                success = OnRequestConfirmation(arg_passkey.get_uint32());
+                success = OnRequestConfirmation(arg_device.get_string(), arg_passkey.get_uint32());
             }
 
             if (!success) {
@@ -100,7 +114,7 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
             bool success = true;
             if (OnRequestAuthorization) {
-                success = OnRequestAuthorization();
+                success = OnRequestAuthorization(arg_device.get_string());
             }
 
             if (!success) {
@@ -112,11 +126,12 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
             // std::cout << "Agent1::message_handle() AuthorizeService" << std::endl;
 
             SimpleDBus::Holder arg_device = msg.extract();
+            msg.extract_next();
             SimpleDBus::Holder arg_uuid = msg.extract();
 
             bool success = true;
             if (OnAuthorizeService) {
-                success = OnAuthorizeService(arg_uuid.get_string());
+                success = OnAuthorizeService(arg_device.get_string(), arg_uuid.get_string());
             }
 
             if (!success) {
@@ -128,6 +143,9 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
             // std::cout << "Agent1::message_handle() Cancel" << std::endl;
             // NOTE: Due to the blocking nature of this interface, the Cancel method won't
             //       have any real impact on any of the callbacks, and thus will be ignored.
+            if (OnCancel) {
+                OnCancel();
+            }
 
         } else {
             // std::cout << "Agent1::message_handle() Unknown method: " << msg.get_member() << std::endl;

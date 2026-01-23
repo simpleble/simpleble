@@ -11,10 +11,14 @@ const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> GattCharacteristic1
     // clang-format on
 };
 
-GattCharacteristic1::GattCharacteristic1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
+GattCharacteristic1::GattCharacteristic1(std::shared_ptr<SimpleDBus::Connection> conn,
+                                         std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.GattCharacteristic1") {}
 
-GattCharacteristic1::~GattCharacteristic1() { OnValueChanged.unload(); }
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+GattCharacteristic1::~GattCharacteristic1() = default;
 
 void GattCharacteristic1::StartNotify() {
     auto msg = create_method_call("StartNotify");
@@ -54,65 +58,43 @@ ByteArray GattCharacteristic1::ReadValue() {
 
     SimpleDBus::Message reply_msg = _conn->send_with_reply_and_block(msg);
     SimpleDBus::Holder value = reply_msg.extract();
-    update_value(value);
 
+    Value.set(value);
     return Value();
 }
 
-std::string GattCharacteristic1::UUID() {
-    // As the UUID property doesn't change, we can cache it
-    std::scoped_lock lock(_property_update_mutex);
-    return _uuid;
-}
+void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
+    if (msg.is_method_call(_interface_name, "ReadValue")) {
+        SimpleDBus::Holder options = msg.extract();
 
-ByteArray GattCharacteristic1::Value() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _value;
-}
+        OnReadValue();
 
-std::vector<std::string> GattCharacteristic1::Flags() {
-    std::scoped_lock lock(_property_update_mutex);
+        SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
+        reply.append_argument(_properties["Value"]->get(), "ay");
+        _conn->send(reply);
+    } else if (msg.is_method_call(_interface_name, "WriteValue")) {
+        SimpleDBus::Holder value = msg.extract();
+        msg.extract_next();
+        SimpleDBus::Holder options = msg.extract();
 
-    std::vector<std::string> flags;
-    for (SimpleDBus::Holder& flag : _properties["Flags"].get_array()) {
-        flags.push_back(flag.get_string());
+        Value.set(value);
+        SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
+        _conn->send(reply);
+
+        OnWriteValue(Value.get());
+    } else if (msg.is_method_call(_interface_name, "StartNotify")) {
+        SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
+        _conn->send(reply);
+
+        Notifying.set(true).emit();
+
+        OnStartNotify();
+    } else if (msg.is_method_call(_interface_name, "StopNotify")) {
+        SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
+        _conn->send(reply);
+
+        Notifying.set(false).emit();
+
+        OnStopNotify();
     }
-
-    return flags;
-}
-
-uint16_t GattCharacteristic1::MTU() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["MTU"].get_uint16();
-}
-
-bool GattCharacteristic1::Notifying(bool refresh) {
-    if (refresh) {
-        property_refresh("Notifying");
-    }
-
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Notifying"].get_boolean();
-}
-
-void GattCharacteristic1::property_changed(std::string option_name) {
-    if (option_name == "UUID") {
-        std::scoped_lock lock(_property_update_mutex);
-        _uuid = _properties["UUID"].get_string();
-    } else if (option_name == "Value") {
-        update_value(_properties["Value"]);
-        OnValueChanged();
-    }
-}
-
-void GattCharacteristic1::update_value(SimpleDBus::Holder& new_value) {
-    std::scoped_lock lock(_property_update_mutex);
-    auto value_array = new_value.get_array();
-
-    char* value_data = new char[value_array.size()];
-    for (std::size_t i = 0; i < value_array.size(); i++) {
-        value_data[i] = value_array[i].get_byte();
-    }
-    _value = ByteArray(value_data, value_array.size());
-    delete[] value_data;
 }

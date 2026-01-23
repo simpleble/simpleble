@@ -496,17 +496,17 @@ Holder Holder::create(double value) {
 }
 
 template <>
-Holder Holder::create(const std::string& value) {
+Holder Holder::create(std::string value) {
     return create_string(value);
 }
 
 template <>
-Holder Holder::create(const ObjectPath& value) {
+Holder Holder::create(ObjectPath value) {
     return create_object_path(value);
 }
 
 template <>
-Holder Holder::create(const Signature& value) {
+Holder Holder::create(Signature value) {
     return create_signature(value);
 }
 

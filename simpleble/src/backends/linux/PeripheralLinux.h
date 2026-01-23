@@ -4,9 +4,9 @@
 #include <simpleble/Service.h>
 #include <simpleble/Types.h>
 
-#include <simplebluez/Adapter.h>
-#include <simplebluez/Characteristic.h>
-#include <simplebluez/Device.h>
+#include <simplebluez/standard/Adapter.h>
+#include <simplebluez/standard/Characteristic.h>
+#include <simplebluez/standard/Device.h>
 
 #include "../common/PeripheralBase.h"
 

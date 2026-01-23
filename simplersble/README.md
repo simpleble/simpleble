@@ -27,7 +27,7 @@ You can add SimpleRsBLE to your project by adding the following lines to your `C
 
 ```toml
 [dependencies]
-simplersble = "0.10.1"
+simplersble = "0.10.4"
 ```
 
 Please review our [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplersble/src/bin) on GitHub for more information on how to use SimpleRsBLE.

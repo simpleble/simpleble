@@ -166,12 +166,7 @@ set(SIMPLEBLE_DONGL_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/d2h.pb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/h2d.pb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/basic.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/simpleble.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_gap.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_gattc.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_gatts.pb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/softdevice_types.pb.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/protocol/simpleble.pb.c)
 
 if(SIMPLEBLE_PLAIN)
     list(APPEND SIMPLEBLE_DONGL_SOURCES
@@ -226,18 +221,21 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/PeripheralLinux.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/BackendBluez.cpp
 
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Logging.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Agent.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Device.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Characteristic.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Exceptions.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Service.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Adapter.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Bluez.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/BluezRoot.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/BluezOrg.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/BluezOrgBluez.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Descriptor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Exceptions.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Logging.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Agent.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Advertisement.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/ServiceManager.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/CustomRoot.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Device.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Characteristic.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Service.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Adapter.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/BluezRoot.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/BluezOrg.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/BluezOrgBluez.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Descriptor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/Adapter1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/Agent1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/GattDescriptor1.cpp
@@ -246,12 +244,16 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/Device1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/Battery1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/AgentManager1.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/GattManager1.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/LEAdvertisement1.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/interfaces/LEAdvertisingManager1.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/advanced/Interface.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/advanced/Proxy.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Connection.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Exceptions.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Holder.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/HolderUtils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Logging.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Message.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Path.cpp

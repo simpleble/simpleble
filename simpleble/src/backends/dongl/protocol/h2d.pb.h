@@ -6,7 +6,6 @@
 #include "nanopb/pb.h"
 #include "protocol/basic.pb.h"
 #include "protocol/simpleble.pb.h"
-#include "protocol/softdevice.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
 #error Regenerate this file with the current version of nanopb generator.
@@ -19,7 +18,6 @@ typedef struct _dongl_Command {
     union {
         basic_Command basic;
         simpleble_Command simpleble;
-        sd_Command softdevice;
     } cmd;
 } dongl_Command;
 
@@ -35,18 +33,15 @@ extern "C" {
 /* Field tags (for use in manual encoding/decoding) */
 #define dongl_Command_basic_tag                  1
 #define dongl_Command_simpleble_tag              2
-#define dongl_Command_softdevice_tag             3
 
 /* Struct field encoding specification for nanopb */
 #define dongl_Command_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,basic,cmd.basic),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,simpleble,cmd.simpleble),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,softdevice,cmd.softdevice),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,simpleble,cmd.simpleble),   2)
 #define dongl_Command_CALLBACK NULL
 #define dongl_Command_DEFAULT NULL
 #define dongl_Command_cmd_basic_MSGTYPE basic_Command
 #define dongl_Command_cmd_simpleble_MSGTYPE simpleble_Command
-#define dongl_Command_cmd_softdevice_MSGTYPE sd_Command
 
 extern const pb_msgdesc_t dongl_Command_msg;
 
@@ -54,13 +49,8 @@ extern const pb_msgdesc_t dongl_Command_msg;
 #define dongl_Command_fields &dongl_Command_msg
 
 /* Maximum encoded size of messages (where known) */
-#if defined(sd_Command_size)
-union dongl_Command_cmd_size_union {char f3[(6 + sd_Command_size)]; char f0[531];};
-#endif
-#if defined(sd_Command_size)
 #define DONGL_H2D_PB_H_MAX_SIZE                  dongl_Command_size
-#define dongl_Command_size                       (0 + sizeof(union dongl_Command_cmd_size_union))
-#endif
+#define dongl_Command_size                       531
 
 #ifdef __cplusplus
 } /* extern "C" */

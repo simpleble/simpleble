@@ -5,13 +5,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on `Keep a Changelog`_, and this project adheres to `Semantic Versioning`_.
 
-
-[0.10.4] - XXXX-XX-XX
+[0.11.0] - XXXX-XX-XX
 ---------------------
 
 **Notes**
 
--
+- 
+
+**Added**
+
+- 
+
+**Changed**
+
+- (SimpleDBus) Interfaces now host their own property objects.
+- (SimpleDBus) Property change callbacks are now handled by the individual property objects.
+- (SimpleBluez) Moved some files around, which might change the include paths for some users.
+- **API CHANGE**: (SimpleBluez) API for accessing internal BlueZ objects has been made more flexible.
+
+**Fixed**
+
+- 
+
+**Removed**
+
+- 
+
+
+[0.10.4] - 2025-12-29
+---------------------
 
 **Added**
 

@@ -41,18 +41,21 @@ set(SIMPLEBLUEZ_INCLUDE
     ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/external)
 
 set(SIMPLEBLUEZ_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Logging.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Agent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Device.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Characteristic.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Bluez.cpp    
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Service.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Adapter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Bluez.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/BluezRoot.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/BluezOrg.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/BluezOrgBluez.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Descriptor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Logging.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Agent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Advertisement.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/ServiceManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/CustomRoot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Device.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Characteristic.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Service.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Adapter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/BluezRoot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/BluezOrg.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/BluezOrgBluez.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/standard/Descriptor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Adapter1.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Agent1.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/GattDescriptor1.cpp
@@ -61,11 +64,15 @@ set(SIMPLEBLUEZ_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Device1.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Battery1.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/AgentManager1.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/GattManager1.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/LEAdvertisement1.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/LEAdvertisingManager1.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/advanced/Interface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/advanced/Proxy.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Connection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Holder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/HolderUtils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Message.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Path.cpp

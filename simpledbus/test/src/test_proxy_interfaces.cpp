@@ -1,15 +1,15 @@
 #include <gtest/gtest.h>
 
-#include <simpledbus/advanced/Proxy.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
+#include <simpledbus/advanced/Proxy.h>
 
 using namespace SimpleDBus;
 
 const AutoRegisterInterface<Interface> registry_i1{
     "i.1",
     // clang-format off
-    [](std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path, const Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {
-        return std::make_shared<Interface>(conn, bus_name, path, "i.1");
+    [](std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy) -> std::shared_ptr<SimpleDBus::Interface> {
+        return std::make_shared<Interface>(conn, proxy, "i.1");
     }
     // clang-format on
 };
@@ -17,8 +17,8 @@ const AutoRegisterInterface<Interface> registry_i1{
 const AutoRegisterInterface<Interface> registry_i2{
     "i.2",
     // clang-format off
-    [](std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path, const Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {
-        return std::make_shared<Interface>(conn, bus_name, path, "i.2");
+    [](std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy) -> std::shared_ptr<SimpleDBus::Interface> {
+        return std::make_shared<Interface>(conn, proxy, "i.2");
     }
     // clang-format on
 };
@@ -26,8 +26,8 @@ const AutoRegisterInterface<Interface> registry_i2{
 const AutoRegisterInterface<Interface> registry_i3{
     "i.3",
     // clang-format off
-    [](std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path, const Holder& options) -> std::shared_ptr<SimpleDBus::Interface> {
-        return std::make_shared<Interface>(conn, bus_name, path, "i.3");
+    [](std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy) -> std::shared_ptr<SimpleDBus::Interface> {
+        return std::make_shared<Interface>(conn, proxy, "i.3");
     }
     // clang-format on
 };

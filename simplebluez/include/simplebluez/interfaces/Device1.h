@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include <simpledbus/base/HolderUtils.h>
 #include "simplebluez/Types.h"
 
 namespace SimpleBluez {
@@ -23,37 +24,24 @@ class Device1 : public SimpleDBus::Interface {
     void CancelPairing();
 
     // ----- PROPERTIES -----
-    int16_t RSSI();
-    int16_t TxPower();
-    uint16_t Appearance();  // On Bluez 5.53, this always returns 0.
-    std::string Address();
-    std::string AddressType();
-    std::string Alias();
-    std::string Name();
-    std::vector<std::string> UUIDs();
-    std::map<uint16_t, ByteArray> ManufacturerData(bool refresh = true);
-    std::map<std::string, ByteArray> ServiceData(bool refresh = true);
-    bool Paired(bool refresh = true);
-    bool Connected(bool refresh = true);
-    bool ServicesResolved(bool refresh = true);
-
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnServicesResolved;
-    kvn::safe_callback<void()> OnDisconnected;
-
-  protected:
-    void property_changed(std::string option_name) override;
-
-    int16_t _rssi = INT16_MIN;
-    int16_t _tx_power = INT16_MIN;
-    std::string _name;
-    std::string _alias;
-    std::string _address;
-    std::string _address_type;
-    bool _connected;
-    bool _services_resolved;
-    std::map<uint16_t, ByteArray> _manufacturer_data;
-    std::map<std::string, ByteArray> _service_data;
+    Property<int16_t>& RSSI = property<int16_t>("RSSI");
+    Property<int16_t>& TxPower = property<int16_t>("TxPower");
+    Property<uint16_t>& Appearance = property<uint16_t>("Appearance");
+    Property<std::string>& Address = property<std::string>("Address");
+    Property<std::string>& AddressType = property<std::string>("AddressType");
+    Property<std::string>& Alias = property<std::string>("Alias");
+    Property<std::string>& Name = property<std::string>("Name");
+    CustomProperty<std::vector<std::string>>& UUIDs = property<std::vector<std::string>>(
+        "UUIDs", SimpleDBus::HolderUtils::from_string_array, SimpleDBus::HolderUtils::to_string_array);
+    CustomProperty<std::map<uint16_t, ByteArray>>& ManufacturerData = property<std::map<uint16_t, ByteArray>>(
+        "ManufacturerData", SimpleDBus::HolderUtils::from_dict_uint16_byte_array, SimpleDBus::HolderUtils::to_dict_uint16_byte_array);
+    CustomProperty<std::map<std::string, ByteArray>>& ServiceData = property<std::map<std::string, ByteArray>>(
+        "ServiceData", SimpleDBus::HolderUtils::from_dict_string_byte_array, SimpleDBus::HolderUtils::to_dict_string_byte_array);
+    Property<bool>& Paired = property<bool>("Paired");
+    Property<bool>& Bonded = property<bool>("Bonded");
+    Property<bool>& Trusted = property<bool>("Trusted");
+    Property<bool>& Connected = property<bool>("Connected");
+    Property<bool>& ServicesResolved = property<bool>("ServicesResolved");
 
   private:
     static const SimpleDBus::AutoRegisterInterface<Device1> registry;

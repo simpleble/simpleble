@@ -21,12 +21,7 @@ Proxy::~Proxy() {
     on_signal_received.unload();
 }
 
-void Proxy::on_registration() {
-    // TODO: This is a hack to make sure the Properties interface is always available and
-    // not removed by the linker. We'll remove this once the Properties interface is used
-    // a lot more.
-    auto prop = std::make_shared<Interfaces::Properties>(_conn, shared_from_this());
-}
+void Proxy::on_registration() {}
 
 std::shared_ptr<Proxy> Proxy::path_create(const std::string& path) {
     return std::make_shared<Proxy>(_conn, _bus_name, path);
@@ -267,13 +262,7 @@ Holder Proxy::path_collect() {
     SimpleDBus::Holder interfaces = SimpleDBus::Holder::create_dict();
 
     for (const auto& [interface_name, interface_ptr] : _interfaces) {
-        SimpleDBus::Holder properties = SimpleDBus::Holder::create_dict();
-        {
-            std::scoped_lock lock(interface_ptr->_property_update_mutex);
-            for (const auto& [key, value] : interface_ptr->_properties) {
-                properties.dict_append(SimpleDBus::Holder::Type::STRING, key, value);
-            }
-        }
+        SimpleDBus::Holder properties = interface_ptr->handle_property_get_all();
         interfaces.dict_append(SimpleDBus::Holder::Type::STRING, interface_name, std::move(properties));
     }
 

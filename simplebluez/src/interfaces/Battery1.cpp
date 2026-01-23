@@ -16,15 +16,8 @@ const SimpleDBus::AutoRegisterInterface<Battery1> Battery1::registry{
 Battery1::Battery1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.Battery1") {}
 
-Battery1::~Battery1() { OnPercentageChanged.unload(); }
+// IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
+// This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
+// initialized at startup.
+Battery1::~Battery1() = default;
 
-uint8_t Battery1::Percentage() {
-    std::scoped_lock lock(_property_update_mutex);
-    return _properties["Percentage"].get_byte();
-}
-
-void Battery1::property_changed(std::string option_name) {
-    if (option_name == "Percentage") {
-        OnPercentageChanged();
-    }
-}

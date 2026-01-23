@@ -3,8 +3,8 @@
 #include <simpledbus/base/Connection.h>
 
 #include <simpledbus/advanced/Interface.h>
-#include <kvn/kvn_safe_callback.hpp>
 #include <simpledbus/base/Path.h>
+#include <kvn/kvn_safe_callback.hpp>
 
 #include <memory>
 #include <mutex>
