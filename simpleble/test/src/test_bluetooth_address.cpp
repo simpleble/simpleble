@@ -149,4 +149,48 @@ TEST(BluetoothAddressTest, StreamOperatorChained) {
     EXPECT_EQ(oss.str(), "aa:bb:cc:dd:ee:ff - 11:22:33:44:55:66");
 }
 
+TEST(BluetoothAddressTest, StringConcatenationStringPlusAddress) {
+    SimpleBLE::bluetoothAddress addr("AA:BB:CC:DD:EE:FF");
+    std::string str = "Device: ";
+    std::string result = str + addr;
+    EXPECT_EQ(result, "Device: aa:bb:cc:dd:ee:ff");
+}
+
+TEST(BluetoothAddressTest, StringConcatenationAddressPlusString) {
+    SimpleBLE::bluetoothAddress addr("AA:BB:CC:DD:EE:FF");
+    std::string str = " [Connected]";
+    std::string result = addr + str;
+    EXPECT_EQ(result, "aa:bb:cc:dd:ee:ff [Connected]");
+}
+
+TEST(BluetoothAddressTest, StringConcatenationCStringPlusAddress) {
+    SimpleBLE::bluetoothAddress addr("AA:BB:CC:DD:EE:FF");
+    std::string result = "Device: " + addr;
+    EXPECT_EQ(result, "Device: aa:bb:cc:dd:ee:ff");
+}
+
+TEST(BluetoothAddressTest, StringConcatenationAddressPlusCString) {
+    SimpleBLE::bluetoothAddress addr("AA:BB:CC:DD:EE:FF");
+    std::string result = addr + " [Connected]";
+    EXPECT_EQ(result, "aa:bb:cc:dd:ee:ff [Connected]");
+}
+
+TEST(BluetoothAddressTest, StringConcatenationChained) {
+    SimpleBLE::bluetoothAddress addr("AA:BB:CC:DD:EE:FF");
+    std::string result = "Device: " + addr + " [" + std::to_string(42) + "]";
+    EXPECT_EQ(result, "Device: aa:bb:cc:dd:ee:ff [42]");
+}
+
+TEST(BluetoothAddressTest, StringConcatenationMixedCase) {
+    SimpleBLE::bluetoothAddress addr("aA:Bb:cC:dD:eE:fF");
+    std::string result = "Address: " + addr + " found";
+    EXPECT_EQ(result, "Address: aa:bb:cc:dd:ee:ff found");
+}
+
+TEST(BluetoothAddressTest, StringConcatenationEmptyAddress) {
+    SimpleBLE::bluetoothAddress addr;
+    std::string result = "Empty: " + addr + " end";
+    EXPECT_EQ(result, "Empty:  end");
+}
+
 

@@ -112,6 +112,46 @@ class bluetoothAddress {
         return os << addr.to_string();
     }
 
+    /**
+     * @brief String concatenation operator for std::string + bluetoothAddress.
+     * @param str The left-hand side string.
+     * @param addr The right-hand side bluetoothAddress.
+     * @return A new string containing the concatenated result.
+     */
+    friend std::string operator+(const std::string& str, const bluetoothAddress& addr) {
+        return str + addr.to_string();
+    }
+
+    /**
+     * @brief String concatenation operator for bluetoothAddress + std::string.
+     * @param addr The left-hand side bluetoothAddress.
+     * @param str The right-hand side string.
+     * @return A new string containing the concatenated result.
+     */
+    friend std::string operator+(const bluetoothAddress& addr, const std::string& str) {
+        return addr.to_string() + str;
+    }
+
+    /**
+     * @brief String concatenation operator for const char* + bluetoothAddress.
+     * @param cstr The left-hand side C-style string.
+     * @param addr The right-hand side bluetoothAddress.
+     * @return A new string containing the concatenated result.
+     */
+    friend std::string operator+(const char* cstr, const bluetoothAddress& addr) {
+        return std::string(cstr) + addr.to_string();
+    }
+
+    /**
+     * @brief String concatenation operator for bluetoothAddress + const char*.
+     * @param addr The left-hand side bluetoothAddress.
+     * @param cstr The right-hand side C-style string.
+     * @return A new string containing the concatenated result.
+     */
+    friend std::string operator+(const bluetoothAddress& addr, const char* cstr) {
+        return addr.to_string() + cstr;
+    }
+
   private:
     std::string raw_;
 
