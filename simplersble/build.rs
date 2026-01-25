@@ -57,6 +57,7 @@ fn main() {
     // Build the bindings
     cxx_build::bridge("simplersble/src/lib.rs")
         .file("simplersble/src/bindings/Bindings.cpp")
-        .flag_if_supported("-std=c++17")
+        .flag_if_supported("-std=c++17")  // GCC/Clang
+        .flag_if_supported("/std:c++17")  // MSVC 
         .compile("simpleble_bindings");
 }

@@ -10,7 +10,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 
 **Notes**
 
-- 
+- Custom formatters like `fmt::format` require explicit conversion using `.to_string()` when formatting `BluetoothAddress` values. Standard streams work directly without conversion. 
 
 **Added**
 
@@ -23,6 +23,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 - (SimpleDBus) Property change callbacks are now handled by the individual property objects.
 - (SimpleBluez) Moved some files around, which might change the include paths for some users.
 - **API CHANGE**: (SimpleBluez) API for accessing internal BlueZ objects has been made more flexible.
+- **API CHANGE**: `Peripheral::address()` and `Adapter::address()` now return `BluetoothAddress` instead of `std::string`. The `BluetoothAddress` type provides case-insensitive comparison and automatic conversion to `std::string` when needed. This ensures consistent lowercase address representation across all platforms.
 
 **Fixed**
 
