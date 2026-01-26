@@ -223,6 +223,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
 
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Bluez.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Exceptions.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Config.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/Logging.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Agent.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/src/standard/Advertisement.cpp
@@ -253,6 +254,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Connection.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Exceptions.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Holder.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/Config.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Logging.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Message.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Path.cpp

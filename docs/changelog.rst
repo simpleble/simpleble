@@ -17,6 +17,8 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 - (SimpleDBus) Connection has a new `send_with_reply` method that doesn't block the underlying DBus event loop.
 - (SimpleBluez) Added support for advertising as a peripheral.
 - (SimpleBluez) Added support for exposing services and characteristics as a peripheral.
+- (Linux) Added support for powering on and off the adapter.
+- (Linux) Added configuration option to select between the system and the user DBus bus.
 
 **Changed**
 
@@ -35,6 +37,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 **Removed**
 
 - (SimpleDBus) Removed individual create/get functions in favor of templated versions.
+- **API CHANGE**: (SimpleBluez) Deprecated the use of the `SIMPLEBLUEZ_USE_SESSION_DBUS` environment variable in favor of a configuration option.
 
 
 [0.10.4] - 2025-12-29

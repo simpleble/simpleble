@@ -4,6 +4,8 @@
 #include "CommonUtils.h"
 
 #include <simplebluez/Bluez.h>
+#include <simpleble/Config.h>
+#include <simplebluez/Config.h>
 
 #include <fmt/core.h>
 #include <atomic>
@@ -35,6 +37,8 @@ std::shared_ptr<BackendBase> BACKEND_LINUX() { return BackendBluez::get(); }
 BackendBluez::BackendBluez(buildToken) {
     static std::mutex get_mutex;       // Static mutex to ensure thread safety when accessing the logger
     std::scoped_lock lock(get_mutex);  // Unlock the mutex on function return
+
+    SimpleBluez::Config::use_system_bus = Config::SimpleBluez::use_system_bus;
 
     bluez.init();
     async_thread_active = true;

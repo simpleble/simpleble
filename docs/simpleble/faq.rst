@@ -11,6 +11,13 @@ MacOS 13.0+ (Ventura and newer), iOS 15.0+, and Android API 31+.
 
 Please check the overview page on more information about platform-specific limitations.
 
+**When should I set configuration values?**
+
+All configuration values must be set prior to any other interaction with a SimpleBLE component.
+This includes calling ``SimpleBLE::Adapter::get_adapters()`` or any other function that
+interacts with the underlying Bluetooth stack. Changes made after initialization may not
+take effect or could lead to undefined behavior.
+
 **Why do I get UUIDs for the peripheral address on MacOS?**
 
 MacOS has a policy of not allowing applications to access the Bluetooth address of

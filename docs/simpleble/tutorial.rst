@@ -5,6 +5,39 @@ Tutorial
 In this page you'll find all the information you need to get up and running with SimpleBLE.
 
 
+Understanding how to configure SimpleBLE is the first step towards using it
+effectively. Once you have the correct header files included, you should
+set any necessary configuration values before any other interaction with
+the library.
+
+Configuration
+=============
+
+SimpleBLE provides a set of configuration options that can be used to
+customize the behavior of the library. These options are available within
+the :cpp:namespace:`SimpleBLE::Config` namespace.
+
+**CRITICAL:** All configuration values must be set prior to any other
+interaction with a SimpleBLE component. This includes calling
+:cpp:func:`SimpleBLE::Adapter::get_adapters()` or any other function that
+interacts with the underlying Bluetooth stack.
+
+The following code snippet shows how to set the configuration values::
+
+   #include <simpleble/SimpleBLE.h>
+
+   int main(int argc, char** argv) {
+      // Set configuration values before any other interaction
+      SimpleBLE::Config::SimpleBluez::use_legacy_bluez_backend = true;
+
+      // Now you can proceed with the rest of your program
+      if (!SimpleBLE::Adapter::bluetooth_enabled()) {
+         // ...
+      }
+
+      // ...
+   }
+
 Getting started
 ===============
 

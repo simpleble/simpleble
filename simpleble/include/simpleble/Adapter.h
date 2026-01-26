@@ -47,7 +47,7 @@ class SIMPLEBLE_EXPORT Adapter {
     /**
      * Control the power state of the adapter.
      *
-     * NOTE: The power on/off functionality is only supported on Windows and Linux (implementation pending).
+     * NOTE: The power on/off functionality is only supported on Windows and Linux.
      *       On other platforms, this method will do nothing.
      * NOTE: Callbacks are currently a placeholder for future implementation.
      */
@@ -89,6 +89,9 @@ class SIMPLEBLE_EXPORT Adapter {
      *
      * This will cause backends to be instantiated/initialized and adapters
      * too.
+     *
+     * @note All configuration values must be set prior to calling this function.
+     *       Please refer to the SimpleBLE::Config documentation for more details.
      */
     static std::vector<Adapter> get_adapters();
 
