@@ -1,3 +1,4 @@
+#include <simpledbus/Config.h>
 #include <simpledbus/base/Connection.h>
 #include <simpledbus/base/Exceptions.h>
 #include <simpledbus/base/Logging.h>
@@ -161,8 +162,7 @@ Message Connection::send_with_reply(Message& msg) {
     bool timed_out = false;
     {
         std::unique_lock<std::mutex> lock(ctx.mtx);
-        const std::chrono::seconds timeout_limit(30); // TODO: make this configurable
-        if (!ctx.cv.wait_for(lock, timeout_limit, [&ctx] { return ctx.completed; })) {
+        if (!ctx.cv.wait_for(lock, Config::Connection::send_with_reply_timeout, [&ctx] { return ctx.completed; })) {
             timed_out = true;
         }
     }

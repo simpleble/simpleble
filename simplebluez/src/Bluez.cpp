@@ -1,15 +1,12 @@
 #include <simplebluez/Bluez.h>
 #include <simpledbus/interfaces/ObjectManager.h>
 
+#include <simplebluez/Config.h>
+
 using namespace SimpleBluez;
 
-#ifdef SIMPLEBLUEZ_USE_SESSION_DBUS
-#define DBUS_BUS DBUS_BUS_SESSION
-#else
-#define DBUS_BUS DBUS_BUS_SYSTEM
-#endif
-
-Bluez::Bluez() : _conn(std::make_shared<SimpleDBus::Connection>(DBUS_BUS)) {}
+Bluez::Bluez()
+    : _conn(std::make_shared<SimpleDBus::Connection>(Config::use_system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION)) {}
 
 Bluez::~Bluez() {
     if (_conn->is_initialized()) {
@@ -27,9 +24,7 @@ void Bluez::init() {
     _custom_root = SimpleDBus::Proxy::create<CustomRoot>(_conn, "org.simplebluez", "/");
 }
 
-void Bluez::run_async() {
-    _conn->read_write_dispatch();
-}
+void Bluez::run_async() { _conn->read_write_dispatch(); }
 
 std::shared_ptr<CustomRoot> Bluez::root_custom() { return _custom_root; }
 

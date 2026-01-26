@@ -275,6 +275,7 @@ include simpleble/src_c/utils.cpp
 include simplebluez/CMakeLists.txt
 include simplebluez/cmake/simplebluez.pc.in
 include simplebluez/include/simplebluez/Bluez.h
+include simplebluez/include/simplebluez/Config.h
 include simplebluez/include/simplebluez/Exceptions.h
 include simplebluez/include/simplebluez/Types.h
 include simplebluez/include/simplebluez/interfaces/Adapter1.h
@@ -301,6 +302,7 @@ include simplebluez/include/simplebluez/standard/Device.h
 include simplebluez/include/simplebluez/standard/Service.h
 include simplebluez/include/simplebluez/standard/ServiceManager.h
 include simplebluez/src/Bluez.cpp
+include simplebluez/src/Config.cpp
 include simplebluez/src/Exceptions.cpp
 include simplebluez/src/Logging.cpp
 include simplebluez/src/Logging.h
@@ -329,6 +331,7 @@ include simplebluez/src/standard/Service.cpp
 include simplebluez/src/standard/ServiceManager.cpp
 include simpledbus/CMakeLists.txt
 include simpledbus/cmake/simpledbus.pc.in
+include simpledbus/include/simpledbus/Config.h
 include simpledbus/include/simpledbus/advanced/Interface.h
 include simpledbus/include/simpledbus/advanced/InterfaceRegistry.h
 include simpledbus/include/simpledbus/advanced/Proxy.h
@@ -340,6 +343,7 @@ include simpledbus/include/simpledbus/base/Message.h
 include simpledbus/include/simpledbus/base/Path.h
 include simpledbus/include/simpledbus/interfaces/ObjectManager.h
 include simpledbus/include/simpledbus/interfaces/Properties.h
+include simpledbus/src/Config.cpp
 include simpledbus/src/advanced/Interface.cpp
 include simpledbus/src/advanced/Proxy.cpp
 include simpledbus/src/base/Connection.cpp
