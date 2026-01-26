@@ -38,57 +38,73 @@ SimpleDBus::Holder Adapter1::GetDiscoveryFilters() {
 }
 
 void Adapter1::SetDiscoveryFilter(DiscoveryFilter filter) {
-    SimpleDBus::Holder properties = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder properties = SimpleDBus::Holder::create_array();
 
     if (filter.UUIDs.size() > 0) {
         SimpleDBus::Holder uuids = SimpleDBus::Holder::create_array();
         for (size_t i = 0; i < filter.UUIDs.size(); i++) {
             uuids.array_append(SimpleDBus::Holder::create_string(filter.UUIDs.at(i)));
         }
-        properties.dict_append(SimpleDBus::Holder::Type::ARRAY, "UUIDs", uuids);
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        dict.dict_append(SimpleDBus::Holder::Type::STRING, "UUIDs", uuids);
+        properties.array_append(dict);
     }
 
     if (filter.RSSI.has_value()) {
-        properties.dict_append(SimpleDBus::Holder::Type::INT16, "RSSI",
-                               SimpleDBus::Holder::create_int16(filter.RSSI.value()));
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        dict.dict_append(SimpleDBus::Holder::Type::STRING, "RSSI",
+                         SimpleDBus::Holder::create_int16(filter.RSSI.value()));
+        properties.array_append(dict);
     }
 
     if (filter.Pathloss.has_value()) {
-        properties.dict_append(SimpleDBus::Holder::Type::UINT16, "Pathloss",
-                               SimpleDBus::Holder::create_uint16(filter.Pathloss.value()));
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        dict.dict_append(SimpleDBus::Holder::Type::STRING, "Pathloss",
+                         SimpleDBus::Holder::create_uint16(filter.Pathloss.value()));
+        properties.array_append(dict);
     }
 
-    switch (filter.Transport) {
-        case DiscoveryFilter::TransportType::AUTO: {
-            properties.dict_append(SimpleDBus::Holder::Type::STRING, "Transport",
-                                   SimpleDBus::Holder::create_string("auto"));
-            break;
+    {
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        switch (filter.Transport) {
+            case DiscoveryFilter::TransportType::AUTO: {
+                dict.dict_append(SimpleDBus::Holder::Type::STRING, "Transport",
+                                 SimpleDBus::Holder::create_string("auto"));
+                break;
+            }
+            case DiscoveryFilter::TransportType::BREDR: {
+                dict.dict_append(SimpleDBus::Holder::Type::STRING, "Transport",
+                                 SimpleDBus::Holder::create_string("bredr"));
+                break;
+            }
+            case DiscoveryFilter::TransportType::LE: {
+                dict.dict_append(SimpleDBus::Holder::Type::STRING, "Transport",
+                                 SimpleDBus::Holder::create_string("le"));
+                break;
+            }
         }
-        case DiscoveryFilter::TransportType::BREDR: {
-            properties.dict_append(SimpleDBus::Holder::Type::STRING, "Transport",
-                                   SimpleDBus::Holder::create_string("bredr"));
-            break;
-        }
-        case DiscoveryFilter::TransportType::LE: {
-            properties.dict_append(SimpleDBus::Holder::Type::STRING, "Transport",
-                                   SimpleDBus::Holder::create_string("le"));
-            break;
-        }
+        properties.array_append(dict);
     }
 
     if (!filter.DuplicateData) {
-        properties.dict_append(SimpleDBus::Holder::Type::BOOLEAN, "DuplicateData",
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        dict.dict_append(SimpleDBus::Holder::Type::STRING, "DuplicateData",
                                SimpleDBus::Holder::create_boolean(false));
+        properties.array_append(dict);
     }
 
     if (filter.Discoverable) {
-        properties.dict_append(SimpleDBus::Holder::Type::BOOLEAN, "Discoverable",
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        dict.dict_append(SimpleDBus::Holder::Type::STRING, "Discoverable",
                                SimpleDBus::Holder::create_boolean(false));
+        properties.array_append(dict);
     }
 
     if (filter.Pattern.size() > 0) {
-        properties.dict_append(SimpleDBus::Holder::Type::STRING, "Pattern",
+        SimpleDBus::Holder dict = SimpleDBus::Holder::create_dict();
+        dict.dict_append(SimpleDBus::Holder::Type::STRING, "Pattern",
                                SimpleDBus::Holder::create_string(filter.Pattern));
+        properties.array_append(dict);
     }
 
     auto msg = create_method_call("SetDiscoveryFilter");
