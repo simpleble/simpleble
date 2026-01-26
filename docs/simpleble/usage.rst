@@ -276,6 +276,19 @@ To include this dependency module, add the following to your `settings.gradle` f
 **NOTE:** We will provide Maven packages in the future.
 
 
+Usage with Xcode **(macOS only)** 
+=================================
+
+Create Xcode C++ project.
+Navigate to your target.
+Under the **General** tab, **Frameworks and Libraries** section, add the following frameworks:
+  - Foundation
+  - CoreBluetooth
+Under the **Build Settings** tab, **Search Paths** section, update the following settings:
+  - Header Search Paths (add <path-to-simpleble>/include)
+  - Library Search Paths (add <path-to-simpleble>/lib)
+
+
 Build Examples
 ==============
 
