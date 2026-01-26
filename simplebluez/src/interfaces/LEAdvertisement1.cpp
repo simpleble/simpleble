@@ -13,8 +13,6 @@ const SimpleDBus::AutoRegisterInterface<LEAdvertisement1> LEAdvertisement1::regi
 
 LEAdvertisement1::LEAdvertisement1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.LEAdvertisement1") {
-
-    Type("peripheral"); // This is the only required field, so we set a default
 }
 
 // IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.

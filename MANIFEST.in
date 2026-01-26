@@ -335,7 +335,6 @@ include simpledbus/include/simpledbus/advanced/Proxy.h
 include simpledbus/include/simpledbus/base/Connection.h
 include simpledbus/include/simpledbus/base/Exceptions.h
 include simpledbus/include/simpledbus/base/Holder.h
-include simpledbus/include/simpledbus/base/HolderUtils.h
 include simpledbus/include/simpledbus/base/Logging.h
 include simpledbus/include/simpledbus/base/Message.h
 include simpledbus/include/simpledbus/base/Path.h
@@ -346,7 +345,6 @@ include simpledbus/src/advanced/Proxy.cpp
 include simpledbus/src/base/Connection.cpp
 include simpledbus/src/base/Exceptions.cpp
 include simpledbus/src/base/Holder.cpp
-include simpledbus/src/base/HolderUtils.cpp
 include simpledbus/src/base/Logging.cpp
 include simpledbus/src/base/Message.cpp
 include simpledbus/src/base/Path.cpp

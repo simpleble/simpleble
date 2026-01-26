@@ -125,54 +125,6 @@ class Interface {
         void notify_changed() override { on_changed(get()); }
     };
 
-    template <typename T>
-    class CustomProperty : public PropertyBase {
-      public:
-        CustomProperty(Interface& interface, const std::string& name, std::function<Holder(T)> to_holder,
-                       std::function<T(Holder)> from_holder)
-            : PropertyBase(interface, name), _to_holder(to_holder), _from_holder(from_holder) {}
-
-        virtual ~CustomProperty() { on_changed.unload(); }
-
-        T operator()() const { return get(); }
-        operator T() const { return get(); }
-
-        // NOTE: This is a workaround to allow implicit conversion to std::string for ObjectPath and Signature types.
-        template <typename U = T, typename = std::enable_if_t<!std::is_same_v<U, std::string> && std::is_convertible_v<U, std::string>>>
-        operator std::string() const {
-            return (std::string)get();
-        }
-
-        void operator()(const T& value) { set(value); }
-
-        using PropertyBase::set;
-
-        CustomProperty& refresh() {
-            PropertyBase::refresh();
-            return *this;
-        }
-
-        T get() const {
-            std::scoped_lock lock(_mutex);
-            return _from_holder(_value);
-        }
-
-        CustomProperty& set(T value) {
-            std::scoped_lock lock(_mutex);
-            _value = _to_holder(value);
-            _valid = true;
-            return *this;
-        }
-
-        kvn::safe_callback<void(T)> on_changed;
-
-        void notify_changed() override { on_changed(get()); }
-
-      private:
-        std::function<Holder(T)> _to_holder;
-        std::function<T(Holder)> _from_holder;
-    };
-
     Interface(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> proxy, const std::string& interface_name);
 
     virtual ~Interface() = default;
@@ -199,8 +151,6 @@ class Interface {
     Holder handle_property_get(std::string property_name);
     Holder handle_property_get_all();
 
-    // TODO: Add a version of these functions with a default value.
-    // TODO: Extend holder with the capabilities inside holderutils so that we don't need the CustomProperty class.
     template <typename T>
     Property<T>& property(const std::string& name) {
         std::unique_ptr<PropertyBase> property_ptr = std::make_unique<Property<T>>(*this, name);
@@ -211,13 +161,14 @@ class Interface {
     }
 
     template <typename T>
-    CustomProperty<T>& property(const std::string& name, std::function<Holder(T)> to_holder, std::function<T(Holder)> from_holder) {
-        std::unique_ptr<PropertyBase> property_ptr = std::make_unique<CustomProperty<T>>(*this, name, to_holder, from_holder);
-        CustomProperty<T>& property = dynamic_cast<CustomProperty<T>&>(*property_ptr);
-        property.set(T());
+    Property<T>& property(const std::string& name, T default_value) {
+        std::unique_ptr<PropertyBase> property_ptr = std::make_unique<Property<T>>(*this, name);
+        Property<T>& property = dynamic_cast<Property<T>&>(*property_ptr);
+        property.set(default_value);
         _properties.emplace(name, std::move(property_ptr));
         return property;
     }
+
 
   protected:
     std::atomic_bool _loaded{true};

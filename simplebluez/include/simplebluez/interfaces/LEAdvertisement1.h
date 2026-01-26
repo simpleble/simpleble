@@ -23,7 +23,7 @@ class LEAdvertisement1 : public SimpleDBus::Interface {
 
     // ----- PROPERTIES -----
 
-    Property<std::string>& Type = property<std::string>("Type");
+    Property<std::string>& Type = property<std::string>("Type", "peripheral");
     Property<std::vector<std::string>>& ServiceUUIDs = property<std::vector<std::string>>("ServiceUUIDs");
     Property<std::map<uint16_t, ByteArray>>& ManufacturerData = property<std::map<uint16_t, ByteArray>>("ManufacturerData");
     Property<std::map<std::string, ByteArray>>& ServiceData = property<std::map<std::string, ByteArray>>("ServiceData");

@@ -27,7 +27,7 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     Property<SimpleDBus::ObjectPath>& Service = property<SimpleDBus::ObjectPath>("Service");
     Property<ByteArray>& Value = property<ByteArray>("Value");
     Property<bool>& Notifying = property<bool>("Notifying");
-    Property<std::vector<std::string>>& Flags = property<std::vector<std::string>>("Flags");
+    Property<std::vector<std::string>>& Flags = property<std::vector<std::string>>("Flags", {"read", "write", "notify"});
     Property<uint16_t>& MTU = property<uint16_t>("MTU");
 
     // ----- CALLBACKS -----
