@@ -1,0 +1,30 @@
+{
+  "title": "Documentation",
+  "root": true,
+  "pages": [
+    "index",
+    "---General---",
+    "overview",
+    "licensing_faq",
+    "changelog",
+    "extras",
+    "---SimpleBLE---",
+    "simpleble/usage",
+    "simpleble/tutorial",
+    "simpleble/api",
+    "simpleble/faq",
+    "---SimplePyBLE---",
+    "simplepyble/usage",
+    "simplepyble/api",
+    "---SimpleDroidBLE---",
+    "simpledroidble/usage",
+    "---SimpleBluez---",
+    "simplebluez/usage",
+    "simplebluez/api",
+    "---SimpleDBus---",
+    "simpledbus/usage",
+    "simpledbus/api",
+    "---Tutorials---",
+    "cmake_primer"
+  ]
+}

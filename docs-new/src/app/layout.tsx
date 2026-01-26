@@ -1,0 +1,42 @@
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono, Sora } from 'next/font/google';
+import { RootProvider } from 'fumadocs-ui/provider/next';
+import './global.css';
+import type { ReactNode } from 'react';
+
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+});
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+});
+
+const sora = Sora({
+  variable: '--font-sora',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
+
+export const metadata: Metadata = {
+  title: 'SimpleBLE Docs',
+  description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+  },
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${sora.variable} antialiased`}
+      >
+        <RootProvider>{children}</RootProvider>
+      </body>
+    </html>
+  );
+}
