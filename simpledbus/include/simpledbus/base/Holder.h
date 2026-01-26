@@ -5,9 +5,25 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 namespace SimpleDBus {
+
+namespace detail {
+template <typename T>
+inline constexpr bool always_false_v = false;
+
+template <typename T, typename = void>
+struct is_map : std::false_type {};
+
+template <typename T>
+struct is_map<T, std::void_t<typename T::key_type, typename T::mapped_type, decltype(std::declval<T>().begin())>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_map_v = is_map<T>::value;
+}  // namespace detail
 
 class ObjectPath {
   public:
@@ -72,59 +88,73 @@ class Holder {
     std::string signature() const;
     void signature_override(const std::string& signature);
 
-    [[deprecated("Use create<bool> instead")]] static Holder create_boolean(bool value);
-    [[deprecated("Use create<uint8_t> instead")]] static Holder create_byte(uint8_t value);
-    [[deprecated("Use create<int16_t> instead")]] static Holder create_int16(int16_t value);
-    [[deprecated("Use create<uint16_t> instead")]] static Holder create_uint16(uint16_t value);
-    [[deprecated("Use create<int32_t> instead")]] static Holder create_int32(int32_t value);
-    [[deprecated("Use create<uint32_t> instead")]] static Holder create_uint32(uint32_t value);
-    [[deprecated("Use create<int64_t> instead")]] static Holder create_int64(int64_t value);
-    [[deprecated("Use create<uint64_t> instead")]] static Holder create_uint64(uint64_t value);
-    [[deprecated("Use create<double> instead")]] static Holder create_double(double value);
-    [[deprecated("Use create<std::string> instead")]] static Holder create_string(const std::string& str);
-    [[deprecated("Use create<ObjectPath> instead")]] static Holder create_object_path(const ObjectPath& path);
-    [[deprecated("Use create<Signature> instead")]] static Holder create_signature(const Signature& signature);
-    [[deprecated("Use create<std::vector<Holder>> instead")]] static Holder create_array();
-    [[deprecated("Use create<std::map<std::string, Holder>> instead")]] static Holder create_dict();
-
     std::any get_contents() const;
-
-    [[deprecated("Use get<bool> instead")]] bool get_boolean() const;
-    [[deprecated("Use get<uint8_t> instead")]] uint8_t get_byte() const;
-    [[deprecated("Use get<int16_t> instead")]] int16_t get_int16() const;
-    [[deprecated("Use get<uint16_t> instead")]] uint16_t get_uint16() const;
-    [[deprecated("Use get<int32_t> instead")]] int32_t get_int32() const;
-    [[deprecated("Use get<uint32_t> instead")]] uint32_t get_uint32() const;
-    [[deprecated("Use get<int64_t> instead")]] int64_t get_int64() const;
-    [[deprecated("Use get<uint64_t> instead")]] uint64_t get_uint64() const;
-    [[deprecated("Use get<double> instead")]] double get_double() const;
-    [[deprecated("Use get<std::string> instead")]] std::string get_string() const;
-    [[deprecated("Use get<ObjectPath> instead")]] ObjectPath get_object_path() const;
-    [[deprecated("Use get<Signature> instead")]] Signature get_signature() const;
-    [[deprecated("Use get<std::vector<Holder>> instead")]] std::vector<Holder> get_array() const;
-    [[deprecated("Use get<std::map<uint8_t, Holder>> instead")]] std::map<uint8_t, Holder> get_dict_uint8() const;
-    [[deprecated("Use get<std::map<uint16_t, Holder>> instead")]] std::map<uint16_t, Holder> get_dict_uint16() const;
-    [[deprecated("Use get<std::map<uint32_t, Holder>> instead")]] std::map<uint32_t, Holder> get_dict_uint32() const;
-    [[deprecated("Use get<std::map<uint64_t, Holder>> instead")]] std::map<uint64_t, Holder> get_dict_uint64() const;
-    [[deprecated("Use get<std::map<int16_t, Holder>> instead")]] std::map<int16_t, Holder> get_dict_int16() const;
-    [[deprecated("Use get<std::map<int32_t, Holder>> instead")]] std::map<int32_t, Holder> get_dict_int32() const;
-    [[deprecated("Use get<std::map<int64_t, Holder>> instead")]] std::map<int64_t, Holder> get_dict_int64() const;
-    [[deprecated("Use get<std::map<std::string, Holder>> instead")]] std::map<std::string, Holder> get_dict_string() const;
-    [[deprecated("Use get<std::map<ObjectPath, Holder>> instead")]] std::map<ObjectPath, Holder> get_dict_object_path() const;
-    [[deprecated("Use get<std::map<Signature, Holder>> instead")]] std::map<Signature, Holder> get_dict_signature() const;
 
     void dict_append(Type key_type, std::any key, Holder value);
     void array_append(Holder holder);
 
-    // Template speciallizations.
+    // Template implementations.
     template <typename T>
-    static Holder create();
+    static Holder create() {
+        Holder h;
+        using U = std::decay_t<T>;
+        if constexpr (std::is_same_v<U, std::vector<Holder>>) {
+            h._type = ARRAY;
+        } else if constexpr (detail::is_map_v<U>) {
+            h._type = DICT;
+        }
+        return h;
+    }
 
     template <typename T>
-    static Holder create(T value);
+    static Holder create(T value) {
+        Holder h;
+        using U = std::decay_t<T>;
+        if constexpr (std::is_same_v<U, bool>) {
+            h._type = BOOLEAN;
+            h.holder_boolean = value;
+        } else if constexpr (std::is_integral_v<U>) {
+            h._type = _type_to_enum<U>();
+            h.holder_integer = static_cast<uint64_t>(value);
+        } else if constexpr (std::is_floating_point_v<U>) {
+            h._type = DOUBLE;
+            h.holder_double = static_cast<double>(value);
+        } else if constexpr (std::is_convertible_v<U, std::string>) {
+            if constexpr (std::is_same_v<U, ObjectPath>) {
+                h._type = OBJ_PATH;
+            } else if constexpr (std::is_same_v<U, Signature>) {
+                h._type = SIGNATURE;
+            } else {
+                h._type = STRING;
+            }
+            h.holder_string = static_cast<std::string>(value);
+        }
+        return h;
+    }
 
     template <typename T>
-    T get() const;
+    T get() const {
+        using U = std::decay_t<T>;
+        if constexpr (std::is_same_v<U, bool>) {
+            return holder_boolean;
+        } else if constexpr (std::is_integral_v<U>) {
+            return static_cast<U>(holder_integer);
+        } else if constexpr (std::is_floating_point_v<U>) {
+            return static_cast<U>(holder_double);
+        } else if constexpr (std::is_same_v<U, std::string>) {
+            return holder_string;
+        } else if constexpr (std::is_same_v<U, ObjectPath>) {
+            return ObjectPath(holder_string);
+        } else if constexpr (std::is_same_v<U, Signature>) {
+            return Signature(holder_string);
+        } else if constexpr (std::is_same_v<U, std::vector<Holder>>) {
+            return holder_array;
+        } else if constexpr (detail::is_map_v<U>) {
+            return _get_dict<typename U::key_type>(_type_to_enum<typename U::key_type>());
+        } else {
+            static_assert(detail::always_false_v<U>, "Unsupported type for Holder::get");
+        }
+    }
 
   private:
     Type _type = NONE;
@@ -144,10 +174,40 @@ class Holder {
     std::string _signature_simple() const;
 
     template <typename T>
-    std::map<T, Holder> _get_dict(Type key_type) const;
+    std::map<T, Holder> _get_dict(Type key_type) const {
+        std::map<T, Holder> output;
+        for (auto& [key_type_internal, key, value] : holder_dict) {
+            if (key_type_internal == key_type) {
+                if constexpr (std::is_same_v<std::decay_t<T>, ObjectPath> || std::is_same_v<std::decay_t<T>, Signature>) {
+                    output[T(std::any_cast<std::string>(key))] = value;
+                } else {
+                    output[std::any_cast<T>(key)] = value;
+                }
+            }
+        }
+        return output;
+    }
 
     static std::string _signature_type(Type type) noexcept;
     static std::string _represent_type(Type type, std::any value) noexcept;
+
+    template <typename T>
+    static constexpr Type _type_to_enum() {
+        using U = std::decay_t<T>;
+        if constexpr (std::is_same_v<U, uint8_t>) return BYTE;
+        if constexpr (std::is_same_v<U, int16_t>) return INT16;
+        if constexpr (std::is_same_v<U, uint16_t>) return UINT16;
+        if constexpr (std::is_same_v<U, int32_t>) return INT32;
+        if constexpr (std::is_same_v<U, uint32_t>) return UINT32;
+        if constexpr (std::is_same_v<U, int64_t>) return INT64;
+        if constexpr (std::is_same_v<U, uint64_t>) return UINT64;
+        if constexpr (std::is_same_v<U, std::string>) return STRING;
+        if constexpr (std::is_same_v<U, ObjectPath>) return OBJ_PATH;
+        if constexpr (std::is_same_v<U, Signature>) return SIGNATURE;
+        return NONE;
+    }
+
+    static bool _compare_any(Type type, const std::any& a, const std::any& b);
 };
 
 }  // namespace SimpleDBus

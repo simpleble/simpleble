@@ -25,14 +25,16 @@ The format is based on `Keep a Changelog`_, and this project adheres to `Semanti
 - (SimpleBluez) Moved some files around, which might change the include paths for some users.
 - **API CHANGE**: (SimpleBluez) API for accessing internal BlueZ objects has been made more flexible.
 - (SimpleBluez) Migrated all internal classes to use `send_with_reply`.
+- (SimpleDBus) `Holder` class now has templated methods for creating and getting values.
 
 **Fixed**
 
 - (SimpleDBus) The Holder class now has appropriate getters, setters and defaults for object paths and signatures.
+- (SimpleDBus) Fixed several issues around handling of Signature and ObjectPath data types.
 
 **Removed**
 
-- 
+- (SimpleDBus) Removed individual create/get functions in favor of templated versions.
 
 
 [0.10.4] - 2025-12-29
