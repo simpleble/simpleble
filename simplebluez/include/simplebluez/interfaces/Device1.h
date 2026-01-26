@@ -3,11 +3,8 @@
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
 
-#include "kvn/kvn_safe_callback.hpp"
-
 #include <string>
 
-#include <simpledbus/base/HolderUtils.h>
 #include "simplebluez/Types.h"
 
 namespace SimpleBluez {
@@ -31,12 +28,9 @@ class Device1 : public SimpleDBus::Interface {
     Property<std::string>& AddressType = property<std::string>("AddressType");
     Property<std::string>& Alias = property<std::string>("Alias");
     Property<std::string>& Name = property<std::string>("Name");
-    CustomProperty<std::vector<std::string>>& UUIDs = property<std::vector<std::string>>(
-        "UUIDs", SimpleDBus::HolderUtils::from_string_array, SimpleDBus::HolderUtils::to_string_array);
-    CustomProperty<std::map<uint16_t, ByteArray>>& ManufacturerData = property<std::map<uint16_t, ByteArray>>(
-        "ManufacturerData", SimpleDBus::HolderUtils::from_dict_uint16_byte_array, SimpleDBus::HolderUtils::to_dict_uint16_byte_array);
-    CustomProperty<std::map<std::string, ByteArray>>& ServiceData = property<std::map<std::string, ByteArray>>(
-        "ServiceData", SimpleDBus::HolderUtils::from_dict_string_byte_array, SimpleDBus::HolderUtils::to_dict_string_byte_array);
+    Property<std::vector<std::string>>& UUIDs = property<std::vector<std::string>>("UUIDs");
+    Property<std::map<uint16_t, ByteArray>>& ManufacturerData = property<std::map<uint16_t, ByteArray>>("ManufacturerData");
+    Property<std::map<std::string, ByteArray>>& ServiceData = property<std::map<std::string, ByteArray>>("ServiceData");
     Property<bool>& Paired = property<bool>("Paired");
     Property<bool>& Bonded = property<bool>("Bonded");
     Property<bool>& Trusted = property<bool>("Trusted");

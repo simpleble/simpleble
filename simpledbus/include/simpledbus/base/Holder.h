@@ -23,6 +23,16 @@ struct is_map<T, std::void_t<typename T::key_type, typename T::mapped_type, decl
 
 template <typename T>
 inline constexpr bool is_map_v = is_map<T>::value;
+
+template <typename T, typename = void>
+struct is_vector : std::false_type {};
+
+template <typename T>
+struct is_vector<T, std::void_t<typename T::value_type, decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
+                                decltype(std::declval<T>().push_back(std::declval<typename T::value_type>()))>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_vector_v = is_vector<T>::value && !std::is_same_v<T, std::string>;
 }  // namespace detail
 
 class ObjectPath {
@@ -98,7 +108,7 @@ class Holder {
     static Holder create() {
         Holder h;
         using U = std::decay_t<T>;
-        if constexpr (std::is_same_v<U, std::vector<Holder>>) {
+        if constexpr (detail::is_vector_v<U>) {
             h._type = ARRAY;
         } else if constexpr (detail::is_map_v<U>) {
             h._type = DICT;
@@ -119,7 +129,7 @@ class Holder {
         } else if constexpr (std::is_floating_point_v<U>) {
             h._type = DOUBLE;
             h.holder_double = static_cast<double>(value);
-        } else if constexpr (std::is_convertible_v<U, std::string>) {
+        } else if constexpr (std::is_convertible_v<U, std::string> && !detail::is_vector_v<U>) {
             if constexpr (std::is_same_v<U, ObjectPath>) {
                 h._type = OBJ_PATH;
             } else if constexpr (std::is_same_v<U, Signature>) {
@@ -128,6 +138,16 @@ class Holder {
                 h._type = STRING;
             }
             h.holder_string = static_cast<std::string>(value);
+        } else if constexpr (detail::is_vector_v<U>) {
+            h._type = ARRAY;
+            for (const auto& item : value) {
+                h.array_append(Holder::create(item));
+            }
+        } else if constexpr (detail::is_map_v<U>) {
+            h._type = DICT;
+            for (const auto& [key, val] : value) {
+                h.dict_append(_type_to_enum<typename U::key_type>(), key, Holder::create(val));
+            }
         }
         return h;
     }
@@ -147,10 +167,35 @@ class Holder {
             return ObjectPath(holder_string);
         } else if constexpr (std::is_same_v<U, Signature>) {
             return Signature(holder_string);
-        } else if constexpr (std::is_same_v<U, std::vector<Holder>>) {
-            return holder_array;
+        } else if constexpr (detail::is_vector_v<U>) {
+            using V = typename U::value_type;
+            if constexpr (std::is_same_v<V, Holder>) {
+                return holder_array;
+            } else {
+                U result;
+                for (const auto& h : holder_array) {
+                    result.push_back(h.get<V>());
+                }
+                return result;
+            }
         } else if constexpr (detail::is_map_v<U>) {
-            return _get_dict<typename U::key_type>(_type_to_enum<typename U::key_type>());
+            using K = typename U::key_type;
+            using V = typename U::mapped_type;
+            if constexpr (std::is_same_v<V, Holder>) {
+                return _get_dict<K>(_type_to_enum<K>());
+            } else {
+                std::map<K, V> result;
+                for (auto& [key_type_internal, key, value] : holder_dict) {
+                    if (key_type_internal == _type_to_enum<K>()) {
+                        if constexpr (std::is_same_v<std::decay_t<K>, ObjectPath> || std::is_same_v<std::decay_t<K>, Signature>) {
+                            result[K(std::any_cast<std::string>(key))] = value.get<V>();
+                        } else {
+                            result[std::any_cast<K>(key)] = value.get<V>();
+                        }
+                    }
+                }
+                return result;
+            }
         } else {
             static_assert(detail::always_false_v<U>, "Unsupported type for Holder::get");
         }

@@ -20,6 +20,16 @@ namespace kvn {
  */
 class bytearray {
   public:
+    using value_type = uint8_t;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = uint8_t&;
+    using const_reference = const uint8_t&;
+    using pointer = uint8_t*;
+    using const_pointer = const uint8_t*;
+    using iterator = std::vector<uint8_t>::iterator;
+    using const_iterator = std::vector<uint8_t>::const_iterator;
+
     /**
      * @brief Default constructor.
      */
@@ -209,13 +219,18 @@ class bytearray {
 
     //! @cond Doxygen_Suppress
     // Expose vector-like functionality
-    size_t size() const { return data_.size(); }
+    size_type size() const { return data_.size(); }
     const uint8_t* data() const { return data_.data(); }
     uint8_t* data() { return data_.data(); }
     bool empty() const { return data_.empty(); }
     void clear() { data_.clear(); }
-    uint8_t& operator[](size_t index) { return data_[index]; }
-    const uint8_t& operator[](size_t index) const { return data_[index]; }
+    void reserve(size_type n) { data_.reserve(n); }
+    void resize(size_type n) { data_.resize(n); }
+    void resize(size_type n, uint8_t v) { data_.resize(n, v); }
+    uint8_t& operator[](size_type index) { return data_[index]; }
+    const uint8_t& operator[](size_type index) const { return data_[index]; }
+    uint8_t& at(size_type index) { return data_.at(index); }
+    const uint8_t& at(size_type index) const { return data_.at(index); }
     void push_back(uint8_t byte) { data_.push_back(byte); }
 
     /**
@@ -258,8 +273,8 @@ class bytearray {
      * @param value The byte to insert.
      * @return Iterator pointing to the inserted element.
      */
-    auto insert(typename std::vector<uint8_t>::iterator pos, uint8_t value) { return data_.insert(pos, value); }
-    auto insert(typename std::vector<uint8_t>::const_iterator pos, uint8_t value) { return data_.insert(pos, value); }
+    auto insert(iterator pos, uint8_t value) { return data_.insert(pos, value); }
+    auto insert(const_iterator pos, uint8_t value) { return data_.insert(pos, value); }
 
     /**
      * @brief Inserts multiple copies of a byte at the specified position.
@@ -268,8 +283,8 @@ class bytearray {
      * @param value The byte to insert.
      * @return Iterator pointing to the first inserted element.
      */
-    auto insert(typename std::vector<uint8_t>::iterator pos, size_t count, uint8_t value) { return data_.insert(pos, count, value); }
-    auto insert(typename std::vector<uint8_t>::const_iterator pos, size_t count, uint8_t value) { return data_.insert(pos, count, value); }
+    auto insert(iterator pos, size_type count, uint8_t value) { return data_.insert(pos, count, value); }
+    auto insert(const_iterator pos, size_type count, uint8_t value) { return data_.insert(pos, count, value); }
 
     /**
      * @brief Inserts elements from a range at the specified position.
@@ -280,9 +295,13 @@ class bytearray {
      * @return Iterator pointing to the first inserted element.
      */
     template <typename InputIt>
-    auto insert(typename std::vector<uint8_t>::iterator pos, InputIt first, InputIt last) { return data_.insert(pos, first, last); }
+    auto insert(iterator pos, InputIt first, InputIt last) {
+        return data_.insert(pos, first, last);
+    }
     template <typename InputIt>
-    auto insert(typename std::vector<uint8_t>::const_iterator pos, InputIt first, InputIt last) { return data_.insert(pos, first, last); }
+    auto insert(const_iterator pos, InputIt first, InputIt last) {
+        return data_.insert(pos, first, last);
+    }
 
     /**
      * @brief Inserts another bytearray at the specified position.
@@ -290,8 +309,8 @@ class bytearray {
      * @param other The bytearray to insert.
      * @return Iterator pointing to the first inserted element.
      */
-    auto insert(typename std::vector<uint8_t>::iterator pos, const bytearray& other) { return data_.insert(pos, other.begin(), other.end()); }
-    auto insert(typename std::vector<uint8_t>::const_iterator pos, const bytearray& other) { return data_.insert(pos, other.begin(), other.end()); }
+    auto insert(iterator pos, const bytearray& other) { return data_.insert(pos, other.begin(), other.end()); }
+    auto insert(const_iterator pos, const bytearray& other) { return data_.insert(pos, other.begin(), other.end()); }
 
     //! @endcond
 

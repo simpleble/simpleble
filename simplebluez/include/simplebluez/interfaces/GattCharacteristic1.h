@@ -2,7 +2,6 @@
 
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
-#include <simpledbus/base/HolderUtils.h>
 
 #include <simplebluez/Types.h>
 
@@ -26,11 +25,9 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     // ----- PROPERTIES -----
     Property<std::string>& UUID = property<std::string>("UUID");
     Property<SimpleDBus::ObjectPath>& Service = property<SimpleDBus::ObjectPath>("Service");
-    CustomProperty<ByteArray>& Value = property<ByteArray>("Value", SimpleDBus::HolderUtils::from_byte_array,
-                                                           SimpleDBus::HolderUtils::to_byte_array);
+    Property<ByteArray>& Value = property<ByteArray>("Value");
     Property<bool>& Notifying = property<bool>("Notifying");
-    CustomProperty<std::vector<std::string>>& Flags = property<std::vector<std::string>>(
-        "Flags", SimpleDBus::HolderUtils::from_string_array, SimpleDBus::HolderUtils::to_string_array);
+    Property<std::vector<std::string>>& Flags = property<std::vector<std::string>>("Flags");
     Property<uint16_t>& MTU = property<uint16_t>("MTU");
 
     // ----- CALLBACKS -----

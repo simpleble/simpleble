@@ -3,13 +3,9 @@
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
 
-#include "kvn/kvn_safe_callback.hpp"
-
 #include <simplebluez/Types.h>
 
 #include <string>
-
-#include <simpledbus/base/HolderUtils.h>
 
 namespace SimpleBluez {
 
@@ -24,8 +20,7 @@ class GattDescriptor1 : public SimpleDBus::Interface {
 
     // ----- PROPERTIES -----
     Property<std::string>& UUID = property<std::string>("UUID");
-    CustomProperty<ByteArray>& Value = property<ByteArray>("Value", SimpleDBus::HolderUtils::from_byte_array,
-                                                           SimpleDBus::HolderUtils::to_byte_array);
+    Property<ByteArray>& Value = property<ByteArray>("Value");
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattDescriptor1> registry;

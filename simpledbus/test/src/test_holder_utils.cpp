@@ -26,27 +26,23 @@ TEST(HolderUtils, StringArray) {
 }
 
 TEST(HolderUtils, DictUint16ByteArray) {
-    std::map<uint16_t, kvn::bytearray> value = {{1, {0x11, 0x12}}, {2, {0x21, 0x22}}};
+    std::map<uint16_t, std::vector<uint8_t>> value = {{1, {0x11, 0x12}}, {2, {0x21, 0x22}}};
     Holder h = HolderUtils::from_dict_uint16_byte_array(value);
 
     EXPECT_EQ(h.type(), Holder::Type::DICT);
     EXPECT_EQ(h.signature(), "a{qv}");
 
-    std::map<uint16_t, kvn::bytearray> result = HolderUtils::to_dict_uint16_byte_array(h);
-    EXPECT_EQ(value.size(), result.size());
-    EXPECT_EQ(value.at(1).toHex(), result.at(1).toHex());
-    EXPECT_EQ(value.at(2).toHex(), result.at(2).toHex());
+    std::map<uint16_t, std::vector<uint8_t>> result = HolderUtils::to_dict_uint16_byte_array(h);
+    EXPECT_EQ(value, result);
 }
 
 TEST(HolderUtils, DictStringByteArray) {
-    std::map<std::string, kvn::bytearray> value = {{"key1", {0x31, 0x32}}, {"key2", {0x41, 0x42}}};
+    std::map<std::string, std::vector<uint8_t>> value = {{"key1", {0x31, 0x32}}, {"key2", {0x41, 0x42}}};
     Holder h = HolderUtils::from_dict_string_byte_array(value);
 
     EXPECT_EQ(h.type(), Holder::Type::DICT);
     EXPECT_EQ(h.signature(), "a{sv}");
 
-    std::map<std::string, kvn::bytearray> result = HolderUtils::to_dict_string_byte_array(h);
-    EXPECT_EQ(value.size(), result.size());
-    EXPECT_EQ(value.at("key1").toHex(), result.at("key1").toHex());
-    EXPECT_EQ(value.at("key2").toHex(), result.at("key2").toHex());
+    std::map<std::string, std::vector<uint8_t>> result = HolderUtils::to_dict_string_byte_array(h);
+    EXPECT_EQ(value, result);
 }

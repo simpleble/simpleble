@@ -1,7 +1,7 @@
 #pragma once
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
-#include <simpledbus/base/HolderUtils.h>
+
 #include <string>
 #include <vector>
 
@@ -25,8 +25,7 @@ class LEAdvertisingManager1 : public SimpleDBus::Interface {
 
     Property<uint8_t>& ActiveInstances = property<uint8_t>("ActiveInstances");
     Property<uint8_t>& SupportedInstances = property<uint8_t>("SupportedInstances");
-    CustomProperty<std::vector<std::string>>& SupportedIncludes = property<std::vector<std::string>>(
-        "SupportedIncludes", SimpleDBus::HolderUtils::from_string_array, SimpleDBus::HolderUtils::to_string_array);
+    Property<std::vector<std::string>>& SupportedIncludes = property<std::vector<std::string>>("SupportedIncludes");
 
   private:
     static const SimpleDBus::AutoRegisterInterface<LEAdvertisingManager1> registry;
