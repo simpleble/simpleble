@@ -110,7 +110,7 @@ class Interface {
 
         T get() const {
             std::scoped_lock lock(_mutex);
-            return _value.get<T>();
+            return _value.template get<T>();
         }
 
         Property& set(T value) {
@@ -168,7 +168,6 @@ class Interface {
         _properties.emplace(name, std::move(property_ptr));
         return property;
     }
-
 
   protected:
     std::atomic_bool _loaded{true};

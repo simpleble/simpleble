@@ -174,7 +174,7 @@ class Holder {
             } else {
                 U result;
                 for (const auto& h : holder_array) {
-                    result.push_back(h.get<V>());
+                    result.push_back(h.template get<V>());
                 }
                 return result;
             }
@@ -188,9 +188,9 @@ class Holder {
                 for (auto& [key_type_internal, key, value] : holder_dict) {
                     if (key_type_internal == _type_to_enum<K>()) {
                         if constexpr (std::is_same_v<std::decay_t<K>, ObjectPath> || std::is_same_v<std::decay_t<K>, Signature>) {
-                            result[K(std::any_cast<std::string>(key))] = value.get<V>();
+                            result[K(std::any_cast<std::string>(key))] = value.template get<V>();
                         } else {
-                            result[std::any_cast<K>(key)] = value.get<V>();
+                            result[std::any_cast<K>(key)] = value.template get<V>();
                         }
                     }
                 }
