@@ -20,12 +20,12 @@ GattManager1::GattManager1(std::shared_ptr<SimpleDBus::Connection> conn, std::sh
 GattManager1::~GattManager1() = default;
 
 void GattManager1::RegisterApplication(std::string application_path) {
-    SimpleDBus::Holder properties = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder properties = SimpleDBus::Holder::create<std::map<std::string, SimpleDBus::Holder>>();
 
     // NOTE: The current documentation doesn't specify any options. Using a placeholder for now.
 
     auto msg = create_method_call("RegisterApplication");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(application_path), "o");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(application_path), "o");
     msg.append_argument(properties, "a{sv}");
 
     _conn->send_with_reply(msg);
@@ -33,6 +33,6 @@ void GattManager1::RegisterApplication(std::string application_path) {
 
 void GattManager1::UnregisterApplication(std::string application_path) {
     auto msg = create_method_call("UnregisterApplication");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(application_path), "o");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(application_path), "o");
     _conn->send_with_reply(msg);
 }

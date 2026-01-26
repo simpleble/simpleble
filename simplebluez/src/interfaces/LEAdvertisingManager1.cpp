@@ -21,12 +21,12 @@ LEAdvertisingManager1::LEAdvertisingManager1(std::shared_ptr<SimpleDBus::Connect
 LEAdvertisingManager1::~LEAdvertisingManager1() = default;
 
 void LEAdvertisingManager1::RegisterAdvertisement(std::string advertisement_path) {
-    SimpleDBus::Holder properties = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder properties = SimpleDBus::Holder::create<std::map<std::string, SimpleDBus::Holder>>();
 
     // NOTE: The current documentation doesn't specify any options. Using a placeholder for now.
 
     auto msg = create_method_call("RegisterAdvertisement");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(advertisement_path), "o");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(advertisement_path), "o");
     msg.append_argument(properties, "a{sv}");
 
     _conn->send_with_reply(msg);
@@ -34,6 +34,6 @@ void LEAdvertisingManager1::RegisterAdvertisement(std::string advertisement_path
 
 void LEAdvertisingManager1::UnregisterAdvertisement(std::string advertisement_path) {
     auto msg = create_method_call("UnregisterAdvertisement");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(advertisement_path), "o");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(advertisement_path), "o");
     _conn->send_with_reply(msg);
 }

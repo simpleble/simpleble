@@ -20,12 +20,12 @@ GattDescriptor1::GattDescriptor1(std::shared_ptr<SimpleDBus::Connection> conn, s
 GattDescriptor1::~GattDescriptor1() = default;
 
 void GattDescriptor1::WriteValue(const ByteArray& value) {
-    SimpleDBus::Holder value_data = SimpleDBus::Holder::create_array();
+    SimpleDBus::Holder value_data = SimpleDBus::Holder::create<std::vector<SimpleDBus::Holder>>();
     for (size_t i = 0; i < value.size(); i++) {
-        value_data.array_append(SimpleDBus::Holder::create_byte(value[i]));
+        value_data.array_append(SimpleDBus::Holder::create<uint8_t>(value[i]));
     }
 
-    SimpleDBus::Holder options = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder options = SimpleDBus::Holder::create<std::map<std::string, SimpleDBus::Holder>>();
 
     auto msg = create_method_call("WriteValue");
     msg.append_argument(value_data, "ay");
@@ -37,7 +37,7 @@ ByteArray GattDescriptor1::ReadValue() {
     auto msg = create_method_call("ReadValue");
 
     // NOTE: ReadValue requires an additional argument, which currently is not supported
-    SimpleDBus::Holder options = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder options = SimpleDBus::Holder::create<std::map<std::string, SimpleDBus::Holder>>();
     msg.append_argument(options, "a{sv}");
 
     SimpleDBus::Message reply_msg = _conn->send_with_reply(msg);

@@ -10,7 +10,6 @@ Holder::Holder() {}
 
 Holder::~Holder() {}
 
-// Template specializations for create
 template <>
 Holder Holder::create(bool value) {
     Holder h;
@@ -660,7 +659,6 @@ std::string Holder::signature() const {
     }
     return output;
 }
-
 
 std::any Holder::get_contents() const {
     // Only return the contents for simple types

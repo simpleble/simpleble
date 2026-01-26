@@ -14,8 +14,8 @@ const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> GattCharacteristic1
 GattCharacteristic1::GattCharacteristic1(std::shared_ptr<SimpleDBus::Connection> conn,
                                          std::shared_ptr<SimpleDBus::Proxy> proxy)
     : SimpleDBus::Interface(conn, proxy, "org.bluez.GattCharacteristic1") {
-        Flags.set({"read", "write", "notify"});
-    }
+    Flags.set({"read", "write", "notify"});
+}
 
 // IMPORTANT: The destructor is defined here (instead of inline) to anchor the vtable to this object file.
 // This prevents the linker from stripping this translation unit and ensures the static 'registry' variable is
@@ -33,16 +33,18 @@ void GattCharacteristic1::StopNotify() {
 }
 
 void GattCharacteristic1::WriteValue(const ByteArray& value, WriteType type) {
-    SimpleDBus::Holder value_data = SimpleDBus::Holder::create_array();
+    SimpleDBus::Holder value_data = SimpleDBus::Holder::create<std::vector<SimpleDBus::Holder>>();
     for (size_t i = 0; i < value.size(); i++) {
-        value_data.array_append(SimpleDBus::Holder::create_byte(value[i]));
+        value_data.array_append(SimpleDBus::Holder::create<uint8_t>(value[i]));
     }
 
-    SimpleDBus::Holder options = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder options = SimpleDBus::Holder::create<std::map<std::string, SimpleDBus::Holder>>();
     if (type == WriteType::REQUEST) {
-        options.dict_append(SimpleDBus::Holder::Type::STRING, "type", SimpleDBus::Holder::create_string("request"));
+        options.dict_append(SimpleDBus::Holder::Type::STRING, "type",
+                            SimpleDBus::Holder::create<std::string>("request"));
     } else if (type == WriteType::COMMAND) {
-        options.dict_append(SimpleDBus::Holder::Type::STRING, "type", SimpleDBus::Holder::create_string("command"));
+        options.dict_append(SimpleDBus::Holder::Type::STRING, "type",
+                            SimpleDBus::Holder::create<std::string>("command"));
     }
 
     auto msg = create_method_call("WriteValue");
@@ -55,7 +57,7 @@ ByteArray GattCharacteristic1::ReadValue() {
     auto msg = create_method_call("ReadValue");
 
     // NOTE: ReadValue requires an additional argument, which currently is not supported
-    SimpleDBus::Holder options = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder options = SimpleDBus::Holder::create<std::map<std::string, SimpleDBus::Holder>>();
     msg.append_argument(options, "a{sv}");
 
     SimpleDBus::Message reply_msg = _conn->send_with_reply(msg);

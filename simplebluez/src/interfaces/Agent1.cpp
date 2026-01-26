@@ -20,7 +20,6 @@ Agent1::Agent1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<Sim
 Agent1::~Agent1() = default;
 
 void Agent1::message_handle(SimpleDBus::Message& msg) {
-
     if (msg.get_type() == SimpleDBus::Message::Type::METHOD_CALL) {
         // To minimize the amount of repeated code, create a method return object that will be
         // used to send the reply.
@@ -38,11 +37,11 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
             std::string pin_code = "abc123";
             if (OnRequestPinCode) {
-                pin_code = OnRequestPinCode(arg_device.get_string());
+                pin_code = OnRequestPinCode(arg_device.get<std::string>());
             }
 
             if (!pin_code.empty()) {
-                reply.append_argument(SimpleDBus::Holder::create_string(pin_code), DBUS_TYPE_STRING_AS_STRING);
+                reply.append_argument(SimpleDBus::Holder::create<std::string>(pin_code), DBUS_TYPE_STRING_AS_STRING);
             } else {
                 reply_error(msg, "org.bluez.Error.Rejected", "User rejected the request");
                 return;
@@ -53,11 +52,11 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
             SimpleDBus::Holder arg_device = msg.extract();
             int32_t passkey = 123456;
             if (OnRequestPasskey) {
-                passkey = OnRequestPasskey(arg_device.get_string());
+                passkey = OnRequestPasskey(arg_device.get<std::string>());
             }
 
             if (passkey >= 0 && passkey <= 999999) {
-                reply.append_argument(SimpleDBus::Holder::create_uint32(static_cast<uint32_t>(passkey)),
+                reply.append_argument(SimpleDBus::Holder::create<uint32_t>(static_cast<uint32_t>(passkey)),
                                       DBUS_TYPE_UINT32_AS_STRING);
             } else {
                 reply_error(msg, "org.bluez.Error.Rejected", "User rejected the request");
@@ -72,7 +71,7 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
             bool success = true;
             if (OnDisplayPinCode) {
-                success = OnDisplayPinCode(arg_device.get_string(), arg_pin_code.get_string());
+                success = OnDisplayPinCode(arg_device.get<std::string>(), arg_pin_code.get<std::string>());
             }
 
             if (!success) {
@@ -89,7 +88,8 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
             SimpleDBus::Holder arg_entered = msg.extract();
 
             if (OnDisplayPasskey) {
-                OnDisplayPasskey(arg_device.get_string(), arg_passkey.get_uint32(), arg_entered.get_uint16());
+                OnDisplayPasskey(arg_device.get<std::string>(), arg_passkey.get<uint32_t>(),
+                                 arg_entered.get<uint16_t>());
             }
 
         } else if (msg.get_member() == "RequestConfirmation") {
@@ -100,7 +100,7 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
             bool success = true;
             if (OnRequestConfirmation) {
-                success = OnRequestConfirmation(arg_device.get_string(), arg_passkey.get_uint32());
+                success = OnRequestConfirmation(arg_device.get<std::string>(), arg_passkey.get<uint32_t>());
             }
 
             if (!success) {
@@ -114,7 +114,7 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
             bool success = true;
             if (OnRequestAuthorization) {
-                success = OnRequestAuthorization(arg_device.get_string());
+                success = OnRequestAuthorization(arg_device.get<std::string>());
             }
 
             if (!success) {
@@ -131,7 +131,7 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
 
             bool success = true;
             if (OnAuthorizeService) {
-                success = OnAuthorizeService(arg_device.get_string(), arg_uuid.get_string());
+                success = OnAuthorizeService(arg_device.get<std::string>(), arg_uuid.get<std::string>());
             }
 
             if (!success) {

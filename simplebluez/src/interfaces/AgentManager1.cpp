@@ -21,19 +21,19 @@ AgentManager1::~AgentManager1() = default;
 
 void AgentManager1::RegisterAgent(std::string agent, std::string capability) {
     auto msg = create_method_call("RegisterAgent");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(agent), "o");
-    msg.append_argument(SimpleDBus::Holder::create_string(capability), "s");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(agent), "o");
+    msg.append_argument(SimpleDBus::Holder::create<std::string>(capability), "s");
     _conn->send_with_reply(msg);
 }
 
 void AgentManager1::RequestDefaultAgent(std::string agent) {
     auto msg = create_method_call("RequestDefaultAgent");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(agent), "o");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(agent), "o");
     _conn->send_with_reply(msg);
 }
 
 void AgentManager1::UnregisterAgent(std::string agent) {
     auto msg = create_method_call("UnregisterAgent");
-    msg.append_argument(SimpleDBus::Holder::create_object_path(agent), "o");
+    msg.append_argument(SimpleDBus::Holder::create<SimpleDBus::ObjectPath>(agent), "o");
     _conn->send_with_reply(msg);
 }
