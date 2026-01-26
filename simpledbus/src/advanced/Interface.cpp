@@ -18,7 +18,7 @@ std::shared_ptr<Proxy> Interface::proxy() const { return _proxy.lock(); }
 // ----- LIFE CYCLE -----
 
 void Interface::load(Holder options) {
-    auto changed_options = options.get_dict_string();
+    auto changed_options = options.get<std::map<std::string, Holder>>();
 
     // NEW PROPERTY UPDATE
     // Note: Properties that have not been defined inside _property_bases will explicitly be ignored.
@@ -71,7 +71,7 @@ void Interface::property_emit(const std::string& property_name, Holder value) {
     }
 
     auto properties = std::dynamic_pointer_cast<SimpleDBus::Interfaces::Properties>(
-    proxy()->interface_get("org.freedesktop.DBus.Properties"));
+        proxy()->interface_get("org.freedesktop.DBus.Properties"));
 
     std::map<std::string, SimpleDBus::Holder> changed_properties;
     changed_properties[property_name] = value;
@@ -83,18 +83,18 @@ bool Interface::property_exists(const std::string& property_name) { return _prop
 // ----- HANDLES -----
 
 void Interface::handle_properties_changed(Holder changed_properties, Holder invalidated_properties) {
-    auto changed_options = changed_properties.get_dict_string();
+    auto changed_options = changed_properties.get<std::map<std::string, Holder>>();
     for (auto& [name, value] : changed_options) {
         if (_properties.find(name) == _properties.end()) continue;
 
         _properties[name]->set(value);
     }
 
-    auto removed_options = invalidated_properties.get_array();
+    auto removed_options = invalidated_properties.get<std::vector<Holder>>();
     for (auto& removed_option : removed_options) {
-        if (_properties.find(removed_option.get_string()) == _properties.end()) continue;
+        if (_properties.find(removed_option.get<std::string>()) == _properties.end()) continue;
 
-        _properties[removed_option.get_string()]->invalidate();
+        _properties[removed_option.get<std::string>()]->invalidate();
     }
 }
 
@@ -111,7 +111,7 @@ Holder Interface::handle_property_get(std::string property_name) {
 }
 
 Holder Interface::handle_property_get_all() {
-    Holder properties = Holder::create_dict();
+    Holder properties = Holder::create<std::map<std::string, Holder>>();
     for (auto& [name, value] : _properties) {
         properties.dict_append(Holder::STRING, name, value->get());
     }

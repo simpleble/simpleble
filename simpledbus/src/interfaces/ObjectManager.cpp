@@ -33,14 +33,14 @@ Holder ObjectManager::GetManagedObjects() {
 
 void ObjectManager::message_handle(Message& msg) {
     if (msg.is_signal(_interface_name, "InterfacesAdded")) {
-        std::string path = msg.extract().get_string();
+        std::string path = msg.extract().get<std::string>();
         msg.extract_next();
         Holder options = msg.extract();
 
         proxy()->path_add(path, options);
         InterfacesAdded(path, options);
     } else if (msg.is_signal(_interface_name, "InterfacesRemoved")) {
-        std::string path = msg.extract().get_string();
+        std::string path = msg.extract().get<std::string>();
         msg.extract_next();
         Holder options = msg.extract();
 

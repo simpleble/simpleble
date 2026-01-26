@@ -12,8 +12,7 @@
 using namespace SimpleDBus;
 
 Proxy::Proxy(std::shared_ptr<Connection> conn, const std::string& bus_name, const std::string& path)
-    : _conn(conn), _bus_name(bus_name), _path(path), _valid(true), _registered(false) {
-    }
+    : _conn(conn), _bus_name(bus_name), _path(path), _valid(true), _registered(false) {}
 
 Proxy::~Proxy() {
     unregister_object_path();
@@ -62,7 +61,7 @@ void Proxy::unregister_object_path() {
 std::string Proxy::introspect() {
     auto query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Introspectable", "Introspect");
     auto reply_msg = _conn->send_with_reply_and_block(query_msg);
-    return reply_msg.extract().get_string();
+    return reply_msg.extract().get<std::string>();
 }
 
 // ----- INTERFACE HANDLING -----
@@ -92,15 +91,15 @@ size_t Proxy::interfaces_count() {
 }
 
 void Proxy::interfaces_load(Holder managed_interfaces) {
-    auto managed_interface = managed_interfaces.get_dict_string();
+    auto managed_interface = managed_interfaces.get<std::map<std::string, Holder>>();
 
     std::scoped_lock lock(_interface_access_mutex);
     for (auto& [iface_name, options] : managed_interface) {
         // If the interface has not been loaded, load it
         if (!interface_exists(iface_name)) {
             if (InterfaceRegistry::getInstance().isRegistered(iface_name)) {
-                _interfaces.emplace(std::make_pair(
-                    iface_name, InterfaceRegistry::getInstance().create(iface_name, _conn, shared_from_this(), options)));
+                _interfaces.emplace(std::make_pair(iface_name, InterfaceRegistry::getInstance().create(
+                                                                   iface_name, _conn, shared_from_this(), options)));
             } else {
                 LOG_WARN("Interface {} not registered within SimpleDBus", iface_name);
             }
@@ -121,8 +120,8 @@ void Proxy::interfaces_reload(Holder managed_interfaces) {
 
 void Proxy::interfaces_unload(SimpleDBus::Holder removed_interfaces) {
     std::scoped_lock lock(_interface_access_mutex);
-    for (auto& option : removed_interfaces.get_array()) {
-        std::string iface_name = option.get_string();
+    for (auto& option : removed_interfaces.get<std::vector<Holder>>()) {
+        std::string iface_name = option.get<std::string>();
         if (interface_exists(iface_name)) {
             _interfaces[iface_name]->unload();
         }
@@ -258,22 +257,22 @@ bool Proxy::path_prune() {
 
 Holder Proxy::path_collect() {
     // TODO: This function logic should be moved to the ObjectManager interface.
-    SimpleDBus::Holder result = SimpleDBus::Holder::create_dict();
-    SimpleDBus::Holder interfaces = SimpleDBus::Holder::create_dict();
+    SimpleDBus::Holder result = SimpleDBus::Holder::create<std::map<std::string, Holder>>();
+    SimpleDBus::Holder interfaces = SimpleDBus::Holder::create<std::map<std::string, Holder>>();
 
     for (const auto& [interface_name, interface_ptr] : _interfaces) {
         SimpleDBus::Holder properties = interface_ptr->handle_property_get_all();
         interfaces.dict_append(SimpleDBus::Holder::Type::STRING, interface_name, std::move(properties));
     }
 
-    if (!interfaces.get_dict_string().empty()) {
+    if (!interfaces.get<std::map<std::string, Holder>>().empty()) {
         result.dict_append(SimpleDBus::Holder::Type::OBJ_PATH, _path, std::move(interfaces));
     }
 
     for (const auto& [child_path, child] : _children) {
         SimpleDBus::Holder child_result = child->path_collect();
         // Merge child_result into result
-        for (auto&& [path, child_interfaces] : child_result.get_dict_object_path()) {
+        for (auto&& [path, child_interfaces] : child_result.get<std::map<ObjectPath, Holder>>()) {
             result.dict_append(SimpleDBus::Holder::Type::OBJ_PATH, std::move(path), std::move(child_interfaces));
         }
     }
