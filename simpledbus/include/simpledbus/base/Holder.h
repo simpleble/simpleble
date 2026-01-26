@@ -15,6 +15,7 @@ class ObjectPath {
     ObjectPath(const std::string& path) : path(path) {}
     ObjectPath(const char* path) : path(path) {}
     operator std::string() const { return path; }
+    const char* c_str() const { return path.c_str(); }
     bool operator<(const ObjectPath& other) const { return path < other.path; }
     bool operator==(const ObjectPath& other) const { return path == other.path; }
     bool operator!=(const ObjectPath& other) const { return path != other.path; }
@@ -29,6 +30,7 @@ class Signature {
     Signature(const std::string& signature) : signature(signature) {}
     Signature(const char* signature) : signature(signature) {}
     operator std::string() const { return signature; }
+    const char* c_str() const { return signature.c_str(); }
     bool operator<(const Signature& other) const { return signature < other.signature; }
     bool operator==(const Signature& other) const { return signature == other.signature; }
     bool operator!=(const Signature& other) const { return signature != other.signature; }
@@ -70,48 +72,46 @@ class Holder {
     std::string signature() const;
     void signature_override(const std::string& signature);
 
-    // TODO: Deprecate these functions in favor of templated version.
-    static Holder create_boolean(bool value);
-    static Holder create_byte(uint8_t value);
-    static Holder create_int16(int16_t value);
-    static Holder create_uint16(uint16_t value);
-    static Holder create_int32(int32_t value);
-    static Holder create_uint32(uint32_t value);
-    static Holder create_int64(int64_t value);
-    static Holder create_uint64(uint64_t value);
-    static Holder create_double(double value);
-    static Holder create_string(const std::string& str);
-    static Holder create_object_path(const ObjectPath& path);
-    static Holder create_signature(const Signature& signature);
-    static Holder create_array();
-    static Holder create_dict();
+    [[deprecated("Use create<bool> instead")]] static Holder create_boolean(bool value);
+    [[deprecated("Use create<uint8_t> instead")]] static Holder create_byte(uint8_t value);
+    [[deprecated("Use create<int16_t> instead")]] static Holder create_int16(int16_t value);
+    [[deprecated("Use create<uint16_t> instead")]] static Holder create_uint16(uint16_t value);
+    [[deprecated("Use create<int32_t> instead")]] static Holder create_int32(int32_t value);
+    [[deprecated("Use create<uint32_t> instead")]] static Holder create_uint32(uint32_t value);
+    [[deprecated("Use create<int64_t> instead")]] static Holder create_int64(int64_t value);
+    [[deprecated("Use create<uint64_t> instead")]] static Holder create_uint64(uint64_t value);
+    [[deprecated("Use create<double> instead")]] static Holder create_double(double value);
+    [[deprecated("Use create<std::string> instead")]] static Holder create_string(const std::string& str);
+    [[deprecated("Use create<ObjectPath> instead")]] static Holder create_object_path(const ObjectPath& path);
+    [[deprecated("Use create<Signature> instead")]] static Holder create_signature(const Signature& signature);
+    [[deprecated("Use create<std::vector<Holder>> instead")]] static Holder create_array();
+    [[deprecated("Use create<std::map<std::string, Holder>> instead")]] static Holder create_dict();
 
     std::any get_contents() const;
 
-    // TODO: Deprecate these functions in favor of templated version.
-    bool get_boolean() const;
-    uint8_t get_byte() const;
-    int16_t get_int16() const;
-    uint16_t get_uint16() const;
-    int32_t get_int32() const;
-    uint32_t get_uint32() const;
-    int64_t get_int64() const;
-    uint64_t get_uint64() const;
-    double get_double() const;
-    std::string get_string() const;
-    std::string get_object_path() const;
-    std::string get_signature() const;
-    std::vector<Holder> get_array() const;
-    std::map<uint8_t, Holder> get_dict_uint8() const;
-    std::map<uint16_t, Holder> get_dict_uint16() const;
-    std::map<uint32_t, Holder> get_dict_uint32() const;
-    std::map<uint64_t, Holder> get_dict_uint64() const;
-    std::map<int16_t, Holder> get_dict_int16() const;
-    std::map<int32_t, Holder> get_dict_int32() const;
-    std::map<int64_t, Holder> get_dict_int64() const;
-    std::map<std::string, Holder> get_dict_string() const;
-    std::map<std::string, Holder> get_dict_object_path() const;
-    std::map<std::string, Holder> get_dict_signature() const;
+    [[deprecated("Use get<bool> instead")]] bool get_boolean() const;
+    [[deprecated("Use get<uint8_t> instead")]] uint8_t get_byte() const;
+    [[deprecated("Use get<int16_t> instead")]] int16_t get_int16() const;
+    [[deprecated("Use get<uint16_t> instead")]] uint16_t get_uint16() const;
+    [[deprecated("Use get<int32_t> instead")]] int32_t get_int32() const;
+    [[deprecated("Use get<uint32_t> instead")]] uint32_t get_uint32() const;
+    [[deprecated("Use get<int64_t> instead")]] int64_t get_int64() const;
+    [[deprecated("Use get<uint64_t> instead")]] uint64_t get_uint64() const;
+    [[deprecated("Use get<double> instead")]] double get_double() const;
+    [[deprecated("Use get<std::string> instead")]] std::string get_string() const;
+    [[deprecated("Use get<ObjectPath> instead")]] ObjectPath get_object_path() const;
+    [[deprecated("Use get<Signature> instead")]] Signature get_signature() const;
+    [[deprecated("Use get<std::vector<Holder>> instead")]] std::vector<Holder> get_array() const;
+    [[deprecated("Use get<std::map<uint8_t, Holder>> instead")]] std::map<uint8_t, Holder> get_dict_uint8() const;
+    [[deprecated("Use get<std::map<uint16_t, Holder>> instead")]] std::map<uint16_t, Holder> get_dict_uint16() const;
+    [[deprecated("Use get<std::map<uint32_t, Holder>> instead")]] std::map<uint32_t, Holder> get_dict_uint32() const;
+    [[deprecated("Use get<std::map<uint64_t, Holder>> instead")]] std::map<uint64_t, Holder> get_dict_uint64() const;
+    [[deprecated("Use get<std::map<int16_t, Holder>> instead")]] std::map<int16_t, Holder> get_dict_int16() const;
+    [[deprecated("Use get<std::map<int32_t, Holder>> instead")]] std::map<int32_t, Holder> get_dict_int32() const;
+    [[deprecated("Use get<std::map<int64_t, Holder>> instead")]] std::map<int64_t, Holder> get_dict_int64() const;
+    [[deprecated("Use get<std::map<std::string, Holder>> instead")]] std::map<std::string, Holder> get_dict_string() const;
+    [[deprecated("Use get<std::map<ObjectPath, Holder>> instead")]] std::map<ObjectPath, Holder> get_dict_object_path() const;
+    [[deprecated("Use get<std::map<Signature, Holder>> instead")]] std::map<Signature, Holder> get_dict_signature() const;
 
     void dict_append(Type key_type, std::any key, Holder value);
     void array_append(Holder holder);
