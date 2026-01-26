@@ -16,6 +16,8 @@ class ObjectPath {
     ObjectPath(const char* path) : path(path) {}
     operator std::string() const { return path; }
     bool operator<(const ObjectPath& other) const { return path < other.path; }
+    bool operator==(const ObjectPath& other) const { return path == other.path; }
+    bool operator!=(const ObjectPath& other) const { return path != other.path; }
 
   private:
     std::string path;
@@ -28,6 +30,8 @@ class Signature {
     Signature(const char* signature) : signature(signature) {}
     operator std::string() const { return signature; }
     bool operator<(const Signature& other) const { return signature < other.signature; }
+    bool operator==(const Signature& other) const { return signature == other.signature; }
+    bool operator!=(const Signature& other) const { return signature != other.signature; }
 
   private:
     std::string signature;
