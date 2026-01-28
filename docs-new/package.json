@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run build:doxygen && next build",
-    "build:doxygen": "node scripts/build-doxygen.js",
+    "build": "next build",
     "dev": "next dev",
     "start": "next start",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
