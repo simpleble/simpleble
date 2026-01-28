@@ -2,8 +2,10 @@
   "name": "docs",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "npm run build:doxygen && next build",
+    "build:doxygen": "node scripts/build-doxygen.js",
     "dev": "next dev",
     "start": "next start",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
@@ -18,6 +20,7 @@
     "next": "16.1.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
@@ -26,6 +29,7 @@
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
+    "fast-xml-parser": "^5.3.3",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

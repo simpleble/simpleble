@@ -11,6 +11,10 @@
 /build
 *.tsbuildinfo
 
+# doxygen + moxygen API docs build
+/_doxygen/
+/_temp_api.md
+
 # misc
 .DS_Store
 *.pem

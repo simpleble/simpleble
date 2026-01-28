@@ -31,20 +31,18 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
         style: "normal",
       }}
     >
-      <div className="mb-12">
-        <DocsTitle className="text-4xl sm:text-5xl font-sora font-bold tracking-tight mb-4">
-          {page.data.title}
-        </DocsTitle>
-        <DocsDescription className="text-lg text-fd-muted-foreground leading-relaxed mb-8">
-          {page.data.description}
-        </DocsDescription>
-        <div className="flex flex-row gap-4 items-center border-y py-4 border-fd-border/50">
-          <LLMCopyButton markdownUrl={`${page.url}.mdx`} />
-          <ViewOptions
-            markdownUrl={`${page.url}.mdx`}
-            githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${page.path}`}
-          />
-        </div>
+      <DocsTitle className="text-4xl sm:text-5xl font-sora font-bold tracking-tight">
+        {page.data.title}
+      </DocsTitle>
+      <DocsDescription className="text-lg text-fd-muted-foreground leading-relaxed mb-2">
+        {page.data.description}
+      </DocsDescription>
+      <div className="flex flex-row flex-wrap gap-2 items-center border-b pb-6">
+        <LLMCopyButton markdownUrl={`${page.url}.mdx`} />
+        <ViewOptions
+          markdownUrl={`${page.url}.mdx`}
+          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${page.path}`}
+        />
       </div>
       <DocsBody className="prose-lg prose-fd-primary max-w-none">
         <MDX
@@ -72,7 +70,18 @@ export async function generateMetadata(
     title: page.data.title,
     description: page.data.description,
     openGraph: {
-      images: getPageImage(page).url,
+      images: [
+        {
+          url: getPageImage(page).url,
+          width: 1200,
+          height: 630,
+          alt: page.data.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [getPageImage(page).url],
     },
   };
 }

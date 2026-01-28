@@ -1,0 +1,93 @@
+---
+title: API Components Example
+description: Example of using API documentation components manually
+---
+
+import { ApiClass, ApiMethod, ApiSection } from "@/components/api";
+
+# Manual API Documentation Example
+
+This file demonstrates how to use the API components manually (though they are typically auto-generated).
+
+<ApiSection title="Example API">
+
+<ApiClass 
+  name="Example::MyClass"
+  brief="A brief description of MyClass"
+  detailed="This is a more detailed description that can span multiple paragraphs. It provides comprehensive information about the class and its purpose."
+>
+
+### Public Functions
+
+<ApiMethod
+  signature="void simpleMethod()"
+  brief="A method without parameters"
+/>
+
+<ApiMethod
+  signature="int calculate(int x, int y)"
+  brief="Calculates something with two integers"
+  detailed="This method performs a calculation using the provided parameters. It returns an integer result."
+  parameters={[
+    {name: "x", type: "int"},
+    {name: "y", type: "int"}
+  ]}
+/>
+
+<ApiMethod
+  signature="void setCallback(std::function<void(int)> callback)"
+  brief="Sets a callback function"
+  detailed="Registers a callback that will be invoked when certain events occur. The callback receives an integer parameter."
+  parameters={[
+    {
+      name: "callback",
+      type: "std::function<void(int)>",
+      description: "Function to call on events"
+    }
+  ]}
+/>
+
+</ApiClass>
+
+<ApiClass 
+  name="Example::AnotherClass"
+  brief="Another example class"
+>
+
+### Public Functions
+
+<ApiMethod
+  signature="AnotherClass()"
+  brief="Default constructor"
+/>
+
+<ApiMethod
+  signature="void doSomething()"
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Safe API Example">
+
+<ApiClass 
+  name="Example::Safe::MyClass"
+  brief="Thread-safe version of MyClass"
+  detailed="This version provides the same functionality but with thread-safety guarantees."
+>
+
+### Public Functions
+
+<ApiMethod
+  signature="std::optional<int> tryCalculate(int x, int y)"
+  brief="Safe version that returns optional"
+  parameters={[
+    {name: "x", type: "int"},
+    {name: "y", type: "int"}
+  ]}
+/>
+
+</ApiClass>
+
+</ApiSection>

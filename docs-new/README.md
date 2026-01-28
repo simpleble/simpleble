@@ -1,45 +1,51 @@
-# docs
+# SimpleBLE Documentation
 
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+This is the documentation website for [SimpleBLE](https://github.com/OpenBluetoothToolbox/SimpleBLE), a cross-platform Bluetooth Low Energy (BLE) library.
 
-Run development server:
+Built with [Fumadocs](https://fumadocs.dev) and [Next.js](https://nextjs.org).
+
+## Getting Started
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-pnpm dev
-# or
-yarn dev
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Explore
+## API Documentation Generation
 
-In the project, you can see:
+The API reference is automatically generated from the C++ source code using Doxygen and a custom parser that converts Doxygen XML to MDX with React components.
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+### Scripts
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+- `npm run build:doxygen`: Orchestrates the full API documentation build.
+  - Runs Doxygen using the `Doxyfile` to generate XML output in `_doxygen/xml/`.
+  - Executes `scripts/build-doxygen.js` to parse the XML and generate `content/docs/simpleble/api.mdx`.
+- `npm run build`: Runs the Doxygen build followed by the Next.js production build.
 
-### Fumadocs MDX
+### Script Details
 
-A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+- **`scripts/build-doxygen.js`**: The main entry point for API generation. It defines which classes to include (Standard API, Safe API, etc.) and uses the helpers in `utils.js` to generate the final MDX file.
+- **`scripts/utils.js`**: Contains the logic for:
+  - Parsing Doxygen XML nodes.
+  - Extracting text, types, and method signatures safely.
+  - Converting XML structures into `<ApiClass>`, `<ApiMethod>`, and `<ApiSection>` React components.
+  - Handling edge cases like C++ template types, escaping JSX/Markdown, and generating stable anchor IDs for the Table of Contents.
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+## Project Structure
+
+| Route                | Description                                        |
+| -------------------- | -------------------------------------------------- |
+| `app/(home)`         | The landing page.                                  |
+| `app/docs`           | The documentation layout and pages.                |
+| `content/docs`       | MDX/Markdown files for the documentation.          |
+| `src/components/api` | Custom React components used in the API reference. |
+| `scripts/`           | Automation scripts for Doxygen integration.        |
 
 ## Learn More
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+- [Fumadocs Documentation](https://fumadocs.dev)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [SimpleBLE Repository](https://github.com/OpenBluetoothToolbox/SimpleBLE)

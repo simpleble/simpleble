@@ -195,10 +195,9 @@ body {
   #nd-sidebar[data-mobile="true"] {
     z-index: 50 !important;
   }
-  
+
   /* Ensure sidebar overlay/backdrop is above content */
   [data-sidebar-overlay] {
     z-index: 49 !important;
   }
 }
-
