@@ -1,3 +1,3 @@
-export { ApiClass } from "./ApiClass";
-export { ApiMethod } from "./ApiMethod";
-export { ApiSection } from "./ApiSection";
+export { ApiClass } from "./api-class";
+export { ApiMethod } from "./api-method";
+export { ApiSection } from "./api-section";

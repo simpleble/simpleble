@@ -22,15 +22,12 @@ export function LogoWithTheme({
   useEffect(() => {
     setMounted(true)
     
-    // Check if dark mode is active by looking for .dark class on html element
     const checkDarkMode = () => {
       setIsDark(document.documentElement.classList.contains('dark'))
     }
 
-    // Initial check
     checkDarkMode()
 
-    // Watch for changes using MutationObserver
     const observer = new MutationObserver(checkDarkMode)
     observer.observe(document.documentElement, {
       attributes: true,
@@ -40,8 +37,6 @@ export function LogoWithTheme({
     return () => observer.disconnect()
   }, [])
 
-  // Use white logo (simpleBLE-logo.png) for dark mode
-  // Use dark logo (simpleBLE-logo-dark.png) for light mode
   const logoSrc = mounted && isDark ? '/simpleBLE-logo.png' : '/simpleBLE-logo-dark.png'
 
   return (

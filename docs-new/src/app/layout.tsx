@@ -27,6 +27,20 @@ export const metadata: Metadata = {
     icon: '/favicon.png',
     apple: '/favicon.png',
   },
+  openGraph: {
+    images: [
+      {
+        url: '/og/home',
+        width: 1200,
+        height: 630,
+        alt: 'SimpleBLE Docs',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og/home'],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

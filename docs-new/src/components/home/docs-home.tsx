@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { ReactElement } from "react";
 
-import { DocsHomeHero } from "@/components/docs-home-hero";
-import { DocsHomeSearch } from "@/components/docs-home-search";
-import { HoverIlluminationLink } from "@/components/hover-illumination-link";
+import { DocsHomeHero } from "@/components/home/docs-home-hero";
+import { DocsHomeSearch } from "@/components/home/docs-home-search";
+import { HoverIlluminationLink } from "@/components/ui/hover-illumination-link";
 
 type CardLink = Readonly<{
   title: string;

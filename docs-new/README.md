@@ -1,6 +1,6 @@
 # SimpleBLE Documentation
 
-This is the documentation website for [SimpleBLE](https://github.com/OpenBluetoothToolbox/SimpleBLE), a cross-platform Bluetooth Low Energy (BLE) library.
+This is the documentation website for [SimpleBLE](https://github.com/simpleble/simpleble), a cross-platform Bluetooth Low Energy (BLE) library.
 
 Built with [Fumadocs](https://fumadocs.dev) and [Next.js](https://nextjs.org).
 
@@ -48,4 +48,4 @@ The API reference is automatically generated from the C++ source code using Doxy
 
 - [Fumadocs Documentation](https://fumadocs.dev)
 - [Next.js Documentation](https://nextjs.org/docs)
-- [SimpleBLE Repository](https://github.com/OpenBluetoothToolbox/SimpleBLE)
+- [SimpleBLE Repository](https://github.com/simpleble/simpleble)

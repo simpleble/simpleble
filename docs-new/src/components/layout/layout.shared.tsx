@@ -1,7 +1,6 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import type { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 
-import { LogoWithTheme } from "@/components/logo-with-theme";
+import { LogoWithTheme } from "@/components/ui/logo-with-theme";
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -18,8 +17,3 @@ export function baseOptions(): BaseLayoutProps {
   };
 }
 
-export function docsSidebarOptions(): DocsLayoutProps["sidebar"] {
-  return {
-    // No footer with version - keeping it simple like legacy docs
-  };
-}

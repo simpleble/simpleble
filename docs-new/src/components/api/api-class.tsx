@@ -1,4 +1,3 @@
-import { cn } from "@/lib/cn";
 import type { ReactNode } from "react";
 import { Box } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -12,9 +11,9 @@ interface ApiClassProps {
 
 export function ApiClass({ name, brief, detailed, children }: ApiClassProps) {
   return (
-    <div className="not-prose my-8 rounded-xl border border-fd-border bg-gradient-to-br from-fd-card to-fd-card/50 shadow-lg overflow-hidden">
+    <div className="not-prose my-8 rounded-xl border border-fd-border bg-linear-to-br from-fd-card to-fd-card/50 shadow-lg overflow-hidden">
       {/* Class Header */}
-      <div className="border-b border-fd-border bg-gradient-to-r from-fd-primary/10 via-fd-primary/5 to-transparent px-6 py-5">
+      <div className="border-b border-fd-border bg-linear-to-r from-fd-primary/10 via-fd-primary/5 to-transparent px-6 py-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-fd-primary/10 ring-1 ring-fd-primary/20">
             <Box className="h-5 w-5 text-fd-primary" />

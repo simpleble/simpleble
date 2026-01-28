@@ -1,16 +1,15 @@
 "use client";
-
 import { useEffect } from "react";
 
+/**
+ * Adds a hover with illumination effect to the sidebar links.
+ */
 export const SidebarHoverEffect = () => {
   useEffect(() => {
-    // Función para agregar el efecto hover a un elemento
     const addHoverEffect = (element: HTMLElement) => {
-      // Asegurarse de que el elemento tenga posición relativa y overflow hidden
       element.style.position = "relative";
       element.style.overflow = "hidden";
 
-      // Crear los divs de efecto si no existen
       let hoverLayer1 = element.querySelector(
         ".sidebar-hover-effect-1"
       ) as HTMLElement;
@@ -49,7 +48,6 @@ export const SidebarHoverEffect = () => {
         element.prepend(hoverLayer2);
       }
 
-      // Manejadores de mouse
       const handleMouseMove = (e: MouseEvent) => {
         const rect = element.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -77,7 +75,6 @@ export const SidebarHoverEffect = () => {
       element.addEventListener("mouseenter", handleMouseEnter);
       element.addEventListener("mouseleave", handleMouseLeave);
 
-      // Cleanup function
       return () => {
         element.removeEventListener("mousemove", handleMouseMove);
         element.removeEventListener("mouseenter", handleMouseEnter);
@@ -85,7 +82,6 @@ export const SidebarHoverEffect = () => {
       };
     };
 
-    // Seleccionar todos los enlaces del sidebar
     const sidebarLinks = document.querySelectorAll(
       '#nd-sidebar a[href^="/docs"]'
     );
@@ -97,7 +93,6 @@ export const SidebarHoverEffect = () => {
       if (cleanup) cleanupFunctions.push(cleanup);
     });
 
-    // Observer para detectar cambios en el DOM (navegación)
     const observer = new MutationObserver(() => {
       const newLinks = document.querySelectorAll(
         '#nd-sidebar a[href^="/docs"]'
@@ -121,7 +116,6 @@ export const SidebarHoverEffect = () => {
       });
     }
 
-    // Cleanup al desmontar
     return () => {
       cleanupFunctions.forEach((cleanup) => cleanup());
       observer.disconnect();

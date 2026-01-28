@@ -1,4 +1,4 @@
-import { DocsHome } from "@/components/docs-home";
+import { DocsHome } from "@/components/home/docs-home";
 
 export default function HomePage() {
   return <DocsHome />;

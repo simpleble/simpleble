@@ -1,30 +1,11 @@
 "use client";
-
 import Link from "next/link";
 import { useDocsSearch } from "fumadocs-core/search/client";
 import type { ReactElement } from "react";
 
-type SearchItem = Readonly<{
-  title: string;
-  description?: string;
-  url: string;
-}>;
+import { toSearchItems } from "@/lib/utils";
 
-function isSearchItem(value: unknown): value is SearchItem {
-  if (typeof value !== "object" || value === null) return false;
 
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.title === "string" &&
-    typeof v.url === "string" &&
-    (typeof v.description === "string" || v.description === undefined)
-  );
-}
-
-function toSearchItems(data: unknown): ReadonlyArray<SearchItem> {
-  if (!Array.isArray(data)) return [];
-  return data.filter(isSearchItem);
-}
 
 export const DocsHomeSearch = (): ReactElement => {
   const { search, setSearch, query } = useDocsSearch({ type: "fetch" });
