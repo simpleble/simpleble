@@ -32,7 +32,7 @@ function InlineCode({ code, className }: { code: string; className?: string }) {
         lang="cpp"
         code={code}
         codeblock={{
-          allowCopy: true,
+          allowCopy: false,
         }}
       />
     </div>
