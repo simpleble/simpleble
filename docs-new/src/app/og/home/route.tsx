@@ -10,11 +10,10 @@ export async function GET(_req: Request) {
   const mutedForegroundColor = "#6b6b6b";
 
   const title = "SimpleBLE Docs";
-  const description = "The fully supported, cross-platform library designed to get your embedded product to market without the headaches.";
+  const description = "Learn the core API, pick the right bindings, and follow practical guides for building reliable Bluetooth experiences across platforms.";
 
   // Use the dark logo for light background (simpleBLE-logo-dark.png)
   const logoUrl = new URL("/simpleBLE-logo-dark.png", _req.url).toString();
-  const bgUrl = new URL("/footer-bg.png", _req.url).toString();
 
   return new ImageResponse(
     (
@@ -30,22 +29,6 @@ export async function GET(_req: Request) {
           fontFamily: "sans-serif",
         }}
       >
-        {/* Background Image (Same as Hero) */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-10%",
-            left: "-10%",
-            width: "120%",
-            height: "120%",
-            display: "flex",
-            opacity: 0.15,
-            backgroundImage: `url(${bgUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "left top",
-          }}
-        />
-
         {/* Background Gradients (Simplified version of DocsHomeHero) */}
         <div
           style={{
@@ -55,8 +38,8 @@ export async function GET(_req: Request) {
             right: 0,
             bottom: 0,
             display: "flex",
-            opacity: 0.6,
-            background: `radial-gradient(900px 500px at 20% 10%, rgba(33,127,241,0.35) 0%, rgba(33,127,241,0) 65%), radial-gradient(700px 420px at 85% 0%, rgba(33,127,241,0.28) 0%, rgba(33,127,241,0) 70%)`,
+            opacity: 0.4,
+            background: `radial-gradient(900px 500px at 20% 10%, rgba(33,127,241,0.25) 0%, rgba(33,127,241,0) 65%), radial-gradient(700px 420px at 85% 0%, rgba(33,127,241,0.2) 0%, rgba(33,127,241,0) 70%)`,
           }}
         />
 
@@ -69,22 +52,9 @@ export async function GET(_req: Request) {
             right: 0,
             bottom: 0,
             display: "flex",
-            opacity: 0.08,
-            backgroundImage: `linear-gradient(to right, rgba(23,23,23,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(23,23,23,0.1) 1px, transparent 1px)`,
+            opacity: 0.05,
+            backgroundImage: `linear-gradient(to right, ${foregroundColor} 1px, transparent 1px), linear-gradient(to bottom, ${foregroundColor} 1px, transparent 1px)`,
             backgroundSize: "48px 48px",
-          }}
-        />
-
-        {/* Bottom sheen gradient */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "200px",
-            display: "flex",
-            background: "linear-gradient(to top, rgba(33,127,241,0.15) 0%, rgba(33,127,241,0) 100%)",
           }}
         />
 
