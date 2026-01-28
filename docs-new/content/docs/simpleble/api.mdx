@@ -47,17 +47,17 @@ This class is intended to be used by the user only. Library developers should us
 <ApiMethod
   signature="void power_on()"
   detailed="Control the power state of the adapter."
->
-
-<Callout type="info" title="Note">
-The power on/off functionality is only supported on Windows and Linux. On other platforms, this method will do nothing.
-</Callout>
-
-<Callout type="info" title="Note">
-Callbacks are currently a placeholder for future implementation.
-</Callout>
-
-</ApiMethod>
+  notes={[
+    {
+      content: "The power on/off functionality is only supported on Windows and Linux. On other platforms, this method will do nothing.",
+      type: "warn"
+    },
+    {
+      content: "Callbacks are currently a placeholder for future implementation.",
+      type: "info"
+    }
+  ]}
+/>
 
 <ApiMethod
   signature="void power_off()"
@@ -121,24 +121,14 @@ Callbacks are currently a placeholder for future implementation.
 <ApiMethod
   signature="std::vector< Peripheral > get_paired_peripherals()"
   detailed="Retrieve a list of all paired peripherals."
->
-
-<Callout type="info" title="Note">
-This method is currently only supported by the Linux, Windows and Android backends.
-</Callout>
-
-</ApiMethod>
+  note="This method is currently only supported by the Linux, Windows and Android backends."
+/>
 
 <ApiMethod
   signature="std::vector< Peripheral > get_connected_peripherals()"
   detailed="Retrieve a list of all connected peripherals."
->
-
-<Callout type="info" title="Note">
-This method is currently only supported by the Windows backend. (More backends coming soon.)
-</Callout>
-
-</ApiMethod>
+  note="This method is currently only supported by the Windows backend. (More backends coming soon.)"
+/>
 
 ### Public Static Functions [!toc]
 
@@ -149,13 +139,8 @@ This method is currently only supported by the Windows backend. (More backends c
 <ApiMethod
   signature="static std::vector< Adapter > get_adapters()"
   detailed="Fetches a list of all available adapters from all available backends.  This will cause backends to be instantiated/initialized and adapters too."
->
-
-<Callout type="info" title="Note">
-All configuration values must be set prior to calling this function. Please refer to the SimpleBLE::Config documentation for more details.
-</Callout>
-
-</ApiMethod>
+  notes={[{ content: "All configuration values must be set prior to calling this function. Please refer to the SimpleBLE::Config documentation for more details.", type: "info" }]}
+/>
 
 </ApiClass>
 
@@ -200,13 +185,8 @@ All configuration values must be set prior to calling this function. Please refe
 <ApiMethod
   signature="int16_t tx_power()"
   brief="Provides the advertised transmit power in dBm."
->
-
-<Callout type="info" title="Note">
-If the field has not been advertised by the peripheral, the returned value will be -32768.
-</Callout>
-
-</ApiMethod>
+  notes={[{ content: "If the field has not been advertised by the peripheral, the returned value will be -32768.", type: "info" }]}
+/>
 
 <ApiMethod
   signature="uint16_t mtu()"
@@ -239,13 +219,8 @@ If the field has not been advertised by the peripheral, the returned value will 
 <ApiMethod
   signature="std::vector< Service > services()"
   brief="Provides a list of all services that are available on the peripheral."
->
-
-<Callout type="info" title="Note">
-If the peripheral is not connected, it will return a list of services that were advertised by the device.
-</Callout>
-
-</ApiMethod>
+  notes={[{ content: "If the peripheral is not connected, it will return a list of services that were advertised by the device.", type: "info" }]}
+/>
 
 <ApiMethod
   signature="std::map< uint16_t, ByteArray > manufacturer_data()"
@@ -731,13 +706,8 @@ If the peripheral is not connected, it will return a list of services that were 
 <ApiMethod
   signature="operator std::string() const"
   brief="Conversion operator to convert byte array to std::string."
->
-
-<Callout type="info" title="Note">
-This is provided to support code that relies on byte array being representd as a string.
-</Callout>
-
-</ApiMethod>
+  notes={[{ content: "This is provided to support code that relies on byte array being representd as a string.", type: "info" }]}
+/>
 
 <ApiMethod
   signature="operator std::vector< uint8_t >() const"

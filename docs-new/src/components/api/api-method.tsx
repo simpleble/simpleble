@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Callout } from "fumadocs-ui/components/callout";
 
 import { CollapsibleToggle } from "@/components/ui/collapsible-toggle";
 import { InlineCode } from "@/components/ui/inline-code";
@@ -10,21 +11,33 @@ interface ApiMethodProps {
   signature: string;
   brief?: string;
   detailed?: string;
+  notes?: Array<{
+    content: string;
+    type: "info" | "warn" | "error";
+  }>;
   parameters?: Array<{
     name: string;
     type: string;
     description?: string;
   }>;
+  children?: React.ReactNode;
 }
 
 export function ApiMethod({
   signature,
   brief,
   detailed,
+  notes,
   parameters,
+  children,
 }: ApiMethodProps) {
   const [isParamsOpen, setIsParamsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  const hasNotes = notes && notes.length > 0;
+  const hasParameters = parameters && parameters.length > 0;
+  const hasDetails = brief || detailed || hasNotes;
+  const hasAnyContent = hasDetails || hasParameters || children;
 
   return (
     <div
@@ -44,10 +57,10 @@ export function ApiMethod({
       </div>
 
       {/* Method Details */}
-      {(brief || detailed || (parameters && parameters.length > 0)) && (
+      {hasAnyContent && (
         <div className="px-4 pb-4 space-y-4">
           {/* Brief and Detailed descriptions - Collapsible */}
-          {(brief || detailed) && (
+          {hasDetails && (
             <div className="space-y-4">
               <CollapsibleToggle
                 isOpen={isDetailsOpen}
@@ -71,13 +84,25 @@ export function ApiMethod({
                       className="text-sm text-fd-muted-foreground/90"
                     />
                   )}
+
+                  {notes &&
+                    notes.map((note, i) => (
+                      <Callout key={i} type={note.type} title="Note">
+                        <MarkdownContent
+                          content={note.content}
+                          className="text-sm"
+                        />
+                      </Callout>
+                    ))}
+
+                  {children && <div>{children}</div>}
                 </div>
               )}
             </div>
           )}
 
           {/* Parameters - Collapsible */}
-          {parameters && parameters.length > 0 && (
+          {hasParameters && (
             <div className="space-y-4">
               <CollapsibleToggle
                 isOpen={isParamsOpen}
