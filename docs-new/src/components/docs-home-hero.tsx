@@ -132,7 +132,7 @@ export const DocsHomeHero = (): ReactElement => {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <Link
-              href="/docs/simpleble/usage"
+              href="/docs/simpleble/tutorial"
               className="inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-sora font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Quickstart

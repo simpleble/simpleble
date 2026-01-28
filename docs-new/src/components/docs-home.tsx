@@ -17,13 +17,13 @@ const RESOURCES: ReadonlyArray<CardLink> = [
     title: "What's SimpleBLE?",
     description:
       "A cross-platform BLE library (and bindings) designed for shipping embedded products without Bluetooth headaches.",
-    href: "/docs/overview",
+    href: "/docs/",
   },
   {
     title: "Licensing & Support",
     description:
       "Understand the licensing options, commercial readiness, and where to get help when you need it.",
-    href: "/docs/licensing_faq",
+    href: "/docs/licensing",
   },
   {
     title: "Changelog",
@@ -49,6 +49,34 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/docs/simplepyble/usage",
   },
   {
+    eyebrow: "Bindings",
+    title: "SimplecBLE",
+    description:
+      "C bindings for the SimpleBLE core library.",
+    href: "/docs/simplecble/usage",
+  },
+  {
+    eyebrow: "Bindings",
+    title: "SimpleJavaBLE",
+    description:
+      "Java bindings for Android and cross-platform Java applications.",
+    href: "/docs/simplejavable/usage",
+  },
+  {
+    eyebrow: "Bindings",
+    title: "SimplersBLE",
+    description:
+      "Rust bindings with a modern API for safe BLE development.",
+    href: "/docs/simplersble/usage",
+  },
+  {
+    eyebrow: "Bindings",
+    title: "SimpledroidBLE",
+    description:
+      "Android-only bindings for native Android BLE development.",
+    href: "/docs/simpledroidble/usage",
+  },
+  {
     eyebrow: "Linux",
     title: "SimpleBluez",
     description:
@@ -56,7 +84,7 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/docs/simplebluez/usage",
   },
   {
-    eyebrow: "System",
+    eyebrow: "Linux",
     title: "SimpleDBus",
     description: "A DBus object hierarchy handler used by the Linux stack.",
     href: "/docs/simpledbus/usage",
