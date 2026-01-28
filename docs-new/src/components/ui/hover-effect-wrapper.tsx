@@ -13,17 +13,17 @@ type HoverEffectWrapperProps = {
 const variants = {
   default: {
     gradient:
-      "linear-gradient(to right, rgba(33,127,241,0.18), rgba(255,255,255,0.08))",
+      "linear-gradient(to right, rgba(33,127,241,0.28), rgba(255,255,255,0.08))",
     sheen: "rgba(255,255,255,0.08)",
   },
   button: {
     gradient:
-      "linear-gradient(to right, rgba(33,127,241,0.35), rgba(33,127,241,0.20))",
+      "linear-gradient(to right, rgba(33,127,241,0.48), rgba(33,127,241,0.30))",
     sheen: "rgba(255,255,255,0.15)",
   },
   hero: {
     gradient:
-      "linear-gradient(to right, rgba(33,127,241,0.18), rgba(255,255,255,0.08))",
+      "linear-gradient(to right, rgba(33,127,241,0.28), rgba(255,255,255,0.08))",
     sheen: "rgba(255,255,255,0.10)",
   },
 };
