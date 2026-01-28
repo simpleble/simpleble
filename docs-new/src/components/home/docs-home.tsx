@@ -35,42 +35,35 @@ const RESOURCES: ReadonlyArray<CardLink> = [
 
 const PRODUCTS: ReadonlyArray<CardLink> = [
   {
-    eyebrow: "Core",
+    eyebrow: "C/C++",
     title: "SimpleBLE",
     description:
       "C/C++ core library with a consistent BLE API across platforms.",
     href: "/docs/simpleble/usage",
   },
   {
-    eyebrow: "Bindings",
-    title: "SimplepyBLE",
+    eyebrow: "Python",
+    title: "SimplePyBLE",
     description:
       "Python bindings for fast prototyping and automation workflows.",
     href: "/docs/simplepyble/usage",
   },
   {
-    eyebrow: "Bindings",
-    title: "SimplecBLE",
-    description:
-      "C bindings for the SimpleBLE core library.",
-    href: "/docs/simplecble/usage",
-  },
-  {
-    eyebrow: "Bindings",
+    eyebrow: "Java",
     title: "SimpleJavaBLE",
     description:
       "Java bindings for Android and cross-platform Java applications.",
-    href: "/docs/simplejavable/usage",
+    href: "/docs/simplejavable/examples",
   },
   {
-    eyebrow: "Bindings",
-    title: "SimplersBLE",
+    eyebrow: "Rust",
+    title: "SimpleRsBLE",
     description:
       "Rust bindings with a modern API for safe BLE development.",
-    href: "/docs/simplersble/usage",
+    href: "/docs/simplersble/examples",
   },
   {
-    eyebrow: "Bindings",
+    eyebrow: "Android",
     title: "SimpledroidBLE",
     description:
       "Android-only bindings for native Android BLE development.",
