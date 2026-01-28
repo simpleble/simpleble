@@ -20,7 +20,11 @@ const sora = Sora({
   weight: ['400', '500', '600', '700'],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://docs.simpleble.org';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'SimpleBLE Docs',
   description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
   icons: {
@@ -28,6 +32,11 @@ export const metadata: Metadata = {
     apple: '/favicon.png',
   },
   openGraph: {
+    type: 'website',
+    url: siteUrl,
+    siteName: 'SimpleBLE Docs',
+    title: 'SimpleBLE Docs',
+    description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
     images: [
       {
         url: '/og/home',
@@ -39,6 +48,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
+    title: 'SimpleBLE Docs',
+    description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
     images: ['/og/home'],
   },
 };

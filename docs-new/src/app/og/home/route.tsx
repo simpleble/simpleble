@@ -136,3 +136,8 @@ export async function GET(_req: Request) {
     }
   );
 }
+
+export function generateStaticParams() {
+  // Return empty array to indicate this route should be statically generated
+  return [];
+}
