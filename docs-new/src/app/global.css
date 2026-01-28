@@ -118,7 +118,7 @@ body {
   color: var(--foreground);
 }
 
-/* Docs UI Refinements */
+  /* Docs UI Refinements */
 .prose {
   --tw-prose-body: var(--fd-foreground);
   --tw-prose-headings: var(--fd-foreground);
@@ -135,6 +135,10 @@ body {
   --tw-prose-pre-bg: var(--fd-muted);
   --tw-prose-th-borders: var(--fd-border);
   --tw-prose-td-borders: var(--fd-border);
+}
+
+a {
+  text-decoration-color: var(--primary);
 }
 
 /* Sidebar styling */

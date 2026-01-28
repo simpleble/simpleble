@@ -43,7 +43,7 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
   },
   {
     eyebrow: "Bindings",
-    title: "SimplePyBLE",
+    title: "SimplepyBLE",
     description:
       "Python bindings for fast prototyping and automation workflows.",
     href: "/docs/simplepyble/usage",
@@ -111,7 +111,7 @@ export const DocsHome = ({ className }: DocsHomeProps): ReactElement => {
             </h2>
             <Link
               href="/docs"
-              className="text-sm font-sora font-semibold text-primary hover:underline underline-offset-4"
+              className="text-sm font-sora font-semibold text-primary hover:underline decoration-primary underline-offset-4"
             >
               View all →
             </Link>

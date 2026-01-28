@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Sora } from 'next/font/google';
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import './global.css';
 import type { ReactNode } from 'react';
+
+import './global.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

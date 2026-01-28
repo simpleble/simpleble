@@ -12,6 +12,7 @@
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
+    "@takumi-rs/image-response": "^0.66.4",
     "framer-motion": "^12.29.0",
     "fumadocs-core": "16.4.8",
     "fumadocs-mdx": "14.2.6",

@@ -18,7 +18,7 @@ export function MarkdownContent({
           a: ({ href, children }) => (
             <a
               href={href}
-              className="text-fd-primary hover:underline font-medium"
+              className="text-fd-primary hover:underline decoration-fd-primary font-medium"
             >
               {children}
             </a>
