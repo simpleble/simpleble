@@ -24,7 +24,7 @@ export const DocsHomeHero = (): ReactElement => {
             </p>
 
             <h1 className="font-sora text-[30px] sm:text-[38px] lg:text-[48px] leading-[1.06] tracking-[-0.035em] text-fd-foreground">
-              Bluetooth integration in minutes, not months.
+              Bluetooth capabilities in minutes. Not months.
             </h1>
 
             <p className="text-base sm:text-lg leading-relaxed text-fd-muted-foreground max-w-[70ch]">
