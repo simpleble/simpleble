@@ -1,6 +1,6 @@
 {
   "name": "simplernble",
-  "version": "0.0.6-beta.8",
+  "version": "0.0.6-beta.14",
   "description": "SimpleBLE for React Native",
   "main": "lib/index",
   "module": "lib/index",
@@ -28,19 +28,17 @@
     "README.md"
   ],
   "scripts": {
-    "nitrogen": "npx nitrogen",
-    "prepack": "npm run build && npm run nitrogen && bash scripts/prepare-package.sh",
-    "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "clean": "rm -rf simpleble simpledroidbridge cmake dependencies VERSION nitrogen lib tsconfig.tsbuildinfo android/build android/.cxx android/.gradle apple/build_iphoneos_arm64 apple/build_iphonesimulator_arm64 apple/simpleble_iphoneos_arm64 apple/simpleble_iphonesimulator_arm64 apple/build_macosx_arm64 apple/build_macosx_x86_64 apple/simpleble_macosx_arm64 apple/simpleble_macosx_x86_64 apple/simpleble_macosx_universal apple/SimpleBLE.xcframework",
-    "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
+    "nitrogen": "npx nitrogen",
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build && npm run nitrogen",
     "prepublishOnly": "npm run typecheck",
     "postpublish": "npm run clean",
+    "clean": "rm -rf simpleble simpledroidbridge cmake dependencies VERSION nitrogen lib tsconfig.tsbuildinfo android/build android/.cxx android/.gradle android/prebuilt apple/SimpleBLE.xcframework",
+    "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "specs": "tsc --noEmit false && nitrogen --logLevel=\"debug\"",
-    "publish:patch": "npm version patch && npm publish",
-    "publish:minor": "npm version minor && npm publish",
-    "publish:major": "npm version major && npm publish",
-    "publish:beta": "npm version prerelease --preid beta && npm publish --tag beta"
+    "publish:local": "bash scripts/prepare-package.sh && npm publish",
+    "publish:local:beta": "bash scripts/prepare-package.sh && npm version prerelease --preid beta && npm publish --tag beta"
   },
   "keywords": [
     "react-native",

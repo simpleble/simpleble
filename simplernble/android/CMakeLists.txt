@@ -17,9 +17,19 @@ include(${PROJECT_ROOT_DIR}/cmake/epilogue.cmake)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)
 
-set(BUILD_SHARED_LIBS OFF)
-add_subdirectory(${PROJECT_ROOT_DIR}/simpleble ${CMAKE_BINARY_DIR}/simpleble)
-set(BUILD_SHARED_LIBS ON)
+set(SIMPLEBLE_PREBUILT_DIR "${CMAKE_SOURCE_DIR}/prebuilt/${ANDROID_ABI}")
+set(SIMPLEBLE_PREBUILT_LIB "${SIMPLEBLE_PREBUILT_DIR}/lib/libsimpleble.a")
+
+add_library(simpleble STATIC IMPORTED)
+set_target_properties(simpleble PROPERTIES
+    IMPORTED_LOCATION "${SIMPLEBLE_PREBUILT_LIB}"
+)
+
+target_include_directories(simpleble INTERFACE
+    "${SIMPLEBLE_PREBUILT_DIR}/include"
+)
+
+add_library(simpleble::simpleble ALIAS simpleble)
 
 file(GLOB_RECURSE SHARED_CPP_FILES "../cpp/*.cpp")
 
@@ -38,7 +48,7 @@ target_include_directories(NitroSimplernble PRIVATE
     ../cpp
 )
 
-# Nitro generated 
+# Nitro generated
 find_library(LOG_LIB log)
 
 # Link all libraries together
@@ -47,5 +57,6 @@ target_link_libraries(
     ${LOG_LIB}
     simpleble::simpleble # SimpleBLE library
     android     # Android core - Nitro generated
+    nativehelper # Required for JNI (JNI_GetCreatedJavaVMs)
     -ldl
 )

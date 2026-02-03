@@ -146,6 +146,48 @@ jobs:
       - name: List all artifacts
         run: find $GITHUB_WORKSPACE/build_simpledroidbridge -type f -ls
 
+  build-react-native:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: simplernble
+        run: npm ci
+
+      - name: Update package version
+        working-directory: simplernble
+        run: npm version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+
+      - name: TypeScript compilation
+        working-directory: simplernble
+        run: npm run build
+
+      - name: Nitrogen code generation
+        working-directory: simplernble
+        run: npm run nitrogen
+
+      - name: Verify generated files
+        working-directory: simplernble
+        run: |
+          test -d nitrogen/generated/shared/c++
+          test -d nitrogen/generated/android
+          test -d nitrogen/generated/ios
+          ls -la nitrogen/generated/
+
   build-rust:
     runs-on: ${{ matrix.config.runner-os || 'ubuntu-latest' }}
     container: ${{ matrix.config.container-image }}

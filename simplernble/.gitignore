@@ -5,17 +5,24 @@ dependencies/
 VERSION
 simpledroidbridge/
 
-# iOS build intermediates and binaries
-apple/build_*/
-apple/simpleble_*/
-apple/**/*.a
-apple/**/*.xcframework
+lib/
 
-# macOS build intermediates (XCFramework is committed for npm distribution)
-macos/build_*/
-macos/simpleble_*/
-
-# Nitrogen generated files (regenerated on each `npx nitrogen` run)
 nitrogen/
 
+apple/build_*/
+apple/simpleble_*/
+apple/SimpleBLE.xcframework/
+
+android/build/
+android/.cxx/
+android/.gradle/
+android/prebuilt/
+android/build_android_*/
+
+# Node
 node_modules/
+*.tgz
+
+nitrogen/
+
+tsconfig.tsbuildinfo

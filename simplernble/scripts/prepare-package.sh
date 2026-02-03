@@ -16,6 +16,7 @@ DIRS_TO_CLEAN=(
   "android/build"
   "android/.cxx"
   "android/.gradle"
+  "android/prebuilt"
   "apple/build"
 )
 
@@ -186,6 +187,103 @@ rm -rf "${APPLE_DIR}/simpleble_iphonesimulator_arm64"
 rm -rf "${APPLE_DIR}/simpleble_macosx_arm64"
 rm -rf "${APPLE_DIR}/simpleble_macosx_x86_64"
 rm -rf "${APPLE_DIR}/simpleble_macosx_universal"
+
+# =============================================================================
+# Build SimpleBLE static libraries for Android
+# =============================================================================
+
+echo ""
+echo "Building SimpleBLE for Android..."
+
+ANDROID_DIR="${PACKAGE_DIR}/android"
+ANDROID_PREBUILT_DIR="${ANDROID_DIR}/prebuilt"
+
+# Detect NDK path from environment variables (CI-compatible)
+# Priority: ANDROID_NDK_HOME > ANDROID_NDK > ANDROID_HOME/ndk > ANDROID_SDK_ROOT/ndk
+detect_ndk_from_sdk() {
+    local sdk_root="${1}"
+    if [ -n "$sdk_root" ] && [ -d "$sdk_root/ndk" ]; then
+        # Find the latest NDK version in the SDK
+        local ndk_path=$(ls -d "$sdk_root/ndk"/*/ 2>/dev/null | sort -V | tail -1)
+        if [ -n "$ndk_path" ]; then
+            echo "${ndk_path%/}"  # Remove trailing slash
+            return 0
+        fi
+    fi
+    return 1
+}
+
+NDK_PATH=""
+if [ -n "${ANDROID_NDK_HOME}" ]; then
+    NDK_PATH="${ANDROID_NDK_HOME}"
+elif [ -n "${ANDROID_NDK}" ]; then
+    NDK_PATH="${ANDROID_NDK}"
+elif NDK_PATH=$(detect_ndk_from_sdk "${ANDROID_HOME}"); then
+    : # NDK_PATH already set by detect_ndk_from_sdk
+elif NDK_PATH=$(detect_ndk_from_sdk "${ANDROID_SDK_ROOT}"); then
+    : # NDK_PATH already set by detect_ndk_from_sdk
+fi
+
+if [ -z "${NDK_PATH}" ] || [ ! -d "${NDK_PATH}" ]; then
+    echo "Warning: Android NDK not found. Skipping Android prebuilt libraries."
+    echo "To enable Android builds, set one of these environment variables:"
+    echo "  - ANDROID_NDK_HOME (direct path to NDK)"
+    echo "  - ANDROID_HOME (SDK path, NDK will be found in \$ANDROID_HOME/ndk/)"
+    echo "  - ANDROID_SDK_ROOT (same as ANDROID_HOME)"
+else
+    echo "Using NDK: ${NDK_PATH}"
+
+    # Android ABIs to build
+    ANDROID_ABIS=("arm64-v8a" "armeabi-v7a" "x86_64" "x86")
+    ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-24}"
+
+    # Clean previous prebuilt directory
+    rm -rf "${ANDROID_PREBUILT_DIR}"
+    mkdir -p "${ANDROID_PREBUILT_DIR}"
+
+    # Build for each ABI
+    build_for_android_abi() {
+        local ABI=$1
+        local BUILD_DIR="${ANDROID_DIR}/build_android_${ABI}"
+        local INSTALL_DIR="${ANDROID_PREBUILT_DIR}/${ABI}"
+
+        echo ""
+        echo "Building SimpleBLE for Android ${ABI}..."
+
+        mkdir -p "${BUILD_DIR}"
+        mkdir -p "${INSTALL_DIR}"
+
+        cmake -B "${BUILD_DIR}" -S "${PACKAGE_DIR}/simpleble" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${NDK_PATH}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${ABI}" \
+            -DANDROID_PLATFORM="android-${ANDROID_API_LEVEL}" \
+            -DANDROID_STL=c++_shared \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DSIMPLEBLE_EXCLUDE_C=ON
+
+        cmake --build "${BUILD_DIR}" --config Release --parallel
+        cmake --install "${BUILD_DIR}" --config Release
+
+        echo "Installed to ${INSTALL_DIR}"
+    }
+
+    for ABI in "${ANDROID_ABIS[@]}"; do
+        build_for_android_abi "${ABI}"
+    done
+
+    # Clean up intermediate build directories
+    echo ""
+    echo "Cleaning up Android intermediate build directories..."
+    for ABI in "${ANDROID_ABIS[@]}"; do
+        rm -rf "${ANDROID_DIR}/build_android_${ABI}"
+    done
+
+    echo ""
+    echo "Android SimpleBLE build complete!"
+    echo "Prebuilt libraries at: ${ANDROID_PREBUILT_DIR}"
+fi
 
 echo ""
 echo "Package preparation complete!"

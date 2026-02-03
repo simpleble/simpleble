@@ -18,3 +18,9 @@ target
 .cache
 
 node_modules/
+
+.next/
+next-env.d.ts
+.source
+
+uv.lock
