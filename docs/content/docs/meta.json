@@ -15,6 +15,7 @@
     "simpleble/faq",
     "---SimplePyBLE---",
     "simplepyble/usage",
+    "simplepyble/server",
     "simplepyble/examples",
     "---SimpleDroidBLE---",
     "simpledroidble/usage",
