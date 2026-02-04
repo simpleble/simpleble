@@ -102,7 +102,7 @@ jobs:
           lipo -create \
             ../artifacts/simpleble-macos-arm64/lib/libsimpleble.a \
             ../artifacts/simpleble-macos-x64/lib/libsimpleble.a \
-            -output ../artifacts/simpleble-macos-universal/lib/libsimpleble.a
+            -output ../artifacts/simpleble-macos-universal/lib/libsimpleble.a 
 
           # Create universal iOS Simulator library
           mkdir -p ../artifacts/simpleble-ios-simulator-universal/lib
