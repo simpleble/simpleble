@@ -1,18 +1,8 @@
 cmake_minimum_required(VERSION 3.9.0)
 
 set(PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR}/..)
-if(NOT EXISTS "${PROJECT_ROOT_DIR}/cmake/prelude.cmake")
-    message(FATAL_ERROR "Cannot find bundled SimpleBLE cmake files at ${PROJECT_ROOT_DIR}/cmake. Make sure you're using the npm package contents.")
-endif()
 
-file(READ "${PROJECT_ROOT_DIR}/VERSION" VERSION_FILE_CONTENTS)
-string(STRIP "${VERSION_FILE_CONTENTS}" SIMPLEBLE_VERSION_BASE)
-
-include(${PROJECT_ROOT_DIR}/cmake/prelude.cmake)
-
-project(NitroSimplernble VERSION ${SIMPLEBLE_VERSION_BASE} LANGUAGES CXX)
-
-include(${PROJECT_ROOT_DIR}/cmake/epilogue.cmake)
+project(NitroSimplernble LANGUAGES CXX)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)

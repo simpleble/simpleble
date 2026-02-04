@@ -108,8 +108,10 @@ jobs:
 
       - name: Setup Android prebuilt
         working-directory: simplernble
+        env:
+          ANDROID_ABIS: "arm64-v8a armeabi-v7a x86_64 x86"
         run: |
-          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+          for abi in $ANDROID_ABIS; do
             mkdir -p android/prebuilt/$abi
             cp -r ../artifacts/simpleble-android-$abi/* android/prebuilt/$abi/
           done
@@ -117,10 +119,7 @@ jobs:
       - name: Copy sources from repo
         working-directory: simplernble
         run: |
-          cp -r ../simpleble .
           cp -r ../simpledroidbridge .
-          cp -r ../cmake .
-          cp -r ../dependencies .
           cp ../VERSION .
           cp ../LICENSE.md .
 

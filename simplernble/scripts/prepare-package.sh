@@ -22,10 +22,7 @@ DIRS_TO_CLEAN=(
 
 # Directories/files to copy from repo root
 ITEMS_TO_COPY=(
-  "simpleble"
   "simpledroidbridge"
-  "cmake"
-  "dependencies"
   "VERSION"
   "LICENSE.md"
 )
@@ -91,7 +88,7 @@ build_for_ios_platform() {
     echo ""
     echo "Building SimpleBLE for ${PLATFORM} (${ARCH})..."
 
-    cmake -B "${BUILD_DIR}" -S "${APPLE_DIR}" \
+    cmake -B "${BUILD_DIR}" -S "${REPO_ROOT}/simpleble" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_SYSTEM_NAME=iOS \
         -DCMAKE_OSX_SYSROOT="${PLATFORM}" \
@@ -117,10 +114,8 @@ build_for_macos_platform() {
     echo ""
     echo "Building SimpleBLE for macOS (${ARCH})..."
 
-    cmake -B "${BUILD_DIR}" -S "${APPLE_DIR}" \
+    cmake -B "${BUILD_DIR}" -S "${REPO_ROOT}/simpleble" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_SYSTEM_NAME=Darwin \
-        -DCMAKE_OSX_SYSROOT="macosx" \
         -DCMAKE_OSX_ARCHITECTURES="${ARCH}" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET}" \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
@@ -253,7 +248,7 @@ else
         mkdir -p "${BUILD_DIR}"
         mkdir -p "${INSTALL_DIR}"
 
-        cmake -B "${BUILD_DIR}" -S "${PACKAGE_DIR}/simpleble" \
+        cmake -B "${BUILD_DIR}" -S "${REPO_ROOT}/simpleble" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="${NDK_PATH}/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI="${ABI}" \
