@@ -31,16 +31,16 @@ jobs:
       - name: Add Version Suffix
         uses: ./.github/actions/setup-version
 
-      - name: Setup Android SDK
-        if: matrix.config.os == 'android'
-        uses: android-actions/setup-android@v3
-
       - name: Setup Java
         if: matrix.config.os == 'android'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Setup Android SDK
+        if: matrix.config.os == 'android'
+        uses: android-actions/setup-android@v3
 
       - name: Install Android NDK
         if: matrix.config.os == 'android'
