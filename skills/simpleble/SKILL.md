@@ -1,0 +1,31 @@
+---
+name: simpleble
+description: Use the SimpleBLE MCP server to scan, connect, and interact with Bluetooth devices. This skill provides guidance on the recommended flow (scan -> connect -> services -> read/notify) and handles platform-specific differences like UUIDs on macOS vs MAC addresses on Linux. Use when the user wants to interact with BLE hardware or debug Bluetooth connections.
+---
+
+# SimpleBLE
+
+This skill provides instructions for using the SimpleBLE MCP server to interact with Bluetooth Low Energy (BLE) devices directly from the host machine.
+
+## Quick Start Flow
+
+Always follow this sequence for reliable BLE interactions:
+
+1. **Discovery**: Call `get_adapters` to find available Bluetooth hardware.
+2. **Scanning**: Call `scan_for` (default 5s) to find nearby peripherals.
+3. **Connection**: Call `connect` using the `address` from the scan results.
+4. **Exploration**: Call `services` to list available GATT services and characteristics.
+5. **Interaction**: Use `read` for one-time values or `notify` for streaming data.
+6. **Cleanup**: Always call `disconnect` when finished to release the device.
+
+## Core Instructions
+
+- **Scanning**: Prefer scanning immediately before connecting to ensure the device is in the internal cache.
+- **Addressing**: Be aware that macOS/iOS uses UUIDs for addresses, while Linux/Windows uses MAC addresses.
+- **Data Handling**: Binary data is returned as both `data_hex` and `data_utf8` (best-effort). Use `data_hex` for protocol analysis and `data_utf8` for human-readable strings.
+- **Notifications**: The `notify` tool collects samples for a fixed duration and then automatically unsubscribes.
+
+## Additional Resources
+
+- For detailed tool documentation and platform notes, see [reference.md](reference.md).
+- For concrete usage examples and troubleshooting, see [examples.md](examples.md).
