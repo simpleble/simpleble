@@ -74,6 +74,11 @@ skbuild.setup(
         "pybind11",
     ],
     install_requires=[],
+    entry_points={
+        "console_scripts": [
+            "simpleble-mcp = simplepyble.mcp_server:main",
+        ],
+    },
     extras_require={
         "mcp": ["fastmcp"],
         "server": ["fastapi", "uvicorn", "pydantic"],
