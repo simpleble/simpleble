@@ -1,4 +1,5 @@
 .vscode
+.cursor
 *.binlog
 .DS_Store
 _build
