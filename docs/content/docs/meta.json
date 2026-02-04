@@ -29,6 +29,8 @@
     "simpledbus/usage",
     "simpledbus/examples",
     "simpledbus/architecture",
+    "---MCP Server---",
+    "mcp/usage",
     "---Tutorials---",
     "cmake_primer"
   ]

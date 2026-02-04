@@ -1,0 +1,168 @@
+---
+title: MCP Usage
+description: Run and use the SimplePyBLE MCP server.
+---
+
+The SimplePyBLE MCP server provides local BLE tools to MCP-capable clients. It is designed for development, debugging, and AI-assisted workflows that need direct access to BLE hardware on the host machine.
+
+## Installation
+
+The MCP server is part of the repository. For local development/testing, install from source:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install .
+pip install fastmcp
+```
+
+If you only need the REST server, see the SimplePyBLE usage page.
+
+## Running the server
+
+Default transport is STDIO (recommended for IDE-integrated MCP clients):
+
+```bash
+python3 -m simplepyble.mcp_server
+```
+
+HTTP transport is available for manual testing:
+
+```bash
+python3 -m simplepyble.mcp_server --transport http --host 127.0.0.1 --port 8000
+```
+
+## Tool catalog
+
+All tool inputs/outputs are JSON-serializable. Byte values are returned as hex strings with a best-effort UTF-8 decode.
+
+### `get_adapters`
+List available Bluetooth adapters.
+
+Response:
+```json
+[
+  {"identifier": "Default Adapter [UUID]", "address": "UUID"}
+]
+```
+
+### `scan_for(timeout_ms=5000, adapter_index=0)`
+Scan for nearby BLE devices.
+
+Response:
+```json
+[
+  {
+    "identifier": "DeviceName",
+    "address": "UUID-or-MAC",
+    "rssi": -55,
+    "connectable": true,
+    "manufacturer_data": {"76": "0215..."}
+  }
+]
+```
+
+### `connect(address)`
+Connect to a device found in the last scan.
+
+Response:
+```json
+{"message": "Connected to DeviceName", "address": "UUID-or-MAC"}
+```
+
+### `disconnect(address)`
+Disconnect from a connected device.
+
+Response:
+```json
+{"message": "Disconnected from DeviceName", "address": "UUID-or-MAC"}
+```
+
+### `services(address)`
+List services and characteristics for a connected device.
+
+Response:
+```json
+{
+  "identifier": "DeviceName",
+  "address": "UUID-or-MAC",
+  "connected": true,
+  "mtu": 23,
+  "services": [
+    {"uuid": "service-uuid", "characteristics": ["char-uuid"]}
+  ]
+}
+```
+
+### `read(address, service_uuid, char_uuid)`
+Read a characteristic value.
+
+Response:
+```json
+{
+  "service_uuid": "service-uuid",
+  "char_uuid": "char-uuid",
+  "data_hex": "00aabb",
+  "data_utf8": "..."
+}
+```
+
+### `notify(address, service_uuid, char_uuid, duration_ms=5000)`
+Subscribe to notifications for a duration and return collected samples, then unsubscribe.
+
+Response:
+```json
+[
+  {
+    "service": "service-uuid",
+    "characteristic": "char-uuid",
+    "data_hex": "163c00",
+    "data_utf8": "...",
+    "type": "notification"
+  }
+]
+```
+
+## Recommended flow
+
+1. `get_adapters`
+2. `scan_for`
+3. `connect`
+4. `services`
+5. `read` or `notify`
+6. `disconnect`
+
+## Platform notes
+
+- On macOS/iOS, device “address” is a UUID, not a MAC address.
+- Advertisement fields (RSSI, manufacturer data, service UUIDs) can vary by OS and device.
+- Some characteristics require pairing or may be restricted by the OS.
+
+## MCP client example (FastMCP)
+
+```python
+import asyncio
+from fastmcp import Client
+
+async def main():
+    async with Client("http://127.0.0.1:8000/mcp") as client:
+        adapters = await client.call_tool("get_adapters", {})
+        scan = await client.call_tool("scan_for", {"timeout_ms": 5000})
+        print(adapters.structured_content)
+        print(scan.structured_content)
+
+asyncio.run(main())
+```
+
+Note: FastMCP returns structured results under `structured_content` rather than `data` for some tool outputs.
+
+## Guidance for AI tool consumers
+
+To make this MCP server easy for AI agents to use:
+
+- Keep tool descriptions concise and action-oriented (already provided via docstrings).
+- Prefer deterministic outputs and stable schemas.
+- Encourage agents to follow the recommended flow (scan before connect).
+- Suggest verifying capabilities via `services` before reads/notifications.
+- Surface actionable errors (no adapter, not connected, not in scan results).
+

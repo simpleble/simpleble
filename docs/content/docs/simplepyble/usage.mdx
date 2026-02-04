@@ -43,3 +43,20 @@ python3 -m simplepyble.server --host 127.0.0.1 --port 8000
 ```
 
 For detailed information on how to install, run, and interact with the server, please refer to the [REST Server](./server) documentation.
+
+## MCP Server (FastMCP)
+
+SimplePyBLE also ships an MCP server powered by FastMCP for local tool access from MCP-capable clients. Install the optional dependencies:
+
+```bash
+pip install simplepyble[mcp]
+```
+
+Run the MCP server over STDIO (default) or HTTP:
+
+```bash
+python3 -m simplepyble.mcp_server
+python3 -m simplepyble.mcp_server --transport http --host 127.0.0.1 --port 8000
+```
+
+Manual smoke test: use an MCP client to call `adapters_list` and `scan_run` once the server is running.
