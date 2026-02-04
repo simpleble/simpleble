@@ -13,6 +13,7 @@ jobs:
         config:
           - { runner-os: macos-14, os: ios, arch: aarch64, artifact: ios-arm64 }
           - { runner-os: macos-14, os: ios-simulator, arch: aarch64, artifact: ios-simulator-arm64 }
+          - { runner-os: macos-14, os: ios-simulator, arch: x64, artifact: ios-simulator-x64 }
           - { runner-os: macos-14, os: macos, arch: aarch64, artifact: macos-arm64 }
           - { runner-os: macos-14, os: macos, arch: x64, artifact: macos-x64 }
           - { runner-os: ubuntu-22.04, os: android, arch: arm64-v8a, artifact: android-arm64-v8a }
@@ -96,12 +97,20 @@ jobs:
             ../artifacts/simpleble-macos-x64/lib/libsimpleble.a \
             -output ../artifacts/simpleble-macos-universal/lib/libsimpleble.a
 
+          # Create universal iOS Simulator library
+          mkdir -p ../artifacts/simpleble-ios-simulator-universal/lib
+          cp -r ../artifacts/simpleble-ios-simulator-arm64/include ../artifacts/simpleble-ios-simulator-universal/
+          lipo -create \
+            ../artifacts/simpleble-ios-simulator-arm64/lib/libsimpleble.a \
+            ../artifacts/simpleble-ios-simulator-x64/lib/libsimpleble.a \
+            -output ../artifacts/simpleble-ios-simulator-universal/lib/libsimpleble.a
+
           # Create XCFramework
           xcodebuild -create-xcframework \
             -library ../artifacts/simpleble-ios-arm64/lib/libsimpleble.a \
             -headers ../artifacts/simpleble-ios-arm64/include \
-            -library ../artifacts/simpleble-ios-simulator-arm64/lib/libsimpleble.a \
-            -headers ../artifacts/simpleble-ios-simulator-arm64/include \
+            -library ../artifacts/simpleble-ios-simulator-universal/lib/libsimpleble.a \
+            -headers ../artifacts/simpleble-ios-simulator-universal/include \
             -library ../artifacts/simpleble-macos-universal/lib/libsimpleble.a \
             -headers ../artifacts/simpleble-macos-universal/include \
             -output apple/SimpleBLE.xcframework

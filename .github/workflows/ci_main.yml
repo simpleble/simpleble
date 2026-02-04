@@ -224,7 +224,7 @@ jobs:
 
   publish-react-native:
     needs: [publish-release]
-    if: github.event_name == 'release'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     runs-on: ubuntu-22.04
 
     steps:
