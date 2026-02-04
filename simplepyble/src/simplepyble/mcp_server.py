@@ -1,10 +1,4 @@
-try:
-    from fastmcp import FastMCP
-except ImportError:
-    print("Dependencies for SimplePyBLE MCP server are not installed.")
-    print("Please install them using: pip install simplepyble[mcp]")
-    raise SystemExit(1)
-
+from fastmcp import FastMCP
 import argparse
 import time
 from typing import Dict, List, Optional
@@ -37,7 +31,7 @@ class BleState:
 
 
 ble_state = BleState()
-mcp = FastMCP(name="SimplePyBLE MCP Server")
+mcp = FastMCP(name="SimpleBLE MCP Server")
 
 
 @mcp.tool(
