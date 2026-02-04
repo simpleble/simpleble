@@ -62,7 +62,7 @@ check_changelog() {
     local current_commit_tag=$1
     if [[ -n "$current_commit_tag" ]]; then
         echo "- Release tag found in changelog?"
-        if grep -q "$current_commit_tag" docs/changelog.rst; then
+        if grep -q "$current_commit_tag" docs/content/docs/changelog.mdx; then
             echo "  OK"
             return 0
         else

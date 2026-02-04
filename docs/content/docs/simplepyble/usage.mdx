@@ -1,0 +1,45 @@
+---
+title: Usage
+description: Build and run SimplePyBLE in your specific environment.
+---
+
+SimpleBLE works on Windows, Linux and MacOS. Please follow the instructions below to build and run SimplePyBLE in your specific environment.
+
+## Installing from PyPI
+
+The fastest way to get going with SimplePyBLE is to install it from PyPI:
+
+```bash
+pip install simplepyble
+```
+
+Please take into consideration that when using this library on Linux, you will need to have the following dependencies installed:
+
+```bash
+sudo apt-get install libdbus-1-dev
+```
+
+## Installing locally
+
+If you wish to install SimplePyBLE locally, either for development purposes or to access the latest features, you can do so by cloning the repository and installing it with pip:
+
+```bash
+cd <path-to-simpleble>/simplepyble
+pip install .
+```
+
+## Built-in REST Server
+
+SimplePyBLE includes a built-in REST server that allows you to control BLE devices using a REST API. To use the server, you need to install the optional dependencies:
+
+```bash
+pip install simplepyble[server]
+```
+
+Once the dependencies are installed, you can run the server using the following command:
+
+```bash
+python3 -m simplepyble.server --host 127.0.0.1 --port 8000
+```
+
+For detailed information on how to install, run, and interact with the server, please refer to the [REST Server](./server) documentation.

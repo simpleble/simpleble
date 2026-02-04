@@ -22,17 +22,11 @@ std::string AdapterLinux::identifier() { return adapter_->identifier(); }
 
 BluetoothAddress AdapterLinux::address() { return adapter_->address(); }
 
-void AdapterLinux::power_on() {
-    // TODO: This will be implemented after SimpleDBus and SimpleBluez are updated to the new architecture.
-}
+void AdapterLinux::power_on() { adapter_->powered(true); }
 
-void AdapterLinux::power_off() {
-    // TODO: This will be implemented after SimpleDBus and SimpleBluez are updated to the new architecture.
-}
+void AdapterLinux::power_off() { adapter_->powered(false); }
 
-bool AdapterLinux::is_powered() {
-    return adapter_->powered();
-}
+bool AdapterLinux::is_powered() { return adapter_->powered(); }
 
 void AdapterLinux::scan_start() {
     seen_peripherals_.clear();

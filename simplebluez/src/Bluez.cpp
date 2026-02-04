@@ -1,15 +1,12 @@
 #include <simplebluez/Bluez.h>
 #include <simpledbus/interfaces/ObjectManager.h>
 
+#include <simplebluez/Config.h>
+
 using namespace SimpleBluez;
 
-#ifdef SIMPLEBLUEZ_USE_SESSION_DBUS
-#define DBUS_BUS DBUS_BUS_SESSION
-#else
-#define DBUS_BUS DBUS_BUS_SYSTEM
-#endif
-
-Bluez::Bluez() : _conn(std::make_shared<SimpleDBus::Connection>(DBUS_BUS)) {}
+Bluez::Bluez()
+    : _conn(std::make_shared<SimpleDBus::Connection>(Config::use_system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION)) {}
 
 Bluez::~Bluez() {
     if (_conn->is_initialized()) {
@@ -23,14 +20,16 @@ void Bluez::init() {
 
     _bluez_root = SimpleDBus::Proxy::create<BluezRoot>(_conn, "org.bluez", "/");
     _bluez_root->load_managed_objects();
+
+    _custom_root = SimpleDBus::Proxy::create<CustomRoot>(_conn, "org.simplebluez", "/");
 }
 
-void Bluez::run_async() {
-    _conn->read_write_dispatch();
-}
+void Bluez::run_async() { _conn->read_write_dispatch(); }
+
+std::shared_ptr<CustomRoot> Bluez::root_custom() { return _custom_root; }
+
+std::shared_ptr<BluezRoot> Bluez::root_bluez() { return _bluez_root; }
 
 std::vector<std::shared_ptr<Adapter>> Bluez::get_adapters() { return _bluez_root->get_adapters(); }
 
-std::shared_ptr<Agent> Bluez::get_agent() { return _bluez_root->get_agent(); }
-
-void Bluez::register_agent() { _bluez_root->register_agent(); }
+void Bluez::register_agent(std::shared_ptr<Agent> agent) { _bluez_root->register_agent(agent); }

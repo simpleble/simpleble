@@ -3,8 +3,6 @@
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
 
-#include "kvn/kvn_safe_callback.hpp"
-
 #include <simplebluez/Types.h>
 
 #include <string>
@@ -21,18 +19,8 @@ class GattDescriptor1 : public SimpleDBus::Interface {
     ByteArray ReadValue();
 
     // ----- PROPERTIES -----
-    std::string UUID();
-    ByteArray Value();
-
-    // ----- CALLBACKS -----
-    kvn::safe_callback<void()> OnValueChanged;
-
-  protected:
-    void property_changed(std::string option_name) override;
-    void update_value(SimpleDBus::Holder& new_value);
-
-    std::string _uuid;
-    ByteArray _value;
+    Property<std::string>& UUID = property<std::string>("UUID");
+    Property<ByteArray>& Value = property<ByteArray>("Value");
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattDescriptor1> registry;

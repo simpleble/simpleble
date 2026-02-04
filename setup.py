@@ -13,7 +13,9 @@ def exclude_unnecessary_files(cmake_manifest):
             name.endswith(".so")
             or name.endswith(".dylib")
             or name.endswith("py")
+            or name.endswith("pyi")
             or name.endswith("pyd")
+            or name.endswith("py.typed")
         )
         print(f"Parsing file: {name} - {is_necessary}")
         return is_necessary
@@ -59,6 +61,7 @@ skbuild.setup(
     long_description_content_type="text/x-rst",
     packages=["simplepyble"],
     package_dir={"": "simplepyble/src"},
+    package_data={"simplepyble": ["py.typed", "*.pyi"]},
     cmake_source_dir="simplepyble",
     cmake_args=cmake_options,
     cmake_process_manifest_hook=exclude_unnecessary_files,
@@ -71,7 +74,9 @@ skbuild.setup(
         "pybind11",
     ],
     install_requires=[],
-    extras_require={},
+    extras_require={
+        "server": ["fastapi", "uvicorn", "pydantic"],
+    },
     platforms="Windows, macOS, Linux",
     python_requires=">=3.8",
     classifiers=[

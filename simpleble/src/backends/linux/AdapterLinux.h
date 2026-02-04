@@ -7,7 +7,7 @@
 
 #include <kvn_safe_callback.hpp>
 
-#include <simplebluez/Adapter.h>
+#include <simplebluez/standard/Adapter.h>
 
 #include <atomic>
 #include <functional>

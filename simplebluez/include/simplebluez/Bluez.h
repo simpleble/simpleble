@@ -2,10 +2,10 @@
 
 #include <simpledbus/advanced/Proxy.h>
 
-#include <simplebluez/BluezRoot.h>
-#include <simplebluez/Adapter.h>
-#include <simplebluez/Agent.h>
-
+#include <simplebluez/standard/Adapter.h>
+#include <simplebluez/standard/Agent.h>
+#include <simplebluez/standard/BluezRoot.h>
+#include <simplebluez/standard/CustomRoot.h>
 #include <vector>
 
 namespace SimpleBluez {
@@ -24,13 +24,16 @@ class Bluez {
     void init();
     void run_async();
 
+    std::shared_ptr<CustomRoot> root_custom();
+    std::shared_ptr<BluezRoot> root_bluez();
+
     std::vector<std::shared_ptr<Adapter>> get_adapters();
-    std::shared_ptr<Agent> get_agent();
-    void register_agent();
+    void register_agent(std::shared_ptr<Agent> agent);
 
   private:
     std::shared_ptr<SimpleDBus::Connection> _conn;
     std::shared_ptr<SimpleBluez::BluezRoot> _bluez_root;
+    std::shared_ptr<SimpleBluez::CustomRoot> _custom_root;
 };
 
 }  // namespace SimpleBluez

@@ -9,17 +9,14 @@ namespace SimpleBluez {
 class GattService1 : public SimpleDBus::Interface {
   public:
     GattService1(std::shared_ptr<SimpleDBus::Connection> conn, std::shared_ptr<SimpleDBus::Proxy> proxy);
-    virtual ~GattService1() = default;
+    virtual ~GattService1();
 
     // ----- METHODS -----
 
     // ----- PROPERTIES -----
-    std::string UUID();
-
-  protected:
-    void property_changed(std::string option_name) override;
-
-    std::string _uuid;
+    Property<std::string>& UUID = property<std::string>("UUID");
+    Property<bool>& Primary = property<bool>("Primary");
+    Property<std::vector<std::string>>& Characteristics = property<std::vector<std::string>>("Characteristics");
 
   private:
     static const SimpleDBus::AutoRegisterInterface<GattService1> registry;

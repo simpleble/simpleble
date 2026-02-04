@@ -79,6 +79,7 @@ jobs:
 
   examples:
     runs-on: ubuntu-22.04
+    if: ${{ inputs.libraries != '[]' && inputs.libraries != '' }}
     strategy:
       fail-fast: false
       matrix:

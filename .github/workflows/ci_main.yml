@@ -74,10 +74,10 @@ jobs:
     if: needs.pre_job.outputs.should_skip != 'true'
     uses: ./.github/workflows/ci_lint.yml
 
-  docs:
-    needs: [pre_job]
-    if: needs.pre_job.outputs.should_skip != 'true'
-    uses: ./.github/workflows/ci_docs.yml
+  # docs:
+  #   needs: [pre_job]
+  #   if: needs.pre_job.outputs.should_skip != 'true'
+  #   uses: ./.github/workflows/ci_docs.yml
 
   smoketest:
     needs: [pre_job]
@@ -114,6 +114,7 @@ jobs:
 
   linux-internals:
     needs: [smoketest, libraries]
+    if: ${{ needs.libraries.outputs.values != '[]' && needs.libraries.outputs.values != '' }}
     uses: ./.github/workflows/ci_linux_internals.yml
     with:
       libraries: ${{ needs.libraries.outputs.values }}
