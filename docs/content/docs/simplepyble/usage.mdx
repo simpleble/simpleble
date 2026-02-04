@@ -28,25 +28,9 @@ cd <path-to-simpleble>/simplepyble
 pip install .
 ```
 
-## Built-in REST Server
+## MCP Server
 
-SimplePyBLE includes a built-in REST server that allows you to control BLE devices using a REST API. To use the server, you need to install the optional dependencies:
-
-```bash
-pip install simplepyble[server]
-```
-
-Once the dependencies are installed, you can run the server using the following command:
-
-```bash
-python3 -m simplepyble.server --host 127.0.0.1 --port 8000
-```
-
-For detailed information on how to install, run, and interact with the server, please refer to the [REST Server](./server) documentation.
-
-## MCP Server (FastMCP)
-
-SimplePyBLE also ships an MCP server powered by FastMCP for local tool access from MCP-capable clients. Install the optional dependencies:
+SimplePyBLE also ships an MCP server powered by FastMCP for local tool access from MCP-capable clients. To use the MCP server, you need to install the optional dependencies:
 
 ```bash
 pip install simplepyble[mcp]

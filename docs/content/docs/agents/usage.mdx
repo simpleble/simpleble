@@ -1,5 +1,5 @@
 ---
-title: MCP Usage
+title: Usage
 description: Run and use the SimplePyBLE MCP server.
 ---
 
@@ -7,30 +7,70 @@ The SimplePyBLE MCP server provides local BLE tools to MCP-capable clients. It i
 
 ## Installation
 
-The MCP server is part of the repository. For local development/testing, install from source:
+First, install the package with the `mcp` extra:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install .
-pip install fastmcp
+pip install "simplepyble[mcp]"
 ```
 
-If you only need the REST server, see the SimplePyBLE usage page.
+<details open>
+<summary><b>Install in Cursor</b></summary>
 
-## Running the server
+Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
 
-Default transport is STDIO (recommended for IDE-integrated MCP clients):
+Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol) for more info.
 
-```bash
-python3 -m simplepyble.mcp_server
+#### Cursor Local Server Connection
+
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=simpleble&config=eyJjb21tYW5kIjogInNpbXBsZWJsZS1tY3AifQo=)
+
+```json
+{
+  "mcpServers": {
+    "simpleble": {
+      "command": "simpleble-mcp"
+    }
+  }
+}
 ```
 
-HTTP transport is available for manual testing:
+*Note: You must have installed the package first via `pip install "simplepyble[mcp]"`. If `simpleble-mcp` is not in your system PATH, you may need to provide the full path to the executable.*
 
-```bash
-python3 -m simplepyble.mcp_server --transport http --host 127.0.0.1 --port 8000
+</details>
+
+<details>
+<summary><b>Install in Claude Code</b></summary>
+
+Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
+
+#### Claude Code Local Server Connection
+
+```sh
+claude mcp add simpleble -- simpleble-mcp
 ```
+
+</details>
+
+<details>
+<summary><b>Install in Opencode</b></summary>
+
+Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+
+#### Opencode Local Server Connection
+
+```json
+{
+  "mcp": {
+    "simpleble": {
+      "type": "local",
+      "command": ["simpleble-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+</details>
 
 ## Tool catalog
 
@@ -138,31 +178,33 @@ Response:
 - Advertisement fields (RSSI, manufacturer data, service UUIDs) can vary by OS and device.
 - Some characteristics require pairing or may be restricted by the OS.
 
-## MCP client example (FastMCP)
+## MCP client example (FastMCP via HTTP)
+
+If you are running the server manually using the HTTP transport (`simpleble-mcp --transport http`), you can connect to it using a FastMCP client:
 
 ```python
 import asyncio
 from fastmcp import Client
 
 async def main():
+    # Connect to the server running on the default port 8000
     async with Client("http://127.0.0.1:8000/mcp") as client:
         adapters = await client.call_tool("get_adapters", {})
-        scan = await client.call_tool("scan_for", {"timeout_ms": 5000})
-        print(adapters.structured_content)
-        print(scan.structured_content)
-
-asyncio.run(main())
+        # ...
 ```
 
 Note: FastMCP returns structured results under `structured_content` rather than `data` for some tool outputs.
 
-## Guidance for AI tool consumers
+## Running the server manually
 
-To make this MCP server easy for AI agents to use:
+While Cursor handles starting the server automatically, you can also run it manually for testing.
 
-- Keep tool descriptions concise and action-oriented (already provided via docstrings).
-- Prefer deterministic outputs and stable schemas.
-- Encourage agents to follow the recommended flow (scan before connect).
-- Suggest verifying capabilities via `services` before reads/notifications.
-- Surface actionable errors (no adapter, not connected, not in scan results).
+**STDIO Transport (Default):**
+```bash
+simpleble-mcp
+```
 
+**HTTP Transport:**
+```bash
+simpleble-mcp --transport http --host 127.0.0.1 --port 8000
+```
