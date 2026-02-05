@@ -27,5 +27,5 @@ Always follow this sequence for reliable BLE interactions:
 
 ## Additional Resources
 
-- For detailed tool documentation and platform notes, see [reference.md](reference.md).
-- For concrete usage examples and troubleshooting, see [examples.md](examples.md).
+- For detailed tool documentation and platform notes, see [the reference guide](references/REFERENCE.md).
+- For concrete usage examples, see [examples.md](references/examples.md).

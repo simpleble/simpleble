@@ -43,24 +43,3 @@
 2. Call `scan_for(timeout_ms=10000)` with a longer timeout to give devices more time to advertise.
 3. Analyze the results: if no devices are found, suggest checking physical proximity or if the device is already paired/connected to another host.
 4. If devices are found but not the specific one, list the found identifiers to see if it's appearing with a different name.
-
-## Troubleshooting
-
-### Server not responding
-If the MCP server is not responding, check if it's configured in `.cursor/mcp.json` or `~/.cursor/mcp.json`. 
-
-**Example config:**
-```json
-{
-  "mcpServers": {
-    "simpleble": {
-      "command": "python",
-      "args": ["-m", "simplepyble.mcp"],
-      "cwd": "/path/to/simpleble"
-    }
-  }
-}
-```
-
-### Permission Denied
-On macOS, ensure Cursor has "Bluetooth" permissions in System Settings -> Privacy & Security.
