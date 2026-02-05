@@ -27,20 +27,3 @@ If you wish to install SimplePyBLE locally, either for development purposes or t
 cd <path-to-simpleble>/simplepyble
 pip install .
 ```
-
-## MCP Server
-
-SimplePyBLE also ships an MCP server powered by FastMCP for local tool access from MCP-capable clients. To use the MCP server, you need to install the optional dependencies:
-
-```bash
-pip install simplepyble[mcp]
-```
-
-Run the MCP server over STDIO (default) or HTTP:
-
-```bash
-python3 -m simplepyble.mcp_server
-python3 -m simplepyble.mcp_server --transport http --host 127.0.0.1 --port 8000
-```
-
-Manual smoke test: use an MCP client to call `get_adapters` and `scan_for` once the server is running**.**
