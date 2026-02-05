@@ -3,32 +3,44 @@
 ## Tool Catalog
 
 ### Adapter Management
+
 - `get_adapters`: Lists all Bluetooth adapters. Returns `identifier` and `address`.
-- `scan_for(timeout_ms, adapter_index)`: Scans for devices. Returns `identifier`, `address`, `rssi`, `connectable`, and `manufacturer_data`.
+- `scan_for(timeout_ms)`: Scans for devices using the first available adapter. Returns `identifier`, `address`, `rssi`, `connectable`, and `manufacturer_data`.
 
 ### Connection Management
-- `connect(address)`: Establishes a GATT connection.
+
+- `connect(address)`: Establishes a connection.
 - `disconnect(address)`: Terminates the connection.
 
 ### GATT Operations
+
 - `services(address)`: Discovers services and characteristics. Returns a list of services with their UUIDs and associated characteristic UUIDs.
 - `read(address, service_uuid, char_uuid)`: Reads a single value. Returns `data_hex` and `data_utf8`.
-- `notify(address, service_uuid, char_uuid, duration_ms)`: Subscribes to notifications for `duration_ms`, collects samples, and then unsubscribes.
+- `write_request(address, service_uuid, char_uuid, data)`: Writes data (hex string) to a characteristic with response.
+- `write_command(address, service_uuid, char_uuid, data)`: Writes data (hex string) to a characteristic without response.
+- `notify(address, service_uuid, char_uuid)`: Subscribes to notifications. Data is buffered in the background.
+- `indicate(address, service_uuid, char_uuid)`: Subscribes to indications. Data is buffered in the background.
+- `get_notifications(address)`: Retrieves and clears all buffered notifications/indications.
+- `unsubscribe(address, service_uuid, char_uuid)`: Unsubscribes from notifications or indications.
 
 ## Platform-Specific Behavior
 
 ### macOS / iOS
-- **Addresses**: Uses randomized UUIDs (e.g., `5E2A...`) instead of hardware MAC addresses. These UUIDs are persistent for the local machine but different across different hosts.
+
+- **Addresses**: Uses randomized UUIDs (e.g., `5E2A...`) instead of hardware MAC addresses. These UUIDs are temporary and may change between sessions or device restarts.
 - **Permissions**: Requires Bluetooth permissions. If the MCP server fails to start or scan, check System Settings.
 
 ### Linux (BlueZ)
+
 - **Addresses**: Uses standard MAC addresses (e.g., `AA:BB:CC:DD:EE:FF`).
-- **Dependencies**: Requires `dbus` and `libdbus-1-dev` (or equivalent) to be installed.
+- **Dependencies**: Works on any Linux OS that uses BlueZ.
 
 ## Data Encoding
+
 - **Hex**: Always provided as a lowercase string without `0x` prefix.
 - **UTF-8**: Decoded using `errors="ignore"`. If the data is purely binary, this field may contain garbled text or be empty.
 
 ## Error Handling
+
 - **"Device not found in scan results"**: You must call `scan_for` before `connect` so the server knows which peripheral to use.
-- **"Device not connected"**: Call `connect` before attempting `services`, `read`, or `notify`.
+- **"Device not connected"**: Call `connect` before attempting `services`, `read`, `notify`, or `indicate`.

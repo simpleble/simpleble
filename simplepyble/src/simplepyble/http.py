@@ -29,7 +29,7 @@ app = FastAPI(
 )
 
 # Global state to hold adapters and peripherals
-# In a real production scenario, this might need more robust state management
+# This might need more robust state management
 class BleState:
     def __init__(self):
         self.adapters = simplepyble.Adapter.get_adapters()

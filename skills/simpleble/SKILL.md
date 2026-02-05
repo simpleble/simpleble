@@ -9,13 +9,13 @@ This skill provides instructions for using the SimpleBLE MCP server to interact 
 
 ## Quick Start Flow
 
-Always follow this sequence for reliable BLE interactions:
+Always follow this sequence for BLE interactions:
 
-1. **Discovery**: Call `get_adapters` to find available Bluetooth hardware.
+1. **Initialization**: Call `get_adapters` to find available Bluetooth hardware.
 2. **Scanning**: Call `scan_for` (default 5s) to find nearby peripherals.
 3. **Connection**: Call `connect` using the `address` from the scan results.
 4. **Exploration**: Call `services` to list available GATT services and characteristics.
-5. **Interaction**: Use `read` for one-time values or `notify` for streaming data.
+5. **Interaction**: Use `read` for one-time values, `write_request`/`write_command` to send data, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data.
 6. **Cleanup**: Always call `disconnect` when finished to release the device.
 
 ## Core Instructions
@@ -23,9 +23,11 @@ Always follow this sequence for reliable BLE interactions:
 - **Scanning**: Prefer scanning immediately before connecting to ensure the device is in the internal cache.
 - **Addressing**: Be aware that macOS/iOS uses UUIDs for addresses, while Linux/Windows uses MAC addresses.
 - **Data Handling**: Binary data is returned as both `data_hex` and `data_utf8` (best-effort). Use `data_hex` for protocol analysis and `data_utf8` for human-readable strings.
-- **Notifications**: The `notify` tool collects samples for a fixed duration and then automatically unsubscribes.
+- **Notifications/Indications**: Use `notify` or `indicate` to subscribe, `get_notifications` to retrieve buffered data, and `unsubscribe` when done.
+- **Bluetooth Status**: Assume Bluetooth is enabled by default. Only check `bluetooth_enabled` when an operation fails.
 
 ## Additional Resources
 
 - For detailed tool documentation and platform notes, see [the reference guide](references/REFERENCE.md).
 - For concrete usage examples, see [examples.md](references/examples.md).
+- For troubleshooting common issues, see [troubleshooting.md](references/troubleshooting.md).

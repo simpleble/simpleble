@@ -34,7 +34,33 @@
 5. Attempt a `read` from a known characteristic (e.g., Device Name or Battery Level) to verify data access.
 6. Report the status of each step to the user to help pinpoint where it fails.
 
-## Example 4: Troubleshooting Discovery
+## Example 4: Writing to a Characteristic
+
+**User**: "Send the command 0x01 to the control characteristic on my device at AA:BB:CC:DD:EE:FF."
+
+**Agent Workflow**:
+1. Call `scan_for` to ensure the device is in cache.
+2. Call `connect("AA:BB:CC:DD:EE:FF")`.
+3. Call `services("AA:BB:CC:DD:EE:FF")` to find the relevant service and characteristic.
+4. Call `write_request("AA:BB:CC:DD:EE:FF", "service-uuid", "char-uuid", "01")` for a write with response, or `write_command(...)` for a write without response.
+5. Call `disconnect("AA:BB:CC:DD:EE:FF")`.
+
+## Example 5: Streaming Notification Data
+
+**User**: "Subscribe to heart rate notifications from my device at AA:BB:CC:DD:EE:FF."
+
+**Agent Workflow**:
+1. Call `scan_for` to ensure the device is in cache.
+2. Call `connect("AA:BB:CC:DD:EE:FF")`.
+3. Call `services("AA:BB:CC:DD:EE:FF")` to find the Heart Rate Service (usually `0000180d-...`).
+4. Identify the Heart Rate Measurement characteristic (usually `00002a37-...`).
+5. Call `notify("AA:BB:CC:DD:EE:FF", "180d", "2a37")` to subscribe.
+6. Wait, then call `get_notifications("AA:BB:CC:DD:EE:FF")` to retrieve buffered samples.
+7. Repeat `get_notifications` as needed to collect more data.
+8. Call `unsubscribe("AA:BB:CC:DD:EE:FF", "180d", "2a37")` when done.
+9. Call `disconnect("AA:BB:CC:DD:EE:FF")`.
+
+## Example 6: Troubleshooting Discovery
 
 **User**: "I've made this Bluetooth integration but I'm not finding any device, please see if you can find any BLE device."
 

@@ -34,7 +34,7 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 }
 ```
 
-*Note: You must have installed the package first via `pip install "simplepyble[mcp]"`. If `simpleaible` is not in your system PATH, you may need to provide the full path to the executable.*
+_Note: You must have installed the package first via `pip install "simplepyble[mcp]"`. If `simpleaible` is not in your system PATH, you may need to provide the full path to the executable._
 
 </details>
 
@@ -76,20 +76,34 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 All tool inputs/outputs are JSON-serializable. Byte values are returned as hex strings with a best-effort UTF-8 decode.
 
+### `bluetooth_enabled`
+
+Check if Bluetooth is enabled on the host system. Use this tool only when troubleshooting failed operations.
+
+Response:
+
+```json
+{ "enabled": true }
+```
+
+**Important**: Only call this tool when a BLE operation fails. Assume Bluetooth is enabled by default. Bluetooth must be enabled for all operations to work.
+
 ### `get_adapters`
+
 List available Bluetooth adapters.
 
 Response:
+
 ```json
-[
-  {"identifier": "Default Adapter [UUID]", "address": "UUID"}
-]
+[{ "identifier": "Default Adapter [UUID]", "address": "UUID" }]
 ```
 
-### `scan_for(timeout_ms=5000, adapter_index=0)`
-Scan for nearby BLE devices.
+### `scan_for(timeout_ms=5000)`
+
+Scan for nearby BLE devices using the first available adapter.
 
 Response:
+
 ```json
 [
   {
@@ -97,47 +111,53 @@ Response:
     "address": "UUID-or-MAC",
     "rssi": -55,
     "connectable": true,
-    "manufacturer_data": {"76": "0215..."}
+    "manufacturer_data": { "76": "0215..." }
   }
 ]
 ```
 
 ### `connect(address)`
+
 Connect to a device found in the last scan.
 
 Response:
+
 ```json
-{"message": "Connected to DeviceName", "address": "UUID-or-MAC"}
+{ "message": "Connected to DeviceName", "address": "UUID-or-MAC" }
 ```
 
 ### `disconnect(address)`
+
 Disconnect from a connected device.
 
 Response:
+
 ```json
-{"message": "Disconnected from DeviceName", "address": "UUID-or-MAC"}
+{ "message": "Disconnected from DeviceName", "address": "UUID-or-MAC" }
 ```
 
 ### `services(address)`
+
 List services and characteristics for a connected device.
 
 Response:
+
 ```json
 {
   "identifier": "DeviceName",
   "address": "UUID-or-MAC",
   "connected": true,
   "mtu": 23,
-  "services": [
-    {"uuid": "service-uuid", "characteristics": ["char-uuid"]}
-  ]
+  "services": [{ "uuid": "service-uuid", "characteristics": ["char-uuid"] }]
 }
 ```
 
 ### `read(address, service_uuid, char_uuid)`
+
 Read a characteristic value.
 
 Response:
+
 ```json
 {
   "service_uuid": "service-uuid",
@@ -147,10 +167,52 @@ Response:
 }
 ```
 
-### `notify(address, service_uuid, char_uuid, duration_ms=5000)`
-Subscribe to notifications for a duration and return collected samples, then unsubscribe.
+### `write_request(address, service_uuid, char_uuid, data)`
+
+Write data to a characteristic with response. `data` must be a hex string (e.g. `"00aabb"`).
 
 Response:
+
+```json
+{ "message": "Write successful" }
+```
+
+### `write_command(address, service_uuid, char_uuid, data)`
+
+Write data to a characteristic without response. `data` must be a hex string (e.g. `"00aabb"`).
+
+Response:
+
+```json
+{ "message": "Write command successful" }
+```
+
+### `notify(address, service_uuid, char_uuid)`
+
+Subscribe to notifications on a characteristic. Data is buffered in the background and can be retrieved with `get_notifications`. Call `unsubscribe` when done.
+
+Response:
+
+```json
+{ "message": "Subscribed to notifications" }
+```
+
+### `indicate(address, service_uuid, char_uuid)`
+
+Subscribe to indications on a characteristic. Data is buffered in the background and can be retrieved with `get_notifications`. Call `unsubscribe` when done.
+
+Response:
+
+```json
+{ "message": "Subscribed to indications" }
+```
+
+### `get_notifications(address)`
+
+Retrieve and clear all buffered notifications and indications for a device.
+
+Response:
+
 ```json
 [
   {
@@ -163,13 +225,23 @@ Response:
 ]
 ```
 
+### `unsubscribe(address, service_uuid, char_uuid)`
+
+Unsubscribe from notifications or indications on a characteristic.
+
+Response:
+
+```json
+{ "message": "Unsubscribed" }
+```
+
 ## Recommended flow
 
 1. `get_adapters`
 2. `scan_for`
 3. `connect`
 4. `services`
-5. `read` or `notify`
+5. `read` for one-time values, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data
 6. `disconnect`
 
 ## Platform notes
@@ -200,11 +272,13 @@ Note: FastMCP returns structured results under `structured_content` rather than 
 While Cursor handles starting the server automatically, you can also run it manually for testing.
 
 **STDIO Transport (Default):**
+
 ```bash
 simpleaible
 ```
 
 **HTTP Transport:**
+
 ```bash
 simpleaible --transport http --host 127.0.0.1 --port 8000
 ```

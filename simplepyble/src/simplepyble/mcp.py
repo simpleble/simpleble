@@ -1,6 +1,5 @@
 from fastmcp import FastMCP
 import argparse
-import time
 from typing import Dict, List, Optional
 
 import simplepyble
@@ -9,9 +8,7 @@ import simplepyble
 class BleState:
     def __init__(self) -> None:
         self.adapters: List[simplepyble.Adapter] = simplepyble.Adapter.get_adapters()
-        self.adapter: Optional[simplepyble.Adapter] = (
-            self.adapters[0] if self.adapters else None
-        )
+        self.adapter: Optional[simplepyble.Adapter] = self.adapters[0] if self.adapters else None
         self.peripherals: Dict[str, simplepyble.Peripheral] = {}
         self.scan_results: List[simplepyble.Peripheral] = []
         self.notifications: Dict[str, List[Dict]] = {}
@@ -21,17 +18,27 @@ class BleState:
         if self.adapters and not self.adapter:
             self.adapter = self.adapters[0]
 
-    def set_active_adapter(self, adapter_index: int) -> None:
-        self.refresh_adapters()
-        if not self.adapters:
-            raise RuntimeError("No Bluetooth adapter available")
-        if adapter_index < 0 or adapter_index >= len(self.adapters):
-            raise RuntimeError("Adapter index out of range")
-        self.adapter = self.adapters[adapter_index]
-
 
 ble_state = BleState()
 mcp = FastMCP(name="SimpleBLE MCP Server")
+
+
+@mcp.tool(
+    name="bluetooth_enabled",
+    description="Check if Bluetooth is enabled on the host system.",
+    tags={"adapter", "ble", "read", "status"},
+    annotations={
+        "title": "Bluetooth Enabled",
+        "readOnlyHint": True,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+    meta={"version": "1.0", "role": "discovery"},
+)
+def bluetooth_enabled() -> Dict[str, bool]:
+    """Check if Bluetooth is enabled and available."""
+    enabled = simplepyble.Adapter.bluetooth_enabled()
+    return {"enabled": enabled}
 
 
 @mcp.tool(
@@ -49,15 +56,12 @@ mcp = FastMCP(name="SimpleBLE MCP Server")
 def get_adapters() -> List[Dict[str, str]]:
     """List all available Bluetooth adapters."""
     ble_state.refresh_adapters()
-    return [
-        {"identifier": adapter.identifier(), "address": adapter.address()}
-        for adapter in ble_state.adapters
-    ]
+    return [{"identifier": a.identifier(), "address": a.address()} for a in ble_state.adapters]
 
 
 @mcp.tool(
     name="scan_for",
-    description="Scan for nearby BLE peripherals using the selected adapter.",
+    description="Scan for nearby BLE peripherals using the first available adapter.",
     tags={"adapter", "scan", "ble", "read"},
     annotations={
         "title": "Scan For",
@@ -67,9 +71,9 @@ def get_adapters() -> List[Dict[str, str]]:
     },
     meta={"version": "1.0", "role": "discovery"},
 )
-def scan_for(timeout_ms: int = 5000, adapter_index: int = 0) -> List[Dict]:
-    """Scan for nearby BLE devices."""
-    ble_state.set_active_adapter(adapter_index)
+def scan_for(timeout_ms: int = 5000) -> List[Dict]:
+    """Scan for nearby BLE devices using the first available adapter."""
+    ble_state.refresh_adapters()
     if not ble_state.adapter:
         raise RuntimeError("No Bluetooth adapter available")
 
@@ -128,7 +132,7 @@ def connect(address: str) -> Dict[str, str]:
 
     try:
         target.connect()
-    except Exception as exc:  # pragma: no cover - backend-specific errors
+    except Exception as exc:
         raise RuntimeError(f"Failed to connect: {exc}") from exc
 
     ble_state.peripherals[address] = target
@@ -157,7 +161,7 @@ def disconnect(address: str) -> Dict[str, str]:
     peripheral = ble_state.peripherals[address]
     try:
         peripheral.disconnect()
-    except Exception as exc:  # pragma: no cover - backend-specific errors
+    except Exception as exc:
         raise RuntimeError(f"Failed to disconnect: {exc}") from exc
 
     ble_state.notifications.pop(address, None)
@@ -234,8 +238,78 @@ def read(address: str, service_uuid: str, char_uuid: str) -> Dict[str, str]:
 
 
 @mcp.tool(
+    name="write_request",
+    description="Write data to a characteristic with response (write request). Data must be a hex string.",
+    tags={"peripheral", "gatt", "ble", "write"},
+    annotations={
+        "title": "Write Request",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+    meta={"version": "1.0", "role": "gatt"},
+)
+def write_request(address: str, service_uuid: str, char_uuid: str, data: str) -> Dict[str, str]:
+    """Write data to a characteristic with response. Data is a hex string."""
+    if address not in ble_state.peripherals:
+        raise RuntimeError("Device not found")
+
+    peripheral = ble_state.peripherals[address]
+    if not peripheral.is_connected():
+        raise RuntimeError("Device not connected")
+
+    try:
+        data_bytes = bytes.fromhex(data)
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid hex string: {exc}") from exc
+
+    try:
+        peripheral.write_request(service_uuid, char_uuid, data_bytes)
+    except Exception as exc:  # pragma: no cover - backend-specific errors
+        raise RuntimeError(f"Write failed: {exc}") from exc
+
+    return {"message": "Write successful"}
+
+
+@mcp.tool(
+    name="write_command",
+    description="Write data to a characteristic without response (write command). Data must be a hex string.",
+    tags={"peripheral", "gatt", "ble", "write"},
+    annotations={
+        "title": "Write Command",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+    meta={"version": "1.0", "role": "gatt"},
+)
+def write_command(address: str, service_uuid: str, char_uuid: str, data: str) -> Dict[str, str]:
+    """Write data to a characteristic without response. Data is a hex string."""
+    if address not in ble_state.peripherals:
+        raise RuntimeError("Device not found")
+
+    peripheral = ble_state.peripherals[address]
+    if not peripheral.is_connected():
+        raise RuntimeError("Device not connected")
+
+    try:
+        data_bytes = bytes.fromhex(data)
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid hex string: {exc}") from exc
+
+    try:
+        peripheral.write_command(service_uuid, char_uuid, data_bytes)
+    except Exception as exc:  # pragma: no cover - backend-specific errors
+        raise RuntimeError(f"Write command failed: {exc}") from exc
+
+    return {"message": "Write command successful"}
+
+
+@mcp.tool(
     name="notify",
-    description="Collect notifications from a characteristic for a fixed duration.",
+    description="Subscribe to notifications on a characteristic. Data is buffered and can be retrieved with get_notifications. Call unsubscribe when done.",
     tags={"peripheral", "gatt", "ble", "notify"},
     annotations={
         "title": "Notify",
@@ -246,13 +320,8 @@ def read(address: str, service_uuid: str, char_uuid: str) -> Dict[str, str]:
     },
     meta={"version": "1.0", "role": "gatt"},
 )
-def notify(
-    address: str,
-    service_uuid: str,
-    char_uuid: str,
-    duration_ms: int = 5000,
-) -> List[Dict[str, str]]:
-    """Collect notifications for a duration, then unsubscribe."""
+def notify(address: str, service_uuid: str, char_uuid: str) -> Dict[str, str]:
+    """Subscribe to notifications. Data is buffered in the background."""
     if address not in ble_state.peripherals:
         raise RuntimeError("Device not found")
 
@@ -260,27 +329,119 @@ def notify(
     if not peripheral.is_connected():
         raise RuntimeError("Device not connected")
 
-    samples: List[Dict[str, str]] = []
-
     def notification_callback(data: bytes) -> None:
-        samples.append(
-            {
-                "service": service_uuid,
-                "characteristic": char_uuid,
-                "data_hex": data.hex(),
-                "data_utf8": data.decode("utf-8", errors="ignore"),
-                "type": "notification",
-            }
-        )
+        if address in ble_state.notifications:
+            ble_state.notifications[address].append(
+                {
+                    "service": service_uuid,
+                    "characteristic": char_uuid,
+                    "data_hex": data.hex(),
+                    "data_utf8": data.decode("utf-8", errors="ignore"),
+                    "type": "notification",
+                }
+            )
 
     try:
         peripheral.notify(service_uuid, char_uuid, notification_callback)
-        time.sleep(max(duration_ms, 0) / 1000)
-        peripheral.unsubscribe(service_uuid, char_uuid)
     except Exception as exc:  # pragma: no cover - backend-specific errors
         raise RuntimeError(f"Notify failed: {exc}") from exc
 
+    return {"message": "Subscribed to notifications"}
+
+
+@mcp.tool(
+    name="indicate",
+    description="Subscribe to indications on a characteristic. Data is buffered and can be retrieved with get_notifications. Call unsubscribe when done.",
+    tags={"peripheral", "gatt", "ble", "indicate"},
+    annotations={
+        "title": "Indicate",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+    meta={"version": "1.0", "role": "gatt"},
+)
+def indicate(address: str, service_uuid: str, char_uuid: str) -> Dict[str, str]:
+    """Subscribe to indications. Data is buffered in the background."""
+    if address not in ble_state.peripherals:
+        raise RuntimeError("Device not found")
+
+    peripheral = ble_state.peripherals[address]
+    if not peripheral.is_connected():
+        raise RuntimeError("Device not connected")
+
+    def indication_callback(data: bytes) -> None:
+        if address in ble_state.notifications:
+            ble_state.notifications[address].append(
+                {
+                    "service": service_uuid,
+                    "characteristic": char_uuid,
+                    "data_hex": data.hex(),
+                    "data_utf8": data.decode("utf-8", errors="ignore"),
+                    "type": "indication",
+                }
+            )
+
+    try:
+        peripheral.indicate(service_uuid, char_uuid, indication_callback)
+    except Exception as exc:  # pragma: no cover - backend-specific errors
+        raise RuntimeError(f"Indicate failed: {exc}") from exc
+
+    return {"message": "Subscribed to indications"}
+
+
+@mcp.tool(
+    name="get_notifications",
+    description="Retrieve and clear all buffered notifications and indications for a connected peripheral.",
+    tags={"peripheral", "gatt", "ble", "read"},
+    annotations={
+        "title": "Get Notifications",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+    meta={"version": "1.0", "role": "gatt"},
+)
+def get_notifications(address: str) -> List[Dict[str, str]]:
+    """Return all buffered notifications/indications and clear the buffer."""
+    if address not in ble_state.notifications:
+        return []
+
+    samples = ble_state.notifications[address]
+    ble_state.notifications[address] = []
     return samples
+
+
+@mcp.tool(
+    name="unsubscribe",
+    description="Unsubscribe from notifications or indications on a characteristic.",
+    tags={"peripheral", "gatt", "ble"},
+    annotations={
+        "title": "Unsubscribe",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+    meta={"version": "1.0", "role": "gatt"},
+)
+def unsubscribe(address: str, service_uuid: str, char_uuid: str) -> Dict[str, str]:
+    """Unsubscribe from notifications or indications on a characteristic."""
+    if address not in ble_state.peripherals:
+        raise RuntimeError("Device not found")
+
+    peripheral = ble_state.peripherals[address]
+    if not peripheral.is_connected():
+        raise RuntimeError("Device not connected")
+
+    try:
+        peripheral.unsubscribe(service_uuid, char_uuid)
+    except Exception as exc:  # pragma: no cover - backend-specific errors
+        raise RuntimeError(f"Unsubscribe failed: {exc}") from exc
+
+    return {"message": "Unsubscribed"}
 
 
 def main() -> None:
