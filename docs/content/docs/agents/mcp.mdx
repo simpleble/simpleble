@@ -18,7 +18,7 @@ pip install "simplepyble[mcp]"
 
 Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
 
-Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol) for more info.
+Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://cursor.com/docs/context/mcp#installing-mcp-servers) for more info.
 
 #### Cursor Local Server Connection
 
@@ -74,166 +74,149 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 ## Tool catalog
 
-All tool inputs/outputs are JSON-serializable. Byte values are returned as hex strings with a best-effort UTF-8 decode.
+All tool inputs/outputs are JSON-serializable.
 
-### `bluetooth_enabled`
+### General Tools
 
-Check if Bluetooth is enabled on the host system. Use this tool only when troubleshooting failed operations.
+#### `bluetooth_enabled`
+Check if Bluetooth is enabled on the host system. By default, assume Bluetooth is enabled. Use this tool only when troubleshooting failed operations.
 
-Response:
+- **Response**: 
+  ```json
+  {"enabled": true}
+  ```
 
-```json
-{ "enabled": true }
-```
+#### `get_adapters`
+List all available Bluetooth adapters on the system.
 
-**Important**: Only call this tool when a BLE operation fails. Assume Bluetooth is enabled by default. Bluetooth must be enabled for all operations to work.
+- **Response**: List of objects containing `identifier` and `address`.
+  ```json
+  [
+    {
+      "identifier": "hci0",
+      "address": "AA:BB:CC:DD:EE:FF"
+    }
+  ]
+  ```
 
-### `get_adapters`
-
-List available Bluetooth adapters.
-
-Response:
-
-```json
-[{ "identifier": "Default Adapter [UUID]", "address": "UUID" }]
-```
-
-### `scan_for(timeout_ms=5000)`
-
+#### `scan_for`
 Scan for nearby BLE devices using the first available adapter.
 
-Response:
+- **Parameters**: `timeout_ms` (default: `5000`) - Duration of the scan in milliseconds.
+- **Response**: List of found devices.
+    ```json
+    [
+      {
+        "identifier": "Nordic_HRM",
+        "address": "AA:BB:CC:DD:EE:FF",
+        "rssi": -55,
+        "connectable": true,
+        "manufacturer_data": {"76": "0215..."}
+      }
+    ]
+    ```
 
-```json
-[
-  {
-    "identifier": "DeviceName",
-    "address": "UUID-or-MAC",
-    "rssi": -55,
-    "connectable": true,
-    "manufacturer_data": { "76": "0215..." }
-  }
-]
-```
+### Device Connection
 
-### `connect(address)`
+#### `connect`
+Establish a connection to a specific device found in the last scan.
 
-Connect to a device found in the last scan.
+- **Parameters**: `address` - Device address (UUID on macOS, MAC on Linux/Windows).
+- **Response**: 
+  ```json
+  {"message": "Connected to Nordic_HRM", "address": "AA:BB:CC:DD:EE:FF"}
+  ```
 
-Response:
-
-```json
-{ "message": "Connected to DeviceName", "address": "UUID-or-MAC" }
-```
-
-### `disconnect(address)`
-
+#### `disconnect`
 Disconnect from a connected device.
 
-Response:
+- **Parameters**: `address`
+- **Response**: 
+  ```json
+  {"message": "Disconnected from AA:BB:CC:DD:EE:FF"}
+  ```
 
-```json
-{ "message": "Disconnected from DeviceName", "address": "UUID-or-MAC" }
-```
+#### `services`
+Retrieve services and characteristics for a connected device.
 
-### `services(address)`
+- **Parameters**: `address`
+- **Response**:
+    ```json
+    {
+      "identifier": "Nordic_HRM",
+      "address": "AA:BB:CC:DD:EE:FF",
+      "connected": true,
+      "mtu": 23,
+      "services": [
+        {
+          "uuid": "0000180d-0000-1000-8000-00805f9b34fb",
+          "characteristics": ["00002a37-0000-1000-8000-00805f9b34fb"]
+        }
+      ]
+    }
+    ```
 
-List services and characteristics for a connected device.
+### Characteristic Interaction
 
-Response:
+#### `read`
+Read the current value of a characteristic.
 
-```json
-{
-  "identifier": "DeviceName",
-  "address": "UUID-or-MAC",
-  "connected": true,
-  "mtu": 23,
-  "services": [{ "uuid": "service-uuid", "characteristics": ["char-uuid"] }]
-}
-```
+- **Parameters**: `address`, `service_uuid`, `char_uuid`
+- **Response**: 
+  ```json
+  {"service_uuid": "0000180d-0000-1000-8000-00805f9b34fb", "char_uuid": "00002a37-0000-1000-8000-00805f9b34fb", "data_hex": "00aabb", "data_utf8": "..."}
+  ```
+- **Note**: `data_utf8` is a convenience field. If the data is not valid UTF-8, invalid bytes are silently skipped, so it may be incomplete or empty for binary data. Use `data_hex` for reliable binary representation.
 
-### `read(address, service_uuid, char_uuid)`
+#### `write_request`
+Write a value to a characteristic (Write with Response).
 
-Read a characteristic value.
+- **Parameters**: `address`, `service_uuid`, `char_uuid`, `data` (hex string, e.g. `"001122"`)
+- **Response**: `{"message": "Write successful"}`
 
-Response:
+#### `write_command`
+Write a value to a characteristic without expecting a response (Write Command).
 
-```json
-{
-  "service_uuid": "service-uuid",
-  "char_uuid": "char-uuid",
-  "data_hex": "00aabb",
-  "data_utf8": "..."
-}
-```
+- **Parameters**: `address`, `service_uuid`, `char_uuid`, `data` (hex string, e.g. `"001122"`)
+- **Response**: `{"message": "Write command successful"}`
 
-### `write_request(address, service_uuid, char_uuid, data)`
+### Notifications and Indications
 
-Write data to a characteristic with response. `data` must be a hex string (e.g. `"00aabb"`).
+#### `notify`
+Subscribe to notifications for a specific characteristic. Data is buffered in the background.
 
-Response:
+- **Parameters**: `address`, `service_uuid`, `char_uuid`
+- **Response**: `{"message": "Subscribed to notifications"}`
 
-```json
-{ "message": "Write successful" }
-```
+#### `indicate`
+Subscribe to indications for a specific characteristic. Data is buffered in the background.
 
-### `write_command(address, service_uuid, char_uuid, data)`
+- **Parameters**: `address`, `service_uuid`, `char_uuid`
+- **Response**: `{"message": "Subscribed to indications"}`
 
-Write data to a characteristic without response. `data` must be a hex string (e.g. `"00aabb"`).
+#### `unsubscribe`
+Stop receiving notifications or indications for a characteristic.
 
-Response:
+- **Parameters**: `address`, `service_uuid`, `char_uuid`
+- **Response**: `{"message": "Unsubscribed"}`
 
-```json
-{ "message": "Write command successful" }
-```
+#### `get_notifications`
+Retrieve all received notifications and indications for a device. This call clears the internal notification buffer for that device.
 
-### `notify(address, service_uuid, char_uuid)`
-
-Subscribe to notifications on a characteristic. Data is buffered in the background and can be retrieved with `get_notifications`. Call `unsubscribe` when done.
-
-Response:
-
-```json
-{ "message": "Subscribed to notifications" }
-```
-
-### `indicate(address, service_uuid, char_uuid)`
-
-Subscribe to indications on a characteristic. Data is buffered in the background and can be retrieved with `get_notifications`. Call `unsubscribe` when done.
-
-Response:
-
-```json
-{ "message": "Subscribed to indications" }
-```
-
-### `get_notifications(address)`
-
-Retrieve and clear all buffered notifications and indications for a device.
-
-Response:
-
-```json
-[
-  {
-    "service": "service-uuid",
-    "characteristic": "char-uuid",
-    "data_hex": "163c00",
-    "data_utf8": "...",
-    "type": "notification"
-  }
-]
-```
-
-### `unsubscribe(address, service_uuid, char_uuid)`
-
-Unsubscribe from notifications or indications on a characteristic.
-
-Response:
-
-```json
-{ "message": "Unsubscribed" }
-```
+- **Parameters**: `address`
+- **Response**: List of notification objects.
+    ```json
+    [
+      {
+        "service": "0000180d-0000-1000-8000-00805f9b34fb",
+        "characteristic": "00002a37-0000-1000-8000-00805f9b34fb",
+        "data_hex": "163c00",
+        "data_utf8": "...",
+        "type": "notification"
+      }
+    ]
+    ```
+- **Note**: `data_utf8` is a convenience field. If the data is not valid UTF-8, invalid bytes are silently skipped, so it may be incomplete or empty for binary data. Use `data_hex` for reliable binary representation.
 
 ## Recommended flow
 
@@ -241,12 +224,12 @@ Response:
 2. `scan_for`
 3. `connect`
 4. `services`
-5. `read` for one-time values, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data
+5. `read` or `write_request`/`write_command` for one-time operations, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data
 6. `disconnect`
 
 ## Platform notes
 
-- On macOS/iOS, device “address” is a UUID, not a MAC address.
+- On macOS/iOS, device `address` is a randomized UUID (e.g., `5E2A...`) instead of a hardware MAC address. These UUIDs are temporary and may change between sessions or device restarts. On Linux/Windows, standard MAC addresses are used (e.g., `AA:BB:CC:DD:EE:FF`).
 - Advertisement fields (RSSI, manufacturer data, service UUIDs) can vary by OS and device.
 - Some characteristics require pairing or may be restricted by the OS.
 

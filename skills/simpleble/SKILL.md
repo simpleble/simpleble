@@ -22,7 +22,7 @@ Always follow this sequence for BLE interactions:
 
 - **Scanning**: Prefer scanning immediately before connecting to ensure the device is in the internal cache.
 - **Addressing**: Be aware that macOS/iOS uses UUIDs for addresses, while Linux/Windows uses MAC addresses.
-- **Data Handling**: Binary data is returned as both `data_hex` and `data_utf8` (best-effort). Use `data_hex` for protocol analysis and `data_utf8` for human-readable strings.
+- **Data Handling**: Binary data is returned as `data_hex` (always reliable) and `data_utf8` (convenience field). If the data is not valid UTF-8, invalid bytes are skipped, so `data_utf8` may be incomplete or empty. Use `data_hex` for protocol analysis and `data_utf8` for human-readable strings.
 - **Notifications/Indications**: Use `notify` or `indicate` to subscribe, `get_notifications` to retrieve buffered data, and `unsubscribe` when done.
 - **Bluetooth Status**: Assume Bluetooth is enabled by default. Only check `bluetooth_enabled` when an operation fails.
 

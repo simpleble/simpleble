@@ -15,7 +15,7 @@
 ### GATT Operations
 
 - `services(address)`: Discovers services and characteristics. Returns a list of services with their UUIDs and associated characteristic UUIDs.
-- `read(address, service_uuid, char_uuid)`: Reads a single value. Returns `data_hex` and `data_utf8`.
+- `read(address, service_uuid, char_uuid)`: Reads a single value. Returns `data_hex` and `data_utf8`. If the data is not valid UTF-8, invalid bytes are skipped in `data_utf8`.
 - `write_request(address, service_uuid, char_uuid, data)`: Writes data (hex string) to a characteristic with response.
 - `write_command(address, service_uuid, char_uuid, data)`: Writes data (hex string) to a characteristic without response.
 - `notify(address, service_uuid, char_uuid)`: Subscribes to notifications. Data is buffered in the background.
@@ -35,12 +35,12 @@
 - **Addresses**: Uses standard MAC addresses (e.g., `AA:BB:CC:DD:EE:FF`).
 - **Dependencies**: Works on any Linux OS that uses BlueZ.
 
+### Windows
+
+- **Addresses**: Uses standard MAC addresses (e.g., `AA:BB:CC:DD:EE:FF`).
+
 ## Data Encoding
 
-- **Hex**: Always provided as a lowercase string without `0x` prefix.
-- **UTF-8**: Decoded using `errors="ignore"`. If the data is purely binary, this field may contain garbled text or be empty.
+- **`data_hex`**: Always reliable. Lowercase hex string without `0x` prefix.
+- **`data_utf8`**: Convenience field. If the data is not valid UTF-8, invalid bytes are silently skipped, so it may be incomplete or empty for binary data.
 
-## Error Handling
-
-- **"Device not found in scan results"**: You must call `scan_for` before `connect` so the server knows which peripheral to use.
-- **"Device not connected"**: Call `connect` before attempting `services`, `read`, `notify`, or `indicate`.

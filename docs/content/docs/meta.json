@@ -29,7 +29,7 @@
     "simpledbus/usage",
     "simpledbus/examples",
     "simpledbus/architecture",
-    "---Agents---",
+    "---AI Tools---",
     "agents/mcp",
     "agents/http",
     "agents/skills",
