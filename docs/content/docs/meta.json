@@ -15,7 +15,6 @@
     "simpleble/faq",
     "---SimplePyBLE---",
     "simplepyble/usage",
-    "simplepyble/server",
     "simplepyble/examples",
     "---SimpleDroidBLE---",
     "simpledroidble/usage",
@@ -32,6 +31,7 @@
     "simpledbus/architecture",
     "---Agents---",
     "agents/mcp",
+    "agents/http",
     "agents/skills",
     "---Tutorials---",
     "cmake_primer"
