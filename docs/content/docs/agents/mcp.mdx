@@ -22,19 +22,19 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 
 #### Cursor Local Server Connection
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=simpleble&config=eyJjb21tYW5kIjogInNpbXBsZWJsZS1tY3AifQo=)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=simpleble&config=eyJjb21tYW5kIjogInNpbXBsZWFpYmxlIn0=)
 
 ```json
 {
   "mcpServers": {
     "simpleble": {
-      "command": "simpleble-mcp"
+      "command": "simpleaible"
     }
   }
 }
 ```
 
-*Note: You must have installed the package first via `pip install "simplepyble[mcp]"`. If `simpleble-mcp` is not in your system PATH, you may need to provide the full path to the executable.*
+*Note: You must have installed the package first via `pip install "simplepyble[mcp]"`. If `simpleaible` is not in your system PATH, you may need to provide the full path to the executable.*
 
 </details>
 
@@ -46,7 +46,7 @@ Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp
 #### Claude Code Local Server Connection
 
 ```sh
-claude mcp add simpleble -- simpleble-mcp
+claude mcp add simpleble -- simpleaible
 ```
 
 </details>
@@ -63,7 +63,7 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
   "mcp": {
     "simpleble": {
       "type": "local",
-      "command": ["simpleble-mcp"],
+      "command": ["simpleaible"],
       "enabled": true
     }
   }
@@ -180,7 +180,7 @@ Response:
 
 ## MCP client example (FastMCP via HTTP)
 
-If you are running the server manually using the HTTP transport (`simpleble-mcp --transport http`), you can connect to it using a FastMCP client:
+If you are running the server manually using the HTTP transport (`simpleaible --transport http`), you can connect to it using a FastMCP client:
 
 ```python
 import asyncio
@@ -201,10 +201,10 @@ While Cursor handles starting the server automatically, you can also run it manu
 
 **STDIO Transport (Default):**
 ```bash
-simpleble-mcp
+simpleaible
 ```
 
 **HTTP Transport:**
 ```bash
-simpleble-mcp --transport http --host 127.0.0.1 --port 8000
+simpleaible --transport http --host 127.0.0.1 --port 8000
 ```
