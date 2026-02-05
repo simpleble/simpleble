@@ -43,7 +43,7 @@ SimplePyBLE.
 
 To run the built-in REST server, you can use the following command: ::
 
-   python3 -m simplepyble.server --host 127.0.0.1 --port 8000
+   python3 -m simplepyble.http --host 127.0.0.1 --port 8000
 
 
 License

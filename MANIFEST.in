@@ -364,7 +364,8 @@ include simplepyble/src/main.cpp
 include simplepyble/src/simplepyble/__init__.py
 include simplepyble/src/simplepyble/__init__.pyi
 include simplepyble/src/simplepyble/py.typed
-include simplepyble/src/simplepyble/server.py
+include simplepyble/src/simplepyble/http.py
+include simplepyble/src/simplepyble/mcp.py
 include simplepyble/src/wrap_adapter.cpp
 include simplepyble/src/wrap_characteristic.cpp
 include simplepyble/src/wrap_config.cpp

@@ -76,7 +76,7 @@ skbuild.setup(
     install_requires=[],
     entry_points={
         "console_scripts": [
-            "simpleble-mcp = simplepyble.mcp_server:main",
+            "simpleaible = simplepyble.mcp:main"
         ],
     },
     extras_require={

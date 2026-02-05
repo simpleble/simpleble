@@ -55,7 +55,7 @@ If the MCP server is not responding, check if it's configured in `.cursor/mcp.js
   "mcpServers": {
     "simpleble": {
       "command": "python",
-      "args": ["-m", "simplepyble.mcp_server"],
+      "args": ["-m", "simplepyble.mcp"],
       "cwd": "/path/to/simpleble"
     }
   }
