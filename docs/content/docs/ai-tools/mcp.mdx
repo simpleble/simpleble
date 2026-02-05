@@ -220,12 +220,13 @@ Retrieve all received notifications and indications for a device. This call clea
 
 ## Recommended flow
 
-1. `get_adapters`
-2. `scan_for`
-3. `connect`
-4. `services`
-5. `read` or `write_request`/`write_command` for one-time operations, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data
-6. `disconnect`
+1. `scan_for`
+2. `connect`
+3. `services`
+4. `read` or `write_request`/`write_command` for one-time operations, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data
+5. `disconnect`
+
+`get_adapters` is only needed when you want to list available Bluetooth adapters, not as a prerequisite for other operations.
 
 ## Platform notes
 

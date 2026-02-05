@@ -11,12 +11,11 @@ This skill provides instructions for using the SimpleBLE MCP server to interact 
 
 Always follow this sequence for BLE interactions:
 
-1. **Initialization**: Call `get_adapters` to find available Bluetooth hardware.
-2. **Scanning**: Call `scan_for` (default 5s) to find nearby peripherals.
-3. **Connection**: Call `connect` using the `address` from the scan results.
-4. **Exploration**: Call `services` to list available GATT services and characteristics.
-5. **Interaction**: Use `read` for one-time values, `write_request`/`write_command` to send data, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data.
-6. **Cleanup**: Always call `disconnect` when finished to release the device.
+1. **Scanning**: Call `scan_for` (default 5s) to find nearby peripherals.
+2. **Connection**: Call `connect` using the `address` from the scan results.
+3. **Exploration**: Call `services` to list available GATT services and characteristics.
+4. **Interaction**: Use `read` for one-time values, `write_request`/`write_command` to send data, or `notify`/`indicate` + `get_notifications` + `unsubscribe` for streaming data.
+5. **Cleanup**: Always call `disconnect` when finished to release the device.
 
 ## Core Instructions
 
