@@ -33,7 +33,7 @@ You can install SimplePyBLE from PyPI using pip: ::
 
 If you want to use the built-in REST server, you can install the optional dependencies: ::
 
-   pip install simplepyble[server]
+   pip install simplepyble[http]
 
 Usage
 -----

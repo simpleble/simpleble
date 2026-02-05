@@ -4,7 +4,7 @@ try:
     import uvicorn
 except ImportError:
     print("Dependencies for SimplePyBLE server are not installed.")
-    print("Please install them using: pip install simplepyble[server]")
+    print("Please install them using: pip install simplepyble[http]")
     exit(1)
 
 from contextlib import asynccontextmanager

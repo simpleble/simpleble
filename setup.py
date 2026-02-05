@@ -81,7 +81,7 @@ skbuild.setup(
     },
     extras_require={
         "mcp": ["fastmcp"],
-        "server": ["fastapi", "uvicorn", "pydantic"],
+        "http": ["fastapi", "uvicorn", "pydantic"],
     },
     platforms="Windows, macOS, Linux",
     python_requires=">=3.8",
