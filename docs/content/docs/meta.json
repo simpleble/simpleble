@@ -30,9 +30,9 @@
     "simpledbus/examples",
     "simpledbus/architecture",
     "---AI Tools---",
-    "agents/mcp",
-    "agents/http",
-    "agents/skills",
+    "ai-tools/mcp",
+    "ai-tools/http",
+    "ai-tools/skills",
     "---Tutorials---",
     "cmake_primer"
   ]
