@@ -1,6 +1,35 @@
 import asyncio
-from typing import List, Callable, Optional, Union, Any, Dict
+import atexit
+import weakref
+from typing import List, Callable, Optional, Union, Any, Dict, Set
 import simplepyble
+
+_active_peripherals = weakref.WeakSet()
+
+def _global_cleanup():
+    # Clear all adapters known to SimpleBLE
+    try:
+        for a in simplepyble.Adapter.get_adapters():
+            a.set_callback_on_scan_start(None)
+            a.set_callback_on_scan_stop(None)
+            a.set_callback_on_scan_found(None)
+            a.set_callback_on_scan_updated(None)
+            try:
+                if a.scan_is_active():
+                    a.scan_stop()
+            except:
+                pass
+    except:
+        pass
+        
+    # Clear peripherals that we tracked via aio.Peripheral
+    for p in list(_active_peripherals):
+        try:
+            p._clear_all_callbacks_sync()
+        except:
+            pass
+
+atexit.register(_global_cleanup)
 
 class Descriptor:
     def __init__(self, internal_descriptor: simplepyble.Descriptor):
@@ -53,6 +82,8 @@ class Service:
 class Peripheral:
     def __init__(self, internal_peripheral: simplepyble.Peripheral):
         self._internal = internal_peripheral
+        self._subscriptions: Set[tuple] = set()
+        _active_peripherals.add(self)
 
     def initialized(self) -> bool:
         return self._internal.initialized()
@@ -116,6 +147,7 @@ class Peripheral:
 
     async def notify(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
         loop = asyncio.get_running_loop()
+        self._subscriptions.add((service_uuid, characteristic_uuid))
         def wrapper(payload):
             if asyncio.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(payload), loop)
@@ -125,6 +157,7 @@ class Peripheral:
 
     async def indicate(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
         loop = asyncio.get_running_loop()
+        self._subscriptions.add((service_uuid, characteristic_uuid))
         def wrapper(payload):
             if asyncio.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(payload), loop)
@@ -134,6 +167,7 @@ class Peripheral:
 
     async def unsubscribe(self, service_uuid: str, characteristic_uuid: str):
         loop = asyncio.get_running_loop()
+        self._subscriptions.discard((service_uuid, characteristic_uuid))
         return await loop.run_in_executor(None, self._internal.unsubscribe, service_uuid, characteristic_uuid)
 
     async def descriptor_read(self, service_uuid: str, characteristic_uuid: str, descriptor_uuid: str) -> bytes:
@@ -167,6 +201,26 @@ class Peripheral:
             else:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_disconnected(wrapper)
+
+    def _clear_all_callbacks_sync(self):
+        """Internal sync cleanup for atexit or __aexit__"""
+        try:
+            self._internal.set_callback_on_connected(None)
+            self._internal.set_callback_on_disconnected(None)
+            for s, c in list(self._subscriptions):
+                try:
+                    self._internal.unsubscribe(s, c)
+                except:
+                    pass
+            self._subscriptions.clear()
+        except:
+            pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self._clear_all_callbacks_sync()
 
 class Adapter:
     def __init__(self, internal_adapter: simplepyble.Adapter):
@@ -271,3 +325,21 @@ class Adapter:
             else:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_updated(wrapper)
+
+    def _clear_all_callbacks_sync(self):
+        """Internal sync cleanup for atexit or __aexit__"""
+        try:
+            self._internal.set_callback_on_scan_start(None)
+            self._internal.set_callback_on_scan_stop(None)
+            self._internal.set_callback_on_scan_found(None)
+            self._internal.set_callback_on_scan_updated(None)
+            if self._internal.scan_is_active():
+                self._internal.scan_stop()
+        except:
+            pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self._clear_all_callbacks_sync()
