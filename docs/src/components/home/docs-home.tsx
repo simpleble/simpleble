@@ -20,9 +20,15 @@ const RESOURCES: ReadonlyArray<CardLink> = [
     href: "/docs/",
   },
   {
+    title: "SimpleAIBLE",
+    description:
+      "An AI-friendly BLE toolkit with MCP server, REST API, and agent skills powered by SimpleBLE.",
+    href: "/docs/simpleaible/mcp",
+  },
+  {
     title: "Licensing & Support",
     description:
-      "Understand the licensing options, commercial readiness, and where to get help when you need it.",
+    "Understand the licensing options, commercial readiness, and where to get help when you need it.",
     href: "/docs/licensing",
   },
   {
@@ -81,6 +87,13 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     title: "SimpleDBus",
     description: "A DBus object hierarchy handler used by the Linux stack.",
     href: "/docs/simpledbus/usage",
+  },
+  {
+    eyebrow: "AI / MCP",
+    title: "SimpleAIBLE",
+    description:
+      "AI-friendly BLE toolkit with MCP server, REST API, and agent skills.",
+    href: "/docs/simpleaible/mcp",
   },
 ];
 

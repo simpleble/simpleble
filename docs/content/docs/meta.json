@@ -29,10 +29,10 @@
     "simpledbus/usage",
     "simpledbus/examples",
     "simpledbus/architecture",
-    "---AI Tools---",
-    "ai-tools/mcp",
-    "ai-tools/http",
-    "ai-tools/skills",
+    "---SimpleAIBLE---",
+    "simpleaible/mcp",
+    "simpleaible/http",
+    "simpleaible/skills",
     "---Tutorials---",
     "cmake_primer"
   ]
