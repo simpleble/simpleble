@@ -249,7 +249,7 @@ echo "Using NDK: ${NDK_PATH}"
 
 # Android ABIs to build
 ANDROID_ABIS=("arm64-v8a" "armeabi-v7a" "x86_64" "x86")
-ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-24}"
+ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-31}"
 
 # Clean previous prebuilt directory
 rm -rf "${ANDROID_PREBUILT_DIR}"
