@@ -43,3 +43,31 @@ python3 -m simplepyble.server --host 127.0.0.1 --port 8000
 ```
 
 For detailed information on how to install, run, and interact with the server, please refer to the [REST Server](./server) documentation.
+
+## Asynchronous API
+
+SimplePyBLE provides an asynchronous API via the `simplepyble.aio` module. This module is designed to work with `asyncio` and provides a more idiomatic way to handle asynchronous operations in Python.
+
+To use the asynchronous API, simply import from `simplepyble.aio`:
+
+```python
+import asyncio
+from simplepyble.aio import Adapter
+
+async def main():
+    adapters = Adapter.get_adapters()
+    if not adapters:
+        return
+
+    adapter = adapters[0]
+    async with adapter:
+        await adapter.scan_for(5000)
+        peripherals = adapter.scan_get_results()
+        for peripheral in peripherals:
+            print(f"Found: {peripheral.identifier()} [{peripheral.address()}]")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+All blocking calls from the synchronous API are available as coroutines in the `aio` module, and callbacks can be either regular functions or coroutines. For more examples, check out the [Examples](./examples) section.

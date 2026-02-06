@@ -41,6 +41,33 @@ Usage
 Please review our `code examples`_ on GitHub for more information on how to use
 SimplePyBLE.
 
+Asynchronous Support
+--------------------
+
+SimplePyBLE provides an asynchronous API via the ``simplepyble.aio`` module. This module
+is designed to work with ``asyncio`` and provides a more idiomatic way to handle
+asynchronous operations in Python.
+
+Example: ::
+
+   import asyncio
+   from simplepyble.aio import Adapter
+
+   async def main():
+       adapters = Adapter.get_adapters()
+       adapter = adapters[0]
+
+       async with adapter:
+           await adapter.scan_for(5000)
+           peripherals = adapter.scan_get_results()
+           for peripheral in peripherals:
+               print(f"Found: {peripheral.identifier()} [{peripheral.address()}]")
+
+   if __name__ == "__main__":
+       asyncio.run(main())
+
+Check out the `async examples`_ for more details.
+
 To run the built-in REST server, you can use the following command: ::
 
    python3 -m simplepyble.server --host 127.0.0.1 --port 8000
@@ -94,6 +121,8 @@ For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the
 .. _SimpleBLE: https://github.com/simpleble/simpleble/
 
 .. _code examples: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble
+
+.. _async examples: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble
 
 .. _Discord: https://discord.gg/N9HqNEcvP3
 
