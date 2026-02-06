@@ -68,8 +68,6 @@ async def main():
         print("Subscribed! Waiting for notifications for 10 seconds...")
         await asyncio.sleep(10)
 
-        # Cleanup is handled by __aexit__ (async with), 
-        # but we can explicitly unsubscribe too.
         await peripheral.unsubscribe(service_uuid, characteristic_uuid)
         print("Unsubscribed.")
 
