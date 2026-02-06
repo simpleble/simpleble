@@ -144,7 +144,10 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._internal.descriptor_write, service_uuid, characteristic_uuid, descriptor_uuid, payload)
 
-    def set_callback_on_connected(self, callback: Callable[[], None]):
+    def set_callback_on_connected(self, callback: Optional[Callable[[], None]]):
+        if callback is None:
+             self._internal.set_callback_on_connected(None)
+             return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -153,7 +156,10 @@ class Peripheral:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_connected(wrapper)
 
-    def set_callback_on_disconnected(self, callback: Callable[[], None]):
+    def set_callback_on_disconnected(self, callback: Optional[Callable[[], None]]):
+        if callback is None:
+             self._internal.set_callback_on_disconnected(None)
+             return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -214,7 +220,10 @@ class Adapter:
     def get_paired_peripherals(self) -> List[Peripheral]:
         return [Peripheral(p) for p in self._internal.get_paired_peripherals()]
 
-    def set_callback_on_scan_start(self, callback: Callable[[], None]):
+    def set_callback_on_scan_start(self, callback: Optional[Callable[[], None]]):
+        if callback is None:
+             self._internal.set_callback_on_scan_start(None)
+             return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -223,7 +232,10 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_start(wrapper)
 
-    def set_callback_on_scan_stop(self, callback: Callable[[], None]):
+    def set_callback_on_scan_stop(self, callback: Optional[Callable[[], None]]):
+        if callback is None:
+             self._internal.set_callback_on_scan_stop(None)
+             return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -232,7 +244,10 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_stop(wrapper)
 
-    def set_callback_on_scan_found(self, callback: Callable[[Peripheral], None]):
+    def set_callback_on_scan_found(self, callback: Optional[Callable[[Peripheral], None]]):
+        if callback is None:
+             self._internal.set_callback_on_scan_found(None)
+             return
         loop = asyncio.get_running_loop()
         def wrapper(peripheral):
             # Wrap the peripheral before passing it to the callback
@@ -243,7 +258,10 @@ class Adapter:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_found(wrapper)
 
-    def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], None]):
+    def set_callback_on_scan_updated(self, callback: Optional[Callable[[Peripheral], None]]):
+        if callback is None:
+             self._internal.set_callback_on_scan_updated(None)
+             return
         loop = asyncio.get_running_loop()
         def wrapper(peripheral):
             # Wrap the peripheral before passing it to the callback
