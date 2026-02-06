@@ -83,14 +83,18 @@ runs:
           echo "CMAKE_OPTIONS=$_ARCH_FLAG -DCMAKE_OSX_DEPLOYMENT_TARGET=13 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           echo "SHELL=bash" >> $GITHUB_ENV
         elif [ "${{ inputs.os }}" == "ios" ] || [ "${{ inputs.os }}" == "ios-simulator" ]; then
-          # iOS configuration for device or simulator builds.
-          # ios-simulator requires specifying the simulator SDK explicitly.
+          # Note: Basic iOS configuration. Assumes Xcode environment is set up correctly
+          # on the runner (especially for finding the correct SDK).
+          # Device vs Simulator builds might require CMAKE_OSX_SYSROOT or a specific CMake toolchain file
+          # for robust SDK and toolchain detection.
           _ARCH_FLAG_VALUE=""
           if [ "${{ inputs.target-arch }}" == "aarch64" ]; then
              _ARCH_FLAG_VALUE="arm64" # For iOS devices or simulators on Apple Silicon
           elif [ "${{ inputs.target-arch }}" == "x64" ]; then
              _ARCH_FLAG_VALUE="x86_64" # For iOS simulators on Intel
           fi
+          # elif [ "${{ inputs.target-arch }}" == "x86" ]; then
+          #    _ARCH_FLAG_VALUE="i386" # For older iOS simulators (less common now)
 
           if [ -n "$_ARCH_FLAG_VALUE" ]; then
             _SDK_FLAG=""
