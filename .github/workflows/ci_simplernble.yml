@@ -1,0 +1,171 @@
+name: Build SimplernBLE
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-native:
+    runs-on: ${{ matrix.config.runner-os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { runner-os: macos-14, os: ios, arch: aarch64, artifact: ios-arm64 }
+          - { runner-os: macos-14, os: ios-simulator, arch: aarch64, artifact: ios-simulator-arm64 }
+          - { runner-os: macos-14, os: ios-simulator, arch: x64, artifact: ios-simulator-x64 }
+          - { runner-os: macos-14, os: macos, arch: aarch64, artifact: macos-arm64 }
+          - { runner-os: macos-14, os: macos, arch: x64, artifact: macos-x64 }
+          - { runner-os: ubuntu-22.04, os: android, arch: arm64-v8a, artifact: android-arm64-v8a }
+          - { runner-os: ubuntu-22.04, os: android, arch: armeabi-v7a, artifact: android-armeabi-v7a }
+          - { runner-os: ubuntu-22.04, os: android, arch: x86_64, artifact: android-x86_64 }
+          - { runner-os: ubuntu-22.04, os: android, arch: x86, artifact: android-x86 }
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Setup Java
+        if: matrix.config.os == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        if: matrix.config.os == 'android'
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        if: matrix.config.os == 'android'
+        run: sdkmanager --install "ndk;26.1.10909125"
+
+      - name: Build SimpleBLE
+        uses: ./.github/actions/build-native
+        with:
+          source-dir: "$GITHUB_WORKSPACE/simpleble"
+          build-dir: "$GITHUB_WORKSPACE/build"
+          install-prefix: "$GITHUB_WORKSPACE/install"
+          build-config: "Release"
+          os: "${{ matrix.config.os }}"
+          target-arch: "${{ matrix.config.arch }}"
+          cmake-options: "-DBUILD_SHARED_LIBS=OFF -DSIMPLEBLE_EXCLUDE_C=ON"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: simpleble-${{ matrix.config.artifact }}
+          path: install/
+
+  package:
+    runs-on: macos-14
+    needs: [build-native]
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create XCFramework
+        working-directory: simplernble
+        run: |
+          # Create universal macOS library
+          mkdir -p ../artifacts/simpleble-macos-universal/lib
+          cp -r ../artifacts/simpleble-macos-arm64/include ../artifacts/simpleble-macos-universal/
+          lipo -create \
+            ../artifacts/simpleble-macos-arm64/lib/libsimpleble.a \
+            ../artifacts/simpleble-macos-x64/lib/libsimpleble.a \
+            -output ../artifacts/simpleble-macos-universal/lib/libsimpleble.a 
+
+          # Create universal iOS Simulator library
+          mkdir -p ../artifacts/simpleble-ios-simulator-universal/lib
+          cp -r ../artifacts/simpleble-ios-simulator-arm64/include ../artifacts/simpleble-ios-simulator-universal/
+          lipo -create \
+            ../artifacts/simpleble-ios-simulator-arm64/lib/libsimpleble.a \
+            ../artifacts/simpleble-ios-simulator-x64/lib/libsimpleble.a \
+            -output ../artifacts/simpleble-ios-simulator-universal/lib/libsimpleble.a
+
+          # Create XCFramework
+          xcodebuild -create-xcframework \
+            -library ../artifacts/simpleble-ios-arm64/lib/libsimpleble.a \
+            -headers ../artifacts/simpleble-ios-arm64/include \
+            -library ../artifacts/simpleble-ios-simulator-universal/lib/libsimpleble.a \
+            -headers ../artifacts/simpleble-ios-simulator-universal/include \
+            -library ../artifacts/simpleble-macos-universal/lib/libsimpleble.a \
+            -headers ../artifacts/simpleble-macos-universal/include \
+            -output apple/SimpleBLE.xcframework
+
+      - name: Setup Android prebuilt
+        working-directory: simplernble
+        env:
+          ANDROID_ABIS: "arm64-v8a armeabi-v7a x86_64 x86"
+        run: |
+          for abi in $ANDROID_ABIS; do
+            mkdir -p android/prebuilt/$abi
+            cp -r ../artifacts/simpleble-android-$abi/* android/prebuilt/$abi/
+          done
+
+      - name: Copy sources from repo
+        working-directory: simplernble
+        run: |
+          cp -r ../simpledroidbridge .
+          cp ../VERSION .
+          cp ../LICENSE.md .
+
+      - name: Install dependencies
+        working-directory: simplernble
+        run: npm ci
+
+      - name: Update package version
+        working-directory: simplernble
+        run: npm version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+
+      - name: Build TypeScript and Nitrogen
+        working-directory: simplernble
+        run: |
+          npm run build
+          npm run nitrogen
+
+      - name: Verify package
+        working-directory: simplernble
+        run: |
+          npm pack --dry-run
+          ls -la apple/SimpleBLE.xcframework/
+          ls -la android/prebuilt/
+
+      - name: Create npm tarball
+        working-directory: simplernble
+        run: npm pack
+
+      - name: Upload npm package
+        uses: actions/upload-artifact@v4
+        with:
+          name: simplernble-npm
+          path: simplernble/simplernble-*.tgz

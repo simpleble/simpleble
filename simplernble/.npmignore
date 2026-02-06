@@ -1,0 +1,40 @@
+# Ignore development and build files
+node_modules/
+android/build/
+android/.cxx/
+android/.gradle/
+apple/build_*/
+apple/simpleble_*/
+*.tsbuildinfo
+
+# Ignore example app
+example/
+
+# Ignore test files
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore documentation source (README.md is included)
+docs/
+
+# Ignore CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Ignore lock files
+package-lock.json
+yarn.lock
+bun.lock
+
+# Ignore environment files
+.env*

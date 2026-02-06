@@ -1,0 +1,118 @@
+{
+  "name": "simplernble",
+  "version": "0.0.6-beta.15",
+  "description": "SimpleBLE for React Native",
+  "main": "lib/index",
+  "module": "lib/index",
+  "types": "lib/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
+  "files": [
+    "src",
+    "lib",
+    "nitrogen",
+    "android/",
+    "apple/",
+    "cpp/",
+    "simpledroidbridge/",
+    "LICENSE.md",
+    "react-native.config.js",
+    "nitro.json",
+    "*.podspec",
+    "app.plugin.js",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "nitrogen": "npx nitrogen",
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build && npm run nitrogen",
+    "prepublishOnly": "npm run typecheck",
+    "postpublish": "npm run clean",
+    "clean": "rm -rf simpleble simpledroidbridge cmake dependencies VERSION nitrogen lib tsconfig.tsbuildinfo android/build android/.cxx android/.gradle android/prebuilt apple/SimpleBLE.xcframework",
+    "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
+    "specs": "tsc --noEmit false && nitrogen --logLevel=\"debug\"",
+    "publish:local": "bash scripts/prepare-package.sh && npm publish",
+    "publish:local:beta": "bash scripts/prepare-package.sh && npm version prerelease --preid beta && npm publish --tag beta"
+  },
+  "keywords": [
+    "react-native",
+    "bluetooth",
+    "ble",
+    "bluetooth-low-energy",
+    "simpleble",
+    "nitro",
+    "nitro-modules",
+    "ios",
+    "android",
+    "macos"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simpleble/simpleble.git",
+    "directory": "simplernble"
+  },
+  "author": "SimpleBLE by The California Open Source Company",
+  "license": "BUSL-1.1",
+  "bugs": {
+    "url": "https://github.com/simpleble/simpleble/issues"
+  },
+  "homepage": "https://github.com/simpleble/simpleble#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "devDependencies": {
+    "@react-native/eslint-config": "0.82.0",
+    "@types/react": "^19.1.03",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "nitrogen": "*",
+    "prettier": "^3.3.3",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "^5.8.3",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-nitro-modules": ">=0.20.0"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@react-native",
+      "prettier"
+    ],
+    "plugins": [
+      "prettier"
+    ],
+    "rules": {
+      "prettier/prettier": [
+        "warn",
+        {
+          "quoteProps": "consistent",
+          "singleQuote": true,
+          "tabWidth": 2,
+          "trailingComma": "es5",
+          "useTabs": false
+        }
+      ]
+    }
+  },
+  "eslintIgnore": [
+    "node_modules/",
+    "lib/"
+  ],
+  "prettier": {
+    "quoteProps": "consistent",
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "useTabs": false,
+    "semi": false
+  }
+}

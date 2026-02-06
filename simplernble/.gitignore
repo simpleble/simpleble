@@ -1,0 +1,28 @@
+# Files copied by prepack script (should not be committed)
+simpleble/
+cmake/
+dependencies/
+VERSION
+simpledroidbridge/
+
+lib/
+
+nitrogen/
+
+apple/build_*/
+apple/simpleble_*/
+apple/SimpleBLE.xcframework/
+
+android/build/
+android/.cxx/
+android/.gradle/
+android/prebuilt/
+android/build_android_*/
+
+# Node
+node_modules/
+*.tgz
+
+nitrogen/
+
+tsconfig.tsbuildinfo

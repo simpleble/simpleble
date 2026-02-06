@@ -1,0 +1,35 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": [
+    "simplernble"
+  ],
+  "ios": {
+    "iosModuleName": "NitroSimplernble"
+  },
+  "android": {
+    "androidNamespace": [
+      "simplernble"
+    ],
+    "androidCxxLibName": "NitroSimplernble"
+  },
+  "autolinking": {
+    "Adapter": {
+      "cpp": "HybridAdapter"
+    },
+    "Peripheral": {
+      "cpp": "HybridPeripheral"
+    },
+    "Service": {
+      "cpp": "HybridService"
+    },
+    "Characteristic": {
+      "cpp": "HybridCharacteristic"
+    },
+    "Descriptor": {
+      "cpp": "HybridDescriptor"
+    }
+  },
+  "ignorePaths": [
+    "**/node_modules"
+  ]
+}

@@ -1,5 +1,5 @@
 name: "Build Native Target"
-description: "Builds and installs a CMake target on Linux, Windows, macOS, iOS, or Android."
+description: "Builds and installs a CMake target on Linux, Windows, macOS, iOS, iOS Simulator, or Android."
 
 inputs:
   source-dir:
@@ -21,10 +21,10 @@ inputs:
     description: "Number of parallel jobs to use for building (empty means default to CPU cores)"
     default: "" # Empty means default to CPU cores
   os:
-    description: "Operating system (e.g., linux, windows, macos, ios, android)"
+    description: "Operating system (e.g., linux, windows, macos, ios, ios-simulator, android)"
     required: true
   target-arch:
-    description: "Target architecture (x64, aarch64, or x86). Defaults to x64."
+    description: "Target architecture (x64, aarch64, x86, arm64-v8a, armeabi-v7a, x86_64). Defaults to x64."
     required: false
     default: "x64"
   linux-use-system-dbus:
@@ -82,7 +82,7 @@ runs:
 
           echo "CMAKE_OPTIONS=$_ARCH_FLAG -DCMAKE_OSX_DEPLOYMENT_TARGET=13 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           echo "SHELL=bash" >> $GITHUB_ENV
-        elif [ "${{ inputs.os }}" == "ios" ]; then
+        elif [ "${{ inputs.os }}" == "ios" ] || [ "${{ inputs.os }}" == "ios-simulator" ]; then
           # Note: Basic iOS configuration. Assumes Xcode environment is set up correctly
           # on the runner (especially for finding the correct SDK).
           # Device vs Simulator builds might require CMAKE_OSX_SYSROOT or a specific CMake toolchain file
@@ -97,8 +97,11 @@ runs:
           fi
 
           if [ -n "$_ARCH_FLAG_VALUE" ]; then
-            # Set CMake options required for iOS cross-compilation
-            echo "CMAKE_OPTIONS=-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=$_ARCH_FLAG_VALUE -DCMAKE_OSX_DEPLOYMENT_TARGET=15.8 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
+            _SDK_FLAG=""
+            if [ "${{ inputs.os }}" == "ios-simulator" ]; then
+              _SDK_FLAG="-DCMAKE_OSX_SYSROOT=iphonesimulator"
+            fi
+            echo "CMAKE_OPTIONS=-DCMAKE_SYSTEM_NAME=iOS $_SDK_FLAG -DCMAKE_OSX_ARCHITECTURES=$_ARCH_FLAG_VALUE -DCMAKE_OSX_DEPLOYMENT_TARGET=15.8 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           else
             echo "Unsupported target architecture for iOS: ${{ inputs.target-arch }}"
             exit 1
