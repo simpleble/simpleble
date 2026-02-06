@@ -31,20 +31,11 @@ You can install SimplePyBLE from PyPI using pip: ::
 
    pip install simplepyble
 
-If you want to use the built-in REST server, you can install the optional dependencies: ::
-
-   pip install simplepyble[http]
-
 Usage
 -----
 
 Please review our `code examples`_ on GitHub for more information on how to use
 SimplePyBLE.
-
-To run the built-in REST server, you can use the following command: ::
-
-   python3 -m simplepyble.http --host 127.0.0.1 --port 8000
-
 
 License
 =======
