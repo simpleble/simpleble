@@ -1,6 +1,166 @@
 import asyncio
-from typing import List, Callable, Optional, Union, Any
+from typing import List, Callable, Optional, Union, Any, Dict
 import simplepyble
+
+class Descriptor:
+    def __init__(self, internal_descriptor: simplepyble.Descriptor):
+        self._internal = internal_descriptor
+
+    def uuid(self) -> str:
+        return self._internal.uuid()
+
+class Characteristic:
+    def __init__(self, internal_characteristic: simplepyble.Characteristic):
+        self._internal = internal_characteristic
+
+    def uuid(self) -> str:
+        return self._internal.uuid()
+
+    def descriptors(self) -> List[Descriptor]:
+        return [Descriptor(d) for d in self._internal.descriptors()]
+
+    def capabilities(self) -> List[str]:
+        return self._internal.capabilities()
+
+    def can_read(self) -> bool:
+        return self._internal.can_read()
+
+    def can_write_request(self) -> bool:
+        return self._internal.can_write_request()
+
+    def can_write_command(self) -> bool:
+        return self._internal.can_write_command()
+
+    def can_notify(self) -> bool:
+        return self._internal.can_notify()
+
+    def can_indicate(self) -> bool:
+        return self._internal.can_indicate()
+
+class Service:
+    def __init__(self, internal_service: simplepyble.Service):
+        self._internal = internal_service
+
+    def uuid(self) -> str:
+        return self._internal.uuid()
+
+    def data(self) -> bytes:
+        return self._internal.data()
+
+    def characteristics(self) -> List[Characteristic]:
+        return [Characteristic(c) for c in self._internal.characteristics()]
+
+class Peripheral:
+    def __init__(self, internal_peripheral: simplepyble.Peripheral):
+        self._internal = internal_peripheral
+
+    def initialized(self) -> bool:
+        return self._internal.initialized()
+
+    def identifier(self) -> str:
+        return self._internal.identifier()
+
+    def address(self) -> str:
+        return self._internal.address()
+
+    def address_type(self) -> str:
+        return self._internal.address_type()
+
+    def rssi(self) -> int:
+        return self._internal.rssi()
+
+    def tx_power(self) -> int:
+        return self._internal.tx_power()
+
+    def mtu(self) -> int:
+        return self._internal.mtu()
+
+    async def connect(self):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.connect)
+
+    async def disconnect(self):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.disconnect)
+
+    def is_connected(self) -> bool:
+        return self._internal.is_connected()
+
+    def is_connectable(self) -> bool:
+        return self._internal.is_connectable()
+
+    def is_paired(self) -> bool:
+        return self._internal.is_paired()
+
+    async def unpair(self):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.unpair)
+
+    def services(self) -> List[Service]:
+        return [Service(s) for s in self._internal.services()]
+
+    def manufacturer_data(self) -> Dict[int, bytes]:
+        return self._internal.manufacturer_data()
+
+    async def read(self, service_uuid: str, characteristic_uuid: str) -> bytes:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.read, service_uuid, characteristic_uuid)
+
+    async def write_request(self, service_uuid: str, characteristic_uuid: str, payload: bytes):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.write_request, service_uuid, characteristic_uuid, payload)
+
+    async def write_command(self, service_uuid: str, characteristic_uuid: str, payload: bytes):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.write_command, service_uuid, characteristic_uuid, payload)
+
+    async def notify(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
+        loop = asyncio.get_running_loop()
+        def wrapper(payload):
+            if asyncio.iscoroutinefunction(callback):
+                asyncio.run_coroutine_threadsafe(callback(payload), loop)
+            else:
+                loop.call_soon_threadsafe(callback, payload)
+        return await loop.run_in_executor(None, self._internal.notify, service_uuid, characteristic_uuid, wrapper)
+
+    async def indicate(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
+        loop = asyncio.get_running_loop()
+        def wrapper(payload):
+            if asyncio.iscoroutinefunction(callback):
+                asyncio.run_coroutine_threadsafe(callback(payload), loop)
+            else:
+                loop.call_soon_threadsafe(callback, payload)
+        return await loop.run_in_executor(None, self._internal.indicate, service_uuid, characteristic_uuid, wrapper)
+
+    async def unsubscribe(self, service_uuid: str, characteristic_uuid: str):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.unsubscribe, service_uuid, characteristic_uuid)
+
+    async def descriptor_read(self, service_uuid: str, characteristic_uuid: str, descriptor_uuid: str) -> bytes:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.descriptor_read, service_uuid, characteristic_uuid, descriptor_uuid)
+
+    async def descriptor_write(self, service_uuid: str, characteristic_uuid: str, descriptor_uuid: str, payload: bytes):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._internal.descriptor_write, service_uuid, characteristic_uuid, descriptor_uuid, payload)
+
+    def set_callback_on_connected(self, callback: Callable[[], None]):
+        loop = asyncio.get_running_loop()
+        def wrapper():
+            if asyncio.iscoroutinefunction(callback):
+                asyncio.run_coroutine_threadsafe(callback(), loop)
+            else:
+                loop.call_soon_threadsafe(callback)
+        self._internal.set_callback_on_connected(wrapper)
+
+    def set_callback_on_disconnected(self, callback: Callable[[], None]):
+        loop = asyncio.get_running_loop()
+        def wrapper():
+            if asyncio.iscoroutinefunction(callback):
+                asyncio.run_coroutine_threadsafe(callback(), loop)
+            else:
+                loop.call_soon_threadsafe(callback)
+        self._internal.set_callback_on_disconnected(wrapper)
 
 class Adapter:
     def __init__(self, internal_adapter: simplepyble.Adapter):
@@ -48,32 +208,11 @@ class Adapter:
     def scan_is_active(self) -> bool:
         return self._internal.scan_is_active()
 
-    def scan_get_results(self):
-        # Return raw peripherals for now, as requested to focus on Adapter first.
-        return self._internal.scan_get_results()
+    def scan_get_results(self) -> List[Peripheral]:
+        return [Peripheral(p) for p in self._internal.scan_get_results()]
         
-    def get_paired_peripherals(self):
-        return self._internal.get_paired_peripherals()
-
-    def _wrap_callback(self, callback: Callable) -> Callable:
-        loop = asyncio.get_running_loop()
-        
-        def wrapper(payload=None):
-            # Inspect callback to see if it takes arguments
-            # Note: simplepyble callbacks might differ in arguments.
-            # set_callback_on_scan_found passes a peripheral.
-            # set_callback_on_scan_start passes nothing.
-            
-            # We need to handle arguments correctly.
-            # But the wrapper signature here must match what C++ expects?
-            # No, C++ calls this wrapper. The wrapper is defined inside _wrap_callback.
-            # Wait, `set_callback_on_scan_found` expects a callback that takes 1 arg.
-            # `set_callback_on_scan_start` expects 0 args.
-            # So I cannot use a generic wrapper with optional payload for all.
-            # I need specific wrappers.
-            pass
-            
-        return wrapper
+    def get_paired_peripherals(self) -> List[Peripheral]:
+        return [Peripheral(p) for p in self._internal.get_paired_peripherals()]
 
     def set_callback_on_scan_start(self, callback: Callable[[], None]):
         loop = asyncio.get_running_loop()
@@ -93,20 +232,24 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_stop(wrapper)
 
-    def set_callback_on_scan_found(self, callback: Callable[[Any], None]):
+    def set_callback_on_scan_found(self, callback: Callable[[Peripheral], None]):
         loop = asyncio.get_running_loop()
         def wrapper(peripheral):
+            # Wrap the peripheral before passing it to the callback
+            wrapped_peripheral = Peripheral(peripheral)
             if asyncio.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(peripheral), loop)
+                asyncio.run_coroutine_threadsafe(callback(wrapped_peripheral), loop)
             else:
-                loop.call_soon_threadsafe(callback, peripheral)
+                loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_found(wrapper)
 
-    def set_callback_on_scan_updated(self, callback: Callable[[Any], None]):
+    def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], None]):
         loop = asyncio.get_running_loop()
         def wrapper(peripheral):
+            # Wrap the peripheral before passing it to the callback
+            wrapped_peripheral = Peripheral(peripheral)
             if asyncio.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(peripheral), loop)
+                asyncio.run_coroutine_threadsafe(callback(wrapped_peripheral), loop)
             else:
-                loop.call_soon_threadsafe(callback, peripheral)
+                loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_updated(wrapper)
