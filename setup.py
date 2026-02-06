@@ -74,15 +74,7 @@ skbuild.setup(
         "pybind11",
     ],
     install_requires=[],
-    entry_points={
-        "console_scripts": [
-            "simpleaible = simplepyble.mcp:main"
-        ],
-    },
-    extras_require={
-        "mcp": ["fastmcp"],
-        "http": ["fastapi", "uvicorn", "pydantic"],
-    },
+    extras_require={},
     platforms="Windows, macOS, Linux",
     python_requires=">=3.8",
     classifiers=[

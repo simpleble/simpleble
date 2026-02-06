@@ -6,7 +6,7 @@ _doxygen
 _skbuild
 .gradle
 
-/build_*
+/build
 /install_*
 /dist
 
@@ -23,3 +23,4 @@ uv.lock
 
 node_modules/
 
+/simpledist 

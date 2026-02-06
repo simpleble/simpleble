@@ -1,16 +1,16 @@
 ---
 title: HTTP Server
-description: Comprehensive documentation for the SimplePyBLE HTTP server API.
+description: Comprehensive documentation for the SimpleAIBLE HTTP server API.
 ---
 
-SimplePyBLE includes a built-in HTTP server that allows you to control BLE devices using a REST API. This is particularly useful for controlling BLE devices remotely or for providing an interface for AI agents.
+SimpleAIBLE includes a built-in HTTP server that allows you to control BLE devices using a REST API. This is particularly useful for controlling BLE devices remotely or for providing an interface for AI agents.
 
 ## Installation
 
-To use the server, you need to install the optional dependencies:
+Install the `simpleaible` package:
 
 ```bash
-pip install simplepyble[http]
+pip install simpleaible
 ```
 
 ## Running the Server
@@ -18,7 +18,7 @@ pip install simplepyble[http]
 Once the dependencies are installed, you can run the server using the following command:
 
 ```bash
-python3 -m simplepyble.http --host 127.0.0.1 --port 8000
+python3 -m simpleaible.http --host 127.0.0.1 --port 8000
 ```
 
 By default, the server runs on `http://127.0.0.1:8000`.
@@ -32,7 +32,7 @@ Check if the API is running and healthy.
 
 - **Response**: 
   ```json
-  {"message": "SimplePyBLE API is running"}
+  {"message": "SimpleAIBLE API is running"}
   ```
 
 #### `GET /adapters`

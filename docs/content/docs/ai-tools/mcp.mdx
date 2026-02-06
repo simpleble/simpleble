@@ -1,16 +1,16 @@
 ---
 title: MCP Server
-description: Run and use the SimplePyBLE MCP server.
+description: Run and use the SimpleAIBLE MCP server.
 ---
 
-The SimplePyBLE MCP server provides local BLE tools to MCP-capable clients. It is designed for development, debugging, and AI-assisted workflows that need direct access to BLE hardware on the host machine.
+The SimpleAIBLE MCP server provides local BLE tools to MCP-capable clients. It is designed for development, debugging, and AI-assisted workflows that need direct access to BLE hardware on the host machine.
 
 ## Installation
 
-First, install the package with the `mcp` extra:
+Install the `simpleaible` package:
 
 ```bash
-pip install "simplepyble[mcp]"
+pip install simpleaible
 ```
 
 <details open>
@@ -27,14 +27,14 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 ```json
 {
   "mcpServers": {
-    "simpleble": {
+    "simpleaible": {
       "command": "simpleaible"
     }
   }
 }
 ```
 
-_Note: You must have installed the package first via `pip install "simplepyble[mcp]"`. If `simpleaible` is not in your system PATH, you may need to provide the full path to the executable._
+_Note: You must have installed the package first via `pip install simpleaible`. If `simpleaible` is not in your system PATH, you may need to provide the full path to the executable._
 
 </details>
 
@@ -46,7 +46,7 @@ Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp
 #### Claude Code Local Server Connection
 
 ```sh
-claude mcp add simpleble -- simpleaible
+claude mcp add simpleaible -- simpleaible
 ```
 
 </details>
@@ -61,7 +61,7 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 ```json
 {
   "mcp": {
-    "simpleble": {
+    "simpleaible": {
       "type": "local",
       "command": ["simpleaible"],
       "enabled": true
