@@ -92,9 +92,9 @@ runs:
              _ARCH_FLAG_VALUE="arm64" # For iOS devices or simulators on Apple Silicon
           elif [ "${{ inputs.target-arch }}" == "x64" ]; then
              _ARCH_FLAG_VALUE="x86_64" # For iOS simulators on Intel
-          fi
           # elif [ "${{ inputs.target-arch }}" == "x86" ]; then
           #    _ARCH_FLAG_VALUE="i386" # For older iOS simulators (less common now)
+          fi
 
           if [ -n "$_ARCH_FLAG_VALUE" ]; then
             _SDK_FLAG=""
