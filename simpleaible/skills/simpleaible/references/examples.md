@@ -1,4 +1,4 @@
-# SimpleBLE Examples
+# SimpleAIBLE Examples
 
 ## Example 1: Listing Bluetooth Adapters
 

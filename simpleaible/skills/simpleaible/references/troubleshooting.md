@@ -1,4 +1,4 @@
-# Troubleshooting SimpleBLE MCP Operations
+# Troubleshooting SimpleAIBLE MCP Operations
 
 ## Bluetooth Not Enabled
 

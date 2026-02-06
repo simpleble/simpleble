@@ -1,11 +1,11 @@
 ---
-name: simpleble
-description: Use the SimpleBLE MCP server to scan, connect, and interact with Bluetooth devices. This skill provides guidance on the recommended flow (scan -> connect -> services -> read/notify) and handles platform-specific differences like UUIDs on macOS vs MAC addresses on Linux. Use when the user wants to interact with BLE hardware or debug Bluetooth connections.
+name: simpleaible
+description: Use the SimpleAIBLE MCP server to scan, connect, and interact with Bluetooth devices. This skill provides guidance on the recommended flow (scan -> connect -> services -> read/notify) and handles platform-specific differences like UUIDs on macOS vs MAC addresses on Linux. Use when the user wants to interact with BLE hardware or debug Bluetooth connections.
 ---
 
-# SimpleBLE
+# SimpleAIBLE
 
-This skill provides instructions for using the SimpleBLE MCP server to interact with Bluetooth Low Energy (BLE) devices directly from the host machine.
+SimpleAIBLE is an AI-friendly BLE toolkit powered by SimpleBLE. This skill provides instructions for using the SimpleAIBLE MCP server to interact with Bluetooth Low Energy (BLE) devices directly from the host machine.
 
 ## Quick Start Flow
 

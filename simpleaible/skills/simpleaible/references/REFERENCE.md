@@ -1,4 +1,4 @@
-# SimpleBLE Reference
+# SimpleAIBLE Reference
 
 ## Tool Catalog
 
