@@ -26,12 +26,6 @@ const RESOURCES: ReadonlyArray<CardLink> = [
     href: "/docs/simpleaible/mcp",
   },
   {
-    title: "Licensing & Support",
-    description:
-    "Understand the licensing options, commercial readiness, and where to get help when you need it.",
-    href: "/docs/licensing",
-  },
-  {
     title: "Changelog",
     description:
       "Track releases, fixes, and improvements across the core library and language bindings.",
