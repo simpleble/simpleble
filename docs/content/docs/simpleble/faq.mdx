@@ -29,6 +29,18 @@ MacOS has a policy of not allowing applications to access the Bluetooth address 
 
 </Accordion>
 
+<Accordion title="Why does connecting take longer on Linux?" id="linux-connection">
+
+On Linux (BlueZ), SimpleBLE waits until all services have been fully resolved before considering the device "connected". This ensures that when `connect()` returns, the device is fully ready for interaction, but it adds the time required for service discovery to the connection process.
+
+</Accordion>
+
+<Accordion title="Why is address_type() returning unknown on Android?" id="android-address-type">
+
+Retrieving the address type of a peripheral is only supported on Android API level 35 and newer. On older versions of Android, the OS does not expose this information to applications.
+
+</Accordion>
+
 <Accordion title="I get a 'Bluetooth not enabled' warning on Windows, despite Bluetooth being enabled." id="windows-warning">
 
 This is a known issue when running a version of SimpleBLE built for a 32-bit architecture on a 64-bit Windows machine. The issue is that the underlying Windows API will not allow us to query the state of the Bluetooth adapter when running in 32-bit mode. The solution is to consume a 64-bit version of SimpleBLE instead.

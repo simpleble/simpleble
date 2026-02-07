@@ -1,0 +1,204 @@
+---
+title: Tutorial
+description: Step-by-step guide to using SimpleCBLE.
+---
+
+This tutorial will guide you through the basics of using SimpleCBLE to scan for and connect to Bluetooth Low Energy devices.
+
+## Header Files
+
+To use SimpleCBLE, you need to include the main header file:
+
+```c
+#include <simpleble/simpleble.h>
+```
+
+(Note: Depending on your installation, it might be `<simpleble_c/simpleble.h>`. The `simpleble/include/simpleble/simpleble.h` file includes `simpleble_c/adapter.h`, etc. Wait, looking at the code I read:
+
+```c
+// simpleble/include/simpleble/simpleble.h
+#include <simpleble/export.h>
+#include <simpleble_c/adapter.h>
+#include <simpleble_c/peripheral.h>
+```
+
+It seems the include path might be slightly different depending on how it's installed. In the example `scan.c`:
+
+```c
+#include "simpleble_c/simpleble.h"
+```
+
+I will stick to generic `#include <simpleble_c/simpleble.h>` or `#include <simpleble/simpleble.h>` depending on how headers are exposed. Based on `simplecble/CMakeLists.txt`:
+
+```cmake
+install(
+    DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simplecble/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simplecble)
+```
+
+It installs to `include/simplecble/simpleble/simpleble.h`? That looks weird.
+
+The `target_include_directories` says:
+`$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>`
+
+In the repo: `simplecble/include/simplecble/simpleble.h`.
+
+So `#include <simplecble/simpleble.h>` seems likely if installed correctly, or `#include <simpleble/simpleble.h>` if the include path is set to `simplecble/include/simplecble`.
+
+Wait, the example uses `#include "simpleble_c/simpleble.h"`. This suggests the old binding name `simpleble_c` might still be used or the example is referencing a specific path.
+
+Actually, the `simplecble/CMakeLists.txt` creates an alias:
+
+```cmake
+add_library(simpleble-c ALIAS simplecble)
+```
+
+And the headers in `simplecble/include/simplecble` seem to define the C API.
+
+Let's assume standard installation puts headers in `include/simplecble`. So `#include <simplecble/simpleble.h>`.
+
+## Initialization
+
+There is no global initialization function, but you should usually start by getting the list of adapters.
+
+## Adapters
+
+Everything in SimpleBLE starts with an adapter. You can check if Bluetooth is enabled and list available adapters.
+
+```c
+#include <stdio.h>
+#include <simplecble/simpleble.h>
+
+int main() {
+    // Check if Bluetooth is enabled
+    if (!simpleble_adapter_is_bluetooth_enabled()) {
+        printf("Bluetooth is not enabled.
+");
+        return 1;
+    }
+
+    // Get the number of adapters
+    size_t adapter_count = simpleble_adapter_get_count();
+    if (adapter_count == 0) {
+        printf("No adapters found.
+");
+        return 1;
+    }
+
+    // Get the handle for the first adapter
+    // Note: You must release this handle when done!
+    simpleble_adapter_t adapter = simpleble_adapter_get_handle(0);
+
+    if (adapter == NULL) {
+        printf("Failed to get adapter handle.
+");
+        return 1;
+    }
+
+    // Get adapter details
+    char* identifier = simpleble_adapter_identifier(adapter);
+    char* address = simpleble_adapter_address(adapter);
+
+    printf("Adapter: %s [%s]
+", identifier, address);
+
+    // Clean up strings
+    simpleble_free(identifier);
+    simpleble_free(address);
+
+    // Clean up adapter handle
+    simpleble_adapter_release_handle(adapter);
+
+    return 0;
+}
+```
+
+## Scanning
+
+To scan for peripherals, you use `simpleble_adapter_scan_for` or the async methods.
+
+```c
+// Start scanning for 5 seconds (5000 ms)
+simpleble_adapter_scan_for(adapter, 5000);
+
+// Get results
+size_t results_count = simpleble_adapter_scan_get_results_count(adapter);
+
+for (size_t i = 0; i < results_count; i++) {
+    // Get peripheral handle
+    // Note: You must release this handle when done!
+    simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i);
+
+    char* identifier = simpleble_peripheral_identifier(peripheral);
+    char* address = simpleble_peripheral_address(peripheral);
+    int16_t rssi = simpleble_peripheral_rssi(peripheral);
+
+    printf("Found: %s [%s] RSSI: %d
+", identifier, address, rssi);
+
+    simpleble_free(identifier);
+    simpleble_free(address);
+    simpleble_peripheral_release_handle(peripheral);
+}
+```
+
+## Connecting
+
+To connect, you need a peripheral handle.
+
+```c
+simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, 0);
+
+if (simpleble_peripheral_connect(peripheral) == SIMPLEBLE_SUCCESS) {
+    printf("Connected!
+");
+
+    // Do something...
+
+    simpleble_peripheral_disconnect(peripheral);
+} else {
+    printf("Failed to connect.
+");
+}
+
+simpleble_peripheral_release_handle(peripheral);
+```
+
+## Services and Characteristics
+
+Once connected, you can explore services and characteristics.
+
+```c
+size_t services_count = simpleble_peripheral_services_count(peripheral);
+
+for (size_t i = 0; i < services_count; i++) {
+    simpleble_service_t service;
+    if (simpleble_peripheral_services_get(peripheral, i, &service) == SIMPLEBLE_SUCCESS) {
+        printf("Service UUID: %s
+", service.uuid.value);
+
+        for (size_t j = 0; j < service.characteristic_count; j++) {
+            printf("  Characteristic UUID: %s
+", service.characteristics[j].uuid.value);
+        }
+    }
+}
+```
+
+## Reading and Writing
+
+(Add examples for reading/writing using `simpleble_peripheral_read`, `simpleble_peripheral_write_request`, etc.)
+
+## Notifications
+
+(Add example for `simpleble_peripheral_notify`)
+
+## Memory Management
+
+It is critical to release handles and free strings returned by the library.
+
+- Use `simpleble_free()` for any string (`char*`) returned by the API.
+- Use `simpleble_adapter_release_handle()` for `simpleble_adapter_t`.
+- Use `simpleble_peripheral_release_handle()` for `simpleble_peripheral_t`.
+
+Failure to do so will result in memory leaks.

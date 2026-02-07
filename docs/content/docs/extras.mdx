@@ -104,3 +104,14 @@ Before releasing a new version of the project, the following steps should be per
 
 - Attempt connecting while already connected.
 - Attempt disconnecting while not connected.
+
+## Documentation Structure Guide
+
+When adding documentation for new components or language bindings, follow this standardized structure to ensure consistency and a high-quality onboarding experience:
+
+1.  **Usage**: Detail installation, system requirements, and how to include the library in a project (CMake, package managers, etc.).
+2.  **Platform Notes**: Document OS-specific behaviors, limitations, and quirks. This is critical for Bluetooth-related components.
+3.  **Tutorial**: Provide a narrative, step-by-step guide that takes the user from a basic "Hello World" (e.g., listing adapters) to more advanced interactions (scanning, connecting, reading/writing).
+4.  **API Reference**: Use the `<ApiSection>`, `<ApiClass>`, and `<ApiMethod>` components to provide technical details for every public class and method.
+5.  **Examples**: Provide a curated list of use-cases with descriptions and direct links to the source code in the repository.
+6.  **FAQ**: Address common questions, troubleshooting steps, and platform-specific nuances that don't fit in the tutorial.

@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.11.1] - XXXX-XX-XX
+## [0.11.1] - 2026-XX-XX
 
 **Notes**
 
@@ -16,7 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Added**
 
-- 
+- (SimplePyBLE) Added `simplepyble.aio` module, providing an `asyncio`-compatible API with automatic callback cleanup and context manager support.
+- (SimplePyBLE) Exposed `Adapter.set_callback_on_power_on`, `Adapter.set_callback_on_power_off`, and `Adapter.get_connected_peripherals` in Python bindings.
+- (SimplePyBLE) Added `initialized()` method to `Service`, `Characteristic`, and `Descriptor` Python bindings.
 
 **Changed**
 
@@ -24,12 +26,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Fixed**
 
-- 
+- (SimpleBLE) Implemented `Adapter::get_connected_peripherals` in the C++ base frontend.
 
 **Removed**
 
 - 
-
 
 ## [0.11.0] - 2026-01-31
 

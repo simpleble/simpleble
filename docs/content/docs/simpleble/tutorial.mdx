@@ -128,39 +128,81 @@ SimpleBLE::Peripheral peripheral = peripherals[0];
 peripheral.connect();
 ```
 
-> **Note:** **More coming soon, I swear. :P**
+## Interacting with peripherals
+
+Once you are connected to a peripheral, you can start interacting with it. The first thing you need to do is to explore the services and characteristics that the peripheral offers. To do so, you can use the `SimpleBLE::Peripheral::services()` method, which returns a list of `SimpleBLE::Service` objects. Each `SimpleBLE::Service` object contains a list of `SimpleBLE::Characteristic` objects, which in turn can contain a list of `SimpleBLE::Descriptor` objects.
+
+```cpp
+// Get the list of services
+std::vector<SimpleBLE::Service> services = peripheral.services();
+
+// Iterate over the services
+for (auto service : services) {
+    std::cout << "Service UUID: " << service.uuid() << std::endl;
+
+    // Iterate over the characteristics
+    for (auto characteristic : service.characteristics()) {
+        std::cout << "  Characteristic UUID: " << characteristic.uuid() << std::endl;
+        std::cout << "  Capabilities: ";
+        for (auto capability : characteristic.capabilities()) {
+            std::cout << capability << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+```
+
+### Reading and Writing
+
+Once you have identified the service and characteristic you want to interact with, you can read and write values to it. To do so, you need the UUIDs of both the service and the characteristic.
+
+```cpp
+std::string service_uuid = "0000180f-0000-1000-8000-00805f9b34fb";
+std::string characteristic_uuid = "00002a19-0000-1000-8000-00805f9b34fb";
+
+// Read the value of a characteristic
+SimpleBLE::ByteArray data = peripheral.read(service_uuid, characteristic_uuid);
+std::cout << "Battery Level: " << (int)data[0] << "%" << std::endl;
+
+// Write a value to a characteristic
+std::string write_service_uuid = "0000180d-0000-1000-8000-00805f9b34fb";
+std::string write_characteristic_uuid = "00002a37-0000-1000-8000-00805f9b34fb";
+SimpleBLE::ByteArray write_data = "Hello World";
+peripheral.write_request(write_service_uuid, write_characteristic_uuid, write_data);
+```
+
+SimpleBLE supports both `write_request` and `write_command`. The difference between them is that `write_request` expects a response from the peripheral, while `write_command` does not. If you are unsure which one to use, check the capabilities of the characteristic.
+
+### Notifications and Indications
+
+If you want to receive updates from a characteristic without having to poll it constantly, you can use notifications and indications. To do so, you need to provide a callback function that will be called every time the characteristic value changes.
+
+```cpp
+// Subscribe to notifications
+peripheral.notify(service_uuid, characteristic_uuid, [](SimpleBLE::ByteArray data) {
+    std::cout << "Received data: " << data.toHex() << std::endl;
+});
+
+// Wait for 5 seconds to receive notifications
+std::this_thread::sleep_for(std::chrono::seconds(5));
+
+// Unsubscribe from notifications
+peripheral.unsubscribe(service_uuid, characteristic_uuid);
+```
+
+Similar to reading and writing, SimpleBLE supports both `notify` and `indicate`. The difference is that `indicate` requires the peripheral to acknowledge the receipt of the notification, while `notify` does not. Again, check the capabilities of the characteristic to know which one to use.
+
+## Unpairing
+
+If you are done with a peripheral and want to remove the bond, you can use the `SimpleBLE::Peripheral::unpair()` method.
+
+```cpp
+// Unpair the peripheral
+peripheral.unpair();
+```
+
+> **Note:** Unpairing is currently only supported on Windows, Linux and Android. On macOS and iOS, the OS manages the bonding process and does not allow applications to programmatically unpair devices.
 
 ## Learn by example
 
-To learn how to use SimpleBLE, please refer to the [examples](https://github.com/simpleble/simpleble/tree/main/examples/simpleble) provided in the repository. Those examples named with a `_c` suffix are using the C-wrapped version of the library and those examples with a `_safe` suffix use the _noexcept_ version of the library.
-
-The following list briefly describes each example provided:
-
-* [list_adapters](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/list_adapters.cpp): List all available adapters.
-* [scan (cpp)](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/scan.cpp) & [scan (c)](https://github.com/simpleble/simpleble/blob/main/examples/simplecble/c/scan.c): Scan for nearby BLE devices.
-* [connect (cpp)](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/connect.cpp) & [connect_safe (cpp)](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/connect_safe.cpp) & [connect (c)](https://github.com/simpleble/simpleble/blob/main/examples/simplecble/c/connect.c): Connect to a BLE device and list its services and characteristics.
-* [read](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/read.cpp): Read a characteristic's value.
-* [write](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/write.cpp): Write a characteristic's value.
-* [notify (cpp)](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/notify.cpp) & [notify (c)](https://github.com/simpleble/simpleble/blob/main/examples/simplecble/c/notify.c): Enable notifications on a characteristic.
-
-## Concurrency
-
-When designing your application using SimpleBLE, concurrency is a key aspect that needs to be taken into account. This is because internally the library relies on a thread pool to handle asynchronous operations and poll the operating system's Bluetooth stack, which can suffer from contention and potentially cause the program to crash or freeze if these threads are significantly delayed.
-
-This can have an important effect when using SimpleBLE with UI applications, such as WxWidgets or Unity.
-
-## Layers and their responsibilities
-
-- External layer
-  - `SimpleBLE::Adapter` and `SimpleBLE::Peripheral` classes.
-  - These objects hold a shared pointer to `SimpleBLE::AdapterBase` and `SimpleBLE::PeripheralBase` respectively.
-- C-style wrapper layer
-  - This layer is a C-style wrapper around the safe C++, designed to allow integration of SimpleBLE into other languages that have support for C bindings.
-- Safe layer
-  - `SimpleBLE::AdapterSafe` and `SimpleBLE::PeripheralSafe` classes.
-  - These objects wrap all `SimpleBLE::Adapter` and `SimpleBLE::Peripheral` objects and provide an interface that does not throw exceptions. Instead, it will return an `std::optional<T>` object if the function returns a value, or a boolean indicating whether the function succeeded if the original function did not return a value. The usage is functionally equivalent to their respective counterparts in the external layer.
-- API layer (OS-dependent)
-  - `SimpleBLE::AdapterBase` and `SimpleBLE::PeripheralBase` classes.
-  - These classes specify the API of the library on top of which the external layer is actually wrapping.
-  - Each OS target has to implement the full public API specified in the external layer, using private methods and properties for the specific requirements of each environment.
-  - Two convenience classes, `SimpleBLE::AdapterBuilder` and `SimpleBLE::PeripheralBuilder` are provided for the case of allowing access to private methods during the build process.
+To learn how to use SimpleBLE, please refer to the [examples](./examples) page.

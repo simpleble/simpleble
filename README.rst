@@ -17,7 +17,8 @@ Key Features
 Language Bindings
 -----------------
 
-* **C/C++**: Core implementation with full platform support
+* **C++ (SimpleBLE)**: Core implementation with full platform support
+* **C (SimpleCBLE)**: C-wrapped version of the library
 * **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
 * **Java (SimpleJavaBLE) - Early Preview**: Java bindings.
 * **Rust (SimpleRsBLE) - Early Preview**: Rust bindings with a **NEW API**. See the `SimpleRsBLE`_ Crates.io page for more details.
