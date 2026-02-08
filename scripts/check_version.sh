@@ -57,6 +57,20 @@ check_cargo_version_match() {
     fi
 }
 
+# Function to check if simpleaible/pyproject.toml version matches the VERSION file
+check_pyproject_version_match() {
+    local version_file=$1
+    local pyproject_version=$2
+    echo "- simpleaible/pyproject.toml consistent with VERSION file?"
+    if [[ "$pyproject_version" == "$version_file"* ]]; then
+        echo "  OK"
+        return 0
+    else
+        echo "  FAIL simpleaible/pyproject.toml version ($pyproject_version) does not match VERSION file content ($version_file)."
+        return 1
+    fi
+}
+
 
 check_changelog() {
     local current_commit_tag=$1
@@ -95,6 +109,9 @@ assert_return_value 'check_cargo_version_match "1.1.1" "1.1.2"' 1 || exit 1
 assert_return_value 'check_cargo_version_match "1.1.1" "1.1.1"' 0 || exit 1
 assert_return_value 'check_cargo_version_match "1.1.1" "1.1.1-dev1"' 0 || exit 1
 assert_return_value 'check_cargo_version_match "1.1.1" "1.1.2-dev1"' 1 || exit 1
+assert_return_value 'check_pyproject_version_match "1.1.1" "1.1.1"' 0 || exit 1
+assert_return_value 'check_pyproject_version_match "1.1.1" "1.1.1-dev1"' 0 || exit 1
+assert_return_value 'check_pyproject_version_match "1.1.1" "1.1.2"' 1 || exit 1
 assert_return_value 'check_tag_version_match "1.1.1" "1.1.2" "1.1.1"' 1 || exit 1
 assert_return_value 'check_tag_version_match "1.1.1" "1.1.1" "1.1.1"' 0 || exit 1
 assert_return_value 'check_tag_version_match "" "1.1.1" "1.1.1"' 1 || exit 1
@@ -111,8 +128,10 @@ current_tag=$(git describe --exact-match --tags HEAD 2>/dev/null | sed 's/^v//')
 latest_tag=$(git describe --tags --abbrev=0 | sed 's/^v//')
 version_file=$(cat VERSION)
 cargo_version=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+pyproject_version=$(grep '^version = ' simpleaible/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
 
 validate_version_format "$version_file" || exit 1
 check_cargo_version_match "$version_file" "$cargo_version" || exit 1
+check_pyproject_version_match "$version_file" "$pyproject_version" || exit 1
 check_tag_version_match "$current_tag" "$version_file" "$latest_tag" || exit 1
 check_changelog "$current_tag"

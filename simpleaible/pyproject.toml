@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simpleaible"
-version = "0.0.2"
+version = "0.11.1-dev1"
 description = "SimpleAIBLE is an AI-friendly BLE toolkit (MCP server & REST API) powered by SimplePyBLE."
 readme = "README.rst"
 requires-python = ">=3.8"
-authors = [{ name = "Kevin Dewald", email = "kevin@dewald.me" }]
+authors = [{ name = "Kevin Dewald", email = "kevin@simpleble.org" }]
 urls = { Homepage = "https://github.com/simpleble/simpleble" }
 keywords = ["ble", "bluetooth", "mcp", "ai", "simpleble"]
 classifiers = [
@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [

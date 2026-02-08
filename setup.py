@@ -54,7 +54,7 @@ skbuild.setup(
     name="simplepyble",
     version=version_str,
     author="Kevin Dewald",
-    author_email="kevin@dewald.me",
+    author_email="kevin@simpleble.org",
     url="https://github.com/simpleble/simpleble",
     description="The ultimate fully-fledged cross-platform BLE library, designed for simplicity and ease of use.",
     long_description=long_description,
@@ -87,6 +87,7 @@ skbuild.setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Programming Language :: Python :: 3 :: Only",
     ],
 )
