@@ -92,6 +92,10 @@ jobs:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simplepyble.yml
 
+  simpleaible:
+    needs: [smoketest]
+    uses: ./.github/workflows/ci_simpleaible.yml
+
   simplejavable:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simplejavable.yml
@@ -116,7 +120,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simplejavable, simpledroidble, simplecble, simplersble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     runs-on: ubuntu-22.04
     steps:
@@ -140,7 +144,7 @@ jobs:
           overwrite: true
           file_glob: true
 
-  publish-python:
+  publish-simplepyble:
     needs: [publish-release]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     runs-on: ubuntu-22.04
@@ -183,6 +187,34 @@ jobs:
           packages-dir: sdist
           skip-existing: true
           attestations: false # Broken, see: https://github.com/pypa/gh-action-pypi-publish/issues/166
+
+  publish-simpleaible:
+    needs: [publish-release]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+    steps:
+
+      - name: Install dependencies
+        run: pip install twine
+
+      - name: "Download SimpleAIBLE artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simpleaible-*
+          path: dist
+          merge-multiple: true
+
+      - name: Check packages
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true
+          attestations: false
 
   publish-rust:
     needs: [publish-release]
