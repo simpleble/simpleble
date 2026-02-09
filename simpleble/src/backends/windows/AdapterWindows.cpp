@@ -241,7 +241,7 @@ void AdapterWindows::_on_scanner_stopped(
     const Advertisement::BluetoothLEAdvertisementWatcher& watcher,
     const Advertisement::BluetoothLEAdvertisementWatcherStoppedEventArgs args) {
     // This callback is already in the MTA context as it's called by WinRT
-    SAFE_CALLBACK_CALL(this->_callback_on_scan_stop);
+    _scan_stopped_callback();
 }
 
 void AdapterWindows::_on_scanner_received(
