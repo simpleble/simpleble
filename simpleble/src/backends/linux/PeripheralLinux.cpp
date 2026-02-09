@@ -325,7 +325,11 @@ void PeripheralLinux::_cleanup_characteristics() noexcept {
 
         for (auto bluez_service : device_->services()) {
             for (auto bluez_characteristic : bluez_service->characteristics()) {
-                bluez_characteristic->clear_on_value_changed();
+                try {
+                    bluez_characteristic->clear_on_value_changed();
+                } catch (std::exception const& e) {
+                    SIMPLEBLE_LOG_WARN(fmt::format("Exception during characteristic cleanup: {}", e.what()));
+                }
             }
         }
 
