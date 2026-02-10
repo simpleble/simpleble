@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (SimpleBLE) Implemented `Adapter::get_connected_peripherals` in the C++ base frontend.
+- (Linux) Fixed `_cleanup_characteristics()` to handle exceptions per characteristic callback cleanup, preventing incomplete cleanup.
 
 **Removed**
 
