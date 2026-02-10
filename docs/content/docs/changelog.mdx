@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (SimpleBLE) Implemented `Adapter::get_connected_peripherals` in the C++ base frontend.
+- (Windows) Fixed scan stop handling so `scan_is_active_` is updated correctly when WinRT reports scanning has stopped.
 
 **Removed**
 
