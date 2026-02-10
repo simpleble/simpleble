@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (SimpleBLE) Implemented `Adapter::get_connected_peripherals` in the C++ base frontend.
+- (SimpleBLE) Improved `OperationNotSupported` exceptions to include the requested operation and characteristic UUID.
+- (Linux) Added explicit capability checks for read/write/notify operations before invoking BlueZ operations.
 
 **Removed**
 
