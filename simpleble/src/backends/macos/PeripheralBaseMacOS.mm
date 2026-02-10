@@ -12,7 +12,6 @@
 #import <simpleble/Service.h>
 #import <optional>
 #import <string>
-#import <vector>
 
 #define WAIT_UNTIL_FALSE(obj, var)                \
     do {                                          \

@@ -20,12 +20,6 @@
 const SimpleBLE::BluetoothUUID BATTERY_SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
 const SimpleBLE::BluetoothUUID BATTERY_CHARACTERISTIC_UUID = "00002a19-0000-1000-8000-00805f9b34fb";
 
-namespace {
-    bool has_flag(const std::vector<std::string>& flags, const char* flag) {
-        return std::find(flags.begin(), flags.end(), flag) != flags.end();
-    }
-}  // namespace
-
 using namespace SimpleBLE;
 using namespace std::chrono_literals;
 
@@ -225,7 +219,7 @@ ByteArray PeripheralLinux::read(BluetoothUUID const& service, BluetoothUUID cons
     // Otherwise, attempt to read the characteristic using default mechanisms
     auto char_obj = _get_characteristic(service, characteristic);
     std::vector<std::string> flags = char_obj->flags();
-    if (!has_flag(flags, "read")) {
+    if (std::find(flags.begin(), flags.end(), "read") == flags.end()) {
         throw Exception::OperationNotSupported("read", characteristic);
     }
     return char_obj->read();
@@ -237,7 +231,7 @@ void PeripheralLinux::write_request(BluetoothUUID const& service, BluetoothUUID 
     // another library)
     auto char_obj = _get_characteristic(service, characteristic);
     std::vector<std::string> flags = char_obj->flags();
-    if (!has_flag(flags, "write")) {
+    if (std::find(flags.begin(), flags.end(), "write") == flags.end()) {
         throw Exception::OperationNotSupported("write_request", characteristic);
     }
     char_obj->write_request(data);
@@ -249,7 +243,7 @@ void PeripheralLinux::write_command(BluetoothUUID const& service, BluetoothUUID 
     // another library)
     auto char_obj = _get_characteristic(service, characteristic);
     std::vector<std::string> flags = char_obj->flags();
-    if (!has_flag(flags, "write-without-response")) {
+    if (std::find(flags.begin(), flags.end(), "write-without-response") == flags.end()) {
         throw Exception::OperationNotSupported("write_command", characteristic);
     }
     char_obj->write_command(data);
@@ -271,7 +265,8 @@ void PeripheralLinux::notify(BluetoothUUID const& service, BluetoothUUID const& 
     // TODO: What to do if the characteristic is already being notified?
     auto characteristic_object = _get_characteristic(service, characteristic);
     std::vector<std::string> flags = characteristic_object->flags();
-    if (!has_flag(flags, "notify") && !has_flag(flags, "indicate")) {
+    if (std::find(flags.begin(), flags.end(), "notify") == flags.end() &&
+        std::find(flags.begin(), flags.end(), "indicate") == flags.end()) {
         throw Exception::OperationNotSupported("notify", characteristic);
     }
     characteristic_object->set_on_value_changed([callback](SimpleBluez::ByteArray new_value) { callback(new_value); });
