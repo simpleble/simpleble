@@ -11,6 +11,8 @@
 #import <simpleble/Exceptions.h>
 #import <simpleble/Service.h>
 #import <optional>
+#import <string>
+#import <vector>
 
 #define WAIT_UNTIL_FALSE(obj, var)                \
     do {                                          \
@@ -294,8 +296,8 @@
 
     // Check that the characteristic supports this feature.
     if ((characteristic.properties & CBCharacteristicPropertyRead) == 0) {
-        NSLog(@"Characteristic does not support read.");
-        throw SimpleBLE::Exception::OperationNotSupported();
+        std::string uuid = [characteristic_uuid UTF8String];
+        throw SimpleBLE::Exception::OperationNotSupported("read", uuid);
     }
 
     CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
@@ -339,8 +341,8 @@
 
     // Check that the characteristic supports this feature.
     if ((characteristic.properties & CBCharacteristicPropertyWrite) == 0) {
-        NSLog(@"Characteristic does not support write with response.");
-        throw SimpleBLE::Exception::OperationNotSupported();
+        std::string uuid = [characteristic_uuid UTF8String];
+        throw SimpleBLE::Exception::OperationNotSupported("write_request", uuid);
     }
 
     CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
@@ -369,8 +371,8 @@
 
     // Check that the characteristic supports this feature.
     if ((characteristic.properties & CBCharacteristicPropertyWriteWithoutResponse) == 0) {
-        NSLog(@"Characteristic does not support write without response.");
-        throw SimpleBLE::Exception::OperationNotSupported();
+        std::string uuid = [characteristic_uuid UTF8String];
+        throw SimpleBLE::Exception::OperationNotSupported("write_command", uuid);
     }
 
     CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];

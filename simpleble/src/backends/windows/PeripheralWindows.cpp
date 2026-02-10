@@ -204,7 +204,7 @@ ByteArray PeripheralWindows::read(BluetoothUUID const& service, BluetoothUUID co
         // Validate that the operation can be performed.
         uint32_t gatt_characteristic_prop = (uint32_t)gatt_characteristic.CharacteristicProperties();
         if ((gatt_characteristic_prop & (uint32_t)GattCharacteristicProperties::Read) == 0) {
-            throw SimpleBLE::Exception::OperationNotSupported();
+            throw SimpleBLE::Exception::OperationNotSupported("read", guid_to_uuid(gatt_characteristic.Uuid()));
         }
 
         // Read the value.
@@ -224,7 +224,7 @@ void PeripheralWindows::write_request(BluetoothUUID const& service, BluetoothUUI
         // Validate that the operation can be performed.
         uint32_t gatt_characteristic_prop = (uint32_t)gatt_characteristic.CharacteristicProperties();
         if ((gatt_characteristic_prop & (uint32_t)GattCharacteristicProperties::Write) == 0) {
-            throw SimpleBLE::Exception::OperationNotSupported();
+            throw SimpleBLE::Exception::OperationNotSupported("write_request", guid_to_uuid(gatt_characteristic.Uuid()));
         }
 
         // Convert the request data to a buffer.
@@ -246,7 +246,7 @@ void PeripheralWindows::write_command(BluetoothUUID const& service, BluetoothUUI
         // Validate that the operation can be performed.
         uint32_t gatt_characteristic_prop = (uint32_t)gatt_characteristic.CharacteristicProperties();
         if ((gatt_characteristic_prop & (uint32_t)GattCharacteristicProperties::WriteWithoutResponse) == 0) {
-            throw SimpleBLE::Exception::OperationNotSupported();
+            throw SimpleBLE::Exception::OperationNotSupported("write_command", guid_to_uuid(gatt_characteristic.Uuid()));
         }
 
         // Convert the request data to a buffer.
@@ -352,7 +352,8 @@ void PeripheralWindows::_subscribe(BluetoothUUID const& service, BluetoothUUID c
         // Validate that the operation can be performed.
         uint32_t gatt_characteristic_prop = (uint32_t)gatt_characteristic.CharacteristicProperties();
         if ((gatt_characteristic_prop & (uint32_t)property) == 0) {
-            throw SimpleBLE::Exception::OperationNotSupported();
+            std::string operation = (property == GattCharacteristicProperties::Notify) ? "notify" : "indicate";
+            throw SimpleBLE::Exception::OperationNotSupported(operation, guid_to_uuid(gatt_characteristic.Uuid()));
         }
 
         // If a notification for the given characteristic is already in progress, swap the callbacks.

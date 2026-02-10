@@ -49,6 +49,7 @@ class SIMPLEBLE_EXPORT DescriptorNotFound : public BaseException {
 class SIMPLEBLE_EXPORT OperationNotSupported : public BaseException {
   public:
     OperationNotSupported();
+    OperationNotSupported(const std::string& operation, const BluetoothUUID& characteristic_uuid);
 };
 
 class SIMPLEBLE_EXPORT OperationFailed : public BaseException {
