@@ -108,6 +108,10 @@ For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the
 
 .. _SimpleBLE: https://github.com/simpleble/simpleble/
 
+.. _docs: https://docs.simpleble.org/
+
+.. _Discord: https://discord.gg/N9HqNEcvP3
+
 .. _MCP Server docs: https://docs.simpleble.org/simpleaible/mcp
 
 .. _HTTP Server docs: https://docs.simpleble.org/simpleaible/http
