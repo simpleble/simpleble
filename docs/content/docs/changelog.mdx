@@ -30,6 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleBLE) Implemented `Adapter::get_connected_peripherals` in the C++ base frontend.
 - (SimpleBLE) Improved `OperationNotSupported` exceptions to include the requested operation and characteristic UUID.
 - (Linux) Added explicit capability checks for read/write/notify operations before invoking BlueZ operations.
+- (Linux) Fixed `_cleanup_characteristics()` to handle exceptions per characteristic callback cleanup, preventing incomplete cleanup.
+- (Windows) Fixed scan stop handling so `scan_is_active_` is updated correctly when WinRT reports scanning has stopped.
 
 **Removed**
 
