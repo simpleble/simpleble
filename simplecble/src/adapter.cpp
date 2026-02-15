@@ -6,6 +6,8 @@
 #include <cstring>
 #include <vector>
 
+#include "string_utils.h"
+
 bool simpleble_adapter_is_bluetooth_enabled(void) {
     try {
         return SimpleBLE::Adapter::bluetooth_enabled();
@@ -66,10 +68,7 @@ char* simpleble_adapter_identifier(simpleble_adapter_t handle) {
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
-        std::string identifier = adapter->identifier();
-        char* c_identifier = (char*)malloc(identifier.size() + 1);
-        strcpy(c_identifier, identifier.c_str());
-        return c_identifier;
+        return str_to_c(adapter->identifier());
     } catch (...) {
         return nullptr;
     }
@@ -82,10 +81,7 @@ char* simpleble_adapter_address(simpleble_adapter_t handle) {
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
-        std::string address = adapter->address();
-        char* c_address = (char*)malloc(address.size() + 1);
-        strcpy(c_address, address.c_str());
-        return c_address;
+        return str_to_c(adapter->address());
     } catch (...) {
         return nullptr;
     }

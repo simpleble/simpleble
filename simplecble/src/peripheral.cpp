@@ -7,6 +7,8 @@
 #include <cstring>
 #include <map>
 
+#include "string_utils.h"
+
 void simpleble_peripheral_release_handle(simpleble_peripheral_t handle) {
     if (handle == nullptr) {
         return;
@@ -36,10 +38,7 @@ char* simpleble_peripheral_identifier(simpleble_peripheral_t handle) {
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
-        std::string identifier = peripheral->identifier();
-        char* c_identifier = (char*)malloc(identifier.size() + 1);
-        strcpy(c_identifier, identifier.c_str());
-        return c_identifier;
+        return str_to_c(peripheral->identifier());
     } catch (...) {
         return nullptr;
     }
@@ -52,10 +51,7 @@ char* simpleble_peripheral_address(simpleble_peripheral_t handle) {
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
-        std::string address = peripheral->address();
-        char* c_address = (char*)malloc(address.size() + 1);
-        strcpy(c_address, address.c_str());
-        return c_address;
+        return str_to_c(peripheral->address());
     } catch (...) {
         return nullptr;
     }
