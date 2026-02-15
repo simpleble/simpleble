@@ -2,7 +2,7 @@
 edition = "2021"
 
 name = "simplersble"
-version = "0.12.1"
+version = "0.12.2"
 rust-version = "1.82"
 license = "BUSL-1.1"
 description = "The all-in-one Bluetooth library that makes it easy to add wireless connectivity to your projects."
