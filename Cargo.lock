@@ -440,7 +440,7 @@ dependencies = [
 
 [[package]]
 name = "simplersble"
-version = "0.11.1-dev1"
+version = "0.12.2-dev1"
 dependencies = [
  "cmake",
  "cxx",
