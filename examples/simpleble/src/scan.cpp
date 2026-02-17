@@ -5,6 +5,7 @@
 #include "utils.hpp"
 
 #include "simpleble/Adapter.h"
+#include "simpleble/Utils.h"
 
 int main() {
     auto adapter_optional = Utils::getAdapter();
@@ -54,7 +55,8 @@ int main() {
 
         std::map<uint16_t, SimpleBLE::ByteArray> manufacturer_data = peripherals[i].manufacturer_data();
         for (auto& [manufacturer_id, data] : manufacturer_data) {
-            std::cout << "    Manufacturer ID: " << manufacturer_id << std::endl;
+            std::cout << "    Manufacturer ID: " << manufacturer_id
+                      << " (" << SimpleBLE::get_company_name(manufacturer_id) << ")" << std::endl;
             std::cout << "    Manufacturer data: " << data << std::endl;
         }
     }
