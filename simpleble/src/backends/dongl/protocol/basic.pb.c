@@ -15,6 +15,12 @@ PB_BIND(basic_ResetCmd, basic_ResetCmd, AUTO)
 PB_BIND(basic_DfuStartCmd, basic_DfuStartCmd, AUTO)
 
 
+PB_BIND(basic_PowerOnCmd, basic_PowerOnCmd, AUTO)
+
+
+PB_BIND(basic_PowerOffCmd, basic_PowerOffCmd, AUTO)
+
+
 PB_BIND(basic_WhoamiRsp, basic_WhoamiRsp, AUTO)
 
 
@@ -22,6 +28,12 @@ PB_BIND(basic_ResetRsp, basic_ResetRsp, AUTO)
 
 
 PB_BIND(basic_DfuStartRsp, basic_DfuStartRsp, AUTO)
+
+
+PB_BIND(basic_PowerOnRsp, basic_PowerOnRsp, AUTO)
+
+
+PB_BIND(basic_PowerOffRsp, basic_PowerOffRsp, AUTO)
 
 
 PB_BIND(basic_Command, basic_Command, AUTO)

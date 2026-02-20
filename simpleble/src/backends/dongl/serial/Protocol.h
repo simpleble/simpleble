@@ -9,8 +9,8 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "Wire.h"
 #include "ProtocolBase.h"
+#include "Wire.h"
 
 #include "protocol/d2h.pb.h"
 #include "protocol/h2d.pb.h"
@@ -27,6 +27,8 @@ class Protocol : public ProtocolBase {
     basic_WhoamiRsp basic_whoami();
     basic_ResetRsp basic_reset();
     basic_DfuStartRsp basic_dfu_start();
+    basic_PowerOnRsp basic_power_on();
+    basic_PowerOffRsp basic_power_off();
 
     simpleble_InitRsp simpleble_init();
     simpleble_ScanStartRsp simpleble_scan_start();

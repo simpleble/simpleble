@@ -43,6 +43,28 @@ basic_DfuStartRsp Protocol::basic_dfu_start() {
     return response.rsp.basic.rsp.dfu_start;
 }
 
+basic_PowerOnRsp Protocol::basic_power_on() {
+    dongl_Command command = dongl_Command_init_zero;
+    command.which_cmd = dongl_Command_basic_tag;
+    command.cmd.basic.which_cmd = basic_Command_power_on_tag;
+    basic_PowerOnCmd power_on_cmd = basic_PowerOnCmd_init_default;
+    command.cmd.basic.cmd.power_on = power_on_cmd;
+
+    dongl_Response response = exchange(command);
+    return response.rsp.basic.rsp.power_on;
+}
+
+basic_PowerOffRsp Protocol::basic_power_off() {
+    dongl_Command command = dongl_Command_init_zero;
+    command.which_cmd = dongl_Command_basic_tag;
+    command.cmd.basic.which_cmd = basic_Command_power_off_tag;
+    basic_PowerOffCmd power_off_cmd = basic_PowerOffCmd_init_default;
+    command.cmd.basic.cmd.power_off = power_off_cmd;
+
+    dongl_Response response = exchange(command);
+    return response.rsp.basic.rsp.power_off;
+}
+
 simpleble_InitRsp Protocol::simpleble_init() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
@@ -76,7 +98,8 @@ simpleble_ScanStopRsp Protocol::simpleble_scan_stop() {
     return response.rsp.simpleble.rsp.scan_stop;
 }
 
-simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType address_type, const std::string& address) {
+simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType address_type,
+                                                 const std::string& address) {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_connect_tag;
@@ -84,7 +107,8 @@ simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType 
     command.cmd.simpleble.cmd.connect = connect_cmd;
 
     command.cmd.simpleble.cmd.connect.address_type = address_type;
-    strncpy(command.cmd.simpleble.cmd.connect.address, address.c_str(), sizeof(command.cmd.simpleble.cmd.connect.address));
+    strncpy(command.cmd.simpleble.cmd.connect.address, address.c_str(),
+            sizeof(command.cmd.simpleble.cmd.connect.address));
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.connect;
@@ -116,7 +140,8 @@ simpleble_ReadRsp Protocol::simpleble_read(uint16_t conn_handle, uint16_t handle
     return response.rsp.simpleble.rsp.read;
 }
 
-simpleble_WriteRsp Protocol::simpleble_write(uint16_t conn_handle, uint16_t handle, simpleble_WriteOperation operation, const std::vector<uint8_t>& data) {
+simpleble_WriteRsp Protocol::simpleble_write(uint16_t conn_handle, uint16_t handle, simpleble_WriteOperation operation,
+                                             const std::vector<uint8_t>& data) {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_write_tag;

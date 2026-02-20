@@ -22,6 +22,14 @@ typedef struct _basic_DfuStartCmd {
     char dummy_field;
 } basic_DfuStartCmd;
 
+typedef struct _basic_PowerOnCmd {
+    char dummy_field;
+} basic_PowerOnCmd;
+
+typedef struct _basic_PowerOffCmd {
+    char dummy_field;
+} basic_PowerOffCmd;
+
 typedef struct _basic_WhoamiRsp {
     uint64_t whoami;
 } basic_WhoamiRsp;
@@ -34,12 +42,22 @@ typedef struct _basic_DfuStartRsp {
     char dummy_field;
 } basic_DfuStartRsp;
 
+typedef struct _basic_PowerOnRsp {
+    char dummy_field;
+} basic_PowerOnRsp;
+
+typedef struct _basic_PowerOffRsp {
+    char dummy_field;
+} basic_PowerOffRsp;
+
 typedef struct _basic_Command {
     pb_size_t which_cmd;
     union {
         basic_WhoamiCmd whoami;
         basic_ResetCmd reset;
         basic_DfuStartCmd dfu_start;
+        basic_PowerOnCmd power_on;
+        basic_PowerOffCmd power_off;
     } cmd;
 } basic_Command;
 
@@ -49,6 +67,8 @@ typedef struct _basic_Response {
         basic_WhoamiRsp whoami;
         basic_ResetRsp reset;
         basic_DfuStartRsp dfu_start;
+        basic_PowerOnRsp power_on;
+        basic_PowerOffRsp power_off;
     } rsp;
 } basic_Response;
 
@@ -61,17 +81,25 @@ extern "C" {
 #define basic_WhoamiCmd_init_default             {0}
 #define basic_ResetCmd_init_default              {0}
 #define basic_DfuStartCmd_init_default           {0}
+#define basic_PowerOnCmd_init_default            {0}
+#define basic_PowerOffCmd_init_default           {0}
 #define basic_WhoamiRsp_init_default             {0}
 #define basic_ResetRsp_init_default              {0}
 #define basic_DfuStartRsp_init_default           {0}
+#define basic_PowerOnRsp_init_default            {0}
+#define basic_PowerOffRsp_init_default           {0}
 #define basic_Command_init_default               {0, {basic_WhoamiCmd_init_default}}
 #define basic_Response_init_default              {0, {basic_WhoamiRsp_init_default}}
 #define basic_WhoamiCmd_init_zero                {0}
 #define basic_ResetCmd_init_zero                 {0}
 #define basic_DfuStartCmd_init_zero              {0}
+#define basic_PowerOnCmd_init_zero               {0}
+#define basic_PowerOffCmd_init_zero              {0}
 #define basic_WhoamiRsp_init_zero                {0}
 #define basic_ResetRsp_init_zero                 {0}
 #define basic_DfuStartRsp_init_zero              {0}
+#define basic_PowerOnRsp_init_zero               {0}
+#define basic_PowerOffRsp_init_zero              {0}
 #define basic_Command_init_zero                  {0, {basic_WhoamiCmd_init_zero}}
 #define basic_Response_init_zero                 {0, {basic_WhoamiRsp_init_zero}}
 
@@ -80,9 +108,13 @@ extern "C" {
 #define basic_Command_whoami_tag                 1
 #define basic_Command_reset_tag                  2
 #define basic_Command_dfu_start_tag              3
+#define basic_Command_power_on_tag               4
+#define basic_Command_power_off_tag              5
 #define basic_Response_whoami_tag                1
 #define basic_Response_reset_tag                 2
 #define basic_Response_dfu_start_tag             3
+#define basic_Response_power_on_tag              4
+#define basic_Response_power_off_tag             5
 
 /* Struct field encoding specification for nanopb */
 #define basic_WhoamiCmd_FIELDLIST(X, a) \
@@ -100,6 +132,16 @@ extern "C" {
 #define basic_DfuStartCmd_CALLBACK NULL
 #define basic_DfuStartCmd_DEFAULT NULL
 
+#define basic_PowerOnCmd_FIELDLIST(X, a) \
+
+#define basic_PowerOnCmd_CALLBACK NULL
+#define basic_PowerOnCmd_DEFAULT NULL
+
+#define basic_PowerOffCmd_FIELDLIST(X, a) \
+
+#define basic_PowerOffCmd_CALLBACK NULL
+#define basic_PowerOffCmd_DEFAULT NULL
+
 #define basic_WhoamiRsp_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT64,   whoami,            1)
 #define basic_WhoamiRsp_CALLBACK NULL
@@ -115,32 +157,54 @@ X(a, STATIC,   SINGULAR, UINT64,   whoami,            1)
 #define basic_DfuStartRsp_CALLBACK NULL
 #define basic_DfuStartRsp_DEFAULT NULL
 
+#define basic_PowerOnRsp_FIELDLIST(X, a) \
+
+#define basic_PowerOnRsp_CALLBACK NULL
+#define basic_PowerOnRsp_DEFAULT NULL
+
+#define basic_PowerOffRsp_FIELDLIST(X, a) \
+
+#define basic_PowerOffRsp_CALLBACK NULL
+#define basic_PowerOffRsp_DEFAULT NULL
+
 #define basic_Command_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,whoami,cmd.whoami),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,reset,cmd.reset),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,dfu_start,cmd.dfu_start),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,dfu_start,cmd.dfu_start),   3) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,power_on,cmd.power_on),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,power_off,cmd.power_off),   5)
 #define basic_Command_CALLBACK NULL
 #define basic_Command_DEFAULT NULL
 #define basic_Command_cmd_whoami_MSGTYPE basic_WhoamiCmd
 #define basic_Command_cmd_reset_MSGTYPE basic_ResetCmd
 #define basic_Command_cmd_dfu_start_MSGTYPE basic_DfuStartCmd
+#define basic_Command_cmd_power_on_MSGTYPE basic_PowerOnCmd
+#define basic_Command_cmd_power_off_MSGTYPE basic_PowerOffCmd
 
 #define basic_Response_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,whoami,rsp.whoami),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,reset,rsp.reset),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,dfu_start,rsp.dfu_start),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,dfu_start,rsp.dfu_start),   3) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,power_on,rsp.power_on),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,power_off,rsp.power_off),   5)
 #define basic_Response_CALLBACK NULL
 #define basic_Response_DEFAULT NULL
 #define basic_Response_rsp_whoami_MSGTYPE basic_WhoamiRsp
 #define basic_Response_rsp_reset_MSGTYPE basic_ResetRsp
 #define basic_Response_rsp_dfu_start_MSGTYPE basic_DfuStartRsp
+#define basic_Response_rsp_power_on_MSGTYPE basic_PowerOnRsp
+#define basic_Response_rsp_power_off_MSGTYPE basic_PowerOffRsp
 
 extern const pb_msgdesc_t basic_WhoamiCmd_msg;
 extern const pb_msgdesc_t basic_ResetCmd_msg;
 extern const pb_msgdesc_t basic_DfuStartCmd_msg;
+extern const pb_msgdesc_t basic_PowerOnCmd_msg;
+extern const pb_msgdesc_t basic_PowerOffCmd_msg;
 extern const pb_msgdesc_t basic_WhoamiRsp_msg;
 extern const pb_msgdesc_t basic_ResetRsp_msg;
 extern const pb_msgdesc_t basic_DfuStartRsp_msg;
+extern const pb_msgdesc_t basic_PowerOnRsp_msg;
+extern const pb_msgdesc_t basic_PowerOffRsp_msg;
 extern const pb_msgdesc_t basic_Command_msg;
 extern const pb_msgdesc_t basic_Response_msg;
 
@@ -148,9 +212,13 @@ extern const pb_msgdesc_t basic_Response_msg;
 #define basic_WhoamiCmd_fields &basic_WhoamiCmd_msg
 #define basic_ResetCmd_fields &basic_ResetCmd_msg
 #define basic_DfuStartCmd_fields &basic_DfuStartCmd_msg
+#define basic_PowerOnCmd_fields &basic_PowerOnCmd_msg
+#define basic_PowerOffCmd_fields &basic_PowerOffCmd_msg
 #define basic_WhoamiRsp_fields &basic_WhoamiRsp_msg
 #define basic_ResetRsp_fields &basic_ResetRsp_msg
 #define basic_DfuStartRsp_fields &basic_DfuStartRsp_msg
+#define basic_PowerOnRsp_fields &basic_PowerOnRsp_msg
+#define basic_PowerOffRsp_fields &basic_PowerOffRsp_msg
 #define basic_Command_fields &basic_Command_msg
 #define basic_Response_fields &basic_Response_msg
 
@@ -159,6 +227,10 @@ extern const pb_msgdesc_t basic_Response_msg;
 #define basic_Command_size                       2
 #define basic_DfuStartCmd_size                   0
 #define basic_DfuStartRsp_size                   0
+#define basic_PowerOffCmd_size                   0
+#define basic_PowerOffRsp_size                   0
+#define basic_PowerOnCmd_size                    0
+#define basic_PowerOnRsp_size                    0
 #define basic_ResetCmd_size                      0
 #define basic_ResetRsp_size                      0
 #define basic_Response_size                      13

@@ -80,9 +80,9 @@ std::string AdapterDongl::identifier() { return "Dongl Adapter"; }
 
 BluetoothAddress AdapterDongl::address() { return "AA:BB:CC:DD:EE:FF"; }
 
-void AdapterDongl::power_on() {}
+void AdapterDongl::power_on() { _serial_protocol->basic_power_on(); }
 
-void AdapterDongl::power_off() {}
+void AdapterDongl::power_off() { _serial_protocol->basic_power_off(); }
 
 bool AdapterDongl::is_powered() { return true; }
 
@@ -191,7 +191,6 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             }
             break;
         }
-
 
         case simpleble_Event_characteristic_discovered_evt_tag: {
             for (auto& [address, peripheral] : this->peripherals_) {
