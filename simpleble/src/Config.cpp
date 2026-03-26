@@ -19,7 +19,8 @@ namespace Config {
     }  // namespace Android
 
     namespace Dongl {
-        bool use_dongl_backend = false;
+        bool use_dongl_backend = true;
+        bool auto_update = false;
     }  // namespace Dongl
 
 }  // namespace Config

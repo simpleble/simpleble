@@ -49,7 +49,11 @@ namespace Android {
 
 namespace Dongl {
     extern bool use_dongl_backend;
-    static void reset() { use_dongl_backend = false; }
+    extern bool auto_update;
+    static void reset() {
+        use_dongl_backend = false;
+        auto_update = false;
+    }
 }  // namespace Dongl
 
 namespace Base {
