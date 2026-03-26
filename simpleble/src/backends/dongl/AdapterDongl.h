@@ -47,6 +47,7 @@ class AdapterDongl : public AdapterBase {
     virtual bool bluetooth_enabled() override;
 
   private:
+    void _check_for_updates(uint32_t current_version);
     void _update_firmware();
     void _scan_received_callback(advertising_data_t data);
     void _on_simpleble_event(const simpleble_Event& event);

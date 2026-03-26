@@ -32,7 +32,7 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
     _serial_protocol->set_event_callback([this](const dongl_Event& event) {
         switch (event.which_evt) {
             case dongl_Event_simpleble_tag:
-                _on_simpleble_event(event.evt.simpleble);
+            _on_simpleble_event(event.evt.simpleble);
                 break;
             default:
                 break;
@@ -61,23 +61,12 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
 
 
     auto response_whoami = _serial_protocol->basic_whoami();
-    fmt::print("Whoami: version {}\n", response_whoami.version);
-
     auto response_init = _serial_protocol->simpleble_init();
+
+    fmt::print("Whoami: version {}\n", response_whoami.version);
     fmt::print("SimpleBLE init: {}\n", response_init.ret_code);
 
-    if (Config::Dongl::auto_update) {
-        if (SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION > response_whoami.version) {
-            try {
-                fmt::print("New firmware available (v{}). Updating...\n", SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION);
-                _update_firmware();
-            } catch (const Exception::BaseException& e) {
-                fmt::print("Auto-update failed: {}\n", e.what());
-            }
-        } else {
-            fmt::print("Firmware is up to date (v{}).\n", response_whoami.version);
-        }
-    }
+    _check_for_updates(response_whoami.version);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -98,7 +87,6 @@ bool AdapterDongl::is_powered() { return true; }
 
 void AdapterDongl::scan_start() {
     auto response = _serial_protocol->simpleble_scan_start();
-
     fmt::print("Scan start: {}\n", response.ret_code);
 }
 
@@ -143,15 +131,34 @@ void AdapterDongl::_scan_received_callback(advertising_data_t data) {
     }
 }
 
+void AdapterDongl::_check_for_updates(uint32_t current_version) {
+    const bool auto_update = Config::Dongl::auto_update;
+    const bool force_update = Config::Dongl::force_update;
+    bool update_required = force_update || (auto_update && (SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION > current_version));
+
+    if (!update_required) {
+        fmt::print("Firmware is up to date (v{}).\n", current_version);
+        return;
+    }
+
+    fmt::print("Updating to v{}...\n", SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION);
+
+    try {
+        _update_firmware();
+    } catch (const Exception::BaseException& e) {
+        fmt::print("Firmware update failed: {}\n", e.what());
+    }
+}
+
 void AdapterDongl::_update_firmware() {
     const uint8_t* firmware_data = SimpleBLE::Dongl::Firmware::OBFUSCATED_FIRMWARE;
     size_t total_length = SimpleBLE::Dongl::Firmware::OBFUSCATED_FIRMWARE_LEN;
     uint32_t version = SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION;
-    
+
     if (total_length < 16) {
         throw Exception::BaseException("Firmware too small");
     }
-    
+
     fmt::print("Starting DFU to version {} (0x{:08x}), total length: {} bytes\n", version, version, total_length);
 
     // 1. DFU Start

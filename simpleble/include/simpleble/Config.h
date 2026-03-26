@@ -50,9 +50,11 @@ namespace Android {
 namespace Dongl {
     extern bool use_dongl_backend;
     extern bool auto_update;
+    extern bool force_update;
     static void reset() {
         use_dongl_backend = false;
         auto_update = false;
+        force_update = false;
     }
 }  // namespace Dongl
 

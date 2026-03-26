@@ -21,6 +21,7 @@ namespace Config {
     namespace Dongl {
         bool use_dongl_backend = false;
         bool auto_update = false;
+        bool force_update = false;
     }  // namespace Dongl
 
 }  // namespace Config
