@@ -1,3 +1,4 @@
+#include <simpleble/Config.h>
 #include <simpleble/Peripheral.h>
 
 #include "AdapterDongl.h"
@@ -6,9 +7,8 @@
 #include "PeripheralDongl.h"
 #include "protocol/simpleble.pb.h"
 #include "serial/Protocol.h"
+#include "Firmware.h"
 
-// #include "cmd/Commands.h"
-// #include "cmd/Events.h"
 #include <memory>
 #include <thread>
 
@@ -59,15 +59,25 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
     //     // TODO: Handle protocol errors
     // });
 
-    // TODO: Send initialization commands
-    // auto command = Dongl::CMD::UartReadVersionCommand();
-    // _serial_protocol->send_packet(command.to_bytes());
 
     auto response_whoami = _serial_protocol->basic_whoami();
-    fmt::print("Whoami: {}\n", response_whoami.whoami);
+    fmt::print("Whoami: version {}\n", response_whoami.version);
 
     auto response_init = _serial_protocol->simpleble_init();
     fmt::print("SimpleBLE init: {}\n", response_init.ret_code);
+
+    if (Config::Dongl::auto_update) {
+        if (SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION > response_whoami.version) {
+            try {
+                fmt::print("New firmware available (v{}). Updating...\n", SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION);
+                _update_firmware();
+            } catch (const Exception::BaseException& e) {
+                fmt::print("Auto-update failed: {}\n", e.what());
+            }
+        } else {
+            fmt::print("Firmware is up to date (v{}).\n", response_whoami.version);
+        }
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -131,6 +141,60 @@ void AdapterDongl::_scan_received_callback(advertising_data_t data) {
     } else {
         SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, peripheral);
     }
+}
+
+void AdapterDongl::_update_firmware() {
+    const uint8_t* firmware_data = SimpleBLE::Dongl::Firmware::OBFUSCATED_FIRMWARE;
+    size_t total_length = SimpleBLE::Dongl::Firmware::OBFUSCATED_FIRMWARE_LEN;
+    uint32_t version = SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION;
+    
+    if (total_length < 16) {
+        throw Exception::BaseException("Firmware too small");
+    }
+    
+    fmt::print("Starting DFU to version {} (0x{:08x}), total length: {} bytes\n", version, version, total_length);
+
+    // 1. DFU Start
+    auto start_rsp = _serial_protocol->basic_dfu_start(version, total_length);
+    if (start_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
+        throw Exception::BaseException("DFU Start failed with error: " + std::to_string(start_rsp.error));
+    }
+
+    // 2. Sequential Chunks (up to 512 bytes each)
+    uint32_t offset = 0;
+    uint32_t chunk_index = 0;
+    while (offset < total_length) {
+        uint32_t chunk_size = std::min((uint32_t)512, (uint32_t)(total_length - offset));
+        std::vector<uint8_t> chunk_data(firmware_data + offset, firmware_data + offset + chunk_size);
+
+        uint32_t page_index = offset / 4096;
+        uint32_t offset_in_page = offset % 4096;
+
+        auto chunk_rsp = _serial_protocol->basic_dfu_chunk(page_index, offset_in_page, chunk_data);
+        if (chunk_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
+            throw Exception::BaseException("DFU Chunk " + std::to_string(chunk_index) + " failed with error: " + std::to_string(chunk_rsp.error));
+        }
+
+        offset += chunk_size;
+        chunk_index++;
+
+        if (chunk_index % 10 == 0 || offset == total_length) {
+            fmt::print("Progress: {}/{} bytes sent\r", offset, total_length);
+            std::fflush(stdout);
+        }
+    }
+    fmt::print("\nDFU chunks sent successfully. Verifying...\n");
+
+    // 3. DFU Verify
+    auto verify_rsp = _serial_protocol->basic_dfu_verify();
+    if (verify_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
+        throw Exception::BaseException("DFU Verification failed with error: " + std::to_string(verify_rsp.error));
+    }
+    fmt::print("DFU verified successfully! Accepted version: {}. Resetting dongle...\n", verify_rsp.accepted_version);
+
+    // 4. DFU Reboot
+    _serial_protocol->basic_dfu_reboot();
+    fmt::print("Dongle rebooting. DFU complete.\n");
 }
 
 void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {

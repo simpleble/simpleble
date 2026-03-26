@@ -1,19 +1,15 @@
 #pragma once
 
-#include <functional>
+#include <cstdint>
+#include <map>
 #include <memory>
-#include <optional>
+#include <string>
 #include <vector>
-
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-
-#include "ProtocolBase.h"
-#include "Wire.h"
 
 #include "protocol/d2h.pb.h"
 #include "protocol/h2d.pb.h"
+
+#include "ProtocolBase.h"
 
 namespace SimpleBLE {
 namespace Dongl {
@@ -22,11 +18,14 @@ namespace Serial {
 class Protocol : public ProtocolBase {
   public:
     Protocol(const std::string& device_path);
-    ~Protocol();
+    virtual ~Protocol();
 
     basic_WhoamiRsp basic_whoami();
     basic_ResetRsp basic_reset();
-    basic_DfuStartRsp basic_dfu_start();
+    basic_DfuStartRsp basic_dfu_start(uint32_t expected_version, uint32_t total_length);
+    basic_DfuChunkRsp basic_dfu_chunk(uint32_t page_index, uint32_t offset_in_page, const std::vector<uint8_t>& encrypted_data);
+    basic_DfuVerifyRsp basic_dfu_verify();
+    basic_DfuRebootRsp basic_dfu_reboot();
     basic_PowerOnRsp basic_power_on();
     basic_PowerOffRsp basic_power_off();
 

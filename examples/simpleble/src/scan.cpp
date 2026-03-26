@@ -30,7 +30,7 @@ int main() {
     adapter.set_callback_on_scan_stop([]() { std::cout << "Scan stopped." << std::endl; });
 
     // Scan for 5 seconds.
-    adapter.scan_for(15000);
+    adapter.scan_for(2000);
 
     std::cout << "Scan complete." << std::endl;
 

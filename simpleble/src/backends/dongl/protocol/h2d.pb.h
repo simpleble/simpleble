@@ -50,7 +50,7 @@ extern const pb_msgdesc_t dongl_Command_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define DONGL_H2D_PB_H_MAX_SIZE                  dongl_Command_size
-#define dongl_Command_size                       531
+#define dongl_Command_size                       533
 
 #ifdef __cplusplus
 } /* extern "C" */
