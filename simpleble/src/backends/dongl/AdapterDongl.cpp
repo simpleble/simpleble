@@ -134,14 +134,14 @@ void AdapterDongl::_scan_received_callback(advertising_data_t data) {
 void AdapterDongl::_check_for_updates(uint32_t current_version) {
     const bool auto_update = Config::Dongl::auto_update;
     const bool force_update = Config::Dongl::force_update;
-    bool update_required = force_update || (auto_update && (SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION > current_version));
+    bool update_required = force_update || (auto_update && (SimpleBLE::Dongl::Firmware::INTERNAL_VERSION > current_version));
 
     if (!update_required) {
         fmt::print("Firmware is up to date (v{}).\n", current_version);
         return;
     }
 
-    fmt::print("Updating to v{}...\n", SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION);
+    fmt::print("Updating to v{}...\n", SimpleBLE::Dongl::Firmware::INTERNAL_VERSION);
 
     try {
         _update_firmware();
@@ -151,56 +151,64 @@ void AdapterDongl::_check_for_updates(uint32_t current_version) {
 }
 
 void AdapterDongl::_update_firmware() {
-    const uint8_t* firmware_data = SimpleBLE::Dongl::Firmware::OBFUSCATED_FIRMWARE;
-    size_t total_length = SimpleBLE::Dongl::Firmware::OBFUSCATED_FIRMWARE_LEN;
-    uint32_t version = SimpleBLE::Dongl::Firmware::FIRMWARE_VERSION;
+    const uint8_t* app_data = SimpleBLE::Dongl::Firmware::INTERNAL_IMAGE;
+    size_t app_length = SimpleBLE::Dongl::Firmware::INTERNAL_IMAGE_LEN;
+    uint32_t version = SimpleBLE::Dongl::Firmware::INTERNAL_VERSION;
+    uint32_t crc32 = SimpleBLE::Dongl::Firmware::INTERNAL_METADATA_CRC;
+    const bool force_update = Config::Dongl::force_update;
 
-    if (total_length < 16) {
-        throw Exception::BaseException("Firmware too small");
-    }
-
-    fmt::print("Starting DFU to version {} (0x{:08x}), total length: {} bytes\n", version, version, total_length);
+    fmt::print("Starting DFU to version {} (0x{:08x}), app length: {} bytes, force_update: {}\n", version, version,
+               app_length, force_update);
 
     // 1. DFU Start
-    auto start_rsp = _serial_protocol->basic_dfu_start(version, total_length);
+    auto start_rsp = _serial_protocol->basic_dfu_start(version, app_length, crc32, force_update);
     if (start_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
         throw Exception::BaseException("DFU Start failed with error: " + std::to_string(start_rsp.error));
     }
 
-    // 2. Sequential Chunks (up to 512 bytes each)
+    // 2. Sequential Chunks
     uint32_t offset = 0;
     uint32_t chunk_index = 0;
-    while (offset < total_length) {
-        uint32_t chunk_size = std::min((uint32_t)512, (uint32_t)(total_length - offset));
-        std::vector<uint8_t> chunk_data(firmware_data + offset, firmware_data + offset + chunk_size);
+    while (offset < app_length) {
+        uint32_t chunk_size = std::min((uint32_t)512, (uint32_t)(app_length - offset));
+        std::vector<uint8_t> chunk_data(app_data + offset, app_data + offset + chunk_size);
 
         uint32_t page_index = offset / 4096;
         uint32_t offset_in_page = offset % 4096;
 
         auto chunk_rsp = _serial_protocol->basic_dfu_chunk(page_index, offset_in_page, chunk_data);
         if (chunk_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
-            throw Exception::BaseException("DFU Chunk " + std::to_string(chunk_index) + " failed with error: " + std::to_string(chunk_rsp.error));
+            throw Exception::BaseException("DFU Chunk at offset " + std::to_string(offset) +
+                                           " failed with error: " + std::to_string(chunk_rsp.error));
         }
 
         offset += chunk_size;
         chunk_index++;
 
-        if (chunk_index % 10 == 0 || offset == total_length) {
-            fmt::print("Progress: {}/{} bytes sent\r", offset, total_length);
-            std::fflush(stdout);
-        }
+        fmt::print("Progress: {}/{} bytes sent\r", offset, app_length);
+        std::fflush(stdout);
     }
-    fmt::print("\nDFU chunks sent successfully. Verifying...\n");
+    fmt::print("\nApp sent successfully. Writing metadata...\n");
 
-    // 3. DFU Verify
+    // 3. DFU Metadata
+    auto metadata_rsp = _serial_protocol->basic_dfu_metadata();
+    if (metadata_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
+        throw Exception::BaseException("DFU Metadata failed with error: " + std::to_string(metadata_rsp.error));
+    }
+    fmt::print("Metadata written successfully. Verifying...\n");
+
+    // 4. DFU Verify
     auto verify_rsp = _serial_protocol->basic_dfu_verify();
     if (verify_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
         throw Exception::BaseException("DFU Verification failed with error: " + std::to_string(verify_rsp.error));
     }
     fmt::print("DFU verified successfully! Accepted version: {}. Resetting dongle...\n", verify_rsp.accepted_version);
 
-    // 4. DFU Reboot
-    _serial_protocol->basic_dfu_reboot();
+    // 5. DFU Reboot
+    auto reboot_rsp = _serial_protocol->basic_dfu_reboot(force_update);
+    if (reboot_rsp.error != basic_DfuError_DFU_ERROR_NONE) {
+        throw Exception::BaseException("DFU Reboot failed with error: " + std::to_string(reboot_rsp.error));
+    }
     fmt::print("Dongle rebooting. DFU complete.\n");
 }
 

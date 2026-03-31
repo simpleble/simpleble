@@ -21,6 +21,9 @@ PB_BIND(basic_DfuChunkCmd, basic_DfuChunkCmd, 2)
 PB_BIND(basic_DfuVerifyCmd, basic_DfuVerifyCmd, AUTO)
 
 
+PB_BIND(basic_DfuMetadataCmd, basic_DfuMetadataCmd, AUTO)
+
+
 PB_BIND(basic_DfuRebootCmd, basic_DfuRebootCmd, AUTO)
 
 
@@ -43,6 +46,9 @@ PB_BIND(basic_DfuChunkRsp, basic_DfuChunkRsp, AUTO)
 
 
 PB_BIND(basic_DfuVerifyRsp, basic_DfuVerifyRsp, AUTO)
+
+
+PB_BIND(basic_DfuMetadataRsp, basic_DfuMetadataRsp, AUTO)
 
 
 PB_BIND(basic_DfuRebootRsp, basic_DfuRebootRsp, AUTO)

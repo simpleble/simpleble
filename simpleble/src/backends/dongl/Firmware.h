@@ -7,9 +7,10 @@ namespace SimpleBLE {
 namespace Dongl {
 namespace Firmware {
 
-extern const uint8_t OBFUSCATED_FIRMWARE[];
-extern const size_t OBFUSCATED_FIRMWARE_LEN;
-extern const uint32_t FIRMWARE_VERSION;
+extern const uint8_t INTERNAL_IMAGE[];
+extern const size_t INTERNAL_IMAGE_LEN;
+extern const uint32_t INTERNAL_VERSION;
+extern const uint32_t INTERNAL_METADATA_CRC;
 
 } // namespace Firmware
 } // namespace Dongl

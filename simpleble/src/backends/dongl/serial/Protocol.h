@@ -22,10 +22,11 @@ class Protocol : public ProtocolBase {
 
     basic_WhoamiRsp basic_whoami();
     basic_ResetRsp basic_reset();
-    basic_DfuStartRsp basic_dfu_start(uint32_t expected_version, uint32_t total_length);
+    basic_DfuStartRsp basic_dfu_start(uint32_t expected_version, uint32_t total_length, uint32_t crc32, bool force_update);
     basic_DfuChunkRsp basic_dfu_chunk(uint32_t page_index, uint32_t offset_in_page, const std::vector<uint8_t>& encrypted_data);
+    basic_DfuMetadataRsp basic_dfu_metadata();
     basic_DfuVerifyRsp basic_dfu_verify();
-    basic_DfuRebootRsp basic_dfu_reboot();
+    basic_DfuRebootRsp basic_dfu_reboot(bool force_update);
     basic_PowerOnRsp basic_power_on();
     basic_PowerOffRsp basic_power_off();
 
