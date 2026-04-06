@@ -32,65 +32,6 @@ basic_ResetRsp Protocol::basic_reset() {
     return response.rsp.basic.rsp.reset;
 }
 
-basic_DfuStartRsp Protocol::basic_dfu_start(uint32_t expected_version, uint32_t total_length, uint32_t crc32, bool force_update) {
-    fmt::print("Protocol::basic_dfu_start: expected_version={}, total_length={}, crc32=0x{:08x}, force_update={}\n", expected_version,
-               total_length, crc32, force_update);
-    dongl_Command command = dongl_Command_init_zero;
-    command.which_cmd = dongl_Command_basic_tag;
-    command.cmd.basic.which_cmd = basic_Command_dfu_start_tag;
-
-    command.cmd.basic.cmd.dfu_start.expected_version = expected_version;
-    command.cmd.basic.cmd.dfu_start.total_length = total_length;
-    command.cmd.basic.cmd.dfu_start.crc32 = crc32;
-    command.cmd.basic.cmd.dfu_start.force_update = force_update;
-
-    dongl_Response response = exchange(command);
-    return response.rsp.basic.rsp.dfu_start;
-}
-
-basic_DfuChunkRsp Protocol::basic_dfu_chunk(uint32_t page_index, uint32_t offset_in_page,
-                                            const std::vector<uint8_t>& encrypted_data) {
-    dongl_Command command = dongl_Command_init_zero;
-    command.which_cmd = dongl_Command_basic_tag;
-    command.cmd.basic.which_cmd = basic_Command_dfu_chunk_tag;
-
-    command.cmd.basic.cmd.dfu_chunk.page_index = page_index;
-    command.cmd.basic.cmd.dfu_chunk.offset_in_page = offset_in_page;
-    command.cmd.basic.cmd.dfu_chunk.encrypted_data.size = encrypted_data.size();
-    memcpy(command.cmd.basic.cmd.dfu_chunk.encrypted_data.bytes, encrypted_data.data(), encrypted_data.size());
-
-    dongl_Response response = exchange(command);
-    return response.rsp.basic.rsp.dfu_chunk;
-}
-
-basic_DfuMetadataRsp Protocol::basic_dfu_metadata() {
-    dongl_Command command = dongl_Command_init_zero;
-    command.which_cmd = dongl_Command_basic_tag;
-    command.cmd.basic.which_cmd = basic_Command_dfu_metadata_tag;
-
-    dongl_Response response = exchange(command);
-    return response.rsp.basic.rsp.dfu_metadata;
-}
-
-basic_DfuVerifyRsp Protocol::basic_dfu_verify() {
-    dongl_Command command = dongl_Command_init_zero;
-    command.which_cmd = dongl_Command_basic_tag;
-    command.cmd.basic.which_cmd = basic_Command_dfu_verify_tag;
-
-    dongl_Response response = exchange(command);
-    return response.rsp.basic.rsp.dfu_verify;
-}
-
-basic_DfuRebootRsp Protocol::basic_dfu_reboot(bool force_update) {
-    dongl_Command command = dongl_Command_init_zero;
-    command.which_cmd = dongl_Command_basic_tag;
-    command.cmd.basic.which_cmd = basic_Command_dfu_reboot_tag;
-    command.cmd.basic.cmd.dfu_reboot.force_update = force_update;
-
-    dongl_Response response = exchange(command);
-    return response.rsp.basic.rsp.dfu_reboot;
-}
-
 basic_PowerOnRsp Protocol::basic_power_on() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_basic_tag;
