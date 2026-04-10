@@ -25,6 +25,7 @@ fn compile_simpleble() {
     cxx_build::CFG.exported_header_dirs.push(&simplersble_source_path);
 
     println!("cargo:rustc-link-search=native={}/lib", simpleble_build_dest.display());
+    println!("cargo:rustc-link-search=native={}/lib64", simpleble_build_dest.display());
     println!("cargo:rustc-link-lib=static={}", simpleble_library_name);
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
