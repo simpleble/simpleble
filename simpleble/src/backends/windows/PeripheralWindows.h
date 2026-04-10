@@ -14,6 +14,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <atomic>
 #include <map>
 #include <memory>
 
@@ -82,6 +83,7 @@ class PeripheralWindows : public PeripheralBase {
     // Internal methods not exposed to the user.
 
     void update_advertising_data(advertising_data_t advertising_data);
+    bool is_disconnect_pending() const noexcept;
 
   private:
     BluetoothLEDevice device_{nullptr};
@@ -101,6 +103,11 @@ class PeripheralWindows : public PeripheralBase {
     uint16_t mtu_;
     bool connectable_;
     winrt::event_token connection_status_changed_token_;
+
+    // Internal state for deferred (non-blocking) disconnect mode
+    // Only active when Config::WinRT::use_deferred_disconnect == true
+    enum class ConnectionState { Disconnected, Connecting, Connected, Disconnecting };
+    std::atomic<ConnectionState> connection_state_{ConnectionState::Disconnected};
 
     std::condition_variable disconnection_cv_;
     std::mutex disconnection_mutex_;

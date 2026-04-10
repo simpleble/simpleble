@@ -14,6 +14,7 @@
 #include "simpleble/Service.h"
 
 #include <simpleble/Exceptions.h>
+#include <simpleble/Config.h>
 
 #include "winrt/Windows.Foundation.Collections.h"
 #include "winrt/Windows.Foundation.h"
@@ -91,7 +92,19 @@ void PeripheralWindows::update_advertising_data(advertising_data_t advertising_d
     service_data_ = advertising_data.service_data;
 }
 
+bool PeripheralWindows::is_disconnect_pending() const noexcept {
+    return SimpleBLE::Config::WinRT::use_deferred_disconnect &&
+           connection_state_ == ConnectionState::Disconnecting;
+}
+
 void PeripheralWindows::connect() {
+    if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+        if (connection_state_ == ConnectionState::Disconnecting) {
+            throw SimpleBLE::Exception::OperationFailed("Device is still disconnecting");
+        }
+        connection_state_ = ConnectionState::Connecting;
+    }
+
     MtaManager::get().execute_sync([this]() {
         device_ = async_get(BluetoothLEDevice::FromBluetoothAddressAsync(_str_to_mac_address(address_)));
     });
@@ -108,6 +121,18 @@ void PeripheralWindows::connect() {
             connection_status_changed_token_ = device_.ConnectionStatusChanged(
                 [this](const BluetoothLEDevice device, const auto args) {
                     if (device.ConnectionStatus() == BluetoothConnectionStatus::Disconnected) {
+                        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+                            connection_state_ = ConnectionState::Disconnected;
+                            
+                            // Explicitly clean up WinRT service objects and clear the map
+                            // on a spontaneous disconnect to prevent stale sessions leaking.
+                            for (auto& [uuid, svc] : gatt_map_) {
+                                if (svc.obj) svc.obj.Close();
+                            }
+                            gatt_map_.clear();
+                            
+                            device_ = nullptr;
+                        }
                         this->disconnection_cv_.notify_all();
 
                         SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
@@ -115,15 +140,47 @@ void PeripheralWindows::connect() {
                 });
         });
 
+        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+            connection_state_ = ConnectionState::Connected;
+        }
         SAFE_CALLBACK_CALL(this->callback_on_connected_);
     } else {
+        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+            connection_state_ = ConnectionState::Disconnected;
+        }
         throw SimpleBLE::Exception::OperationFailed("Failed to connect to device.");
     }
 }
 
 void PeripheralWindows::disconnect() {
-    gatt_map_.clear();
-    if (device_ != nullptr) {
+    if (device_ == nullptr) {
+        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+            connection_state_ = ConnectionState::Disconnected;
+        }
+        return;
+    }
+
+    if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+        // Deferred path
+        if (connection_state_ == ConnectionState::Disconnecting ||
+            connection_state_ == ConnectionState::Disconnected) {
+            return;
+        }
+
+        connection_state_ = ConnectionState::Disconnecting;
+
+        // Explicitly close services (extra safety against stale WinRT objects)
+        for (auto& [uuid, svc] : gatt_map_) {
+            if (svc.obj) svc.obj.Close();
+        }
+        gatt_map_.clear();
+
+        MtaManager::get().execute_sync([this]() {
+            device_.Close();   // fire-and-forget – the 3 s delay still happens in background
+        });
+    } else {
+        // Blocking path
+        gatt_map_.clear();
         MtaManager::get().execute_sync([this]() {
             device_.Close();
         });
@@ -141,7 +198,16 @@ void PeripheralWindows::disconnect() {
 }
 
 bool PeripheralWindows::is_connected() {
-    if (device_ == nullptr) return false;
+    if (device_ == nullptr) {
+        return false;
+    }
+
+    if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+        if (connection_state_ == ConnectionState::Disconnecting ||
+            connection_state_ == ConnectionState::Disconnected) {
+            return false;
+        }
+    }
 
     return MtaManager::get().execute_sync<bool>([this]() {
         return device_.ConnectionStatus() == BluetoothConnectionStatus::Connected;

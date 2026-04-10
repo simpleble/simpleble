@@ -25,7 +25,9 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#include <chrono>
+#include <thread>
+#include <simpleble/Config.h>
 using namespace SimpleBLE;
 using namespace SimpleBLE::WinRT;
 using namespace std::chrono_literals;
@@ -89,6 +91,28 @@ bool AdapterWindows::is_powered() {
 }
 
 void AdapterWindows::scan_start() {
+    // Wait for any pending deferred disconnects
+    if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+        auto start_time = std::chrono::steady_clock::now();
+        constexpr auto max_wait = std::chrono::seconds(5);
+
+        while (std::chrono::steady_clock::now() - start_time < max_wait) {
+            bool any_pending = false;
+            for (const auto& [address, peripheral] : peripherals_) {
+                if (auto win_peripheral = std::dynamic_pointer_cast<PeripheralWindows>(peripheral)) {
+                    if (win_peripheral->is_disconnect_pending()) {
+                        any_pending = true;
+                        break;
+                    }
+                }
+            }
+            if (!any_pending) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
+
     this->seen_peripherals_.clear();
 
     MtaManager::get().execute_sync([this]() {

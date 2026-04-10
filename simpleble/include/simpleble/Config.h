@@ -28,10 +28,12 @@ namespace SimpleBluez {
 namespace WinRT {
     extern bool experimental_use_own_mta_apartment;
     extern bool experimental_reinitialize_winrt_apartment_on_main_thread;
+    extern bool use_deferred_disconnect;
 
     static void reset() {
         experimental_use_own_mta_apartment = true;
         experimental_reinitialize_winrt_apartment_on_main_thread = false;
+        use_deferred_disconnect = true;
     }
 }  // namespace WinRT
 

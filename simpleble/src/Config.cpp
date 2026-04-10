@@ -12,6 +12,7 @@ namespace Config {
     namespace WinRT {
         bool experimental_use_own_mta_apartment = true;
         bool experimental_reinitialize_winrt_apartment_on_main_thread = false;
+        bool use_deferred_disconnect = true;
     }  // namespace WinRT
 
     namespace Android {
