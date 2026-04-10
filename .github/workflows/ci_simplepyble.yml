@@ -75,7 +75,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
           CIBW_BEFORE_ALL_LINUX: "yum update -y && yum group install -y \"Development Tools\" && yum install -y dbus-devel"
           CIBW_ARCHS: ${{ matrix.config.arch }}
-          CIBW_SKIP: "*musllinux_* pp* cp314t*" 
+          CIBW_SKIP: "*musllinux_* cp314t*" 
           CIBW_TEST_SKIP: "*"
           MACOSX_DEPLOYMENT_TARGET: "13.0"
 
