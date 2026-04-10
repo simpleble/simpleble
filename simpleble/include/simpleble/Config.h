@@ -66,6 +66,7 @@ namespace Base {
         WinRT::reset();
         CoreBluetooth::reset();
         Android::reset();
+        Dongl::reset();
     }
 }  // namespace Base
 }  // namespace Config
