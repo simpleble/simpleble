@@ -1,5 +1,8 @@
 package org.simplejavable;
 
+/**
+ * Represents the type of a Bluetooth MAC address.
+ */
 public enum BluetoothAddressType {
     PUBLIC(0),
     RANDOM(1),
@@ -11,6 +14,10 @@ public enum BluetoothAddressType {
         this.value = value;
     }
 
+    /**
+     * Gets the integer value of the address type mapping.
+     * @return The integer value of the address type.
+     */
     public int getValue() {
         return value;
     }
@@ -29,6 +36,11 @@ public enum BluetoothAddressType {
         }
     }
 
+    /**
+     * Parses a BluetoothAddressType from its integer representation.
+     * @param value The integer value.
+     * @return The corresponding BluetoothAddressType.
+     */
     public static BluetoothAddressType fromInt(int value) {
         for (BluetoothAddressType type : values()) {
             if (type.getValue() == value) {

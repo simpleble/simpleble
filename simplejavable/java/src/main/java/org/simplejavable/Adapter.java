@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+/**
+ * Represents a physical Bluetooth adapter on the host system.
+ */
 public class Adapter {
     private EventListener eventListener;
     private final long instanceId;
@@ -45,28 +48,52 @@ public class Adapter {
         nativeAdapterRegister(instanceId, callbacks);
     }
 
+    /**
+     * Gets the system identifier of the Bluetooth adapter.
+     * @return The string identifier.
+     */
     public String getIdentifier() {
         String identifier = nativeAdapterIdentifier(instanceId);
         return identifier != null ? identifier : "";
     }
 
+    /**
+     * Gets the MAC address of the Bluetooth adapter.
+     * @return The BluetoothAddress.
+     */
     public BluetoothAddress getAddress() {
         String address = nativeAdapterAddress(instanceId);
         return new BluetoothAddress(address != null ? address : "");
     }
 
+    /**
+     * Starts scanning for BLE peripherals asynchronously.
+     */
     public void scanStart() {
         nativeAdapterScanStart(instanceId);
     }
 
+    /**
+     * Stops an active BLE peripheral scan.
+     */
     public void scanStop() {
         nativeAdapterScanStop(instanceId);
     }
 
+    /**
+     * Starts scanning for BLE peripherals, blocking for the specified duration.
+     * @param timeoutMs The scan duration in milliseconds.
+     * @throws Exception If the scan fails.
+     */
     public void scanFor(int timeoutMs) throws Exception {
         nativeAdapterScanFor(instanceId, timeoutMs);
     }
 
+    /**
+     * Starts scanning for BLE peripherals asynchronously and returns the results when finished.
+     * @param timeoutMs The scan duration in milliseconds.
+     * @return A CompletableFuture containing the list of found peripherals.
+     */
     public CompletableFuture<List<Peripheral>> scanForAsync(int timeoutMs) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -78,10 +105,18 @@ public class Adapter {
         });
     }
 
+    /**
+     * Checks if the adapter is currently scanning.
+     * @return True if a scan is active.
+     */
     public boolean getScanIsActive() {
         return nativeAdapterScanIsActive(instanceId);
     }
 
+    /**
+     * Gets the list of peripherals found during the last scan.
+     * @return A list of Peripheral objects.
+     */
     public List<Peripheral> scanGetResults() {
         long[] results = nativeAdapterScanGetResults(instanceId);
         List<Peripheral> peripherals = new ArrayList<>();
@@ -91,10 +126,18 @@ public class Adapter {
         return peripherals;
     }
 
+    /**
+     * Sets the event listener for adapter events (e.g., scan start, stop, found).
+     * @param listener The EventListener implementation.
+     */
     public void setEventListener(EventListener listener) {
         this.eventListener = listener;
     }
 
+    /**
+     * Gets a list of all peripherals currently paired with the system.
+     * @return A list of paired Peripheral objects.
+     */
     public List<Peripheral> getPairedPeripherals() {
         long[] results = nativeAdapterGetPairedPeripherals(instanceId);
         List<Peripheral> peripherals = new ArrayList<>();
@@ -104,10 +147,18 @@ public class Adapter {
         return peripherals;
     }
 
+    /**
+     * Checks if Bluetooth is enabled on the host system.
+     * @return True if Bluetooth is enabled.
+     */
     public static boolean isBluetoothEnabled() {
         return nativeIsBluetoothEnabled();
     }
 
+    /**
+     * Gets a list of all available Bluetooth adapters on the system.
+     * @return A list of Adapter objects.
+     */
     public static List<Adapter> getAdapters() {
         long[] nativeAdapterIds = nativeGetAdapters();
         List<Adapter> adapters = new ArrayList<>();
