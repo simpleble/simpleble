@@ -1,16 +1,17 @@
 #include <simpleble/Adapter.h>
-#include "Backend.h"
+#include <simpleble/Backend.h>
 
 #include "BuildVec.h"
 #include "LoggingInternal.h"
 #include "backends/common/AdapterBase.h"
+#include "backends/common/BackendBase.h"
 
 using namespace SimpleBLE;
 
 std::vector<Adapter> Adapter::get_adapters() {
     std::vector<Adapter> adapter_list;
     for (auto& backend : Backend::get_backends()) {
-        for (auto& adapter : backend.get_adapters()) {
+        for (auto& adapter : backend.adapters()) {
             adapter_list.push_back(adapter);
         }
     }
@@ -21,7 +22,14 @@ std::vector<Adapter> Adapter::get_adapters() {
 // TODO: this should be the implementation of the per-backend bluetooth_enabled() function
 // bool Adapter::bluetooth_enabled() { return (*this)->bluetooth_enabled(); }
 
-bool Adapter::bluetooth_enabled() { return get_enabled_backend().bluetooth_enabled(); }
+bool Adapter::bluetooth_enabled() {
+    for (auto& backend : Backend::get_backends()) {
+        if (backend.bluetooth_enabled()) {
+            return true;
+        }
+    }
+    return false;
+}
 
 bool Adapter::initialized() const { return internal_ != nullptr; }
 

@@ -20,9 +20,9 @@ BackendAndroid::BackendAndroid(buildToken) {
     _adapter = std::make_shared<AdapterAndroid>();
 }
 
-std::string BackendAndroid::name() const noexcept { return "Android"; }
+std::string BackendAndroid::identifier() const noexcept { return "Android"; }
 
-SharedPtrVector<AdapterBase> BackendAndroid::get_adapters() {
+SharedPtrVector<AdapterBase> BackendAndroid::adapters() {
     SharedPtrVector<AdapterBase> adapter_list;
     adapter_list.push_back(_adapter);
     return adapter_list;

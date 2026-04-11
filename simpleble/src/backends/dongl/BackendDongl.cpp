@@ -4,6 +4,7 @@
 #include "CommonUtils.h"
 
 #include "usb/UsbHelper.h"
+#include <simpleble/Config.h>
 #include <fmt/core.h>
 
 namespace SimpleBLE {
@@ -13,18 +14,21 @@ class BackendDongl : public BackendSingleton<BackendDongl> {
     BackendDongl(buildToken) {};
     virtual ~BackendDongl() = default;
 
-    virtual SharedPtrVector<AdapterBase> get_adapters() override;
+    virtual SharedPtrVector<AdapterBase> adapters() override;
     virtual bool bluetooth_enabled() override;
-    std::string name() const noexcept override;
+    std::string identifier() const noexcept override;
+    virtual bool is_active() override;
 };
 
 std::shared_ptr<BackendBase> BACKEND_DONGL() { return BackendDongl::get(); }
 
-std::string BackendDongl::name() const noexcept { return "Dongl"; }
+std::string BackendDongl::identifier() const noexcept { return "Dongl"; }
 
 bool BackendDongl::bluetooth_enabled() { return true; }
 
-SharedPtrVector<AdapterBase> BackendDongl::get_adapters() {
+bool BackendDongl::is_active() { return Config::Dongl::use_dongl_backend; }
+
+SharedPtrVector<AdapterBase> BackendDongl::adapters() {
     SharedPtrVector<AdapterBase> adapters;
     for (const auto& device_path : Dongl::USB::UsbHelper::get_dongl_devices()) {
         adapters.push_back(std::make_shared<AdapterDongl>(device_path));

@@ -107,7 +107,7 @@ int main() {
 
 ### Step 2: Get a Bluetooth adapter
 
-With Bluetooth access confirmed, we need to discover the adapters available on the machine. To keep things simple, we will just use the first adapter that we find:
+With Bluetooth access confirmed, we need to discover the adapters available on the machine. SimpleBLE manages multiple backends representing different under-the-hood implementations (such as BlueZ, CoreBluetooth, WinRT, or Dongl), but provides a consolidated method to easily fetch all available adapters across every active backend. To keep things simple, we will just use the first adapter that we find:
 
 ```cpp
 auto adapters = SimpleBLE::Adapter::get_adapters();
@@ -339,7 +339,7 @@ int main() {
 Now that the full sample is in place, let's walk through the complete flow once more:
 
 1. `SimpleBLE::Adapter::bluetooth_enabled()` verifies that Bluetooth is available and that the application has the permissions it needs.
-2. `SimpleBLE::Adapter::get_adapters()` returns the Bluetooth adapters available on the system. To keep things simple, the program uses the first one it finds.
+2. `SimpleBLE::Adapter::get_adapters()` aggregates and returns the Bluetooth adapters available across all native backends on the system. To keep things simple, the program uses the first one it finds.
 3. `adapter.scan_for(5000)` scans for nearby peripherals for five seconds. The `set_callback_on_scan_found()` callback prints each discovered device and stores connectable ones.
 4. After selecting a peripheral, `peripheral.connect()` establishes a connection and allows service discovery.
 5. `peripheral.services()` returns the GATT services exposed by the device. The example walks through each service and characteristic, keeping only those where `characteristic.can_read()` is true.

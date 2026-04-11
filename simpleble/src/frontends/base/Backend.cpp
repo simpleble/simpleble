@@ -8,54 +8,47 @@
 #include "BuildVec.h"
 #include "CommonUtils.h"
 
-#include "Backend.h"
+#include <simpleble/Backend.h>
 
 using namespace SimpleBLE;
 
 namespace SimpleBLE {
 
-static std::shared_ptr<BackendBase> _get_enabled_backend() {
+static SharedPtrVector<BackendBase> _get_backends() {
+    SharedPtrVector<BackendBase> backends;
     using BackendPtr = std::shared_ptr<BackendBase>(void);
 
-    if (Config::Dongl::use_dongl_backend) {
-        extern BackendPtr BACKEND_DONGL;
-        return BACKEND_DONGL();
-    }
+    auto add_backend = [&](std::shared_ptr<BackendBase> backend) {
+        if (backend->is_active()) {
+            backends.push_back(backend);
+        }
+    };
 
     if constexpr (SIMPLEBLE_BACKEND_LINUX) {
         extern BackendPtr BACKEND_LINUX;
         extern BackendPtr BACKEND_LINUX_LEGACY;
-
-        if (Config::SimpleBluez::use_legacy_bluez_backend) {
-            return BACKEND_LINUX_LEGACY();
-        } else {
-            return BACKEND_LINUX();
-        }
+        add_backend(BACKEND_LINUX());
+        add_backend(BACKEND_LINUX_LEGACY());
     } else if constexpr (SIMPLEBLE_BACKEND_WINDOWS) {
         extern BackendPtr BACKEND_WINDOWS;
-        return BACKEND_WINDOWS();
+        add_backend(BACKEND_WINDOWS());
     } else if constexpr (SIMPLEBLE_BACKEND_ANDROID) {
         extern BackendPtr BACKEND_ANDROID;
-        return BACKEND_ANDROID();
+        add_backend(BACKEND_ANDROID());
     } else if constexpr (SIMPLEBLE_BACKEND_MACOS) {
         extern BackendPtr BACKEND_MACOS;
-        return BACKEND_MACOS();
+        add_backend(BACKEND_MACOS());
     } else if constexpr (SIMPLEBLE_BACKEND_IOS) {
         extern BackendPtr BACKEND_MACOS;
-        return BACKEND_MACOS();
+        add_backend(BACKEND_MACOS());
     } else if constexpr (SIMPLEBLE_BACKEND_PLAIN) {
         extern BackendPtr BACKEND_PLAIN;
-        return BACKEND_PLAIN();
+        add_backend(BACKEND_PLAIN());
     }
 
-    throw Exception::NotInitialized();
-}
+    extern BackendPtr BACKEND_DONGL;
+    add_backend(BACKEND_DONGL());
 
-Backend get_enabled_backend() { return Factory::build(_get_enabled_backend()); }
-
-// NOTE: in the future, this can return multiple backends
-static SharedPtrVector<BackendBase> _get_backends() {
-    SharedPtrVector<BackendBase> backends = {_get_enabled_backend()};
     return backends;
 }
 
@@ -79,17 +72,8 @@ const BackendBase* Backend::operator->() const {
     return internal_.get();
 }
 
-std::vector<Adapter> Backend::get_adapters() { return Factory::vector((*this)->get_adapters()); }
+std::vector<Adapter> Backend::adapters() { return Factory::vector((*this)->adapters()); }
 
 bool Backend::bluetooth_enabled() { return (*this)->bluetooth_enabled(); }
 
-std::optional<Backend> Backend::first_bluetooth_enabled() {
-    for (auto& backend : get_backends()) {
-        if (backend->bluetooth_enabled()) {
-            return backend;
-        }
-    }
-    return std::nullopt;
-}
-
-std::string Backend::name() const noexcept { return (*this)->name(); }
+std::string Backend::identifier() const noexcept { return (*this)->identifier(); }

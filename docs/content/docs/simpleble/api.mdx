@@ -9,6 +9,48 @@ The following notes provide an overview of the architecture of some of the highe
 
 <ApiSection title="Standard API" id="standard-api">
 
+## SimpleBLE::Backend [#simpleble-backend] [toc]
+
+<ApiClass name="SimpleBLE::Backend">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Backend()=default"
+/>
+
+<ApiMethod
+  signature="virtual ~Backend()=default"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="std::string identifier() const noexcept"
+  detailed="Get the identifier of the backend."
+/>
+
+<ApiMethod
+  signature="bool bluetooth_enabled()"
+  detailed="Check if Bluetooth is enabled for this backend."
+/>
+
+<ApiMethod
+  signature="std::vector< Adapter > adapters()"
+  detailed="Get a list of all available adapters from this backend."
+/>
+
+### Public Static Functions [!toc]
+
+<ApiMethod
+  signature="static std::vector< Backend > get_backends()"
+  detailed="Get all available backends. This will cause backends to be instantiated/initialized."
+/>
+
+</ApiClass>
+
 ## SimpleBLE::Adapter [#simpleble-adapter] [toc]
 
 <ApiClass name="SimpleBLE::Adapter" detailed="Bluetooth [Adapter](#simpleble-adapter).  A default-constructed [Adapter](#simpleble-adapter) object is not initialized. Calling any method other than `initialized()` on an uninitialized [Adapter](#simpleble-adapter) will throw an exception of type `SimpleBLE::NotInitialized`.">

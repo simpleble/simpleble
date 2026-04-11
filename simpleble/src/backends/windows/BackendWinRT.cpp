@@ -47,7 +47,7 @@ bool BackendWinRT::bluetooth_enabled() {
     });
 }
 
-SharedPtrVector<AdapterBase> BackendWinRT::get_adapters() {
+SharedPtrVector<AdapterBase> BackendWinRT::adapters() {
     return MtaManager::get().execute_sync<SharedPtrVector<AdapterBase>>([this]() {
         auto device_selector = BluetoothAdapter::GetDeviceSelector();
         auto device_information_collection = async_get(
@@ -62,6 +62,6 @@ SharedPtrVector<AdapterBase> BackendWinRT::get_adapters() {
     });
 }
 
-std::string BackendWinRT::name() const noexcept { return "WinRT"; }
+std::string BackendWinRT::identifier() const noexcept { return "WinRT"; }
 
 };  // namespace SimpleBLE

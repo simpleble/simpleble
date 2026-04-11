@@ -12,25 +12,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Notes**
 
-- 
+This release introduces the concept of `Backend` to the SimpleBLE API. Backends represent the underlying BLE implementation,
+such as BlueZ on Linux, CoreBluetooth on macOS, and WinRT on Windows. These entities will become more relevant in future
+releases as we move towards more elaborate workstreams, the first of which is the introduction of the Dongl backend.
+
+The SimpleBLE Dongl is a suite of hardware and firmware products that bypass the host's BLE stack entirely, providing an
+extremely consistent BLE experience across all platforms. Visit the [SimpleBLE Dongl](https://simpleble.org/dongl) website
+to learn more.
 
 **Added**
 
-- (Java) Added `CompletableFuture` wrappers for blocking operations to allow clean asynchronous programming without blocking threads.
+- (SimpleJavaBLE) Added `CompletableFuture` wrappers for blocking operations to allow clean asynchronous programming without blocking threads.
+- (SimpleBLE) Elevated `Backend` class to the public API, enabling programmatical control of all available backends.
+- (SimpleBLE) Introduced the Dongl backend for custom SimpleBLE hardware and firmware products.
 
 **Changed**
 
-- (Java) JNI API calls are now safely wrapped to catch C++ exceptions and bubble them up as Java `RuntimeException` instead of crashing the JVM.
-- (Java) Updated `EventListener` interfaces in `Adapter` and `Peripheral` to provide default empty implementations.
+- (SimpleJavaBLE) JNI API calls are now safely wrapped to catch C++ exceptions and bubble them up as Java `RuntimeException` instead of crashing the JVM.
+- (SimpleJavaBLE) Updated `EventListener` interfaces in `Adapter` and `Peripheral` to provide default empty implementations.
 - (Windows) Added configurable workaround for 3-second delay in disconnecting from a peripheral. **(Thanks, josmithua!)**
 - (Android) Updated NDK version to r29.
 
 **Fixed**
 
-- (Rust) Fixed linker errors on some 64-bit Linux systems. **(Thanks, davidedellagiustina!)**
-- (Java) Fixed missing macOS x64 `.dylib` artifact in the release package due to an omitted CI architecture target.
-- (Java) Fixed JNI symbol resolution errors (`UnsatisfiedLinkError`) on `Adapter.isBluetoothEnabled()` and `isPaired` flags.
-- (Java) Fixed `jvm.dll` initialization conflicts on Windows that prevented the native bindings from loading smoothly.
+- (SimpleRsBLE) Fixed linker errors on some 64-bit Linux systems. **(Thanks, davidedellagiustina!)**
+- (SimpleJavaBLE) Fixed missing macOS x64 `.dylib` artifact in the release package due to an omitted CI architecture target.
+- (SimpleJavaBLE) Fixed JNI symbol resolution errors (`UnsatisfiedLinkError`) on `Adapter.isBluetoothEnabled()` and `isPaired` flags.
+- (SimpleJavaBLE) Fixed `jvm.dll` initialization conflicts on Windows that prevented the native bindings from loading smoothly.
 
 **Removed**
 

@@ -12,9 +12,10 @@ class BackendAndroid : public BackendSingleton<BackendAndroid> {
     BackendAndroid(buildToken);
     virtual ~BackendAndroid() = default;
 
-    virtual std::vector<std::shared_ptr<AdapterBase>> get_adapters() override;
+    virtual std::vector<std::shared_ptr<AdapterBase>> adapters() override;
     virtual bool bluetooth_enabled() override;
-    virtual std::string name() const noexcept override;
+    virtual std::string identifier() const noexcept override;
+    virtual bool is_active() override { return true; }
 
   private:
     // Android devices only have a single Bluetooth adapter, so in order to preserve

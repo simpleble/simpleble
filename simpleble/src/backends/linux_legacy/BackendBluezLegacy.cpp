@@ -2,8 +2,8 @@
 #include "BackendBase.h"
 #include "BackendUtils.h"
 #include "CommonUtils.h"
-
 #include <simplebluezlegacy/Bluez.h>
+#include <simpleble/Config.h>
 
 #include <atomic>
 #include <memory>
@@ -19,9 +19,10 @@ class BackendBluezLegacy : public BackendSingleton<BackendBluezLegacy> {
 
     SimpleBluezLegacy::Bluez bluez;
 
-    virtual SharedPtrVector<AdapterBase> get_adapters() override;
+    virtual SharedPtrVector<AdapterBase> adapters() override;
     virtual bool bluetooth_enabled() override;
-    std::string name() const noexcept override;
+    std::string identifier() const noexcept override;
+    virtual bool is_active() override;
 
   private:
     std::thread* async_thread;
@@ -49,7 +50,7 @@ BackendBluezLegacy::~BackendBluezLegacy() {
     delete async_thread;
 }
 
-SharedPtrVector<AdapterBase> BackendBluezLegacy::get_adapters() {
+SharedPtrVector<AdapterBase> BackendBluezLegacy::adapters() {
     SharedPtrVector<AdapterBase> adapter_list;
 
     auto internal_adapters = bluez.get_adapters();
@@ -73,7 +74,11 @@ bool BackendBluezLegacy::bluetooth_enabled() {
     return enabled;
 }
 
-std::string BackendBluezLegacy::name() const noexcept { return "SimpleBluez Legacy"; }
+bool BackendBluezLegacy::is_active() {
+    return Config::SimpleBluez::use_legacy_bluez_backend;
+}
+
+std::string BackendBluezLegacy::identifier() const noexcept { return "SimpleBluez Legacy"; }
 
 void BackendBluezLegacy::async_thread_function() {
     SAFE_RUN({ bluez.register_agent(); });

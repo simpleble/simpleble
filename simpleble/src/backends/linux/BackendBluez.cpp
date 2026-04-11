@@ -22,9 +22,10 @@ class BackendBluez : public BackendSingleton<BackendBluez> {
 
     SimpleBluez::Bluez bluez;
 
-    virtual SharedPtrVector<AdapterBase> get_adapters() override;
+    virtual SharedPtrVector<AdapterBase> adapters() override;
     virtual bool bluetooth_enabled() override;
-    std::string name() const noexcept override;
+    std::string identifier() const noexcept override;
+    virtual bool is_active() override;
 
   private:
     std::thread* async_thread;
@@ -58,7 +59,7 @@ BackendBluez::~BackendBluez() {
     delete async_thread;
 }
 
-SharedPtrVector<AdapterBase> BackendBluez::get_adapters() {
+SharedPtrVector<AdapterBase> BackendBluez::adapters() {
     SharedPtrVector<AdapterBase> adapter_list;
 
     auto internal_adapters = bluez.get_adapters();
@@ -82,7 +83,11 @@ bool BackendBluez::bluetooth_enabled() {
     return enabled;
 }
 
-std::string BackendBluez::name() const noexcept { return "SimpleBluez"; }
+bool BackendBluez::is_active() {
+    return !Config::SimpleBluez::use_legacy_bluez_backend;
+}
+
+std::string BackendBluez::identifier() const noexcept { return "SimpleBluez"; }
 
 void BackendBluez::async_thread_function() {
     SAFE_RUN({
