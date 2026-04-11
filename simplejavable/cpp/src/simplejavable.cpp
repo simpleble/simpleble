@@ -38,7 +38,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_org_simplejavable_Adapter_00024Companion_nativeIsBluetoothEnabled(JNIEnv* env, jobject thiz) {
+Java_org_simplejavable_Adapter_nativeIsBluetoothEnabled(JNIEnv* env, jclass clazz) {
     return SimpleBLE::Adapter::bluetooth_enabled();
 }
 

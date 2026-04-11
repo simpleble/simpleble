@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (Rust) Fixed linker errors on some 64-bit Linux systems. **(Thanks, davidedellagiustina!)**
+- (Java) Fixed missing macOS x64 `.dylib` artifact in the release package due to an omitted CI architecture target.
+- (Java) Fixed JNI symbol resolution errors (`UnsatisfiedLinkError`) on `Adapter.isBluetoothEnabled()` and `isPaired` flags.
+- (Java) Fixed `jvm.dll` initialization conflicts on Windows that prevented the native bindings from loading smoothly.
 
 **Removed**
 
