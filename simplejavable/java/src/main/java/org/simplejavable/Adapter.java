@@ -3,6 +3,8 @@ package org.simplejavable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 public class Adapter {
     private EventListener eventListener;
@@ -63,6 +65,17 @@ public class Adapter {
 
     public void scanFor(int timeoutMs) throws Exception {
         nativeAdapterScanFor(instanceId, timeoutMs);
+    }
+
+    public CompletableFuture<List<Peripheral>> scanForAsync(int timeoutMs) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                scanFor(timeoutMs);
+                return scanGetResults();
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        });
     }
 
     public boolean getScanIsActive() {
