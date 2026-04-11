@@ -56,7 +56,7 @@ SIMPLECBLE_EXPORT void* simpleble_adapter_underlying(simpleble_adapter_t handle)
 /**
  * @brief Returns the identifier of a given adapter.
  *
- * @note The user is responsible for freeing the returned value.
+ * @note The user is responsible for freeing the returned value by calling `simpleble_free`.
  *
  * @param handle
  * @return char*
@@ -66,7 +66,7 @@ SIMPLECBLE_EXPORT char* simpleble_adapter_identifier(simpleble_adapter_t handle)
 /**
  * @brief Returns the MAC address of a given adapter.
  *
- * @note The user is responsible for freeing the returned value.
+ * @note The user is responsible for freeing the returned value by calling `simpleble_free`.
  *
  * @param handle
  * @return char*

@@ -31,6 +31,8 @@ SIMPLECBLE_EXPORT void* simpleble_peripheral_underlying(simpleble_peripheral_t h
 /**
  * @brief
  *
+ * @note The user is responsible for freeing the returned value by calling `simpleble_free`.
+ *
  * @param handle
  * @return char*
  */
@@ -38,6 +40,8 @@ SIMPLECBLE_EXPORT char* simpleble_peripheral_identifier(simpleble_peripheral_t h
 
 /**
  * @brief
+ *
+ * @note The user is responsible for freeing the returned value by calling `simpleble_free`.
  *
  * @param handle
  * @return char*
@@ -168,7 +172,7 @@ SIMPLECBLE_EXPORT simpleble_err_t simpleble_peripheral_manufacturer_data_get(
 /**
  * @brief
  *
- * @note The user is responsible for freeing the pointer returned in data.
+ * @note The user is responsible for freeing the pointer returned in data by calling `simpleble_free`.
  *
  * @param handle
  * @param service
@@ -255,6 +259,8 @@ SIMPLECBLE_EXPORT simpleble_err_t simpleble_peripheral_unsubscribe(simpleble_per
 
 /**
  * @brief
+ *
+ * @note The user is responsible for freeing the pointer returned in data by calling `simpleble_free`.
  *
  * @param handle
  * @param service
