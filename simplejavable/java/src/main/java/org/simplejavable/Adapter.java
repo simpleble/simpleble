@@ -127,10 +127,10 @@ public class Adapter {
     }
 
     public interface EventListener {
-        void onScanStart();
-        void onScanStop();
-        void onScanUpdated(Peripheral peripheral);
-        void onScanFound(Peripheral peripheral);
+        default void onScanStart() {}
+        default void onScanStop() {}
+        default void onScanUpdated(Peripheral peripheral) {}
+        default void onScanFound(Peripheral peripheral) {}
     }
 
     static {
@@ -140,9 +140,9 @@ public class Adapter {
             throw new RuntimeException("Failed to load native library", e);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            // TODO: We might need this to clean up the native library.
-            // System.out.println("JVM shutdown initiated at " + System.currentTimeMillis());
-        }));
+        // Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        //     // TODO: We might need this to clean up the native library.
+        //     // System.out.println("JVM shutdown initiated at " + System.currentTimeMillis());
+        // }));
     }
 }

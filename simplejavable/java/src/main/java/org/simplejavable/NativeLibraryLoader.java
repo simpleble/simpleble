@@ -95,17 +95,17 @@ public class NativeLibraryLoader {
         // Extract the library file from the JAR
         try (InputStream in = NativeLibraryLoader.class.getResourceAsStream(resourcePath)) {
             if (in == null) {
-                // List contents of the native folder. TODO: Remove this once we don't need it anymore.
-                try (InputStream nativeFolder = NativeLibraryLoader.class.getResourceAsStream(NATIVE_FOLDER)) {
-                    if (nativeFolder == null) {
-                        System.out.println("Native folder not found in JAR!");
-                    } else {
-                        System.out.println("Native folder exists in JAR");
+                // // List contents of the native folder. TODO: Remove this once we don't need it anymore.
+                // try (InputStream nativeFolder = NativeLibraryLoader.class.getResourceAsStream(NATIVE_FOLDER)) {
+                //     if (nativeFolder == null) {
+                //         System.out.println("Native folder not found in JAR!");
+                //     } else {
+                //         System.out.println("Native folder exists in JAR");
 
-                        NativeLibraryLoader.class.getClassLoader().resources("")
-                            .forEach(url -> System.out.println("Found resource: " + url));
-                    }
-                }
+                //         NativeLibraryLoader.class.getClassLoader().resources("")
+                //             .forEach(url -> System.out.println("Found resource: " + url));
+                //     }
+                // }
 
                 throw new FileNotFoundException("Native library not found: " + resourcePath);
             }

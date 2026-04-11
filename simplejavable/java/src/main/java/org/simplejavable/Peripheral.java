@@ -159,7 +159,7 @@ public class Peripheral {
     }
 
     public interface EventListener {
-        void onConnected();
-        void onDisconnected();
+        default void onConnected() {}
+        default void onDisconnected() {}
     }
 }
