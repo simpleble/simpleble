@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Changed**
 
+- (Java) JNI API calls are now safely wrapped to catch C++ exceptions and bubble them up as Java `RuntimeException` instead of crashing the JVM.
 - (Java) Updated `EventListener` interfaces in `Adapter` and `Peripheral` to provide default empty implementations.
 - (Windows) Added configurable workaround for 3-second delay in disconnecting from a peripheral. **(Thanks, josmithua!)**
 - (Android) Updated NDK version to r29.

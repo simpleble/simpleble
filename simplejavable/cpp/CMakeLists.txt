@@ -53,6 +53,10 @@ target_include_directories(
     ${JNI_INCLUDE_DIRS}
 )
 
-target_link_libraries(${CMAKE_PROJECT_NAME} simpleble::simpleble)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_link_libraries(${CMAKE_PROJECT_NAME} simpleble::simpleble)
+else()
+    target_link_libraries(${CMAKE_PROJECT_NAME} simpleble::simpleble ${JNI_LIBRARIES})
+endif()
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0)
