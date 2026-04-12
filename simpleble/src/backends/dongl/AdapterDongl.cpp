@@ -60,10 +60,15 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
 
 
     auto response_whoami = _serial_protocol->basic_whoami();
-    auto response_init = _serial_protocol->simpleble_init();
+    _identifier = std::string(response_whoami.identifier);
+    _address = std::string(response_whoami.mac_address);
 
-    fmt::print("Whoami: version {}\n", response_whoami.version);
-    fmt::print("SimpleBLE init: {}\n", response_init.ret_code);
+    fmt::println("Whoami: version {}", response_whoami.version);
+    fmt::println("Whoami: identifier {}", response_whoami.identifier);
+    fmt::println("Whoami: mac_address {}", response_whoami.mac_address);
+
+    auto response_init = _serial_protocol->simpleble_init();
+    fmt::println("SimpleBLE init: {}", response_init.ret_code);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -72,9 +77,9 @@ AdapterDongl::~AdapterDongl() {}
 
 void* AdapterDongl::underlying() const { return nullptr; }
 
-std::string AdapterDongl::identifier() { return "Dongl Adapter"; }
+std::string AdapterDongl::identifier() { return _identifier; }
 
-BluetoothAddress AdapterDongl::address() { return "AA:BB:CC:DD:EE:FF"; }
+BluetoothAddress AdapterDongl::address() { return _address; }
 
 void AdapterDongl::power_on() { _serial_protocol->basic_power_on(); }
 

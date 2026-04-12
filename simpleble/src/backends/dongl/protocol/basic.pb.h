@@ -43,6 +43,8 @@ typedef struct _basic_PowerOffCmd {
 
 typedef struct _basic_WhoamiRsp {
     uint32_t version;
+    char identifier[32];
+    char mac_address[18];
 } basic_WhoamiRsp;
 
 typedef struct _basic_ResetRsp {
@@ -103,7 +105,7 @@ extern "C" {
 #define basic_ResetCmd_init_default              {0}
 #define basic_PowerOnCmd_init_default            {0}
 #define basic_PowerOffCmd_init_default           {0}
-#define basic_WhoamiRsp_init_default             {0}
+#define basic_WhoamiRsp_init_default             {0, "", ""}
 #define basic_ResetRsp_init_default              {0}
 #define basic_PowerOnRsp_init_default            {0}
 #define basic_PowerOffRsp_init_default           {0}
@@ -113,7 +115,7 @@ extern "C" {
 #define basic_ResetCmd_init_zero                 {0}
 #define basic_PowerOnCmd_init_zero               {0}
 #define basic_PowerOffCmd_init_zero              {0}
-#define basic_WhoamiRsp_init_zero                {0}
+#define basic_WhoamiRsp_init_zero                {0, "", ""}
 #define basic_ResetRsp_init_zero                 {0}
 #define basic_PowerOnRsp_init_zero               {0}
 #define basic_PowerOffRsp_init_zero              {0}
@@ -122,6 +124,8 @@ extern "C" {
 
 /* Field tags (for use in manual encoding/decoding) */
 #define basic_WhoamiRsp_version_tag              1
+#define basic_WhoamiRsp_identifier_tag           2
+#define basic_WhoamiRsp_mac_address_tag          3
 #define basic_Command_whoami_tag                 1
 #define basic_Command_reset_tag                  2
 #define basic_Command_power_on_tag               4
@@ -153,7 +157,9 @@ extern "C" {
 #define basic_PowerOffCmd_DEFAULT NULL
 
 #define basic_WhoamiRsp_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UINT32,   version,           1)
+X(a, STATIC,   SINGULAR, UINT32,   version,           1) \
+X(a, STATIC,   SINGULAR, STRING,   identifier,        2) \
+X(a, STATIC,   SINGULAR, STRING,   mac_address,       3)
 #define basic_WhoamiRsp_CALLBACK NULL
 #define basic_WhoamiRsp_DEFAULT NULL
 
@@ -228,9 +234,9 @@ extern const pb_msgdesc_t basic_Response_msg;
 #define basic_PowerOnRsp_size                    0
 #define basic_ResetCmd_size                      0
 #define basic_ResetRsp_size                      0
-#define basic_Response_size                      8
+#define basic_Response_size                      60
 #define basic_WhoamiCmd_size                     0
-#define basic_WhoamiRsp_size                     6
+#define basic_WhoamiRsp_size                     58
 
 #ifdef __cplusplus
 } /* extern "C" */

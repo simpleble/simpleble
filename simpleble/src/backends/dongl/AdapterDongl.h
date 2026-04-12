@@ -56,6 +56,8 @@ class AdapterDongl : public AdapterBase {
     std::map<BluetoothAddress, std::shared_ptr<PeripheralDongl>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralDongl>> seen_peripherals_;
 
+    std::string _identifier;
+    BluetoothAddress _address;
 };
 
 }  // namespace SimpleBLE
