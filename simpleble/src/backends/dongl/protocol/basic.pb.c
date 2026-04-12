@@ -18,6 +18,9 @@ PB_BIND(basic_PowerOnCmd, basic_PowerOnCmd, AUTO)
 PB_BIND(basic_PowerOffCmd, basic_PowerOffCmd, AUTO)
 
 
+PB_BIND(basic_IsPoweredCmd, basic_IsPoweredCmd, AUTO)
+
+
 PB_BIND(basic_WhoamiRsp, basic_WhoamiRsp, AUTO)
 
 
@@ -28,6 +31,9 @@ PB_BIND(basic_PowerOnRsp, basic_PowerOnRsp, AUTO)
 
 
 PB_BIND(basic_PowerOffRsp, basic_PowerOffRsp, AUTO)
+
+
+PB_BIND(basic_IsPoweredRsp, basic_IsPoweredRsp, AUTO)
 
 
 PB_BIND(basic_Command, basic_Command, AUTO)

@@ -54,6 +54,17 @@ basic_PowerOffRsp Protocol::basic_power_off() {
     return response.rsp.basic.rsp.power_off;
 }
 
+basic_IsPoweredRsp Protocol::basic_is_powered() {
+    dongl_Command command = dongl_Command_init_zero;
+    command.which_cmd = dongl_Command_basic_tag;
+    command.cmd.basic.which_cmd = basic_Command_is_powered_tag;
+    basic_IsPoweredCmd is_powered_cmd = basic_IsPoweredCmd_init_default;
+    command.cmd.basic.cmd.is_powered = is_powered_cmd;
+
+    dongl_Response response = exchange(command);
+    return response.rsp.basic.rsp.is_powered;
+}
+
 simpleble_InitRsp Protocol::simpleble_init() {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
@@ -85,6 +96,17 @@ simpleble_ScanStopRsp Protocol::simpleble_scan_stop() {
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.scan_stop;
+}
+
+simpleble_ScanIsActiveRsp Protocol::simpleble_scan_is_active() {
+    dongl_Command command = dongl_Command_init_zero;
+    command.which_cmd = dongl_Command_simpleble_tag;
+    command.cmd.simpleble.which_cmd = simpleble_Command_scan_is_active_tag;
+    simpleble_ScanIsActiveCmd scan_is_active_cmd = simpleble_ScanIsActiveCmd_init_default;
+    command.cmd.simpleble.cmd.scan_is_active = scan_is_active_cmd;
+
+    dongl_Response response = exchange(command);
+    return response.rsp.simpleble.rsp.scan_is_active;
 }
 
 simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType address_type,

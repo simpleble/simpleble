@@ -85,7 +85,7 @@ void AdapterDongl::power_on() { _serial_protocol->basic_power_on(); }
 
 void AdapterDongl::power_off() { _serial_protocol->basic_power_off(); }
 
-bool AdapterDongl::is_powered() { return true; }
+bool AdapterDongl::is_powered() { return _serial_protocol->basic_is_powered().is_powered; }
 
 void AdapterDongl::scan_start() {
     auto response = _serial_protocol->simpleble_scan_start();
@@ -103,7 +103,7 @@ void AdapterDongl::scan_for(int timeout_ms) {
     scan_stop();
 }
 
-bool AdapterDongl::scan_is_active() { return false; }
+bool AdapterDongl::scan_is_active() { return _serial_protocol->simpleble_scan_is_active().is_active; }
 
 SharedPtrVector<PeripheralBase> AdapterDongl::scan_get_results() { return Util::values(seen_peripherals_); }
 

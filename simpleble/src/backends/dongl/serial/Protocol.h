@@ -24,10 +24,12 @@ class Protocol : public ProtocolBase {
     basic_ResetRsp basic_reset();
     basic_PowerOnRsp basic_power_on();
     basic_PowerOffRsp basic_power_off();
+    basic_IsPoweredRsp basic_is_powered();
 
     simpleble_InitRsp simpleble_init();
     simpleble_ScanStartRsp simpleble_scan_start();
     simpleble_ScanStopRsp simpleble_scan_stop();
+    simpleble_ScanIsActiveRsp simpleble_scan_is_active();
     simpleble_ConnectRsp simpleble_connect(simpleble_BluetoothAddressType address_type, const std::string& address);
     simpleble_DisconnectRsp simpleble_disconnect(uint16_t conn_handle);
     simpleble_ReadRsp simpleble_read(uint16_t conn_handle, uint16_t handle);
