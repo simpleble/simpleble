@@ -109,7 +109,7 @@ Join us to expand SimpleBLE's reach!
 
 .. _Discord: https://discord.gg/N9HqNEcvP3
 
-.. _Documentation: https://simpleble.org/docs
+.. _Documentation: https://docs.simpleble.org/
 
 .. _Software.com.br: https://software.com.br/
 
