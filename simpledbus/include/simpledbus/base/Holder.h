@@ -224,7 +224,17 @@ class Holder {
         for (auto& [key_type_internal, key, value] : holder_dict) {
             if (key_type_internal == key_type) {
                 if constexpr (std::is_same_v<std::decay_t<T>, ObjectPath> || std::is_same_v<std::decay_t<T>, Signature>) {
-                    output[T(std::any_cast<std::string>(key))] = value;
+                    std::string keyStr;
+                    if(key.type() == typeid(ObjectPath)) {
+                        keyStr = std::any_cast<ObjectPath>(key);
+                    }
+                    else if(key.type() == typeid(Signature)) {
+                        keyStr = std::any_cast<Signature>(key);
+                    }
+                    else {
+                        keyStr = std::any_cast<std::string>(key);
+                    }
+                    output[T(keyStr)] = value;
                 } else {
                     output[std::any_cast<T>(key)] = value;
                 }
