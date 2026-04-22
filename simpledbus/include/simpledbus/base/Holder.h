@@ -225,10 +225,10 @@ class Holder {
             if (key_type_internal == key_type) {
                 if constexpr (std::is_same_v<std::decay_t<T>, ObjectPath> || std::is_same_v<std::decay_t<T>, Signature>) {
                     std::string keyStr;
-                    if(key.type() == typeid(ObjectPath)) {
+                    if (key.type() == typeid(ObjectPath)) {
                         keyStr = std::any_cast<ObjectPath>(key);
                     }
-                    else if(key.type() == typeid(Signature)) {
+                    else if (key.type() == typeid(Signature)) {
                         keyStr = std::any_cast<Signature>(key);
                     }
                     else {
