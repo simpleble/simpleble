@@ -6,8 +6,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+#include <simplebluez/Exceptions.h>
 #include "simplebluez/Types.h"
 
+using namespace SimpleDBus;
 SimpleBluez::Bluez bluez;
 
 std::atomic_bool async_thread_active = true;
@@ -18,6 +20,20 @@ void async_thread_function() {
     }
 }
 
+void cleanup(
+    std::shared_ptr<SimpleBluez::Adapter> adapter,
+    std::shared_ptr<SimpleBluez::Advertisement> advertisement,
+    std::thread* async_thread
+) {
+    adapter->unregister_advertisement(advertisement);
+
+    async_thread_active = false;
+    async_thread->join();
+    delete async_thread;
+
+    app_running = false;
+    async_thread_active = false;
+}
 std::atomic_bool app_running = true;
 void signal_handler(int signal) { app_running = false; }
 
@@ -53,22 +69,31 @@ int main(int argc, char* argv[]) {
     advertisement->local_name("SimpleBluez");
 
     // --- MAIN EVENT LOOP ---
-    while (app_running) {
-        // Handle advertising state.
-        if (!advertisement->active()) {
-            adapter->register_advertisement(advertisement);
-            std::cout << "Advertising on " << adapter->identifier() << " [" << adapter->address() << "]" << std::endl;
+    try {
+        while (app_running) {
+            // Handle advertising state.
+            if (!advertisement->active()) {
+                adapter->register_advertisement(advertisement);
+
+                std::cout << "Advertising on " << adapter->identifier()
+                          << " [" << adapter->address() << "]" << std::endl;
+            }
+
+            // This should eventually become a yield.
+            millisecond_delay(100);
         }
-        // This should eventually become a yield.
-        millisecond_delay(100);
+    }
+    catch (const Exception::SendFailed& ex) {
+        std::cerr << "Error: " << ex.what() << std::endl;
+
+        // --- CLEANUP ---
+        cleanup( adapter, advertisement, async_thread);
+
+        return 1;
     }
 
     // --- CLEANUP ---
-    adapter->unregister_advertisement(advertisement);
-
-    async_thread_active = false;
-    async_thread->join();
-    delete async_thread;
+    cleanup( adapter, advertisement, async_thread);
 
     return 0;
 }
