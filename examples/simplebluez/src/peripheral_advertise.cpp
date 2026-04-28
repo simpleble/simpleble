@@ -1,18 +1,22 @@
-#include <simplebluez/Bluez.h>
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+
+#include <simplebluez/Bluez.h>
 #include <simplebluez/Exceptions.h>
 #include "simplebluez/Types.h"
 
 using namespace SimpleDBus;
+
+
+std::atomic_bool app_running = true;
+std::atomic_bool async_thread_active = true;
 SimpleBluez::Bluez bluez;
 
-std::atomic_bool async_thread_active = true;
+
 void async_thread_function() {
     while (async_thread_active) {
         bluez.run_async();
@@ -34,14 +38,15 @@ void cleanup(
     app_running = false;
     async_thread_active = false;
 }
-std::atomic_bool app_running = true;
-void signal_handler(int signal) { app_running = false; }
 
 void millisecond_delay(int ms) {
     for (int i = 0; i < ms; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+
+void signal_handler(int signal) { app_running = false; }
+
 
 int main(int argc, char* argv[]) {
     //std::signal(SIGINT, signal_handler);
