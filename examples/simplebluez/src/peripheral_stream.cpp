@@ -6,8 +6,10 @@
 #include <thread>
 
 #include <simplebluez/Bluez.h>
+#include <simplebluez/Exceptions.h>
 #include "simplebluez/Types.h"
 
+using namespace SimpleDBus;
 
 
 std::atomic_bool app_running = true;
@@ -21,6 +23,33 @@ void async_thread_function() {
     }
 }
 
+void cleanup(
+    std::shared_ptr<SimpleBluez::Adapter> adapter,
+    std::shared_ptr<SimpleBluez::Advertisement> advertisement,
+    std::thread* async_thread,
+    std::map<std::string, std::shared_ptr<SimpleBluez::Device>>& peripherals,
+    std::shared_ptr<SimpleBluez::ServiceManager>& svc_manager
+) {
+    for (auto& peripheral : peripherals) {
+        std::cout << "Disconnecting from " << peripheral.second->name()
+                  << " [" << peripheral.second->address() << "]" << std::endl;
+
+        peripheral.second->disconnect();
+    }
+
+    adapter->unregister_advertisement(advertisement);
+    adapter->unregister_application(svc_manager->path());
+
+    std::cout << "Powering off adapter..." << std::endl;
+    adapter->powered(false);
+
+    async_thread_active = false;
+    async_thread->join();
+    delete async_thread;
+
+    app_running = false;
+    async_thread_active = false;
+}
 
 void millisecond_delay(int ms) {
     for (int i = 0; i < ms; i++) {
@@ -105,37 +134,40 @@ int main(int argc, char* argv[]) {
     advertisement->local_name("SimpleBluez");
 
     // --- MAIN EVENT LOOP ---
-    while (app_running) {
-        // Handle advertising state.
-        if (!advertisement->active()) {
-            adapter->register_advertisement(advertisement);
-            std::cout << "Advertising on " << adapter->identifier() << " [" << adapter->address() << "]" << std::endl;
+    try {
+        while (app_running) {
+            // Handle advertising state.
+            if (!advertisement->active()) {
+                adapter->register_advertisement(advertisement);
+
+                std::cout << "Advertising on " << adapter->identifier()
+                          << " [" << adapter->address() << "]" << std::endl;
+            }
+
+            // TODO: Handle connection events.
+
+            // TODO: Handle data updates.
+            static int value = 0;
+            characteristic0->value(
+                {(uint8_t)(value), (uint8_t)(value + 1), (uint8_t)(value + 2)}
+            );
+            value = (value * 1103515245 + 12345) & 0xFFFFFF;
+
+            // This should eventually become a yield.
+            millisecond_delay(100);
         }
+    }
+    catch (const Exception::SendFailed& ex) {
+        std::cerr << "Error: " << ex.what() << std::endl;
 
-        // TODO: Handle connection events.
+        // --- CLEANUP ---
+        cleanup( adapter, advertisement, async_thread, peripherals, svc_manager);
 
-        // TODO: Handle data updates.
-        static int value = 0;
-        characteristic0->value({(uint8_t)(value), (uint8_t)(value + 1), (uint8_t)(value + 2)});
-        value = (value * 1103515245 + 12345) & 0xFFFFFF;
-
-        // This should eventually become a yield.
-        millisecond_delay(100);
+        return 1;
     }
 
     // --- CLEANUP ---
-
-    for (auto& peripheral : peripherals) {
-        std::cout << "Disconnecting from " << peripheral.second->name() << " [" << peripheral.second->address() << "]" << std::endl;
-        peripheral.second->disconnect();
-    }
-
-    adapter->unregister_advertisement(advertisement);
-    adapter->unregister_application(svc_manager->path());
-
-    async_thread_active = false;
-    async_thread->join();
-    delete async_thread;
+    cleanup( adapter, advertisement, async_thread, peripherals, svc_manager);
 
     return 0;
 }
