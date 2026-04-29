@@ -31,6 +31,9 @@ void cleanup(
 ) {
     adapter->unregister_advertisement(advertisement);
 
+    std::cout << "Powering off adapter..." << std::endl;
+    adapter->powered(false);
+
     async_thread_active = false;
     async_thread->join();
     delete async_thread;
