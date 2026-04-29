@@ -37,9 +37,16 @@ int main(int argc, char* argv[]) {
     std::thread* async_thread = new std::thread(async_thread_function);
     auto adapter = bluez.get_adapters()[0];
 
+    if (!adapter->powered()) {
+        std::cout << "Powering on adapter..." << std::endl;
+        adapter->powered(true);
+    }
+
     std::cout << "Initializing SimpleBluez Peripheral Mode Demo" << std::endl;
 
     // --- ADAPTER SETUP ---
+    adapter->alias("Potato");
+
     std::map<std::string, std::shared_ptr<SimpleBluez::Device>> peripherals;
     adapter->set_on_device_updated([&peripherals](std::shared_ptr<SimpleBluez::Device> device) {
         const bool device_connected = device->connected(); // THIS CAUSES A DEADLOCK!
