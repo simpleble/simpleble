@@ -1,16 +1,19 @@
-#include <simplebluez/Bluez.h>
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+
+#include <simplebluez/Bluez.h>
 #include "simplebluez/Types.h"
 
+
+
+std::atomic_bool app_running = true;
+std::atomic_bool async_thread_active = true;
 SimpleBluez::Bluez bluez;
 
-std::atomic_bool async_thread_active = true;
 void async_thread_function() {
     while (async_thread_active) {
         bluez.run_async();
@@ -18,14 +21,15 @@ void async_thread_function() {
     }
 }
 
-std::atomic_bool app_running = true;
-void signal_handler(int signal) { app_running = false; }
 
 void millisecond_delay(int ms) {
     for (int i = 0; i < ms; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+
+void signal_handler(int signal) { app_running = false; }
+
 
 int main(int argc, char* argv[]) {
     std::signal(SIGINT, signal_handler);
@@ -78,9 +82,10 @@ int main(int argc, char* argv[]) {
     // Register the services and characteristics.
     adapter->register_application(svc_manager->path());
 
-    // NOTE: This long delay is not necessary. However, once an application is registered
-    // you want to wait until all services have been added to the adapter. This is done by
-    // checking the UUIDs property of org.bluez.Adapter1.
+    // NOTE: This long delay is not necessary. However, once an application is
+    // registered you want to wait until all services have been added to the
+    // adapter. This is done by checking the UUIDs property of
+    // org.bluez.Adapter1.
     millisecond_delay(1000);
 
     // --- ADVERTISEMENT DEFINITION ---
