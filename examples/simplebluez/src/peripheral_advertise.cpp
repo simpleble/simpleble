@@ -1,16 +1,22 @@
-#include <simplebluez/Bluez.h>
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+
+#include <simplebluez/Bluez.h>
+#include <simplebluez/Exceptions.h>
 #include "simplebluez/Types.h"
 
+using namespace SimpleDBus;
+
+
+std::atomic_bool app_running = true;
+std::atomic_bool async_thread_active = true;
 SimpleBluez::Bluez bluez;
 
-std::atomic_bool async_thread_active = true;
+
 void async_thread_function() {
     while (async_thread_active) {
         bluez.run_async();
@@ -18,8 +24,30 @@ void async_thread_function() {
     }
 }
 
-std::atomic_bool app_running = true;
-void signal_handler(int signal) { app_running = false; }
+void cleanup(
+    std::shared_ptr<SimpleBluez::Adapter> adapter,
+    std::shared_ptr<SimpleBluez::Advertisement> advertisement,
+    std::thread& async_thread
+) {
+    async_thread_active = false;
+
+    if (async_thread.joinable()) async_thread.join();
+
+    try {
+        adapter->unregister_advertisement(advertisement);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to unregister advertisement: " << e.what() << std::endl;
+    }
+
+    std::cout << "Powering off adapter..." << std::endl;
+    try {
+        adapter->powered(false);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to power off adapter: " << e.what() << std::endl;
+    }
+
+    app_running = false;
+}
 
 void millisecond_delay(int ms) {
     for (int i = 0; i < ms; i++) {
@@ -27,10 +55,13 @@ void millisecond_delay(int ms) {
     }
 }
 
+void signal_handler(int signal) { app_running = false; }
+
+
 int main(int argc, char* argv[]) {
     //std::signal(SIGINT, signal_handler);
     bluez.init();
-    std::thread* async_thread = new std::thread(async_thread_function);
+    std::thread async_thread(async_thread_function);
     auto adapter = bluez.get_adapters()[0];
 
     if (!adapter->powered()) {
@@ -53,22 +84,31 @@ int main(int argc, char* argv[]) {
     advertisement->local_name("SimpleBluez");
 
     // --- MAIN EVENT LOOP ---
-    while (app_running) {
-        // Handle advertising state.
-        if (!advertisement->active()) {
-            adapter->register_advertisement(advertisement);
-            std::cout << "Advertising on " << adapter->identifier() << " [" << adapter->address() << "]" << std::endl;
+    try {
+        while (app_running) {
+            // Handle advertising state.
+            if (!advertisement->active()) {
+                adapter->register_advertisement(advertisement);
+
+                std::cout << "Advertising on " << adapter->identifier()
+                          << " [" << adapter->address() << "]" << std::endl;
+            }
+
+            // This should eventually become a yield.
+            millisecond_delay(100);
         }
-        // This should eventually become a yield.
-        millisecond_delay(100);
+    }
+    catch (const Exception::SendFailed& ex) {
+        std::cerr << "SendFailed: " << ex.what() << std::endl;
+
+        // --- CLEANUP ---
+        cleanup( adapter, advertisement, async_thread);
+
+        return 1;
     }
 
     // --- CLEANUP ---
-    adapter->unregister_advertisement(advertisement);
-
-    async_thread_active = false;
-    async_thread->join();
-    delete async_thread;
+    cleanup( adapter, advertisement, async_thread);
 
     return 0;
 }
