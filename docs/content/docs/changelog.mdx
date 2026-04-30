@@ -36,6 +36,7 @@ to learn more.
 **Fixed**
 
 - (SimpleRsBLE) Fixed linker errors on some 64-bit Linux systems. **(Thanks, davidedellagiustina!)**
+- (SimpleDBus) Fixed `bad_any_cast` exception in dictionaries with `ObjectPath` or `Signature` keys. **(Thanks, AndreiSvatko!)**
 - (SimpleJavaBLE) Fixed missing macOS x64 `.dylib` artifact in the release package due to an omitted CI architecture target.
 - (SimpleJavaBLE) Fixed JNI symbol resolution errors (`UnsatisfiedLinkError`) on `Adapter.isBluetoothEnabled()` and `isPaired` flags.
 - (SimpleJavaBLE) Fixed `jvm.dll` initialization conflicts on Windows that prevented the native bindings from loading smoothly.

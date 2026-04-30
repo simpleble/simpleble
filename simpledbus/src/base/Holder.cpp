@@ -415,6 +415,10 @@ void Holder::array_append(Holder holder) { holder_array.push_back(holder); }
 void Holder::dict_append(Type key_type, std::any key, Holder value) {
     if (key.type() == typeid(const char*)) {
         key = std::string(std::any_cast<const char*>(key));
+    } else if (key.type() == typeid(ObjectPath)) {
+        key = std::string(std::any_cast<ObjectPath>(key));
+    } else if (key.type() == typeid(Signature)) {
+        key = std::string(std::any_cast<Signature>(key));
     }
 
     // TODO : VALIDATE THAT THE SPECIFIED KEY TYPE IS CORRECT

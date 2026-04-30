@@ -181,3 +181,29 @@ TEST(Holder, DictionaryHeterogeneous) {
 }
 
 // TODO: Add tests for equality comparison of Holders.
+
+TEST(Holder, DictionaryObjectPathKey) {
+    std::map<ObjectPath, Holder> m;
+    m[ObjectPath("/test")] = Holder::create<int32_t>(123);
+    Holder h = Holder::create(m);
+    
+    // This should not throw bad_any_cast
+    EXPECT_NO_THROW(h.represent());
+    
+    std::map<ObjectPath, Holder> m2;
+    m2[ObjectPath("/test")] = Holder::create<int32_t>(123);
+    Holder h2 = Holder::create(m2);
+
+    // This should not throw bad_any_cast
+    EXPECT_NO_THROW({
+        bool b = (h == h2);
+        EXPECT_TRUE(b);
+    });
+
+    // Check getting the dict back
+    EXPECT_NO_THROW({
+        auto out = h.get<std::map<ObjectPath, Holder>>();
+        EXPECT_EQ(out.size(), 1);
+        EXPECT_EQ(out[ObjectPath("/test")].get<int32_t>(), 123);
+    });
+}
