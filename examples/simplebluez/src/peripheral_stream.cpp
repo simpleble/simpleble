@@ -102,12 +102,17 @@ int main(int argc, char* argv[]) {
 
         if (device_connected && is_new_device) {
             peripherals[device->address()] = device;
-            std::cout << "New peripheral: " << device->name() << " [" << device->address() << "]" << std::endl;
 
-            // NOTE: This moment can also be used to deregister the advertisement if only one connection is needed.
+            std::cout << "New peripheral: " << device->name()
+                      << " [" << device->address() << "]" << std::endl;
+
+            // NOTE: This moment can also be used to deregister the
+            // advertisement if only one connection is needed.
         } else if (!device_connected && !is_new_device) {
             peripherals.erase(device->address());
-            std::cout << "Lost peripheral: " << device->name() << " [" << device->address() << "]" << std::endl;
+
+            std::cout << "Lost peripheral: " << device->name()
+                      << " [" << device->address() << "]" << std::endl;
         }
     });
 
