@@ -221,13 +221,26 @@ class Holder {
     template <typename T>
     std::map<T, Holder> _get_dict(Type key_type) const {
         std::map<T, Holder> output;
+
         for (auto& [key_type_internal, key, value] : holder_dict) {
-            if (key_type_internal == key_type) {
-                if constexpr (std::is_same_v<std::decay_t<T>, ObjectPath> || std::is_same_v<std::decay_t<T>, Signature>) {
-                    output[T(std::any_cast<std::string>(key))] = value;
+            if (key_type_internal != key_type) {
+                continue;
+            }
+
+            if constexpr (std::is_same_v<std::decay_t<T>, ObjectPath>) {
+                if (key.type() == typeid(ObjectPath)) {
+                    output[std::any_cast<ObjectPath>(key)] = value;
                 } else {
-                    output[std::any_cast<T>(key)] = value;
+                    output[ObjectPath(std::any_cast<std::string>(key))] = value;
                 }
+            } else if constexpr (std::is_same_v<std::decay_t<T>, Signature>) {
+                if (key.type() == typeid(Signature)) {
+                    output[std::any_cast<Signature>(key)] = value;
+                } else {
+                    output[Signature(std::any_cast<std::string>(key))] = value;
+                }
+            } else {
+                output[std::any_cast<T>(key)] = value;
             }
         }
         return output;
