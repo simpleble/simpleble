@@ -26,10 +26,14 @@ void async_thread_function() {
 void cleanup(
     std::shared_ptr<SimpleBluez::Adapter> adapter,
     std::shared_ptr<SimpleBluez::Advertisement> advertisement,
-    std::thread* async_thread,
+    std::thread& async_thread,
     std::map<std::string, std::shared_ptr<SimpleBluez::Device>>& peripherals,
     std::shared_ptr<SimpleBluez::ServiceManager>& svc_manager
 ) {
+    async_thread_active = false;
+
+    if (async_thread.joinable()) async_thread.join();
+
     for (auto& peripheral : peripherals) {
         std::cout << "Disconnecting from " << peripheral.second->name()
                   << " [" << peripheral.second->address() << "]" << std::endl;
@@ -43,12 +47,8 @@ void cleanup(
     std::cout << "Powering off adapter..." << std::endl;
     adapter->powered(false);
 
-    async_thread_active = false;
-    async_thread->join();
-    delete async_thread;
 
     app_running = false;
-    async_thread_active = false;
 }
 
 void millisecond_delay(int ms) {
@@ -63,7 +63,7 @@ void signal_handler(int signal) { app_running = false; }
 int main(int argc, char* argv[]) {
     std::signal(SIGINT, signal_handler);
     bluez.init();
-    std::thread* async_thread = new std::thread(async_thread_function);
+    std::thread async_thread(async_thread_function);
     auto adapter = bluez.get_adapters()[0];
 
     if (!adapter->powered()) {
