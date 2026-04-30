@@ -30,12 +30,21 @@ void cleanup(
     std::thread& async_thread
 ) {
     async_thread_active = false;
-    adapter->unregister_advertisement(advertisement);
 
     if (async_thread.joinable()) async_thread.join();
-    std::cout << "Powering off adapter..." << std::endl;
-    adapter->powered(false);
 
+    try {
+        adapter->unregister_advertisement(advertisement);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to unregister advertisement: " << e.what() << std::endl;
+    }
+
+    std::cout << "Powering off adapter..." << std::endl;
+    try {
+        adapter->powered(false);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to power off adapter: " << e.what() << std::endl;
+    }
 
     app_running = false;
 }

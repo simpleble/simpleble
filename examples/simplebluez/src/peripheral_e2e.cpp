@@ -35,18 +35,37 @@ void cleanup(
     if (async_thread.joinable()) async_thread.join();
 
     for (auto& peripheral : peripherals) {
-        std::cout << "Disconnecting from " << peripheral.second->name()
-                  << " [" << peripheral.second->address() << "]" << std::endl;
+        std::string address = peripheral.second->address();
 
-        peripheral.second->disconnect();
+        std::cout << "Disconnecting from " << peripheral.second->name()
+                  << " [" << address << "]" << std::endl;
+
+        try {
+            peripheral.second->disconnect();
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to disconnect from " << address << ": "
+                      << e.what() << std::endl;
+        }
     }
 
-    adapter->unregister_advertisement(advertisement);
-    adapter->unregister_application(svc_manager->path());
+    try {
+        adapter->unregister_application(svc_manager->path());
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to unregister application: " << e.what() << std::endl;
+    }
+
+    try {
+        adapter->unregister_advertisement(advertisement);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to unregister advertisement: " << e.what() << std::endl;
+    }
 
     std::cout << "Powering off adapter..." << std::endl;
-    adapter->powered(false);
-
+    try {
+        adapter->powered(false);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to power off adapter: " << e.what() << std::endl;
+    }
 
     app_running = false;
 }
