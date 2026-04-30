@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
         }
     }
     catch (const Exception::SendFailed& ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
+        std::cerr << "SendFailed: " << ex.what() << std::endl;
 
         // --- CLEANUP ---
         cleanup( adapter, advertisement, async_thread, peripherals, svc_manager);
