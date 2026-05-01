@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <simpleble/export.h>
 
 //clang-format off
 namespace SimpleBLE {
@@ -12,10 +13,10 @@ namespace SimpleBLE {
  */
 namespace Config {
 namespace SimpleBluez {
-    extern bool use_legacy_bluez_backend;
-    extern bool use_system_bus; // NOTE: This is only available in the new Bluez backend.
-    extern std::chrono::steady_clock::duration connection_timeout;
-    extern std::chrono::steady_clock::duration disconnection_timeout;
+    extern SIMPLEBLE_EXPORT bool use_legacy_bluez_backend;
+    extern SIMPLEBLE_EXPORT bool use_system_bus; // NOTE: This is only available in the new Bluez backend.
+    extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration connection_timeout;
+    extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration disconnection_timeout;
 
     static void reset() {
         use_legacy_bluez_backend = true;
@@ -26,9 +27,9 @@ namespace SimpleBluez {
 }  // namespace SimpleBluez
 
 namespace WinRT {
-    extern bool experimental_use_own_mta_apartment;
-    extern bool experimental_reinitialize_winrt_apartment_on_main_thread;
-    extern bool use_deferred_disconnect;
+    extern SIMPLEBLE_EXPORT bool experimental_use_own_mta_apartment;
+    extern SIMPLEBLE_EXPORT bool experimental_reinitialize_winrt_apartment_on_main_thread;
+    extern SIMPLEBLE_EXPORT bool use_deferred_disconnect;
 
     static void reset() {
         experimental_use_own_mta_apartment = true;
@@ -44,15 +45,15 @@ namespace CoreBluetooth {
 namespace Android {
     enum class ConnectionPriorityRequest { DISABLED = -1, BALANCED = 0, HIGH = 1, LOW_POWER = 2, DCK = 3 };
 
-    extern ConnectionPriorityRequest connection_priority_request;
+    extern SIMPLEBLE_EXPORT ConnectionPriorityRequest connection_priority_request;
 
     static void reset() { connection_priority_request = ConnectionPriorityRequest::DISABLED; }
 }  // namespace Android
 
 namespace Dongl {
-    extern bool use_dongl_backend;
-    extern bool auto_update;
-    extern bool force_update;
+    extern SIMPLEBLE_EXPORT bool use_dongl_backend;
+    extern SIMPLEBLE_EXPORT bool auto_update;
+    extern SIMPLEBLE_EXPORT bool force_update;
     static void reset() {
         use_dongl_backend = false;
         auto_update = false;
