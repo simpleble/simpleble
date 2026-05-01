@@ -80,5 +80,5 @@ tasks.jar {
         } else {
              logger.warn("nativeLibPath '$path' provided is not a directory. Cannot include native libraries.")
         }
-    } ?: error("Please provide -PnativeLibPath or use -PbuildFromCMake to build from CMake")
+    } ?: logger.warn("Please provide -PnativeLibPath or use -PbuildFromCMake to build from CMake. The generated JAR will not contain native libraries.")
 }
