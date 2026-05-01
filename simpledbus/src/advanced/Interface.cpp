@@ -113,7 +113,9 @@ Holder Interface::handle_property_get(std::string property_name) {
 Holder Interface::handle_property_get_all() {
     Holder properties = Holder::create<std::map<std::string, Holder>>();
     for (auto& [name, value] : _properties) {
-        properties.dict_append(Holder::STRING, name, value->get());
+        if (value->valid()) {
+            properties.dict_append(Holder::STRING, name, value->get());
+        }
     }
     return properties;
 }

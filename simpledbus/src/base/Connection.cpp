@@ -157,7 +157,10 @@ Message Connection::send_with_reply(Message& msg) {
     }
 
     AsyncContext ctx;
-    dbus_pending_call_set_notify(pending, static_reply_handler, &ctx, nullptr);
+    if (!dbus_pending_call_set_notify(pending, static_reply_handler, &ctx, nullptr)) {
+        dbus_pending_call_unref(pending);
+        throw std::runtime_error("Failed to set D-Bus pending call notify callback");
+    }
 
     bool timed_out = false;
     {

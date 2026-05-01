@@ -156,6 +156,7 @@ class Interface {
         std::unique_ptr<PropertyBase> property_ptr = std::make_unique<Property<T>>(*this, name);
         Property<T>& property = dynamic_cast<Property<T>&>(*property_ptr);
         property.set(T());
+        property.invalidate();
         _properties.emplace(name, std::move(property_ptr));
         return property;
     }
