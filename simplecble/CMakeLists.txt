@@ -97,20 +97,25 @@ install(
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simplecble)
 
 if(SIMPLECBLE_TEST)
-    message(STATUS "No tests are available for simplecble")
-    # find_package(GTest REQUIRED)
+    message(STATUS "Building tests for simplecble")
+    find_package(GTest REQUIRED)
 
-    # add_executable(simpleble_test
-    #     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
-    #     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp
-    #     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_bytearray.cpp)
-    # set_target_properties(simpleble_test PROPERTIES
-    #     CXX_VISIBILITY_PRESET hidden
-    #     VISIBILITY_INLINES_HIDDEN YES
-    #     CXX_STANDARD 17
-    #     POSITION_INDEPENDENT_CODE ON
-    #     WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    add_executable(simplecble_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp)
+    set_target_properties(simplecble_test PROPERTIES
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN YES
+        CXX_STANDARD 17
+        POSITION_INDEPENDENT_CODE ON
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-    # target_link_libraries(simpleble_test PRIVATE simpleble::simpleble GTest::gtest)
+    target_include_directories(simplecble_test PRIVATE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpleble/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpleble/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpleble/src/backends/dongl
+        ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/include)
+    
+    target_link_libraries(simplecble_test PRIVATE simplecble simpleble::simpleble GTest::gtest GTest::gtest_main)
 endif()
 

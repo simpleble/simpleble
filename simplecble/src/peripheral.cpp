@@ -231,8 +231,9 @@ simpleble_err_t simpleble_peripheral_services_get(simpleble_peripheral_t handle,
 
         memcpy(services->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN);
 
+        const size_t copy_len = std::min(service.data().size(), sizeof(services->data));
         services->data_length = service.data().size();
-        memcpy(services->data, service.data().data(), service.data().size());
+        memcpy(services->data, service.data().data(), copy_len);
 
         services->characteristic_count = service.characteristics().size();
         if (services->characteristic_count > SIMPLEBLE_CHARACTERISTIC_MAX_COUNT) {
@@ -304,9 +305,9 @@ simpleble_err_t simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_
 
         auto& selected_manufacturer_data = *it;
         manufacturer_data->manufacturer_id = selected_manufacturer_data.first;
+        const size_t copy_len = std::min(selected_manufacturer_data.second.size(), sizeof(manufacturer_data->data));
         manufacturer_data->data_length = selected_manufacturer_data.second.size();
-        memcpy(manufacturer_data->data, selected_manufacturer_data.second.data(),
-               selected_manufacturer_data.second.size());
+        memcpy(manufacturer_data->data, selected_manufacturer_data.second.data(), copy_len);
 
         return SIMPLEBLE_SUCCESS;
     } catch (...) {

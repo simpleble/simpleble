@@ -153,6 +153,10 @@ simpleble_ReadRsp Protocol::simpleble_read(uint16_t conn_handle, uint16_t handle
 
 simpleble_WriteRsp Protocol::simpleble_write(uint16_t conn_handle, uint16_t handle, simpleble_WriteOperation operation,
                                              const std::vector<uint8_t>& data) {
+    if (data.size() > sizeof(simpleble_WriteCmd_data_t::bytes)) {
+        throw std::length_error("Payload exceeds maximum size of 512 bytes");
+    }
+
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_write_tag;

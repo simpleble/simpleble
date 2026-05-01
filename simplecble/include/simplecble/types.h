@@ -37,7 +37,8 @@ typedef struct {
     simpleble_uuid_t uuid;
     size_t data_length;
     uint8_t data[27];
-    // Note: The maximum length of a BLE advertisement is 31 bytes.
+    // Note: The maximum length of a BLE 4.x advertisement is 31 bytes.
+    // BLE 5.0 extended advertisements can be larger, so data may be truncated.
     // The first byte will be the length of the field,
     // the second byte will be the type of the field,
     // the next two bytes will be the service UUID,
@@ -50,7 +51,8 @@ typedef struct {
     uint16_t manufacturer_id;
     size_t data_length;
     uint8_t data[27];
-    // Note: The maximum length of a BLE advertisement is 31 bytes.
+    // Note: The maximum length of a BLE 4.x advertisement is 31 bytes.
+    // BLE 5.0 extended advertisements can be larger, so data may be truncated.
     // The first byte will be the length of the field,
     // the second byte will be the type of the field (0xFF for manufacturer data),
     // the next two bytes will be the manufacturer ID,
