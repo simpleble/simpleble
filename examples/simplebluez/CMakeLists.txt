@@ -56,3 +56,6 @@ configure_simplebluez_target(simplebluez_peripheral_advertise)
 
 add_executable(simplebluez_peripheral_stream src/peripheral_stream.cpp)
 configure_simplebluez_target(simplebluez_peripheral_stream)
+
+add_executable(simplebluez_peripheral_e2e src/peripheral_e2e.cpp)
+configure_simplebluez_target(simplebluez_peripheral_e2e)
