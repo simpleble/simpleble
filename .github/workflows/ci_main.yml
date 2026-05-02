@@ -1,5 +1,8 @@
 name: CI Main
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -122,6 +125,8 @@ jobs:
   publish-release:
     needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    permissions:
+      contents: write
     runs-on: ubuntu-22.04
     steps:
 
