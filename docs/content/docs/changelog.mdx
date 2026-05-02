@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.12.2] - 2026-XX-XX
+## [0.14.0] - 2026-05-02
 
 **Notes**
 
@@ -42,7 +42,7 @@ to learn more.
 - (SimpleJavaBLE) Fixed JNI symbol resolution errors (`UnsatisfiedLinkError`) on `Adapter.isBluetoothEnabled()` and `isPaired` flags.
 - (SimpleJavaBLE) Fixed `jvm.dll` initialization conflicts on Windows that prevented the native bindings from loading smoothly.
 - (SimpleCBLE) Fixed remotely triggerable stack buffer overflows when handling manufacturer data and advertised services (EVE-2026-002, EVE-2026-003). **(Thanks, Mr-IoT!)**
-- (Dongl) Fixed stack buffer overflow in simpleble_write (EVE-2026-001). **(Thanks, Mr-IoT!)**
+- (SimpleBLE) Fixed stack buffer overflow in Dongl write function. (EVE-2026-001). **(Thanks, Mr-IoT!)**
 - (SimpleBLE) Added missing export headers to `Config.h`.
 
 **Removed**
