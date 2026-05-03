@@ -1,4 +1,5 @@
 #include <simpleble/Utils.h>
+#include "Constants.h"
 #if SIMPLEBLE_BACKEND_MACOS || SIMPLEBLE_BACKEND_IOS
 #include "TargetConditionals.h"
 #endif
@@ -20,5 +21,10 @@ OperatingSystem get_operating_system() {
 }
 
 std::string get_simpleble_version() { return SIMPLEBLE_VERSION; }
+
+std::string get_company_name(uint16_t company_id) {
+    auto it = COMPANY_IDENTIFIERS.find(company_id);
+    return (it != COMPANY_IDENTIFIERS.end()) ? it->second : "Unknown";
+}
 
 }  // namespace SimpleBLE
