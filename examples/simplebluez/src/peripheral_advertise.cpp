@@ -29,10 +29,6 @@ void cleanup(
     std::shared_ptr<SimpleBluez::Advertisement> advertisement,
     std::thread& async_thread
 ) {
-    async_thread_active = false;
-
-    if (async_thread.joinable()) async_thread.join();
-
     try {
         adapter->unregister_advertisement(advertisement);
     } catch (const std::exception& e) {
@@ -47,6 +43,9 @@ void cleanup(
     }
 
     app_running = false;
+    async_thread_active = false;
+
+    if (async_thread.joinable()) async_thread.join();
 }
 
 void millisecond_delay(int ms) {

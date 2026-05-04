@@ -30,10 +30,6 @@ void cleanup(
     std::map<std::string, std::shared_ptr<SimpleBluez::Device>>& peripherals,
     std::shared_ptr<SimpleBluez::ServiceManager>& svc_manager
 ) {
-    async_thread_active = false;
-
-    if (async_thread.joinable()) async_thread.join();
-
     for (auto& peripheral : peripherals) {
         std::string address = peripheral.second->address();
 
@@ -68,6 +64,9 @@ void cleanup(
     }
 
     app_running = false;
+    async_thread_active = false;
+
+    if (async_thread.joinable()) async_thread.join();
 }
 
 void millisecond_delay(int ms) {
