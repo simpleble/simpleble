@@ -58,7 +58,7 @@ void signal_handler(int signal) { app_running = false; }
 
 
 int main(int argc, char* argv[]) {
-    //std::signal(SIGINT, signal_handler);
+    std::signal(SIGINT, signal_handler);
     bluez.init();
     std::thread async_thread(async_thread_function);
     auto adapter = bluez.get_adapters()[0];
