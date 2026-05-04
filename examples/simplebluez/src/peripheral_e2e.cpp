@@ -239,6 +239,14 @@ int main(int argc, char* argv[]) {
 
         return 1;
     }
+    catch (const std::exception& ex) {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+
+        // --- CLEANUP ---
+        cleanup(adapter, advertisement, async_thread, peripherals, svc_manager);
+
+        return 1;
+    }
 
     // --- CLEANUP ---
     cleanup(adapter, advertisement, async_thread, peripherals, svc_manager);
