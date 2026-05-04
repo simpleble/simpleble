@@ -101,13 +101,13 @@ int main(int argc, char* argv[]) {
         std::cerr << "SendFailed: " << ex.what() << std::endl;
 
         // --- CLEANUP ---
-        cleanup( adapter, advertisement, async_thread);
+        cleanup(adapter, advertisement, async_thread);
 
         return 1;
     }
 
     // --- CLEANUP ---
-    cleanup( adapter, advertisement, async_thread);
+    cleanup(adapter, advertisement, async_thread);
 
     return 0;
 }

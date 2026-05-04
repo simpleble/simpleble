@@ -16,6 +16,7 @@ std::atomic_bool app_running = true;
 std::atomic_bool async_thread_active = true;
 SimpleBluez::Bluez bluez;
 
+
 void async_thread_function() {
     while (async_thread_active) {
         bluez.run_async();
@@ -234,13 +235,13 @@ int main(int argc, char* argv[]) {
         std::cerr << "SendFailed: " << ex.what() << std::endl;
 
         // --- CLEANUP ---
-        cleanup( adapter, advertisement, async_thread, peripherals, svc_manager);
+        cleanup(adapter, advertisement, async_thread, peripherals, svc_manager);
 
         return 1;
     }
 
     // --- CLEANUP ---
-    cleanup( adapter, advertisement, async_thread, peripherals, svc_manager);
+    cleanup(adapter, advertisement, async_thread, peripherals, svc_manager);
 
     return 0;
 }
