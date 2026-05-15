@@ -78,7 +78,11 @@ void PeripheralLinux::connect() {
     }
 
     device_->clear_on_disconnected();
-    device_->set_on_services_resolved([this]() { this->connection_cv_.notify_all(); });
+    services_resolved_ = false;
+    device_->set_on_services_resolved([this]() {
+        this->services_resolved_ = true;
+        this->connection_cv_.notify_all();
+    });
 
     // Attempt to connect to the device.
     for (size_t i = 0; i < 5; i++) {
@@ -91,12 +95,13 @@ void PeripheralLinux::connect() {
     // preventing disconnection events that should not be seen by the user.
     device_->set_on_disconnected([this]() {
         this->_cleanup_characteristics();
+        this->services_resolved_ = false;
         this->disconnection_cv_.notify_all();
 
         SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
     });
 
-    if (!is_connected()) {
+    if (!device_->connected() || !services_resolved_) {
         throw Exception::OperationFailed();
     }
 
@@ -381,7 +386,8 @@ bool PeripheralLinux::_attempt_connect() {
     // Wait for the connection to be confirmed.
     // The condition variable will return false if the connection was not established.
     std::unique_lock<std::mutex> lock(connection_mutex_);
-    return connection_cv_.wait_for(lock, Config::SimpleBluez::connection_timeout, [this]() { return is_connected(); });
+    return connection_cv_.wait_for(lock, Config::SimpleBluez::connection_timeout,
+                                   [this]() { return device_->connected() && services_resolved_.load(); });
 }
 
 bool PeripheralLinux::_attempt_disconnect() {
@@ -390,7 +396,12 @@ bool PeripheralLinux::_attempt_disconnect() {
     // Wait for the disconnection to be confirmed.
     // The condition variable will return false if the connection is still active.
     std::unique_lock<std::mutex> lock(disconnection_mutex_);
-    return disconnection_cv_.wait_for(lock, Config::SimpleBluez::disconnection_timeout, [this]() { return !is_connected(); });
+    bool disconnected = disconnection_cv_.wait_for(lock, Config::SimpleBluez::disconnection_timeout,
+                                                   [this]() { return !is_connected(); });
+    if (disconnected) {
+        services_resolved_ = false;
+    }
+    return disconnected;
 }
 
 std::shared_ptr<SimpleBluez::Characteristic> PeripheralLinux::_get_characteristic(
@@ -409,6 +420,10 @@ std::shared_ptr<SimpleBluez::Descriptor> PeripheralLinux::_get_descriptor(Blueto
                                                                           BluetoothUUID const& descriptor_uuid) {
     try {
         return device_->get_characteristic(service_uuid, characteristic_uuid)->get_descriptor(descriptor_uuid);
+    } catch (SimpleBluez::Exception::ServiceNotFoundException& e) {
+        throw Exception::ServiceNotFound(service_uuid);
+    } catch (SimpleBluez::Exception::CharacteristicNotFoundException& e) {
+        throw Exception::CharacteristicNotFound(characteristic_uuid);
     } catch (SimpleBluez::Exception::DescriptorNotFoundException& e) {
         throw Exception::DescriptorNotFound(descriptor_uuid);
     }
