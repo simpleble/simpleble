@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleBluez) Fixed custom peripheral D-Bus objects to use the connection's unique bus name instead of the unowned `org.simplebluez` name.
 - (SimpleDBus) Fixed local `ObjectManager::GetManagedObjects()` calls to return the local object tree directly instead of blocking on a D-Bus self-call.
 - (SimpleDBus) Fixed exported proxies to return a D-Bus `UnknownInterface` error for method calls targeting unsupported interfaces.
+- (SimpleJavaBLE) Fixed duplicate Java peripheral wrappers replacing connect and disconnect callbacks for the same native peripheral.
 
 **Removed**
 

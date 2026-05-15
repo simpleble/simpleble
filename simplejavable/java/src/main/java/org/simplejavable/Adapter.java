@@ -3,8 +3,10 @@ package org.simplejavable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents a physical Bluetooth adapter on the host system.
@@ -12,6 +14,7 @@ import java.util.concurrent.CompletionException;
 public class Adapter {
     private EventListener eventListener;
     private final long instanceId;
+    private final Map<Long, Peripheral> peripheralCache = new ConcurrentHashMap<>();
 
     private final Callback callbacks = new Callback() {
         @Override
@@ -31,14 +34,14 @@ public class Adapter {
         @Override
         public void onScanUpdated(long peripheralId) {
             if (eventListener != null) {
-                eventListener.onScanUpdated(new Peripheral(instanceId, peripheralId));
+                eventListener.onScanUpdated(getPeripheral(peripheralId));
             }
         }
 
         @Override
         public void onScanFound(long peripheralId) {
             if (eventListener != null) {
-                eventListener.onScanFound(new Peripheral(instanceId, peripheralId));
+                eventListener.onScanFound(getPeripheral(peripheralId));
             }
         }
     };
@@ -121,7 +124,7 @@ public class Adapter {
         long[] results = nativeAdapterScanGetResults(instanceId);
         List<Peripheral> peripherals = new ArrayList<>();
         for (long id : results) {
-            peripherals.add(new Peripheral(instanceId, id));
+            peripherals.add(getPeripheral(id));
         }
         return peripherals;
     }
@@ -142,9 +145,13 @@ public class Adapter {
         long[] results = nativeAdapterGetPairedPeripherals(instanceId);
         List<Peripheral> peripherals = new ArrayList<>();
         for (long id : results) {
-            peripherals.add(new Peripheral(instanceId, id));
+            peripherals.add(getPeripheral(id));
         }
         return peripherals;
+    }
+
+    private Peripheral getPeripheral(long peripheralId) {
+        return peripheralCache.computeIfAbsent(peripheralId, id -> new Peripheral(instanceId, id));
     }
 
     /**
