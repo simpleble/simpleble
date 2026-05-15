@@ -5,6 +5,7 @@
 #include "CommonUtils.h"
 #include "Utils.h"
 #include "MtaManager.h"
+#include "BackendWinRT.h"
 
 #include "../common/CharacteristicBase.h"
 #include "../common/DescriptorBase.h"
@@ -98,6 +99,10 @@ bool PeripheralWindows::is_disconnect_pending() const noexcept {
 }
 
 void PeripheralWindows::connect() {
+    if (!BackendWinRT::get()->bluetooth_enabled()) {
+        throw SimpleBLE::Exception::OperationFailed("Bluetooth is not enabled.");
+    }
+
     if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
         if (connection_state_ == ConnectionState::Disconnecting) {
             throw SimpleBLE::Exception::OperationFailed("Device is still disconnecting");
@@ -108,6 +113,13 @@ void PeripheralWindows::connect() {
     MtaManager::get().execute_sync([this]() {
         device_ = async_get(BluetoothLEDevice::FromBluetoothAddressAsync(_str_to_mac_address(address_)));
     });
+
+    if (device_ == nullptr) {
+        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+            connection_state_ = ConnectionState::Disconnected;
+        }
+        throw SimpleBLE::Exception::OperationFailed("Failed to retrieve Bluetooth device.");
+    }
 
     // Attempt to connect to the device.
     for (size_t i = 0; i < 3; i++) {
