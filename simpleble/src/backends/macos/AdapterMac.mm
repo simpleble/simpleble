@@ -66,7 +66,10 @@ bool AdapterMac::is_powered() {
 BluetoothAddress AdapterMac::address() { return const_cast<const AdapterMac*>(this)->address(); }
 
 void AdapterMac::scan_start() {
-    this->seen_peripherals_.clear();
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        this->seen_peripherals_.clear();
+    }
 
     AdapterBaseMacOS* internal = (__bridge AdapterBaseMacOS*)opaque_internal_;
     [internal scanStart];
@@ -93,6 +96,7 @@ bool AdapterMac::scan_is_active() {
 }
 
 SharedPtrVector<PeripheralBase> AdapterMac::scan_get_results() {
+    std::scoped_lock lock(peripherals_mutex_);
     SharedPtrVector<PeripheralBase> peripherals = Util::values(seen_peripherals_);
     return peripherals;
 }
@@ -102,23 +106,37 @@ SharedPtrVector<PeripheralBase> AdapterMac::get_paired_peripherals() { return {}
 // Delegate methods passed for AdapterBaseMacOS
 
 void AdapterMac::delegate_did_discover_peripheral(void* opaque_peripheral, void* opaque_adapter, advertising_data_t advertising_data) {
-    if (this->peripherals_.count(opaque_peripheral) == 0) {
-        // If the incoming peripheral has never been seen before, create and save a reference to it.
-        auto base_peripheral = std::make_shared<PeripheralMac>(opaque_peripheral, opaque_adapter, advertising_data);
-        this->peripherals_.insert(std::make_pair(opaque_peripheral, base_peripheral));
+    std::shared_ptr<PeripheralMac> base_peripheral;
+    bool is_new_peripheral = false;
+
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        if (this->peripherals_.count(opaque_peripheral) == 0) {
+            // If the incoming peripheral has never been seen before, create and save a reference to it.
+            base_peripheral = std::make_shared<PeripheralMac>(opaque_peripheral, opaque_adapter, advertising_data);
+            this->peripherals_.insert(std::make_pair(opaque_peripheral, base_peripheral));
+        } else {
+            base_peripheral = this->peripherals_.at(opaque_peripheral);
+        }
     }
 
     // Update the received advertising data.
-    auto base_peripheral = this->peripherals_.at(opaque_peripheral);
     base_peripheral->update_advertising_data(advertising_data);
 
     // Convert the base object into an external-facing Peripheral object
     Peripheral peripheral = Factory::build(base_peripheral);
 
     // Check if the device has been seen before, to forward the correct call to the user.
-    if (this->seen_peripherals_.count(opaque_peripheral) == 0) {
-        // Store it in our table of seen peripherals
-        this->seen_peripherals_.insert(std::make_pair(opaque_peripheral, base_peripheral));
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        is_new_peripheral = this->seen_peripherals_.count(opaque_peripheral) == 0;
+        if (is_new_peripheral) {
+            // Store it in our table of seen peripherals
+            this->seen_peripherals_.insert(std::make_pair(opaque_peripheral, base_peripheral));
+        }
+    }
+
+    if (is_new_peripheral) {
         SAFE_CALLBACK_CALL(this->_callback_on_scan_found, peripheral);
     } else {
         SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, peripheral);
@@ -126,31 +144,43 @@ void AdapterMac::delegate_did_discover_peripheral(void* opaque_peripheral, void*
 }
 
 void AdapterMac::delegate_did_connect_peripheral(void* opaque_peripheral) {
-    if (this->peripherals_.count(opaque_peripheral) == 0) {
-        throw Exception::InvalidReference();
+    std::shared_ptr<PeripheralMac> base_peripheral;
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        if (this->peripherals_.count(opaque_peripheral) == 0) {
+            throw Exception::InvalidReference();
+        }
+        // Load the existing PeripheralBase object
+        base_peripheral = this->peripherals_.at(opaque_peripheral);
     }
 
-    // Load the existing PeripheralBase object
-    std::shared_ptr<PeripheralMac> base_peripheral = this->peripherals_.at(opaque_peripheral);
     base_peripheral->delegate_did_connect();
 }
 
 void AdapterMac::delegate_did_fail_to_connect_peripheral(void* opaque_peripheral, void* opaque_error) {
-    if (this->peripherals_.count(opaque_peripheral) == 0) {
-        throw Exception::InvalidReference();
+    std::shared_ptr<PeripheralMac> base_peripheral;
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        if (this->peripherals_.count(opaque_peripheral) == 0) {
+            throw Exception::InvalidReference();
+        }
+        // Load the existing PeripheralBase object
+        base_peripheral = this->peripherals_.at(opaque_peripheral);
     }
 
-    // Load the existing PeripheralBase object
-    std::shared_ptr<PeripheralMac> base_peripheral = this->peripherals_.at(opaque_peripheral);
     base_peripheral->delegate_did_fail_to_connect(opaque_error);
 }
 
 void AdapterMac::delegate_did_disconnect_peripheral(void* opaque_peripheral, void* opaque_error) {
-    if (this->peripherals_.count(opaque_peripheral) == 0) {
-        throw Exception::InvalidReference();
+    std::shared_ptr<PeripheralMac> base_peripheral;
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        if (this->peripherals_.count(opaque_peripheral) == 0) {
+            throw Exception::InvalidReference();
+        }
+        // Load the existing PeripheralBase object
+        base_peripheral = this->peripherals_.at(opaque_peripheral);
     }
 
-    // Load the existing PeripheralBase object
-    std::shared_ptr<PeripheralMac> base_peripheral = this->peripherals_.at(opaque_peripheral);
     base_peripheral->delegate_did_disconnect(opaque_error);
 }

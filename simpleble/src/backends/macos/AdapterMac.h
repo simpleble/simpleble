@@ -11,6 +11,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -70,6 +71,7 @@ class AdapterMac : public AdapterBase {
      */
     std::map<void*, std::shared_ptr<PeripheralMac>> peripherals_;
     std::map<void*, std::shared_ptr<PeripheralMac>> seen_peripherals_;
+    std::mutex peripherals_mutex_;
 
   private:
     BluetoothAddress address() const;
