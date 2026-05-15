@@ -23,9 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (Linux) Fixed the new BlueZ backend to wait for locally-dispatched service resolution before reporting a peripheral as connected, preventing empty service lists on fresh connections.
-- (SimpleBLE) Fixed macOS notification callbacks to snapshot payload data before invoking the user callback.
-- (SimpleBLE) Fixed concurrent access to macOS peripheral advertising data while scan updates are being processed.
-- (SimpleBLE) Fixed concurrent access to macOS adapter peripheral maps while scan and connection events are processed.
+- (MacOS) Fixed notification callbacks to snapshot payload data before invoking the user callback.
+- (MacOS) Fixed concurrent access to peripheral advertising data while scan updates are being processed.
+- (MacOS) Fixed concurrent access to adapter peripheral maps while scan and connection events are processed.
 - (SimpleBluez) Fixed custom peripheral D-Bus objects to use the connection's unique bus name instead of the unowned `org.simplebluez` name.
 - (SimpleDBus) Fixed local `ObjectManager::GetManagedObjects()` calls to return the local object tree directly instead of blocking on a D-Bus self-call.
 - (SimpleDBus) Fixed descendant proxies staying valid after an ancestor D-Bus object path is removed.
@@ -78,10 +78,6 @@ to learn more.
 - (SimpleCBLE) Fixed remotely triggerable stack buffer overflows when handling manufacturer data and advertised services (EVE-2026-002, EVE-2026-003). **(Thanks, Mr-IoT!)**
 - (SimpleBLE) Fixed stack buffer overflow in Dongl write function. (EVE-2026-001). **(Thanks, Mr-IoT!)**
 - (SimpleBLE) Added missing export headers to `Config.h`.
-
-**Removed**
-
-- 
 
 **Special Acknowledgements**
 
