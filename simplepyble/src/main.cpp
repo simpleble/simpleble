@@ -45,6 +45,16 @@ PYBIND11_MODULE(_simplepyble, m) {
         Returns the version of SimpleBLE.
     )pbdoc");
 
+    m.def("get_company_name", &SimpleBLE::get_company_name, py::arg("company_id"), R"pbdoc(
+        Returns the company name for a given Bluetooth company identifier code.
+
+        Args:
+            company_id: The Bluetooth SIG assigned company identifier (uint16).
+
+        Returns:
+            The company name string, or "Unknown" if the identifier is not found.
+    )pbdoc");
+
     wrap_types(m);
     wrap_descriptor(m);
     wrap_characteristic(m);

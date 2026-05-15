@@ -22,6 +22,15 @@ SIMPLECBLE_EXPORT simpleble_os_t simpleble_get_operating_system(void);
  */
 SIMPLECBLE_EXPORT const char* simpleble_get_version(void);
 
+/**
+ * Returns the company name for a given Bluetooth company identifier code.
+ *
+ * @param company_id The Bluetooth SIG assigned company identifier.
+ * @return A const char pointer to the company name, or "Unknown" if not found.
+ *         The returned string is valid until the next call to this function.
+ */
+SIMPLECBLE_EXPORT const char* simpleble_get_company_name(uint16_t company_id);
+
 #ifdef __cplusplus
 }
 #endif
