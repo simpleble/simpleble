@@ -21,7 +21,7 @@ void Bluez::init() {
     _bluez_root = SimpleDBus::Proxy::create<BluezRoot>(_conn, "org.bluez", "/");
     _bluez_root->load_managed_objects();
 
-    _custom_root = SimpleDBus::Proxy::create<CustomRoot>(_conn, "org.simplebluez", "/");
+    _custom_root = SimpleDBus::Proxy::create<CustomRoot>(_conn, _conn->unique_name(), "/");
 }
 
 void Bluez::run_async() { _conn->read_write_dispatch(); }
