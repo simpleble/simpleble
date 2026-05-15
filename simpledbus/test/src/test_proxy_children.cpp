@@ -22,6 +22,40 @@ TEST(ProxyChildren, AppendRepeatedChild) {
     EXPECT_EQ(1, p.children().size());
 }
 
+TEST(ProxyChildren, RevalidateRetainedChildOnRepeatedAdd) {
+    Proxy p = Proxy(nullptr, "", "/");
+    p.path_add("/a", Holder());
+
+    std::shared_ptr<Proxy> p_a = p.children().at("/a");
+    ASSERT_TRUE(p_a->valid());
+
+    p.path_remove("/a", Holder::create<std::vector<Holder>>());
+    ASSERT_EQ(1, p.children().size());
+    ASSERT_FALSE(p_a->valid());
+
+    p.path_add("/a", Holder());
+    ASSERT_EQ(1, p.children().size());
+    ASSERT_EQ(p_a, p.children().at("/a"));
+    ASSERT_TRUE(p_a->valid());
+}
+
+TEST(ProxyChildren, RevalidateRetainedChildWhenDescendantIsAdded) {
+    Proxy p = Proxy(nullptr, "", "/");
+    p.path_add("/a/b", Holder());
+
+    std::shared_ptr<Proxy> p_a = p.children().at("/a");
+    ASSERT_TRUE(p_a->valid());
+
+    p.path_remove("/a", Holder::create<std::vector<Holder>>());
+    ASSERT_EQ(1, p.children().size());
+    ASSERT_FALSE(p_a->valid());
+
+    p.path_add("/a/b/c", Holder());
+    ASSERT_EQ(1, p.children().size());
+    ASSERT_EQ(p_a, p.children().at("/a"));
+    ASSERT_TRUE(p_a->valid());
+}
+
 TEST(ProxyChildren, AppendExtendedChild) {
     Proxy p = Proxy(nullptr, "", "/");
     p.path_add("/a/b/c/d", Holder());
