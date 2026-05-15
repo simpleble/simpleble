@@ -19,6 +19,7 @@
 
 #include "winrt/Windows.Foundation.Collections.h"
 #include "winrt/Windows.Foundation.h"
+#include "winrt/Windows.Devices.Enumeration.h"
 #include "winrt/Windows.Storage.Streams.h"
 #include "winrt/base.h"
 
@@ -236,7 +237,22 @@ bool PeripheralWindows::is_connected() {
 
 bool PeripheralWindows::is_connectable() { return connectable_; }
 
-bool PeripheralWindows::is_paired() { throw Exception::OperationNotSupported(); }
+bool PeripheralWindows::is_paired() {
+    const BluetoothAddress target_address = address_;
+    const winrt::hstring aqs_filter = BluetoothLEDevice::GetDeviceSelectorFromPairingState(true);
+
+    return MtaManager::get().execute_sync<bool>([target_address, aqs_filter]() {
+        auto dev_info_collection = async_get(Devices::Enumeration::DeviceInformation::FindAllAsync(aqs_filter));
+
+        for (const auto& dev_info : dev_info_collection) {
+            if (_bluetooth_address_from_id(winrt::to_string(dev_info.Id())) == target_address) {
+                return true;
+            }
+        }
+
+        return false;
+    });
+}
 
 void PeripheralWindows::unpair() { throw Exception::OperationNotSupported(); }
 
