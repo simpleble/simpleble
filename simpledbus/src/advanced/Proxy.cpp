@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include <simpledbus/interfaces/Introspectable.h>
 #include <simpledbus/interfaces/Properties.h>
 
 using namespace SimpleDBus;
@@ -56,12 +57,12 @@ void Proxy::unregister_object_path() {
     }
 }
 
-// ----- INTROSPECTION -----
-
-std::string Proxy::introspect() {
-    auto query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Introspectable", "Introspect");
-    auto reply_msg = _conn->send_with_reply_and_block(query_msg);
-    return reply_msg.extract().get<std::string>();
+void Proxy::register_introspectable_interface() {
+    std::scoped_lock lock(_interface_access_mutex);
+    if (!interface_exists("org.freedesktop.DBus.Introspectable")) {
+        _interfaces.emplace("org.freedesktop.DBus.Introspectable",
+                            std::make_shared<SimpleDBus::Interfaces::Introspectable>(_conn, shared_from_this()));
+    }
 }
 
 // ----- INTERFACE HANDLING -----
@@ -319,6 +320,12 @@ void Proxy::message_handle(Message& msg) {
         handled = true;
     } else {
         LOG_WARN("Unhandled message for interface {}: {}", msg.get_interface(), msg.to_string());
+        if (msg.get_type() == Message::Type::METHOD_CALL) {
+            Message reply = Message::create_error(msg, "org.freedesktop.DBus.Error.UnknownInterface",
+                                                  "Unknown interface: " + msg.get_interface());
+            _conn->send(reply);
+            handled = true;
+        }
     }
 
     if (msg.get_type() == Message::Type::SIGNAL) {

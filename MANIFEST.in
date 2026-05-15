@@ -331,6 +331,7 @@ include simpledbus/include/simpledbus/base/Holder.h
 include simpledbus/include/simpledbus/base/Logging.h
 include simpledbus/include/simpledbus/base/Message.h
 include simpledbus/include/simpledbus/base/Path.h
+include simpledbus/include/simpledbus/interfaces/Introspectable.h
 include simpledbus/include/simpledbus/interfaces/ObjectManager.h
 include simpledbus/include/simpledbus/interfaces/Properties.h
 include simpledbus/src/Config.cpp
@@ -342,6 +343,7 @@ include simpledbus/src/base/Holder.cpp
 include simpledbus/src/base/Logging.cpp
 include simpledbus/src/base/Message.cpp
 include simpledbus/src/base/Path.cpp
+include simpledbus/src/interfaces/Introspectable.cpp
 include simpledbus/src/interfaces/ObjectManager.cpp
 include simpledbus/src/interfaces/Properties.cpp
 include simplepyble/CMakeLists.txt

@@ -256,6 +256,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Logging.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Message.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/base/Path.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/interfaces/Introspectable.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/interfaces/ObjectManager.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/interfaces/Properties.cpp
 
