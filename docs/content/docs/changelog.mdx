@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleBLE) Fixed concurrent access to macOS peripheral advertising data while scan updates are being processed.
 - (SimpleBluez) Fixed custom peripheral D-Bus objects to use the connection's unique bus name instead of the unowned `org.simplebluez` name.
 - (SimpleDBus) Fixed local `ObjectManager::GetManagedObjects()` calls to return the local object tree directly instead of blocking on a D-Bus self-call.
+- (SimpleDBus) Fixed descendant proxies staying valid after an ancestor D-Bus object path is removed.
 - (SimpleDBus) Fixed retained proxies remaining invalid after their D-Bus object path is removed and later added again.
 - (SimpleDBus) Fixed exported proxies to return a D-Bus `UnknownInterface` error for method calls targeting unsupported interfaces.
 - (SimpleJavaBLE) Fixed Windows JVM crashes when loading the native bindings with JDKs that bundle older MSVC runtime DLLs.

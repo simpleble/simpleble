@@ -30,6 +30,11 @@ macOS and iOS manage Bluetooth connections at the OS level.
 ### Scanning Delays
 When calling `scan_stop()`, there might be a slight delay (a few seconds) before the underlying adapter actually reports that discovery has stopped. This is a behavior of the BlueZ stack.
 
+### Adapter Removal
+On Linux, BlueZ exposes adapters, peripherals, services, and characteristics as D-Bus object paths. If a Bluetooth adapter is disabled, unplugged, or otherwise removed, BlueZ removes the adapter object path and any child device paths below it. SimpleBLE objects retained by the application may still exist as C++ objects, but the underlying BlueZ objects they refer to are no longer present.
+
+Applications that support adapter hot-plug or adapter removal should treat existing adapters and peripherals as stale after the adapter disappears. Stop active work, release retained objects when possible, and call `SimpleBLE::Adapter::get_adapters()` again to discover the current adapter set before scanning or connecting again.
+
 ## Android
 
 ### API Level Limitations

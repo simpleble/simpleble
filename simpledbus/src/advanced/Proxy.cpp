@@ -32,6 +32,11 @@ bool Proxy::valid() const { return _valid; }
 void Proxy::invalidate() {
     _valid = false;
     unregister_object_path();
+
+    std::scoped_lock lock(_child_access_mutex);
+    for (auto& child_data : _children) {
+        child_data.second->invalidate();
+    }
 }
 
 void Proxy::revalidate() {

@@ -13,3 +13,5 @@ The following notes provide an overview of the architecture of some of the highe
 ## Proxy
 
 - Messages for `org.freedesktop.DBus.Properties` are automatically handled by the `Proxy` class.
+- `Proxy::valid()` tracks whether the proxy's object path is currently present in the D-Bus object tree. When an object path is removed, the corresponding proxy and all retained descendant proxies are marked invalid. If the path is later added again, the same retained proxy can become valid again.
+- A retained `Proxy` object should not be treated as proof that the remote D-Bus object still exists. Callers that keep proxy references across `InterfacesRemoved` events should check `valid()` before issuing methods or refreshing state.
