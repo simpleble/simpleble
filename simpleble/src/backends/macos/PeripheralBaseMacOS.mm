@@ -12,6 +12,7 @@
 #import <simpleble/Service.h>
 #import <optional>
 #import <string>
+#import <utility>
 
 #define WAIT_UNTIL_FALSE(obj, var)                \
     do {                                          \
@@ -646,13 +647,16 @@
 
     if (characteristic.isNotifying) {
         // If the characteristic is notifying, just save the value and trigger the callback.
+        std::function<void(SimpleBLE::ByteArray)> valueChangedCallback;
+        SimpleBLE::ByteArray payload;
         @synchronized(self) {
             characteristicExtras.value = characteristic.value;
+            valueChangedCallback = characteristicExtras->valueChangedCallback;
+            payload = SimpleBLE::ByteArray((const char*)characteristic.value.bytes, characteristic.value.length);
         }
 
-        if (characteristicExtras->valueChangedCallback != nil) {
-            characteristicExtras->valueChangedCallback(
-                SimpleBLE::ByteArray((const char*)characteristic.value.bytes, characteristic.value.length));
+        if (valueChangedCallback) {
+            valueChangedCallback(std::move(payload));
         }
 
     } else {
