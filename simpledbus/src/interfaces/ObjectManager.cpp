@@ -22,6 +22,10 @@ ObjectManager::ObjectManager(std::shared_ptr<Connection> conn, std::shared_ptr<P
 ObjectManager::~ObjectManager() = default;
 
 Holder ObjectManager::GetManagedObjects() {
+    if (_conn && _conn->is_initialized() && _bus_name == _conn->unique_name()) {
+        return proxy()->path_collect();
+    }
+
     Message query_msg = Message::create_method_call(_bus_name, _path, _interface_name, "GetManagedObjects");
     Message reply_msg = _conn->send_with_reply_and_block(query_msg);
     return reply_msg.extract();
