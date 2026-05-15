@@ -82,6 +82,8 @@ class AdapterWindows : public AdapterBase {
         const Advertisement::BluetoothLEAdvertisementWatcher& watcher,
         const Advertisement::BluetoothLEAdvertisementReceivedEventArgs args);
 
+    std::vector<std::shared_ptr<PeripheralBase>> _get_peripherals_from_selector(const winrt::hstring& aqs_filter);
+
     void _scan_stopped_callback();
     void _scan_received_callback(advertising_data_t data);
 };

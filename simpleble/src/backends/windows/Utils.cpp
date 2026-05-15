@@ -1,5 +1,6 @@
 #include "Utils.h"
 
+#include <cctype>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -60,6 +61,24 @@ uint64_t _str_to_mac_address(std::string mac_str) {
     sscanf(mac_str.c_str(), "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", &mac_ptr[5], &mac_ptr[4], &mac_ptr[3],
            &mac_ptr[2], &mac_ptr[1], &mac_ptr[0]);
     return mac_address_number;
+}
+
+BluetoothAddress _bluetooth_address_from_id(const std::string& device_id) {
+    constexpr size_t address_length = 17;
+    if (device_id.size() < address_length) return "";
+
+    BluetoothAddress address = device_id.substr(device_id.size() - address_length);
+    for (size_t i = 0; i < address.size(); i++) {
+        if (i % 3 == 2) {
+            if (address[i] != ':') return "";
+        } else if (!std::isxdigit(static_cast<unsigned char>(address[i]))) {
+            return "";
+        }
+
+        address[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(address[i])));
+    }
+
+    return address;
 }
 
 winrt::guid uuid_to_guid(const std::string& uuid) {
