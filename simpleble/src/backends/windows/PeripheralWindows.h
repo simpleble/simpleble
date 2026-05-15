@@ -116,6 +116,7 @@ class PeripheralWindows : public PeripheralBase {
 
     kvn::safe_callback<void()> callback_on_connected_;
     kvn::safe_callback<void()> callback_on_disconnected_;
+    std::atomic_bool callback_on_disconnected_pending_{false};
 
     std::map<uint16_t, SimpleBLE::ByteArray> manufacturer_data_;
     std::map<BluetoothUUID, SimpleBLE::ByteArray> service_data_;

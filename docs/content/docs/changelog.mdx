@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleDBus) Fixed exported proxies to return a D-Bus `UnknownInterface` error for method calls targeting unsupported interfaces.
 - (SimpleJavaBLE) Fixed Windows JVM crashes when loading the native bindings with JDKs that bundle older MSVC runtime DLLs.
 - (SimpleJavaBLE) Fixed duplicate Java peripheral wrappers replacing connect and disconnect callbacks for the same native peripheral.
+- (Windows) Fixed `Peripheral::set_callback_on_disconnected` so user-initiated disconnects trigger the callback once without relying solely on WinRT's connection-status event.
 
 **Removed**
 

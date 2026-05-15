@@ -117,6 +117,8 @@ void PeripheralWindows::connect() {
     }
 
     if (is_connected()) {
+        callback_on_disconnected_pending_.store(true);
+
         MtaManager::get().execute_sync([this]() {
             connection_status_changed_token_ = device_.ConnectionStatusChanged(
                 [this](const BluetoothLEDevice device, const auto args) {
@@ -135,7 +137,9 @@ void PeripheralWindows::connect() {
                         }
                         this->disconnection_cv_.notify_all();
 
-                        SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
+                        if (callback_on_disconnected_pending_.exchange(false)) {
+                            SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
+                        }
                     }
                 });
         });
@@ -194,6 +198,10 @@ void PeripheralWindows::disconnect() {
         }
 
         device_ = nullptr;
+    }
+
+    if (callback_on_disconnected_pending_.exchange(false)) {
+        SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
     }
 }
 
