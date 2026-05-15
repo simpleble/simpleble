@@ -119,6 +119,7 @@ class Proxy : public std::enable_shared_from_this<Proxy> {
   private:
     // ----- PATH HANDLING -----
     bool _registered;
+    void revalidate();
     void register_object_path();
     void unregister_object_path();
     void register_introspectable_interface();

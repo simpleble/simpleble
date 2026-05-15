@@ -34,6 +34,11 @@ void Proxy::invalidate() {
     unregister_object_path();
 }
 
+void Proxy::revalidate() {
+    _valid = true;
+    register_object_path();
+}
+
 std::string Proxy::path() const { return _path; }
 
 std::string Proxy::bus_name() const { return _bus_name; }
@@ -161,9 +166,13 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
         return;
     }
 
+    revalidate();
+
     // If the path is already in the map, perform a reload of all interfaces.
     if (path_exists(path)) {
-        path_get(path)->interfaces_load(managed_interfaces);
+        auto child = path_get(path);
+        child->revalidate();
+        child->interfaces_load(managed_interfaces);
         return;
     }
 
