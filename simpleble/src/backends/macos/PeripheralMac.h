@@ -9,6 +9,7 @@
 #include <kvn_safe_callback.hpp>
 
 #include <memory>
+#include <mutex>
 
 namespace SimpleBLE {
 
@@ -73,6 +74,7 @@ class PeripheralMac : public PeripheralBase {
 
     std::map<uint16_t, ByteArray> manufacturer_data_;
     std::map<BluetoothUUID, ByteArray> service_data_;
+    std::mutex advertising_data_mutex_;
 
     kvn::safe_callback<void()> callback_on_connected_;
     kvn::safe_callback<void()> callback_on_disconnected_;

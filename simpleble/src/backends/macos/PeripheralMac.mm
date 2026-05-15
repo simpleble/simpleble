@@ -49,9 +49,15 @@ BluetoothAddress PeripheralMac::address() {
 
 BluetoothAddressType PeripheralMac::address_type() { return BluetoothAddressType::UNSPECIFIED; }
 
-int16_t PeripheralMac::rssi() { return rssi_; }
+int16_t PeripheralMac::rssi() {
+    std::scoped_lock lock(advertising_data_mutex_);
+    return rssi_;
+}
 
-int16_t PeripheralMac::tx_power() { return tx_power_; }
+int16_t PeripheralMac::tx_power() {
+    std::scoped_lock lock(advertising_data_mutex_);
+    return tx_power_;
+}
 
 uint16_t PeripheralMac::mtu() {
     PeripheralBaseMacOS* internal = (__bridge PeripheralBaseMacOS*)opaque_internal_;
@@ -59,6 +65,7 @@ uint16_t PeripheralMac::mtu() {
 }
 
 void PeripheralMac::update_advertising_data(advertising_data_t advertising_data) {
+    std::scoped_lock lock(advertising_data_mutex_);
     is_connectable_ = advertising_data.connectable;
     manufacturer_data_ = advertising_data.manufacturer_data;
     rssi_ = advertising_data.rssi;
@@ -91,7 +98,10 @@ bool PeripheralMac::is_connected() {
     return [internal isConnected];
 }
 
-bool PeripheralMac::is_connectable() { return is_connectable_; }
+bool PeripheralMac::is_connectable() {
+    std::scoped_lock lock(advertising_data_mutex_);
+    return is_connectable_;
+}
 
 bool PeripheralMac::is_paired() { throw Exception::OperationNotSupported(); }
 
@@ -103,6 +113,7 @@ SharedPtrVector<ServiceBase> PeripheralMac::available_services() {
 }
 
 SharedPtrVector<ServiceBase> PeripheralMac::advertised_services() {
+    std::scoped_lock lock(advertising_data_mutex_);
     SharedPtrVector<ServiceBase> service_list;
     for (auto& [service_uuid, data] : service_data_) {
         service_list.push_back(std::make_shared<ServiceBase>(service_uuid, data));
@@ -111,7 +122,10 @@ SharedPtrVector<ServiceBase> PeripheralMac::advertised_services() {
     return service_list;
 }
 
-std::map<uint16_t, ByteArray> PeripheralMac::manufacturer_data() { return manufacturer_data_; }
+std::map<uint16_t, ByteArray> PeripheralMac::manufacturer_data() {
+    std::scoped_lock lock(advertising_data_mutex_);
+    return manufacturer_data_;
+}
 
 ByteArray PeripheralMac::read(BluetoothUUID const& service, BluetoothUUID const& characteristic) {
     PeripheralBaseMacOS* internal = (__bridge PeripheralBaseMacOS*)opaque_internal_;
