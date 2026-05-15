@@ -56,6 +56,11 @@ target_include_directories(
 target_link_libraries(${CMAKE_PROJECT_NAME} simpleble::simpleble ${JNI_LIBRARIES})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if(MSVC AND NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+        set_property(TARGET ${CMAKE_PROJECT_NAME} simpleble PROPERTY
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+
     target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "/DELAYLOAD:jvm.dll")
 endif()
 
