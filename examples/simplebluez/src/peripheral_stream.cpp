@@ -1,5 +1,6 @@
 #include <simplebluez/Bluez.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -91,6 +92,17 @@ int main(int argc, char* argv[]) {
     advertisement->manufacturer_data(data);
     advertisement->timeout(10);
     advertisement->local_name("SimpleBluez");
+
+    // BlueZ exposes LE 2M advertising through the LEAdvertisement1 SecondaryChannel property.
+    // The primary advertising channel remains 1M, while secondary advertising uses 2M.
+    auto supported_secondary_channels = adapter->supported_secondary_channels();
+    if (std::find(supported_secondary_channels.begin(), supported_secondary_channels.end(), "2M") !=
+        supported_secondary_channels.end()) {
+        advertisement->secondary_channel("2M");
+        std::cout << "Using 2M secondary advertising channel" << std::endl;
+    } else {
+        std::cout << "2M secondary advertising channel not reported by BlueZ; using default advertising PHY" << std::endl;
+    }
 
     // --- MAIN EVENT LOOP ---
     while (app_running) {

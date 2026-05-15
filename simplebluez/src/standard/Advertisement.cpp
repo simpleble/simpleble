@@ -94,6 +94,10 @@ uint16_t Advertisement::timeout() { return le_advertisement1()->Timeout(); }
 
 void Advertisement::timeout(uint16_t timeout) { le_advertisement1()->Timeout(timeout); }
 
+std::string Advertisement::secondary_channel() { return le_advertisement1()->SecondaryChannel(); }
+
+void Advertisement::secondary_channel(const std::string& channel) { le_advertisement1()->SecondaryChannel(channel); }
+
 uint32_t Advertisement::min_interval() { return le_advertisement1()->MinInterval(); }
 
 void Advertisement::min_interval(uint32_t interval) { le_advertisement1()->MinInterval(interval); }

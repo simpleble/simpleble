@@ -149,6 +149,14 @@ uint8_t Adapter::supported_advertisement_instances() {
     return le_advertising_manager1()->SupportedInstances.refresh();
 }
 
+std::vector<std::string> Adapter::supported_secondary_channels() {
+    auto& supported_secondary_channels = le_advertising_manager1()->SupportedSecondaryChannels;
+    if (supported_secondary_channels.valid()) {
+        supported_secondary_channels.refresh();
+    }
+    return supported_secondary_channels.get();
+}
+
 void Adapter::register_application(const std::string& application_path) {
     gatt_manager1()->RegisterApplication(application_path);
 }

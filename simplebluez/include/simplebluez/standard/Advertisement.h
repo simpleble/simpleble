@@ -57,6 +57,9 @@ class Advertisement : public SimpleDBus::Proxy {
     uint16_t timeout();
     void timeout(uint16_t timeout);
 
+    std::string secondary_channel();
+    void secondary_channel(const std::string& channel);
+
     uint32_t min_interval();
     void min_interval(uint32_t interval);
 

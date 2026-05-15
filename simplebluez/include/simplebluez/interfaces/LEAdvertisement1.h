@@ -36,7 +36,7 @@ class LEAdvertisement1 : public SimpleDBus::Interface {
     Property<uint16_t>& Appearance = property<uint16_t>("Appearance");
     Property<uint16_t>& Duration = property<uint16_t>("Duration");
     Property<uint16_t>& Timeout = property<uint16_t>("Timeout");
-    // Property<std::string>& SecondaryChannel = property<std::string>("SecondaryChannel");
+    Property<std::string>& SecondaryChannel = property<std::string>("SecondaryChannel");
     Property<uint32_t>& MinInterval = property<uint32_t>("MinInterval");
     Property<uint32_t>& MaxInterval = property<uint32_t>("MaxInterval");
     Property<int16_t>& TxPower = property<int16_t>("TxPower");

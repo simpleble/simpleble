@@ -44,6 +44,7 @@ class Adapter : public SimpleDBus::Proxy {
     void unregister_advertisement(const std::shared_ptr<Advertisement>& advertisement);
     uint8_t active_advertisement_instances();
     uint8_t supported_advertisement_instances();
+    std::vector<std::string> supported_secondary_channels();
     void register_application(const std::string& application_path);
     void unregister_application(const std::string& application_path);
 

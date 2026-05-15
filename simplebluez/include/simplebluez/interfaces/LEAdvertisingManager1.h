@@ -26,6 +26,8 @@ class LEAdvertisingManager1 : public SimpleDBus::Interface {
     Property<uint8_t>& ActiveInstances = property<uint8_t>("ActiveInstances");
     Property<uint8_t>& SupportedInstances = property<uint8_t>("SupportedInstances");
     Property<std::vector<std::string>>& SupportedIncludes = property<std::vector<std::string>>("SupportedIncludes");
+    Property<std::vector<std::string>>& SupportedSecondaryChannels = property<std::vector<std::string>>(
+        "SupportedSecondaryChannels");
 
   private:
     static const SimpleDBus::AutoRegisterInterface<LEAdvertisingManager1> registry;
