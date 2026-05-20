@@ -75,7 +75,7 @@ constexpr auto kDocsConfigBaseClass = R"pbdoc(
 )pbdoc";
 
 constexpr auto kDocsConfigWinRTExperimentalMTA = R"pbdoc(
-    Use own MTA apartment (experimental)
+    Deprecated: SimpleBLE uses its own MTA apartment by default. This compatibility flag will be removed in a future release.
 )pbdoc";
 
 constexpr auto kDocsConfigWinRTExperimentalReinitializeMTAOnMainThread = R"pbdoc(

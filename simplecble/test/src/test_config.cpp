@@ -20,12 +20,14 @@ TEST(ConfigTest, AndroidConnectionPriorityCanBeSetFromC) {
 TEST(ConfigTest, SimpleBluezConfigCanBeSetFromC) {
     simpleble_config_simplebluez_reset();
 
-    simpleble_config_simplebluez_set_use_legacy_bluez_backend(false);
+    EXPECT_FALSE(simpleble_config_simplebluez_get_use_legacy_bluez_backend());
+
+    simpleble_config_simplebluez_set_use_legacy_bluez_backend(true);
     simpleble_config_simplebluez_set_use_system_bus(false);
     simpleble_config_simplebluez_set_connection_timeout_ms(1234);
     simpleble_config_simplebluez_set_disconnection_timeout_ms(5678);
 
-    EXPECT_FALSE(simpleble_config_simplebluez_get_use_legacy_bluez_backend());
+    EXPECT_TRUE(simpleble_config_simplebluez_get_use_legacy_bluez_backend());
     EXPECT_FALSE(simpleble_config_simplebluez_get_use_system_bus());
     EXPECT_EQ(simpleble_config_simplebluez_get_connection_timeout_ms(), 1234);
     EXPECT_EQ(simpleble_config_simplebluez_get_disconnection_timeout_ms(), 5678);

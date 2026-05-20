@@ -19,7 +19,7 @@ namespace SimpleBluez {
     extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration disconnection_timeout;
 
     static void reset() {
-        use_legacy_bluez_backend = true;
+        use_legacy_bluez_backend = false;
         use_system_bus = true;
         connection_timeout = std::chrono::seconds(2);
         disconnection_timeout = std::chrono::seconds(1);
@@ -27,6 +27,9 @@ namespace SimpleBluez {
 }  // namespace SimpleBluez
 
 namespace WinRT {
+    /**
+     * @deprecated SimpleBLE uses its own MTA apartment by default. This compatibility flag will be removed in a future release.
+     */
     extern SIMPLEBLE_EXPORT bool experimental_use_own_mta_apartment;
     extern SIMPLEBLE_EXPORT bool experimental_reinitialize_winrt_apartment_on_main_thread;
     extern SIMPLEBLE_EXPORT bool use_deferred_disconnect;

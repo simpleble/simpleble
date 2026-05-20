@@ -36,7 +36,17 @@ SIMPLECBLE_EXPORT int64_t simpleble_config_simplebluez_get_disconnection_timeout
 SIMPLECBLE_EXPORT void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_ms);
 
 SIMPLECBLE_EXPORT void simpleble_config_winrt_reset(void);
+
+/**
+ * @deprecated SimpleBLE uses its own WinRT MTA apartment by default.
+ *             This compatibility flag will be removed in a future release.
+ */
 SIMPLECBLE_EXPORT bool simpleble_config_winrt_get_experimental_use_own_mta_apartment(void);
+
+/**
+ * @deprecated SimpleBLE uses its own WinRT MTA apartment by default.
+ *             This compatibility flag will be removed in a future release.
+ */
 SIMPLECBLE_EXPORT void simpleble_config_winrt_set_experimental_use_own_mta_apartment(bool enabled);
 SIMPLECBLE_EXPORT bool simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread(void);
 SIMPLECBLE_EXPORT void simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread(

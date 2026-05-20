@@ -523,7 +523,7 @@ class _WinRTConfig:
     """WinRT-specific configuration options."""
     
     experimental_use_own_mta_apartment: bool
-    """Use own MTA apartment (experimental)"""
+    """Deprecated: SimpleBLE uses its own MTA apartment by default."""
     
     experimental_reinitialize_winrt_apartment_on_main_thread: bool
     """Reinitialize the WinRT apartment on the main thread (experimental)"""
