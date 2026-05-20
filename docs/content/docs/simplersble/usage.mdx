@@ -1,0 +1,60 @@
+---
+title: Usage
+description: Install and use the SimpleRsBLE early preview binding.
+---
+
+SimpleRsBLE exposes SimpleBLE to Rust applications. It is currently in Early Preview and under active API refinement, but the crate is useful for Rust applications that want the SimpleBLE backend coverage with Rust-facing types and async event streams.
+
+## Requirements
+
+- Rust 1.82 or newer.
+- CMake 3.21 or newer.
+- The platform requirements from [Installation](../installation#platform-prerequisites).
+- On Linux, DBus headers:
+
+```bash
+sudo apt-get install libdbus-1-dev
+```
+
+## Install from crates.io
+
+```bash
+cargo add simplersble
+```
+
+The crate builds the native SimpleBLE components during the Cargo build.
+
+## Use a local checkout
+
+When developing SimpleRsBLE or testing unreleased changes:
+
+```toml
+[dependencies]
+simplersble = { path = "path/to/simpleble" }
+```
+
+## First scan
+
+```rust
+#[tokio::main]
+async fn main() {
+    let mut adapters = simplersble::Adapter::get_adapters().unwrap();
+    if adapters.is_empty() {
+        println!("No Bluetooth adapters found.");
+        return;
+    }
+
+    let adapter = adapters.remove(0);
+    adapter.scan_for(5000).unwrap();
+
+    for peripheral in adapter.scan_get_results().unwrap() {
+        println!(
+            "{} [{}]",
+            peripheral.identifier().unwrap(),
+            peripheral.address().unwrap()
+        );
+    }
+}
+```
+
+For event streams and notification examples, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleRsBLE Examples](./examples).

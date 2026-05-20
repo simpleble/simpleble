@@ -1,0 +1,8 @@
+{
+  "title": "Recipes",
+  "pages": [
+    "scan",
+    "connect",
+    "read-write-notify"
+  ]
+}

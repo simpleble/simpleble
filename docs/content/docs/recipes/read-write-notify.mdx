@@ -1,0 +1,270 @@
+---
+title: Read, Write, Notify
+description: Perform GATT operations after connecting to a BLE peripheral.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+GATT operations happen after a peripheral is connected and services have been discovered. Most applications use the same shape:
+
+1. Select a service UUID and characteristic UUID.
+2. Check the characteristic capability.
+3. Read, write, subscribe, or unsubscribe.
+4. Keep the process, activity, or coroutine alive long enough for notifications or indications to arrive.
+
+The snippets below assume you already have a connected `peripheral`, a `service_uuid`, and a `characteristic_uuid`.
+
+## Read
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
+
+```cpp
+auto value = peripheral.read(service_uuid, characteristic_uuid);
+std::cout << "Read: " << value << std::endl;
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+uint8_t* data = NULL;
+size_t data_length = 0;
+
+simpleble_peripheral_read(peripheral, service_uuid, characteristic_uuid, &data, &data_length);
+
+for (size_t i = 0; i < data_length; i++) {
+    printf("%02X ", data[i]);
+}
+printf("\n");
+
+simpleble_free(data);
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+value = peripheral.read(service_uuid, characteristic_uuid)
+print(f"Read: {value}")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+BluetoothUUID service = new BluetoothUUID(serviceUuid);
+BluetoothUUID characteristic = new BluetoothUUID(characteristicUuid);
+
+byte[] value = peripheral.read(service, characteristic);
+System.out.println("Read: " + bytesToHex(value));
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+let value = peripheral.read(&service_uuid, &characteristic_uuid).unwrap();
+println!("Read: {:?}", value);
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+val value = peripheral.read(serviceUuid, characteristicUuid)
+Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
+```
+
+</Tab>
+</Tabs>
+
+## Write
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
+
+```cpp
+SimpleBLE::ByteArray payload = SimpleBLE::ByteArray::fromHex("010203");
+
+// Acknowledged write.
+peripheral.write_request(service_uuid, characteristic_uuid, payload);
+
+// Unacknowledged write.
+peripheral.write_command(service_uuid, characteristic_uuid, payload);
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+uint8_t payload[] = {0x01, 0x02, 0x03};
+
+simpleble_peripheral_write_request(
+    peripheral,
+    service_uuid,
+    characteristic_uuid,
+    payload,
+    sizeof(payload));
+
+simpleble_peripheral_write_command(
+    peripheral,
+    service_uuid,
+    characteristic_uuid,
+    payload,
+    sizeof(payload));
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+payload = bytes([0x01, 0x02, 0x03])
+
+# Acknowledged write.
+peripheral.write_request(service_uuid, characteristic_uuid, payload)
+
+# Unacknowledged write.
+peripheral.write_command(service_uuid, characteristic_uuid, payload)
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+byte[] payload = new byte[] {0x01, 0x02, 0x03};
+
+peripheral.writeRequest(service, characteristic, payload);
+peripheral.writeCommand(service, characteristic, payload);
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+let payload = vec![0x01, 0x02, 0x03];
+
+peripheral.write_request(&service_uuid, &characteristic_uuid, &payload).unwrap();
+peripheral.write_command(&service_uuid, &characteristic_uuid, &payload).unwrap();
+```
+
+</Tab>
+<Tab value="Android">
+
+SimpleDroidBLE currently exposes `writeRequest` and `writeCommand` placeholders, but characteristic writes are not implemented in the alpha Android-only binding yet. Use C++ SimpleBLE through the Android backend when you need write support today, or track SimpleDroidBLE until those methods are completed.
+
+</Tab>
+</Tabs>
+
+## Notify
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
+
+```cpp
+peripheral.notify(service_uuid, characteristic_uuid, [](SimpleBLE::ByteArray payload) {
+    std::cout << "Notification: " << payload << std::endl;
+});
+
+std::this_thread::sleep_for(std::chrono::seconds(10));
+
+peripheral.unsubscribe(service_uuid, characteristic_uuid);
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+static void on_notify(simpleble_peripheral_t peripheral,
+                      simpleble_uuid_t service,
+                      simpleble_uuid_t characteristic,
+                      const uint8_t* data,
+                      size_t data_length,
+                      void* userdata) {
+    for (size_t i = 0; i < data_length; i++) {
+        printf("%02X ", data[i]);
+    }
+    printf("\n");
+}
+
+simpleble_peripheral_notify(peripheral, service_uuid, characteristic_uuid, on_notify, NULL);
+
+/* Keep the process alive while notifications arrive. */
+
+simpleble_peripheral_unsubscribe(peripheral, service_uuid, characteristic_uuid);
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import time
+
+peripheral.notify(
+    service_uuid,
+    characteristic_uuid,
+    lambda data: print(f"Notification: {data}"),
+)
+
+time.sleep(10)
+
+peripheral.unsubscribe(service_uuid, characteristic_uuid)
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+peripheral.notify(service, characteristic, data -> {
+    System.out.println("Notification: " + bytesToHex(data));
+});
+
+Thread.sleep(10_000);
+
+peripheral.unsubscribe(service, characteristic);
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+let mut stream = peripheral.notify(&service_uuid, &characteristic_uuid).unwrap();
+
+tokio::spawn(async move {
+    while let Some(Ok(event)) = stream.next().await {
+        if let simplersble::ValueChangedEvent::ValueUpdated(data) = event {
+            println!("Notification: {:?}", data);
+        }
+    }
+});
+
+std::thread::sleep(std::time::Duration::from_secs(10));
+
+peripheral.unsubscribe(&service_uuid, &characteristic_uuid).unwrap();
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+val job = CoroutineScope(Dispatchers.Main).launch {
+    peripheral.notify(serviceUuid, characteristicUuid).collect { payload ->
+        Log.d("SimpleBLE", "Notification: ${payload.joinToString(" ") { "%02x".format(it) }}")
+    }
+}
+
+delay(10_000)
+peripheral.unsubscribe(serviceUuid, characteristicUuid)
+job.cancel()
+```
+
+</Tab>
+</Tabs>
+
+## Common pitfalls
+
+- Use `write_request` / `writeRequest` when you need the peripheral to acknowledge the write.
+- Use `write_command` / `writeCommand` only when the characteristic supports write-without-response.
+- Subscribe only to characteristics that advertise notify or indicate capability.
+- Keep the process, activity, or coroutine alive while notifications are active.
+- Unsubscribe before disconnecting when your workflow has a clear end.

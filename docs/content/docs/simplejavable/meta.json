@@ -1,6 +1,7 @@
 {
   "title": "SimpleJavaBLE",
   "pages": [
+    "usage",
     "examples"
   ]
 }

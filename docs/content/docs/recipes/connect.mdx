@@ -1,0 +1,165 @@
+---
+title: Connect
+description: Connect to a BLE peripheral and inspect its services, characteristics, and descriptors.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Connecting moves from BLE advertisements into the GATT database. Once connected, SimpleBLE resolves services and characteristics so you can decide which characteristic to read, write, notify, or indicate.
+
+## Flow
+
+1. Scan for nearby devices.
+2. Keep only peripherals that are connectable.
+3. Let the user or application logic pick one.
+4. Connect.
+5. Enumerate services, characteristics, capabilities, and descriptors.
+6. Disconnect when finished.
+
+## Connect and list GATT objects
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
+
+```cpp
+SimpleBLE::Peripheral peripheral = peripherals[selected_index];
+
+peripheral.connect();
+
+std::cout << "MTU: " << peripheral.mtu() << std::endl;
+for (auto& service : peripheral.services()) {
+    std::cout << "Service: " << service.uuid() << std::endl;
+
+    for (auto& characteristic : service.characteristics()) {
+        std::cout << "  Characteristic: " << characteristic.uuid() << std::endl;
+        std::cout << "    read=" << characteristic.can_read()
+                  << " notify=" << characteristic.can_notify()
+                  << " write_request=" << characteristic.can_write_request()
+                  << " write_command=" << characteristic.can_write_command()
+                  << std::endl;
+    }
+}
+
+peripheral.disconnect();
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+simpleble_peripheral_t peripheral = peripheral_list[selected_index];
+
+if (simpleble_peripheral_connect(peripheral) != SIMPLEBLE_SUCCESS) {
+    printf("Failed to connect.\n");
+    return 1;
+}
+
+size_t service_count = simpleble_peripheral_services_count(peripheral);
+for (size_t i = 0; i < service_count; i++) {
+    simpleble_service_t service;
+    simpleble_peripheral_services_get(peripheral, i, &service);
+
+    printf("Service: %s\n", service.uuid.value);
+    for (size_t j = 0; j < service.characteristic_count; j++) {
+        printf("  Characteristic: %s\n", service.characteristics[j].uuid.value);
+    }
+}
+
+simpleble_peripheral_disconnect(peripheral);
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+peripheral = peripherals[selected_index]
+
+peripheral.connect()
+
+print(f"MTU: {peripheral.mtu()}")
+for service in peripheral.services():
+    print(f"Service: {service.uuid()}")
+    for characteristic in service.characteristics():
+        print(f"  Characteristic: {characteristic.uuid()}")
+        print(f"    Capabilities: {' '.join(characteristic.capabilities())}")
+
+peripheral.disconnect()
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+Peripheral peripheral = peripherals.get(selectedIndex);
+
+peripheral.connect();
+
+System.out.println("MTU: " + peripheral.getMtu());
+for (Service service : peripheral.services()) {
+    System.out.println("Service: " + service.uuid());
+
+    for (Characteristic characteristic : service.characteristics()) {
+        System.out.println("  Characteristic: " + characteristic.uuid());
+        System.out.println("    read=" + characteristic.canRead()
+            + " notify=" + characteristic.canNotify()
+            + " writeRequest=" + characteristic.canWriteRequest()
+            + " writeCommand=" + characteristic.canWriteCommand());
+    }
+}
+
+peripheral.disconnect();
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+let peripheral = adapter.scan_get_results().unwrap().remove(selected_index);
+
+peripheral.connect().unwrap();
+
+println!("MTU: {}", peripheral.mtu().unwrap());
+for service in peripheral.services().unwrap() {
+    println!("Service: {}", service.uuid());
+
+    for characteristic in service.characteristics() {
+        println!("  Characteristic: {}", characteristic.uuid());
+        println!("    Capabilities: {:?}", characteristic.capabilities());
+    }
+}
+
+peripheral.disconnect().unwrap();
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+val peripheral = selectedPeripheral
+
+peripheral.connect()
+
+Log.d("SimpleBLE", "MTU: ${peripheral.mtu}")
+for (service in peripheral.services()) {
+    Log.d("SimpleBLE", "Service: ${service.uuid}")
+
+    for (characteristic in service.characteristics) {
+        Log.d("SimpleBLE", "  Characteristic: ${characteristic.uuid}")
+        Log.d("SimpleBLE", "    notify=${characteristic.canNotify} read=${characteristic.canRead}")
+    }
+}
+
+peripheral.disconnect()
+```
+
+</Tab>
+</Tabs>
+
+## Selection tips
+
+- Prefer filtering by advertised service UUID when your peripheral advertises it.
+- If several peripherals use the same name, show the address/identifier and RSSI to the user.
+- Treat macOS/iOS identifiers as host-local UUIDs, not stable global MAC addresses.
+- Always disconnect when your workflow is done, especially in command-line tools and tests.
+
+After you can connect and list characteristics, continue to [Read, Write, Notify](./read-write-notify).

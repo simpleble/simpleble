@@ -1,0 +1,70 @@
+---
+title: Usage
+description: Build and use the SimpleJavaBLE early preview binding.
+---
+
+SimpleJavaBLE exposes SimpleBLE to JVM applications through a Java API backed by the native SimpleBLE library.
+
+This binding is currently in Early Preview. APIs and packaging details may change, but the existing examples are useful for desktop JVM prototypes and integration experiments.
+
+## Requirements
+
+- JDK 17 or newer.
+- CMake 3.21 or newer.
+- The platform requirements from [Installation](../installation#platform-prerequisites).
+- A native library artifact for the platform and architecture where the JVM runs.
+
+## Build from source
+
+From a local checkout:
+
+```bash
+cd simplejavable/java
+../../utils/gradle/gradlew build -PbuildFromCMake
+```
+
+This builds the Java classes and asks Gradle to build the native library through the CMake project under `simplejavable/cpp`.
+
+The generated JAR is written under:
+
+```text
+simplejavable/java/build/libs
+```
+
+## Native library loading
+
+SimpleJavaBLE loads the `simplejavable` native library at runtime. The Gradle build can package native libraries into the JAR, or you can provide native libraries separately and make them visible to the JVM.
+
+If you already built native libraries elsewhere, pass their location to Gradle:
+
+```bash
+../../utils/gradle/gradlew build -PnativeLibPath=/path/to/native/libs
+```
+
+## First scan
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+
+import java.util.List;
+
+public class ScanExample {
+    public static void main(String[] args) throws Exception {
+        List<Adapter> adapters = Adapter.getAdapters();
+        if (adapters.isEmpty()) {
+            System.err.println("No Bluetooth adapters found.");
+            return;
+        }
+
+        Adapter adapter = adapters.get(0);
+        adapter.scanFor(5000);
+
+        for (Peripheral peripheral : adapter.scanGetResults()) {
+            System.out.println(peripheral.getIdentifier() + " [" + peripheral.getAddress() + "]");
+        }
+    }
+}
+```
+
+For a fuller walkthrough, see [Quickstart](../quickstart) and the [SimpleJavaBLE Examples](./examples).

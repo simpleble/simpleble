@@ -1,0 +1,208 @@
+---
+title: Installation
+description: Pick the right SimpleBLE package or source build path for your language and platform.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+SimpleBLE is a family of libraries. Start by choosing the binding that matches your application, then install the platform dependencies that binding needs.
+
+## Choose a binding
+
+| Binding | Language | Status | Best fit | Install path |
+| --- | --- | --- | --- | --- |
+| [SimpleBLE](./simpleble/usage) | C++ | Production-ready | Native desktop, mobile native code, shared libraries | CMake from source |
+| [SimpleCBLE](./simplecble/usage) | C | Production-ready | C applications, FFI, language bridges | CMake from source |
+| [SimplePyBLE](./simplepyble/usage) | Python | Production-ready | Scripts, tools, data pipelines, tests | PyPI or local source |
+| [SimpleJavaBLE](./simplejavable/usage) | Java | Early Preview | JVM desktop apps and prototypes | Gradle from source |
+| [SimpleRsBLE](./simplersble/usage) | Rust | Early Preview | Rust applications and async workflows | crates.io or local path |
+| [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Alpha | Android-only applications | Gradle composite build |
+| [SimpleBluez](./simplebluez/usage) | C++ | Lower-level utility | Direct BlueZ integration on Linux | CMake from source |
+| [SimpleDBus](./simpledbus/usage) | C++ | Lower-level utility | DBus object model work | CMake from source |
+| [SimpleAIBLE](./simpleaible/mcp) | Python / AI agents | Utility package | Local BLE tools for agents and HTTP/MCP workflows | `uv` or PyPI |
+
+## Platform prerequisites
+
+| Platform | Required setup |
+| --- | --- |
+| Linux | BlueZ, DBus development headers, and permission to access the system Bluetooth stack. On Ubuntu, install `libdbus-1-dev`. |
+| Windows | Windows 10 or newer and Windows SDK `10.0.19041.0` or newer. Build and run 64-bit applications on 64-bit Windows. |
+| macOS | macOS 13.0 or newer and Xcode Command Line Tools. Packaged apps need Bluetooth usage strings in `Info.plist`. |
+| iOS | iOS 15.8 or newer and the normal CoreBluetooth permission flow. |
+| Android | API 31 or newer, Android Studio, Android NDK, manifest permissions, and runtime Bluetooth permission requests. |
+
+See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific permission details that are easy to miss on first adoption.
+
+## Install commands
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android", "SimpleAIBLE"]}>
+<Tab value="C++">
+
+Build and install the C++ library from source:
+
+```bash
+git clone https://github.com/simpleble/simpleble.git
+cd simpleble
+
+cmake -S simpleble -B build_simpleble
+cmake --build build_simpleble -j
+cmake --install build_simpleble --prefix "$PWD/install_simpleble"
+```
+
+Consume the installed package from your own CMake project:
+
+```cmake
+find_package(simpleble REQUIRED CONFIG)
+target_link_libraries(your_app PRIVATE simpleble::simpleble)
+```
+
+For a local vendored build, add the library directly:
+
+```cmake
+add_subdirectory(path/to/simpleble/simpleble ${CMAKE_BINARY_DIR}/simpleble)
+target_link_libraries(your_app PRIVATE simpleble::simpleble)
+```
+
+</Tab>
+<Tab value="C">
+
+Build and install the C wrapper from source:
+
+```bash
+git clone https://github.com/simpleble/simpleble.git
+cd simpleble
+
+cmake -S simplecble -B build_simplecble
+cmake --build build_simplecble -j
+cmake --install build_simplecble --prefix "$PWD/install_simplecble"
+```
+
+Consume the installed package from CMake:
+
+```cmake
+find_package(simplecble REQUIRED CONFIG)
+target_link_libraries(your_app PRIVATE simplecble::simplecble)
+```
+
+If you are compiling manually, include `simplecble` headers and link both `simplecble` and the platform Bluetooth dependencies.
+
+</Tab>
+<Tab value="Python">
+
+Install the Python binding from PyPI:
+
+```bash
+pip install simplepyble
+```
+
+Linux users also need DBus headers:
+
+```bash
+sudo apt-get install libdbus-1-dev
+```
+
+Install from a local checkout when developing SimplePyBLE itself:
+
+```bash
+git clone https://github.com/simpleble/simpleble.git
+cd simpleble
+pip install .
+```
+
+</Tab>
+<Tab value="Java">
+
+SimpleJavaBLE is currently consumed from a source checkout. Build the Java package and native library with Gradle:
+
+```bash
+git clone https://github.com/simpleble/simpleble.git
+cd simpleble/simplejavable/java
+../../utils/gradle/gradlew build -PbuildFromCMake
+```
+
+Use the generated JAR from `simplejavable/java/build/libs` in your JVM application. The JAR must include or be able to find the `simplejavable` native library for your platform.
+
+</Tab>
+<Tab value="Rust">
+
+Add the Rust crate:
+
+```bash
+cargo add simplersble
+```
+
+Linux users need DBus headers before building:
+
+```bash
+sudo apt-get install libdbus-1-dev
+```
+
+If you want to use a local checkout while developing:
+
+```toml
+[dependencies]
+simplersble = { path = "path/to/simpleble" }
+```
+
+</Tab>
+<Tab value="Android">
+
+SimpleDroidBLE is currently consumed as a Gradle composite build from a local checkout.
+
+In `settings.gradle.kts`, include the library before `include(":app")`:
+
+```kotlin
+includeBuild("path/to/simpleble/simpledroidble") {
+    dependencySubstitution {
+        substitute(module("org.simpleble.android:simpledroidble")).using(project(":simpledroidble"))
+    }
+}
+
+include(":app")
+```
+
+Then add the dependency:
+
+```kotlin
+dependencies {
+    implementation("org.simpleble.android:simpledroidble")
+}
+```
+
+The app must also declare and request Bluetooth permissions at runtime.
+
+</Tab>
+<Tab value="SimpleAIBLE">
+
+Install with `uv`:
+
+```bash
+uv tool install simpleaible
+```
+
+Or with pip:
+
+```bash
+pip install simpleaible
+```
+
+Then run the MCP server:
+
+```bash
+simpleaible
+```
+
+See [MCP Server](./simpleaible/mcp) and [HTTP Server](./simpleaible/http) for agent and HTTP workflows.
+
+</Tab>
+</Tabs>
+
+## Verify the install
+
+The fastest smoke test is to scan for nearby devices:
+
+- C++, C, Python, Java, Rust, and Android users can start with [Quickstart](./quickstart).
+- CMake users can build the repository examples from [SimpleBLE Examples](./simpleble/examples) or [SimpleCBLE Examples](./simplecble/examples).
+- Python users can run the examples under `examples/simplepyble`.
+- Rust users can run the examples under `examples/simplersble`.
+- Android users can run the example app under `examples/simpleble-android`.

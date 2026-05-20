@@ -20,6 +20,236 @@ The SimpleCBLE API provides a C-compatible interface for SimpleBLE. It relies on
   parameters={[{"name":"handle","type":"void*"}]}
 />
 
+<ApiMethod
+  signature="simpleble_os_t simpleble_get_operating_system(void)"
+  brief="Returns the operating system SimpleBLE is running on."
+/>
+
+<ApiMethod
+  signature="const char* simpleble_get_version(void)"
+  brief="Returns the SimpleBLE version string."
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Configuration" id="configuration">
+
+## Configuration [#configuration] [toc]
+
+All configuration values must be set before calling adapter functions such as `simpleble_adapter_get_count` or `simpleble_adapter_get_handle`.
+
+<ApiClass name="Configuration Functions">
+
+<ApiMethod
+  signature="void simpleble_config_reset_all(void)"
+  brief="Reset every SimpleBLE configuration value to its default."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_simplebluez_reset(void)"
+  brief="Reset Linux BlueZ configuration values to their defaults."
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_simplebluez_get_use_legacy_bluez_backend(void)"
+  brief="Get whether the legacy BlueZ backend is enabled."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_simplebluez_set_use_legacy_bluez_backend(bool enabled)"
+  brief="Enable or disable the legacy BlueZ backend."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_simplebluez_get_use_system_bus(void)"
+  brief="Get whether the new BlueZ backend uses the system bus."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_simplebluez_set_use_system_bus(bool enabled)"
+  brief="Set whether the new BlueZ backend uses the system bus."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="int64_t simpleble_config_simplebluez_get_connection_timeout_ms(void)"
+  brief="Get the Linux connection timeout in milliseconds."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_simplebluez_set_connection_timeout_ms(int64_t timeout_ms)"
+  brief="Set the Linux connection timeout in milliseconds."
+  parameters={[{"name":"timeout_ms","type":"int64_t"}]}
+/>
+
+<ApiMethod
+  signature="int64_t simpleble_config_simplebluez_get_disconnection_timeout_ms(void)"
+  brief="Get the Linux disconnection timeout in milliseconds."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_ms)"
+  brief="Set the Linux disconnection timeout in milliseconds."
+  parameters={[{"name":"timeout_ms","type":"int64_t"}]}
+/>
+
+<ApiMethod
+  signature="void simpleble_config_winrt_reset(void)"
+  brief="Reset WinRT configuration values to their defaults."
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_winrt_get_experimental_use_own_mta_apartment(void)"
+  brief="Get whether SimpleBLE uses its own WinRT MTA apartment."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_winrt_set_experimental_use_own_mta_apartment(bool enabled)"
+  brief="Set whether SimpleBLE uses its own WinRT MTA apartment."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread(void)"
+  brief="Get whether SimpleBLE reinitializes the WinRT apartment on the main thread."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread(bool enabled)"
+  brief="Set whether SimpleBLE reinitializes the WinRT apartment on the main thread."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_winrt_get_use_deferred_disconnect(void)"
+  brief="Get whether WinRT deferred disconnect is enabled."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_winrt_set_use_deferred_disconnect(bool enabled)"
+  brief="Enable or disable WinRT deferred disconnect."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="void simpleble_config_corebluetooth_reset(void)"
+  brief="Reset CoreBluetooth configuration values to their defaults."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_android_reset(void)"
+  brief="Reset Android configuration values to their defaults."
+/>
+
+<ApiMethod
+  signature="simpleble_config_android_connection_priority_t simpleble_config_android_get_connection_priority(void)"
+  brief="Get the Android connection priority request value."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_android_set_connection_priority(simpleble_config_android_connection_priority_t priority)"
+  brief="Set the Android connection priority request value."
+  detailed="Known values are disabled (-1), balanced (0), high (1), low power (2), and DCK (3)."
+  parameters={[{"name":"priority","type":"simpleble_config_android_connection_priority_t"}]}
+/>
+
+<ApiMethod
+  signature="void simpleble_config_set_android_connection_priority(int priority)"
+  brief="Set the Android connection priority request from a raw integer."
+  detailed="This helper is useful from FFI layers such as Unity P/Invoke. Use 1 for high priority."
+  parameters={[{"name":"priority","type":"int"}]}
+/>
+
+<ApiMethod
+  signature="void simpleble_config_dongl_reset(void)"
+  brief="Reset SimpleBLE Dongl configuration values to their defaults."
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_dongl_get_use_dongl_backend(void)"
+  brief="Get whether the Dongl backend is enabled."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_dongl_set_use_dongl_backend(bool enabled)"
+  brief="Enable or disable the Dongl backend."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_dongl_get_auto_update(void)"
+  brief="Get whether Dongl auto-update is enabled."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_dongl_set_auto_update(bool enabled)"
+  brief="Enable or disable Dongl auto-update."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+<ApiMethod
+  signature="bool simpleble_config_dongl_get_force_update(void)"
+  brief="Get whether Dongl forced update is enabled."
+/>
+
+<ApiMethod
+  signature="void simpleble_config_dongl_set_force_update(bool enabled)"
+  brief="Enable or disable Dongl forced update."
+  parameters={[{"name":"enabled","type":"bool"}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Logging" id="logging">
+
+## Logging [#logging] [toc]
+
+<ApiClass name="Logging Functions">
+
+<ApiMethod
+  signature="void simpleble_logging_set_level(simpleble_log_level_t level)"
+  brief="Set the SimpleBLE logging level."
+  parameters={[{"name":"level","type":"simpleble_log_level_t"}]}
+/>
+
+<ApiMethod
+  signature="simpleble_log_level_t simpleble_logging_get_level(void)"
+  brief="Get the SimpleBLE logging level."
+/>
+
+<ApiMethod
+  signature="void simpleble_logging_set_callback(simpleble_log_callback_t callback)"
+  brief="Set or clear the logging callback."
+  detailed="Pass NULL to clear the callback."
+  parameters={[{"name":"callback","type":"simpleble_log_callback_t"}]}
+/>
+
+<ApiMethod
+  signature="bool simpleble_logging_has_callback(void)"
+  brief="Returns whether a logging callback is set."
+/>
+
+<ApiMethod
+  signature="void simpleble_logging_log_default_stdout(void)"
+  brief="Use the default stdout logger."
+/>
+
+<ApiMethod
+  signature="void simpleble_logging_log_default_file(void)"
+  brief="Use the default file logger."
+/>
+
+<ApiMethod
+  signature="void simpleble_logging_log_default_file_path(const char* path)"
+  brief="Use the default file logger with a custom path."
+  parameters={[{"name":"path","type":"const char*"}]}
+/>
+
 </ApiClass>
 
 </ApiSection>

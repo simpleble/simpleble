@@ -48,6 +48,21 @@ This will install the headers to your system's include directory (e.g., `/usr/lo
 
 ## Usage in your Project
 
+### Runtime Configuration
+
+Set configuration values before the first adapter call. For example, Unity or other P/Invoke users on Android can request high connection priority with:
+
+```c
+#include <simplecble/simplecble.h>
+
+int main(void) {
+    simpleble_config_set_android_connection_priority(1);
+
+    size_t adapter_count = simpleble_adapter_get_count();
+    /* Continue with adapter selection and scanning. */
+}
+```
+
 ### Using CMake
 
 If you are using CMake, you can use `find_package` to locate SimpleCBLE.

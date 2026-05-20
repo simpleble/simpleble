@@ -4,3 +4,18 @@ description: Code examples for SimpleRsBLE.
 ---
 
 To learn how to use SimpleRsBLE, please refer to the [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplersble) provided in the repository.
+
+The example crate includes:
+
+- **list_adapters**: Print the adapters visible to SimpleRsBLE.
+- **scan**: Scan for nearby peripherals and print advertisement details.
+- **connect**: Scan, choose a peripheral, connect, and list services and characteristics.
+- **notify**: Connect to a peripheral, subscribe to notifications, then unsubscribe.
+
+Run an example from the repository root:
+
+```bash
+cargo run --manifest-path examples/simplersble/Cargo.toml --bin scan
+```
+
+For setup details, see [Usage](./usage), [Installation](../installation), and [Quickstart](../quickstart).

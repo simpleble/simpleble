@@ -1,0 +1,292 @@
+---
+title: Quickstart
+description: Get to a first successful BLE scan with SimpleBLE in your language.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+This quickstart gets you to the first adoption milestone: your application can see nearby BLE devices. After that, move to the [Connect](./recipes/connect) and [Read, Write, Notify](./recipes/read-write-notify) recipes.
+
+## Before you run
+
+1. Install the binding for your language using the [Installation](./installation) guide.
+2. Turn on Bluetooth on the host device.
+3. Grant OS permissions when required. On macOS, iOS, and Android this usually means app-level permission prompts or manifest entries.
+4. Keep at least one BLE peripheral nearby and advertising.
+
+## Scan for nearby devices
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
+
+```cpp
+#include <cstdlib>
+#include <iostream>
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    if (!SimpleBLE::Adapter::bluetooth_enabled()) {
+        std::cerr << "Bluetooth is not enabled or permission is missing." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto adapters = SimpleBLE::Adapter::get_adapters();
+    if (adapters.empty()) {
+        std::cerr << "No Bluetooth adapters found." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto adapter = adapters.front();
+    std::cout << "Using adapter: " << adapter.identifier() << " [" << adapter.address() << "]" << std::endl;
+
+    adapter.set_callback_on_scan_found([](SimpleBLE::Peripheral peripheral) {
+        std::cout << "Found: " << peripheral.identifier()
+                  << " [" << peripheral.address() << "] "
+                  << peripheral.rssi() << " dBm" << std::endl;
+    });
+
+    adapter.scan_for(5000);
+
+    std::cout << "Scan results:" << std::endl;
+    for (auto& peripheral : adapter.scan_get_results()) {
+        std::cout << "- " << peripheral.identifier()
+                  << " [" << peripheral.address() << "] "
+                  << (peripheral.is_connectable() ? "connectable" : "not connectable")
+                  << std::endl;
+    }
+
+    return EXIT_SUCCESS;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <simplecble/simplecble.h>
+
+int main(void) {
+    size_t adapter_count = simpleble_adapter_get_count();
+    if (adapter_count == 0) {
+        printf("No Bluetooth adapters found.\n");
+        return 1;
+    }
+
+    simpleble_adapter_t adapter = simpleble_adapter_get_handle(0);
+    if (adapter == NULL) {
+        printf("Unable to open adapter 0.\n");
+        return 1;
+    }
+
+    simpleble_adapter_scan_for(adapter, 5000);
+
+    size_t peripheral_count = simpleble_adapter_scan_get_results_count(adapter);
+    printf("Found %zu peripherals:\n", peripheral_count);
+
+    for (size_t i = 0; i < peripheral_count; i++) {
+        simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i);
+        char* identifier = simpleble_peripheral_identifier(peripheral);
+        char* address = simpleble_peripheral_address(peripheral);
+
+        bool connectable = false;
+        simpleble_peripheral_is_connectable(peripheral, &connectable);
+
+        printf("[%zu] %s [%s] %s\n",
+               i,
+               identifier,
+               address,
+               connectable ? "connectable" : "not connectable");
+
+        simpleble_free(identifier);
+        simpleble_free(address);
+        simpleble_peripheral_release_handle(peripheral);
+    }
+
+    simpleble_adapter_release_handle(adapter);
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+adapters = simplepyble.Adapter.get_adapters()
+if not adapters:
+    raise SystemExit("No Bluetooth adapters found.")
+
+adapter = adapters[0]
+print(f"Using adapter: {adapter.identifier()} [{adapter.address()}]")
+
+adapter.set_callback_on_scan_found(
+    lambda peripheral: print(
+        f"Found: {peripheral.identifier()} [{peripheral.address()}] {peripheral.rssi()} dBm"
+    )
+)
+
+adapter.scan_for(5000)
+
+print("Scan results:")
+for peripheral in adapter.scan_get_results():
+    state = "connectable" if peripheral.is_connectable() else "not connectable"
+    print(f"- {peripheral.identifier()} [{peripheral.address()}] {state}")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+
+import java.util.List;
+
+public class ScanExample {
+    public static void main(String[] args) throws Exception {
+        if (!Adapter.isBluetoothEnabled()) {
+            System.err.println("Bluetooth is not enabled or permission is missing.");
+            return;
+        }
+
+        List<Adapter> adapters = Adapter.getAdapters();
+        if (adapters.isEmpty()) {
+            System.err.println("No Bluetooth adapters found.");
+            return;
+        }
+
+        Adapter adapter = adapters.get(0);
+        System.out.println("Using adapter: " + adapter.getIdentifier() + " [" + adapter.getAddress() + "]");
+
+        adapter.setEventListener(new Adapter.EventListener() {
+            @Override
+            public void onScanFound(Peripheral peripheral) {
+                System.out.println("Found: " + peripheral.getIdentifier()
+                    + " [" + peripheral.getAddress() + "] "
+                    + peripheral.getRssi() + " dBm");
+            }
+        });
+
+        adapter.scanFor(5000);
+
+        System.out.println("Scan results:");
+        for (Peripheral peripheral : adapter.scanGetResults()) {
+            String state = peripheral.isConnectable() ? "connectable" : "not connectable";
+            System.out.println("- " + peripheral.getIdentifier()
+                + " [" + peripheral.getAddress() + "] "
+                + state);
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+Add the dependency:
+
+```toml
+[dependencies]
+simplersble = "0.14"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+```
+
+Then scan:
+
+```rust
+use futures::stream::StreamExt;
+
+#[tokio::main]
+async fn main() {
+    let mut adapters = simplersble::Adapter::get_adapters().unwrap();
+    if adapters.is_empty() {
+        println!("No Bluetooth adapters found.");
+        return;
+    }
+
+    let adapter = adapters.remove(0);
+
+    let mut events = adapter.on_scan_event();
+    tokio::spawn(async move {
+        while let Some(Ok(event)) = events.next().await {
+            if let simplersble::ScanEvent::Found(peripheral) = event {
+                println!(
+                    "Found: {} [{}] {} dBm",
+                    peripheral.identifier().unwrap(),
+                    peripheral.address().unwrap(),
+                    peripheral.rssi().unwrap()
+                );
+            }
+        }
+    });
+
+    adapter.scan_for(5000).unwrap();
+
+    println!("Scan results:");
+    for peripheral in adapter.scan_get_results().unwrap() {
+        println!(
+            "- {} [{}]",
+            peripheral.identifier().unwrap(),
+            peripheral.address().unwrap()
+        );
+    }
+}
+```
+
+</Tab>
+<Tab value="Android">
+
+Declare Bluetooth permissions and request them at runtime before calling the adapter APIs. A minimal Compose scan flow looks like this:
+
+```kotlin
+import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.simpleble.android.Adapter
+
+@Composable
+fun ScanScreen() {
+    val adapter = remember { Adapter.getAdapters().first() }
+    val results = remember { mutableStateOf(emptyList<String>()) }
+
+    LaunchedEffect(Unit) {
+        launch {
+            adapter.onScanFound.collect { peripheral ->
+                val line = "${peripheral.identifier} [${peripheral.address}] ${peripheral.rssi} dBm"
+                Log.d("SimpleBLE", line)
+                results.value = results.value + line
+            }
+        }
+
+        withContext(Dispatchers.IO) {
+            adapter.scanFor(5000)
+        }
+    }
+}
+```
+
+The full Android example app shows permission setup, adapter ownership, scan screens, connection screens, and notification flows.
+
+</Tab>
+</Tabs>
+
+## What this proves
+
+If the scan prints devices, the binding is installed correctly, the OS backend is available, Bluetooth is enabled, and permissions are good enough for discovery. The next step is to connect to one of the connectable peripherals and inspect its GATT services.
+
+## Next steps
+
+- [Scan recipe](./recipes/scan): scan lifecycle, callbacks, and result handling.
+- [Connect recipe](./recipes/connect): choose a device, connect, list services and characteristics.
+- [Read, Write, Notify](./recipes/read-write-notify): perform GATT operations once connected.

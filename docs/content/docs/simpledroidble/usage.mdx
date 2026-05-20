@@ -5,7 +5,14 @@ description: Build and run SimpleDroidBLE in your specific environment.
 
 SimpleDroidBLE is an Android-specific package that provides an API similar to SimpleBLE, using modern Kotlin idiomatic code.
 
-This code is currently under active development and some features are not yet implemented or their API might change, but should be enough to help you get started.
+This code is currently under active development and some features are not yet implemented or their API might change. It is useful for Android-first experiments and applications that want a Kotlin API directly on top of the SimpleBLE Android backend.
+
+## Requirements
+
+- Android API 31 or newer.
+- Android Studio.
+- Android NDK. The repository currently builds with NDK r29.
+- Bluetooth permissions declared in `AndroidManifest.xml` and requested at runtime.
 
 ## Consuming Locally
 
@@ -48,3 +55,70 @@ dependencies {
     implementation("org.simpleble.android:simpledroidble")
 }
 ```
+
+## Android Permissions
+
+Declare the Bluetooth permissions your app needs:
+
+```xml
+<uses-permission android:name="android.permission.BLUETOOTH" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+```
+
+Then set the activity context and request permissions before using the adapter APIs:
+
+```kotlin
+import org.simpleble.android.SimpleDroidBle
+import java.lang.ref.WeakReference
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        SimpleDroidBle.contextReference = WeakReference(this)
+
+        if (!SimpleDroidBle.hasPermissions) {
+            SimpleDroidBle.requestPermissions()
+            return
+        }
+
+        // Safe to create adapters after permissions are available.
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        SimpleDroidBle.handleOnRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+}
+```
+
+## First scan
+
+The Android API uses coroutines and flows for operations and events:
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+
+CoroutineScope(Dispatchers.Main).launch {
+    adapter.onScanFound.collect { peripheral ->
+        Log.d("SimpleBLE", "Found ${peripheral.identifier} [${peripheral.address}]")
+    }
+}
+
+CoroutineScope(Dispatchers.Main).launch {
+    adapter.scanFor(5000)
+}
+```
+
+## Feature status
+
+- Adapter discovery, scanning, connecting, service discovery, characteristic reads, notifications, and indications are available.
+- `writeRequest` and `writeCommand` are currently placeholders in the alpha SimpleDroidBLE API.
+- For a fuller app structure, including permission flow and Compose screens, see [Examples](./examples).

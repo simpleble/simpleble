@@ -1,0 +1,149 @@
+---
+title: Scan
+description: Discover nearby BLE peripherals and collect scan results across SimpleBLE bindings.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Scanning is the first real interaction with the Bluetooth stack. A scan listens for advertisements, reports devices as they appear, and stores the latest result set so your app can choose what to connect to.
+
+## Flow
+
+1. Check that Bluetooth is enabled and permissions are available.
+2. Get the available adapters.
+3. Pick an adapter.
+4. Register scan callbacks or event streams when your binding supports them.
+5. Scan for a bounded amount of time.
+6. Read the scan results and filter for connectable peripherals.
+
+## Core scan call
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
+
+```cpp
+auto adapters = SimpleBLE::Adapter::get_adapters();
+auto adapter = adapters.front();
+
+adapter.set_callback_on_scan_found([](SimpleBLE::Peripheral peripheral) {
+    std::cout << "Found " << peripheral.identifier()
+              << " [" << peripheral.address() << "]" << std::endl;
+});
+
+adapter.scan_for(5000);
+
+for (auto& peripheral : adapter.scan_get_results()) {
+    if (peripheral.is_connectable()) {
+        std::cout << peripheral.identifier() << " is connectable." << std::endl;
+    }
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+simpleble_adapter_t adapter = simpleble_adapter_get_handle(0);
+
+simpleble_adapter_scan_for(adapter, 5000);
+
+size_t count = simpleble_adapter_scan_get_results_count(adapter);
+for (size_t i = 0; i < count; i++) {
+    simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i);
+    char* identifier = simpleble_peripheral_identifier(peripheral);
+    char* address = simpleble_peripheral_address(peripheral);
+
+    printf("%s [%s]\n", identifier, address);
+
+    simpleble_free(identifier);
+    simpleble_free(address);
+    simpleble_peripheral_release_handle(peripheral);
+}
+
+simpleble_adapter_release_handle(adapter);
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+adapter = simplepyble.Adapter.get_adapters()[0]
+
+adapter.set_callback_on_scan_found(
+    lambda peripheral: print(f"Found {peripheral.identifier()} [{peripheral.address()}]")
+)
+
+adapter.scan_for(5000)
+
+for peripheral in adapter.scan_get_results():
+    if peripheral.is_connectable():
+        print(f"{peripheral.identifier()} is connectable")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+Adapter adapter = Adapter.getAdapters().get(0);
+
+adapter.setEventListener(new Adapter.EventListener() {
+    @Override
+    public void onScanFound(Peripheral peripheral) {
+        System.out.println("Found " + peripheral.getIdentifier() + " [" + peripheral.getAddress() + "]");
+    }
+});
+
+adapter.scanFor(5000);
+
+for (Peripheral peripheral : adapter.scanGetResults()) {
+    if (peripheral.isConnectable()) {
+        System.out.println(peripheral.getIdentifier() + " is connectable");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+let mut adapters = simplersble::Adapter::get_adapters().unwrap();
+let adapter = adapters.remove(0);
+
+adapter.scan_for(5000).unwrap();
+
+for peripheral in adapter.scan_get_results().unwrap() {
+    println!(
+        "{} [{}]",
+        peripheral.identifier().unwrap(),
+        peripheral.address().unwrap()
+    );
+}
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+
+adapter.onScanFound.collect { peripheral ->
+    Log.d("SimpleBLE", "Found ${peripheral.identifier} [${peripheral.address}]")
+}
+
+adapter.scanFor(5000)
+
+val results = adapter.scanGetResults()
+```
+
+</Tab>
+</Tabs>
+
+## Practical notes
+
+- Scans should be bounded. Use `scan_for` / `scanFor` when you want a simple blocking scan with predictable duration.
+- Event callbacks are useful for live UI updates, but the final result list is usually the easiest thing to feed into a selection flow.
+- macOS and iOS expose per-host UUIDs instead of hardware MAC addresses.
+- On Linux, make sure the process has access to BlueZ over DBus.
+- On Android, request `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` before scanning.
+
+For a complete first scan program, see [Quickstart](../quickstart).
