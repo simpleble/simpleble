@@ -66,6 +66,9 @@ typedef enum {
     SIMPLEBLE_OS_WINDOWS = 0,
     SIMPLEBLE_OS_MACOS = 1,
     SIMPLEBLE_OS_LINUX = 2,
+    SIMPLEBLE_OS_IOS = 3,
+    SIMPLEBLE_OS_ANDROID = 4,
+    SIMPLEBLE_OS_UNKNOWN = 5,
 } simpleble_os_t;
 
 typedef enum {

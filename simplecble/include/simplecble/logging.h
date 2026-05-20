@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <simplecble/export.h>
@@ -30,7 +31,12 @@ extern "C" {
 #endif
 
 SIMPLECBLE_EXPORT void simpleble_logging_set_level(simpleble_log_level_t level);
+SIMPLECBLE_EXPORT simpleble_log_level_t simpleble_logging_get_level(void);
 SIMPLECBLE_EXPORT void simpleble_logging_set_callback(simpleble_log_callback_t callback);
+SIMPLECBLE_EXPORT bool simpleble_logging_has_callback(void);
+SIMPLECBLE_EXPORT void simpleble_logging_log_default_stdout(void);
+SIMPLECBLE_EXPORT void simpleble_logging_log_default_file(void);
+SIMPLECBLE_EXPORT void simpleble_logging_log_default_file_path(const char* path);
 
 #ifdef __cplusplus
 }

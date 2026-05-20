@@ -25,6 +25,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../simpleble ${CMAKE_BINARY_DIR}/simp
 set(SIMPLEBLE_C_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simplecble.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/adapter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/config.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/peripheral.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cpp)
@@ -101,7 +102,10 @@ if(SIMPLECBLE_TEST)
     find_package(GTest REQUIRED)
 
     add_executable(simplecble_test
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_config.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_logging.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp)
     set_target_properties(simplecble_test PROPERTIES
         CXX_VISIBILITY_PRESET hidden
         VISIBILITY_INLINES_HIDDEN YES
@@ -118,4 +122,3 @@ if(SIMPLECBLE_TEST)
     
     target_link_libraries(simplecble_test PRIVATE simplecble simpleble::simpleble GTest::gtest GTest::gtest_main)
 endif()
-

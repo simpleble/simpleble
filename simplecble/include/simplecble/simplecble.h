@@ -2,7 +2,10 @@
 
 #include <simplecble/export.h>
 #include <simplecble/adapter.h>
+#include <simplecble/config.h>
+#include <simplecble/logging.h>
 #include <simplecble/peripheral.h>
+#include <simplecble/utils.h>
 
 #ifdef __cplusplus
 extern "C" {
