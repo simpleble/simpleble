@@ -18,6 +18,7 @@ We're here to help you succeed with SimpleBLE:
 * **Documentation**: Visit our [Documentation](https://docs.simpleble.org) page for comprehensive guides
 * **Commercial Support**: Check our [our website](https://simpleble.org?utm_source=crates_io&utm_medium=referral&utm_campaign=simplersble_readme) or [email us](mailto:contact@simpleble.org) about licensing and professional services
 * **Community**: Join our [Discord](https://discord.gg/N9HqNEcvP3) server for discussions and help
+* **Dongl**: Try the [official SimpleBLE Bluetooth dongle](https://www.simpleble.org/dongl?utm_source=crates_io&utm_medium=referral&utm_campaign=dongl_launch) for reliable prototyping and production
 
 **Don't hesitate to reach out if you need assistance - we're happy to help!**
 

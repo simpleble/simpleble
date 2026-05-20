@@ -21,6 +21,7 @@ We're here to help you succeed with SimpleAIBLE:
 * **Documentation**: Visit our `docs`_ page for comprehensive guides
 * **Commercial Support**: Check out |website|_ or |email|_ about licensing and professional services.
 * **Community**: Join our `Discord`_ server for discussions and help
+* **Dongl**: Pair AI-driven BLE workflows with the `official SimpleBLE Bluetooth dongle`_.
 
 **Don't hesitate to reach out if you need assistance - we're happy to help!**
 
@@ -107,6 +108,8 @@ For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the
 .. _caos: https://californiaopensource.com?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
 
 .. _SimpleBLE: https://github.com/simpleble/simpleble/
+
+.. _official SimpleBLE Bluetooth dongle: https://www.simpleble.org/dongl?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=dongl_launch
 
 .. _docs: https://docs.simpleble.org/
 

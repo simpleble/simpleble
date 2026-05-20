@@ -12,6 +12,17 @@ Key Features
 * **Multiple Language Bindings**: Production-ready bindings for C, C++, Python, Java and Rust, with more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
 
+Dongl: Official SimpleBLE Hardware
+----------------------------------
+
+SimpleBLE now has an official Bluetooth hardware companion: `Dongl`_. The Dongl N-Series firmware is
+available now for nRF52840-based boards, with pre-loaded production hardware coming soon.
+
+Use Dongl when you want firmware visibility, customizability, and direct support from the team building SimpleBLE.
+
+* Flash the Dongl N-Series firmware onto existing nRF52840 hardware for prototyping.
+* Join the waitlist for the official pre-loaded Dongl hardware.
+
 Language Bindings
 -----------------
 
@@ -98,6 +109,8 @@ Join us to expand SimpleBLE's reach!
 
 .. |Announcements| replace:: Announcements
 .. _Announcements: https://simpleble.org/blog/news?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
+
+.. _Dongl: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=dongl_launch
 
 .. _SimplePyBLE: https://pypi.org/project/simplepyble/
 

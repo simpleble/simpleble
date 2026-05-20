@@ -21,6 +21,7 @@ We're here to help you succeed with SimpleBLE:
 * **Documentation**: Visit our `Documentation`_ page for comprehensive guides
 * **Commercial Support**: Check out |website|_ or |email|_ about licensing and professional services.
 * **Community**: Join our `Discord`_ server for discussions and help
+* **Dongl**: Try the `official SimpleBLE Bluetooth dongle`_ for reliable prototyping and production.
 
 **Don't hesitate to reach out if you need assistance - we're happy to help!**
 
@@ -115,6 +116,8 @@ For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the
 .. _SimplePyBLE: https://pypi.org/project/simplepyble/
 
 .. _SimpleBLE: https://github.com/simpleble/simpleble/
+
+.. _official SimpleBLE Bluetooth dongle: https://www.simpleble.org/dongl?utm_source=pypi_simplepyble&utm_medium=referral&utm_campaign=dongl_launch
 
 .. _code examples: https://github.com/simpleble/simpleble/tree/main/examples/simplepyble
 
