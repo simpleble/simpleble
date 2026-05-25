@@ -19,34 +19,34 @@ const RESOURCES: ReadonlyArray<CardLink> = [
     title: "Licensing & Support",
     description:
       "Understand the licensing options, commercial readiness, and where to get help when you need it.",
-    href: "/docs/licensing",
+    href: "/licensing",
   },
   {
     title: "Changelog",
     description:
       "Track releases, fixes, and improvements across the core library and language bindings.",
-    href: "/docs/changelog",
+    href: "/changelog",
   },
   {
     title: "Bluetooth LE Basics",
     description: "A brief introduction to Bluetooth Low Energy concepts.",
-    href: "/docs/fundamentals/ble_basics",
+    href: "/fundamentals/ble_basics",
   },
   {
     title: "BluetoothPermissions",
     description: "Understanding platform-specific permissions for Bluetooth.",
-    href: "/docs/fundamentals/permissions",
+    href: "/fundamentals/permissions",
   },
   {
     title: "Concurrency within SimpleBLE",
     description:
       "Understanding how SimpleBLE handles threading and concurrency.",
-    href: "/docs/fundamentals/concurrency",
+    href: "/fundamentals/concurrency",
   },
   {
     title: "CMake Primer",
     description: "A quick primer on CMake for SimpleBLE.",
-    href: "/docs/fundamentals/cmake_primer",
+    href: "/fundamentals/cmake_primer",
   },
 ];
 
@@ -56,68 +56,68 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     title: "SimpleBLE",
     description:
       "The core C++ library providing a consistent BLE API across platforms.",
-    href: "/docs/simpleble/usage",
+    href: "/simpleble/usage",
   },
   {
     eyebrow: "Python",
     title: "SimplePyBLE",
     description:
       "Python bindings for fast prototyping and automation workflows.",
-    href: "/docs/simplepyble/usage",
+    href: "/simplepyble/usage",
   },
   {
     eyebrow: "AI / MCP",
     title: "SimpleAIBLE",
     description:
       "AI-friendly BLE toolkit with MCP server, REST API, and agent skills.",
-    href: "/docs/simpleaible/mcp",
+    href: "/simpleaible/mcp",
   },
   {
     eyebrow: "C",
     title: "SimpleCBLE",
     description: "A C-compatible wrapper around the core SimpleBLE library.",
-    href: "/docs/simplecble/usage",
+    href: "/simplecble/usage",
   },
   {
     eyebrow: "Java",
     title: "SimpleJavaBLE",
     description:
       "Java bindings for Android and cross-platform Java applications.",
-    href: "/docs/simplejavable/examples",
+    href: "/simplejavable/examples",
   },
   {
     eyebrow: "Rust",
     title: "SimpleRsBLE",
     description:
       "Rust bindings with a modern API for safe BLE development.",
-    href: "/docs/simplersble/examples",
+    href: "/simplersble/examples",
   },
   {
     eyebrow: "Android",
     title: "SimpledroidBLE",
     description:
       "Android-only bindings for native Android BLE development.",
-    href: "/docs/simpledroidble/usage",
+    href: "/simpledroidble/usage",
   },
   {
     eyebrow: "Unreal Engine",
     title: "SimpleBLE for Unreal",
     description:
       "Unreal Engine plugin with Blueprint and C++ APIs for BLE workflows.",
-    href: "/docs/simpleunrealble/quickstart",
+    href: "/simpleunrealble/quickstart",
   },
   {
     eyebrow: "Linux",
     title: "SimpleBluez",
     description:
       "A BlueZ abstraction layer for Linux-centric BLE integrations.",
-    href: "/docs/simplebluez/usage",
+    href: "/simplebluez/usage",
   },
   {
     eyebrow: "Linux",
     title: "SimpleDBus",
     description: "A DBus object hierarchy handler used by the Linux stack.",
-    href: "/docs/simpledbus/usage",
+    href: "/simpledbus/usage",
   },
 ];
 

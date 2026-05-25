@@ -36,19 +36,19 @@ export const DocsHomeHero = (): ReactElement => {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <Link
-              href="/docs/simpleble/tutorial"
+              href="/simpleble/tutorial"
               className="inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-sora font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Quickstart
             </Link>
             <Link
-              href="/docs/simpleble/api"
+              href="/simpleble/api"
               className="inline-flex h-11 items-center justify-center rounded-2xl border border-fd-border bg-fd-background/70 px-5 text-sm font-sora font-semibold text-fd-foreground backdrop-blur transition-colors hover:bg-fd-muted"
             >
               Explore API
             </Link>
             <Link
-              href="/docs"
+              href="/overview"
               className="inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-sora font-semibold text-primary transition-colors hover:bg-primary/10"
             >
               Browse all docs →

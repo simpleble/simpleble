@@ -1,9 +1,15 @@
 import { getLLMText, source } from '@/lib/source';
 import { notFound } from 'next/navigation';
 
+type MdxRouteProps = Readonly<{
+  params: Promise<{
+    slug: string[];
+  }>;
+}>;
+
 export const revalidate = false;
 
-export async function GET(_req: Request, { params }: RouteContext<'/llms.mdx/docs/[[...slug]]'>) {
+export async function GET(_req: Request, { params }: MdxRouteProps) {
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) notFound();
@@ -16,5 +22,5 @@ export async function GET(_req: Request, { params }: RouteContext<'/llms.mdx/doc
 }
 
 export function generateStaticParams() {
-  return source.generateParams();
+  return source.generateParams().filter(({ slug }) => slug.length > 0);
 }

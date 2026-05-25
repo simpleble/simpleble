@@ -2,7 +2,7 @@
   "title": "Documentation",
   "root": true,
   "pages": [
-    "index",
+    "overview",
     "---General---",
     "installation",
     "quickstart",

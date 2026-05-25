@@ -13,7 +13,13 @@ import { createRelativeLink } from "fumadocs-ui/mdx";
 import { LLMCopyButton } from "@/components/ui/llm-copy-button";
 import { ViewOptions } from "@/components/ui/llm-view-button";
 
-export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
+type DocsRouteProps = Readonly<{
+  params: Promise<{
+    slug: string[];
+  }>;
+}>;
+
+export default async function Page(props: DocsRouteProps) {
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
@@ -57,12 +63,12 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
   );
 }
 
-export async function generateStaticParams() {
-  return source.generateParams();
+export function generateStaticParams() {
+  return source.generateParams().filter(({ slug }) => slug.length > 0);
 }
 
 export async function generateMetadata(
-  props: PageProps<"/docs/[[...slug]]">,
+  props: DocsRouteProps,
 ): Promise<Metadata> {
   const params = await props.params;
   const page = source.getPage(params.slug);

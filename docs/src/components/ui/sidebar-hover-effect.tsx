@@ -83,7 +83,7 @@ export const SidebarHoverEffect = () => {
     };
 
     const sidebarLinks = document.querySelectorAll(
-      '#nd-sidebar a[href^="/docs"]'
+      '#nd-sidebar a[href^="/"]'
     );
 
     const cleanupFunctions: Array<() => void> = [];
@@ -95,7 +95,7 @@ export const SidebarHoverEffect = () => {
 
     const observer = new MutationObserver(() => {
       const newLinks = document.querySelectorAll(
-        '#nd-sidebar a[href^="/docs"]'
+        '#nd-sidebar a[href^="/"]'
       );
       newLinks.forEach((link) => {
         if (

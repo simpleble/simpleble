@@ -79,7 +79,7 @@ export const DocsHomeSearch = (): ReactElement => {
 
           <div className="border-t border-fd-border px-4 py-3">
             <Link
-              href="/docs"
+              href="/overview"
               className="text-sm font-sora font-semibold text-primary hover:underline decoration-primary underline-offset-4"
               onClick={() => setSearch("")}
             >

@@ -39,7 +39,7 @@ The API reference is automatically generated from the C++ source code using Doxy
 | Route                | Description                                        |
 | -------------------- | -------------------------------------------------- |
 | `app/(home)`         | The landing page.                                  |
-| `app/docs`           | The documentation layout and pages.                |
+| `app/(docs)`         | The documentation layout and pages.                |
 | `content/docs`       | MDX/Markdown files for the documentation.          |
 | `src/components/api` | Custom React components used in the API reference. |
 | `scripts/`           | Automation scripts for Doxygen integration.        |
