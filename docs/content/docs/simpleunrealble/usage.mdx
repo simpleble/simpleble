@@ -1,0 +1,48 @@
+---
+title: Usage
+description: Use SimpleBLE from Unreal Engine Blueprints and C++.
+---
+
+SimpleBLE for Unreal Engine provides Blueprint and C++ access to Bluetooth Low Energy adapters, peripherals, services, characteristics, descriptors, notifications, and payload conversion helpers.
+
+Use it when an Unreal project needs to scan for nearby BLE peripherals, connect to a device, inspect services and characteristics, read or write characteristic values, or subscribe to notifications.
+
+## API Shape
+
+The plugin exposes Unreal-native UObject and USTRUCT types over the native SimpleBLE runtime:
+
+- `USimpleBLEManager` is the convenience entry point for common Blueprint workflows such as initialize, scan, connect by display name, read and write UTF-8 text, and subscribe to notifications.
+- `USimpleBLEBackend`, `USimpleBLEAdapter`, and `USimpleBLEPeripheral` provide lower-level access to adapters, peripheral metadata, byte payloads, services, characteristics, descriptors, and connection events.
+- Services, characteristics, descriptors, manufacturer data, errors, and operation results are reflected as Unreal `USTRUCT` snapshots.
+- Characteristic and descriptor payloads use `TArray<uint8>`. `USimpleBLEPayloadLibrary` provides UTF-8 and hex conversion helpers.
+
+## Public Headers
+
+The public C++ headers are grouped under `SimpleBLE/`:
+
+```cpp
+#include "SimpleBLE/Manager.h"
+#include "SimpleBLE/Adapter.h"
+#include "SimpleBLE/Peripheral.h"
+#include "SimpleBLE/PayloadLibrary.h"
+```
+
+## Blueprint Categories
+
+After enabling the plugin and restarting the editor, Blueprint nodes appear under:
+
+- `SimpleBLE`
+- `SimpleBLE|Adapter`
+- `SimpleBLE|Peripheral`
+- `SimpleBLE|Backend`
+- `SimpleBLE|Payload`
+
+## Choosing An API
+
+Use `USimpleBLEManager` for the shortest path from scan to connection, especially in Blueprint projects.
+
+Use the lower-level adapter and peripheral API when you need byte arrays, full service metadata, structured operation errors, or capabilities such as write-with-response versus write-without-response.
+
+## Package Contents
+
+The Fab package includes the plugin descriptor, source module, config, third-party native binaries, documentation, icon resources, and third-party notices. The `Content/` directory is included for the Fab code plugin package structure; the plugin does not require Unreal assets to function.

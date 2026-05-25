@@ -1,0 +1,62 @@
+---
+title: Installation
+description: Install and enable the SimpleBLE Unreal Engine plugin.
+---
+
+SimpleBLE for Unreal can be installed from Fab or copied into an Unreal project as a source plugin.
+
+## Install From Fab
+
+1. Install the SimpleBLE plugin for your Unreal Engine version from Fab or the Epic Games Launcher.
+2. Open your Unreal project.
+3. Go to `Edit > Plugins`.
+4. Search for `SimpleBLE`.
+5. Enable the plugin.
+6. Restart the editor when prompted.
+
+After restart, Blueprint nodes are available under the `SimpleBLE`, `SimpleBLE|Adapter`, `SimpleBLE|Peripheral`, `SimpleBLE|Backend`, and `SimpleBLE|Payload` categories.
+
+## Install From Source
+
+Copy the `SimpleBLE` plugin folder into your project:
+
+```text
+YourProject/
+  Plugins/
+    SimpleBLE/
+      SimpleBLE.uplugin
+      Source/
+      Config/
+      Docs/
+```
+
+Then regenerate project files if you use an IDE, build your project, and enable the plugin from `Edit > Plugins`.
+
+## C++ Module Setup
+
+To call the plugin from a game module, add `SimpleBLE` as a dependency in your module `.Build.cs` file:
+
+```csharp
+PublicDependencyModuleNames.AddRange(
+    new string[]
+    {
+        "Core",
+        "CoreUObject",
+        "Engine",
+        "SimpleBLE"
+    }
+);
+```
+
+Include the public headers you need:
+
+```cpp
+#include "SimpleBLE/Manager.h"
+#include "SimpleBLE/Adapter.h"
+#include "SimpleBLE/Peripheral.h"
+#include "SimpleBLE/PayloadLibrary.h"
+```
+
+## Verify The Plugin
+
+The quickest smoke test is to create a `Simple BLE Manager` object in Blueprint, call `Initialize`, and run a short scan. If initialization fails, check that Bluetooth is enabled, the device has a BLE-capable adapter, the packaged plugin includes `Source/ThirdParty/SimpleBLE/Lib` for the target platform, and mobile runtime permissions have been granted.

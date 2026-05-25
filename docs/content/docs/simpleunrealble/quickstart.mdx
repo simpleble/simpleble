@@ -1,0 +1,162 @@
+---
+title: Quickstart
+description: Scan, connect, read, write, and subscribe with SimpleBLE for Unreal.
+---
+
+This quickstart covers the two main ways to use SimpleBLE from Unreal: the convenience manager and the lower-level adapter/peripheral API.
+
+## Blueprint Manager Flow
+
+Use `USimpleBLEManager` when you want the shortest Blueprint path from scan to connect:
+
+1. Create a `Simple BLE Manager` object and keep it referenced while Bluetooth work is active.
+2. Bind `On Device Found`, `On Scan Finished`, and `On Notify Data`.
+3. Call `Initialize`.
+4. If `Initialize` returns `true`, call `Start Scan` with a timeout in milliseconds.
+5. Use `Get Found Devices` to show names or addresses to the player.
+6. Call `Connect To Device` with the selected display name, identifier, or address.
+7. Call `Read Characteristic`, `Write Characteristic`, `Subscribe Notify`, or `Unsubscribe Notify`.
+8. Call `Disconnect` when finished.
+
+The manager read and write helpers treat characteristic values as UTF-8 strings. For binary protocols, use the lower-level peripheral API and `USimpleBLEPayloadLibrary`.
+
+## Blueprint Adapter Flow
+
+Use `USimpleBLEBackend`, `USimpleBLEAdapter`, and `USimpleBLEPeripheral` when you need complete BLE metadata, byte arrays, or structured error information:
+
+1. Call `Get Backends` or `Get Adapters`.
+2. Choose an adapter.
+3. Bind `On Peripheral Found`, `On Peripheral Updated`, and `On Scan Finished`.
+4. Call `Scan For`, `Start Scan`, or `Stop Scan`.
+5. Use `Get Scan Results` to inspect `USimpleBLEPeripheral` objects.
+6. Call `Get Info` on each peripheral to read identifier, address, RSSI, MTU, connectable state, paired state, and manufacturer data.
+7. Call `Connect`.
+8. Call `Get Services`.
+9. Inspect characteristic capabilities such as `bCanRead`, `bCanWriteRequest`, `bCanWriteCommand`, `bCanNotify`, and `bCanIndicate`.
+10. Call `Read Characteristic`, `Write Request`, `Write Command`, `Notify`, `Indicate`, or `Unsubscribe`.
+
+## C++ Manager Flow
+
+Create and keep a `USimpleBLEManager` reference on a UObject that outlives the scan and connection.
+
+```cpp
+#include "SimpleBLE/Manager.h"
+
+void UMyBluetoothController::StartBluetoothScan()
+{
+    Manager = NewObject<USimpleBLEManager>(this);
+
+    Manager->OnDeviceFound.AddDynamic(this, &UMyBluetoothController::HandleDeviceFound);
+    Manager->OnScanFinished.AddDynamic(this, &UMyBluetoothController::HandleScanFinished);
+    Manager->OnNotifyData.AddDynamic(this, &UMyBluetoothController::HandleNotifyData);
+
+    if (!Manager->Initialize())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SimpleBLE could not initialize."));
+        return;
+    }
+
+    Manager->StartScan(5000);
+}
+```
+
+Delegate handlers must be `UFUNCTION` methods:
+
+```cpp
+UFUNCTION()
+void HandleDeviceFound(const FString& DeviceName);
+
+UFUNCTION()
+void HandleScanFinished();
+
+UFUNCTION()
+void HandleNotifyData(
+    const FString& ServiceUUID,
+    const FString& CharacteristicUUID,
+    const TArray<uint8>& Data);
+```
+
+Connect by a discovered display name, identifier, or address:
+
+```cpp
+if (Manager->ConnectToDevice(DeviceName))
+{
+    const FString Value = Manager->ReadCharacteristic(ServiceUUID, CharacteristicUUID);
+    Manager->WriteCharacteristic(ServiceUUID, CharacteristicUUID, TEXT("hello"));
+    Manager->SubscribeNotify(ServiceUUID, CharacteristicUUID);
+}
+```
+
+## C++ Lower-Level API
+
+The lower-level API returns structured result types and byte payloads:
+
+```cpp
+#include "SimpleBLE/Adapter.h"
+#include "SimpleBLE/Manager.h"
+#include "SimpleBLE/PayloadLibrary.h"
+#include "SimpleBLE/Peripheral.h"
+
+void UMyBluetoothController::ScanWithAdapter()
+{
+    Manager = NewObject<USimpleBLEManager>(this);
+
+    const TArray<USimpleBLEAdapter*> Adapters = Manager->GetAdapters();
+    if (Adapters.IsEmpty())
+    {
+        return;
+    }
+
+    Adapter = Adapters[0];
+    Adapter->OnPeripheralFound.AddDynamic(this, &UMyBluetoothController::HandlePeripheralFound);
+    Adapter->OnScanFinished.AddDynamic(this, &UMyBluetoothController::HandleAdapterScanFinished);
+    Adapter->ScanFor(5000);
+}
+```
+
+Read and write bytes through `USimpleBLEPeripheral`:
+
+```cpp
+void UMyBluetoothController::UsePeripheral(USimpleBLEPeripheral* Peripheral)
+{
+    const FSimpleBLEOperationResult ConnectResult = Peripheral->Connect();
+    if (!ConnectResult.bSuccess)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *ConnectResult.Error.Message);
+        return;
+    }
+
+    const FSimpleBLEDataResult ReadResult =
+        Peripheral->ReadCharacteristic(ServiceUUID, CharacteristicUUID);
+
+    if (ReadResult.bSuccess)
+    {
+        const FString Hex = USimpleBLEPayloadLibrary::BytesToHex(ReadResult.Data, true);
+        UE_LOG(LogTemp, Log, TEXT("Read bytes: %s"), *Hex);
+    }
+
+    const TArray<uint8> Payload =
+        USimpleBLEPayloadLibrary::Utf8StringToBytes(TEXT("hello"));
+
+    const FSimpleBLEOperationResult WriteResult =
+        Peripheral->WriteRequest(ServiceUUID, CharacteristicUUID, Payload);
+
+    if (!WriteResult.bSuccess)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s"), *WriteResult.Error.Message);
+    }
+}
+```
+
+## Payload Helpers And Results
+
+`USimpleBLEPayloadLibrary` provides helpers for UTF-8 strings and hex-encoded device payloads:
+
+- `Utf8 String To Bytes`
+- `Bytes To Utf8 String`
+- `Hex To Bytes`
+- `Bytes To Hex`
+
+Lower-level operations return `FSimpleBLEOperationResult`, `FSimpleBLEBoolResult`, or `FSimpleBLEDataResult`. Check `bSuccess` first, then inspect `Error.Code` and `Error.Message` when an operation fails.
+
+Keep manager, adapter, and peripheral UObjects referenced while operations are active. Scan callbacks and notification callbacks are delivered back to the game thread.

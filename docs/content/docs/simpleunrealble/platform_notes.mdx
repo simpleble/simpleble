@@ -1,0 +1,55 @@
+---
+title: Platform Notes
+description: Platform setup and troubleshooting notes for SimpleBLE for Unreal.
+---
+
+The SimpleBLE Unreal plugin is configured for Windows 64-bit, macOS, iOS, Android, and Linux. Platform Bluetooth permissions and system services are configured by the consuming Unreal project.
+
+## Android
+
+The plugin adds these manifest entries through `Source/SimpleBLE/Private/Android/SimpleBLE_APL.xml`:
+
+- `android.permission.BLUETOOTH`
+- `android.permission.BLUETOOTH_ADMIN`
+- `android.permission.BLUETOOTH_SCAN`
+- `android.permission.BLUETOOTH_CONNECT`
+- `android.hardware.bluetooth_le`
+
+For Android 12 and newer, request runtime permission for `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` before scanning or connecting. Blueprint projects commonly handle this with Unreal's Android Permission plugin.
+
+The plugin marks `BLUETOOTH_SCAN` with `neverForLocation`. If your application uses BLE scanning for location-like behavior, review Android Bluetooth and location policy requirements before shipping.
+
+## iOS
+
+The plugin links `CoreBluetooth`.
+
+Add Bluetooth usage text to your app plist, for example through `Project Settings > iOS > Additional Plist Data`:
+
+```xml
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>This app uses Bluetooth to connect to nearby BLE devices.</string>
+```
+
+If you need background BLE behavior, configure the relevant iOS background modes in your Unreal project. The plugin does not enable background modes by default.
+
+## macOS
+
+Recent macOS versions may require Bluetooth privacy usage text in the packaged application plist. Add a clear `NSBluetoothAlwaysUsageDescription` string when packaging for macOS distribution.
+
+## Linux
+
+Linux runtime targets need the normal BlueZ and D-Bus Bluetooth stack installed and running. The user running the application must have permission to access Bluetooth through the host distribution's Bluetooth configuration.
+
+## Windows
+
+Bluetooth must be enabled and the target device must be visible to the Windows Bluetooth stack. Some BLE operations depend on adapter and device driver support exposed by the operating system.
+
+## Troubleshooting
+
+If `Initialize` returns false, check that Bluetooth is enabled, the host has a BLE-capable adapter, native SimpleBLE binaries are packaged for the current platform, and required mobile permissions have been granted.
+
+If no devices are found, confirm the peripheral is advertising, increase the scan timeout, move the peripheral closer, and verify Android permissions or Linux BlueZ/D-Bus services as appropriate.
+
+If read, write, or notification operations fail, confirm the service and characteristic UUIDs, check characteristic capabilities, use the write mode supported by the device, and keep the manager or peripheral UObject referenced while subscribed.
+
+For binary protocols, prefer the lower-level peripheral API and `USimpleBLEPayloadLibrary` over the convenience manager's UTF-8 string helpers.
