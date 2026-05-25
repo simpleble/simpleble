@@ -1,9 +1,9 @@
 {
   "title": "SimpleBLE for Unreal",
   "pages": [
-    "usage",
-    "installation",
     "quickstart",
+    "installation",
+    "usage",
     "platform_notes"
   ]
 }
