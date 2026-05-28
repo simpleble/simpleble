@@ -164,7 +164,7 @@ class bytearray {
         if (start > end || end > data_.size()) {
             throw std::out_of_range("Invalid slice range");
         }
-        return bytearray(std::vector<uint8_t>(data_.begin() + start, data_.begin() + end));
+        return bytearray(data_.data() + start, end - start);
     }
 
     /**

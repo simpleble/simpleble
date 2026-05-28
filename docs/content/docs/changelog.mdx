@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (MacOS) Fixed notification callbacks to snapshot payload data before invoking the user callback.
 - (MacOS) Fixed concurrent access to peripheral advertising data while scan updates are being processed.
 - (MacOS) Fixed concurrent access to adapter peripheral maps while scan and connection events are processed.
+- (SimpleBLE) Cleaned up `kvn::bytearray` slicing to avoid an unnecessary temporary allocation and resolve a Coverity iterator-container warning.
 - (SimpleBluez) Fixed custom peripheral D-Bus objects to use the connection's unique bus name instead of the unowned `org.simplebluez` name.
 - (SimpleDBus) Fixed local `ObjectManager::GetManagedObjects()` calls to return the local object tree directly instead of blocking on a D-Bus self-call.
 - (SimpleDBus) Fixed descendant proxies staying valid after an ancestor D-Bus object path is removed.

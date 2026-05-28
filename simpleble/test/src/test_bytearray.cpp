@@ -201,6 +201,17 @@ TEST(ByteArrayTest, SliceSingleElement) {
     EXPECT_EQ(slicedArray[0], 0x03);
 }
 
+TEST(ByteArrayTest, SliceEmptyRange) {
+    std::vector<uint8_t> vec = {1, 2, 3, 4, 5};
+    bytearray byteArray(vec);
+    bytearray slicedArray = byteArray.slice(2, 2);
+
+    EXPECT_TRUE(slicedArray.empty());
+
+    bytearray emptyArray;
+    EXPECT_TRUE(emptyArray.slice(0, 0).empty());
+}
+
 TEST(ByteArrayTest, SliceOutOfRange) {
     std::vector<uint8_t> vec = {1, 2, 3, 4, 5};
     bytearray byteArray(vec);
