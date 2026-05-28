@@ -16,3 +16,33 @@ adapter->register_advertisement(advertisement);
 
 Use `adapter->supported_secondary_channels()` to check whether BlueZ reports
 support for `"2M"` on the selected adapter.
+
+## Local GATT read/write options
+
+When exposing local GATT server objects, BlueZ passes per-client context in the
+`ReadValue` and `WriteValue` options dictionary. The callbacks take
+`Characteristic::ValueOptions`, which exposes fields such as `device`, `mtu`,
+`offset`, `link`, `type`, and `prepare-authorize` as `prepare_authorize` in C++:
+
+```cpp
+characteristic->set_on_read_value([characteristic](SimpleBluez::Characteristic::ValueOptions options) {
+    if (options.mtu.has_value()) {
+        std::cout << "Read MTU: " << *options.mtu << std::endl;
+    }
+
+    characteristic->value(SimpleBluez::ByteArray("hello"));
+});
+
+characteristic->set_on_write_value(
+    [](SimpleBluez::ByteArray value, SimpleBluez::Characteristic::ValueOptions options) {
+        if (options.mtu.has_value()) {
+            std::cout << "Write MTU: " << *options.mtu << std::endl;
+        }
+    });
+```
+
+For user-generated/local GATT server characteristics, `characteristic->mtu()`
+reflects the BlueZ `GattCharacteristic1.MTU` property and should not be treated
+as a per-device server-side MTU. BlueZ provides the per-request server MTU in
+`ValueOptions::mtu` for `ReadValue` and `WriteValue` callbacks when that field is
+present.

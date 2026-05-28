@@ -1,5 +1,7 @@
 #include "simplebluez/interfaces/GattCharacteristic1.h"
 
+#include <map>
+
 using namespace SimpleBluez;
 
 const SimpleDBus::AutoRegisterInterface<GattCharacteristic1> GattCharacteristic1::registry{
@@ -68,8 +70,9 @@ ByteArray GattCharacteristic1::ReadValue() {
 void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
     if (msg.is_method_call(_interface_name, "ReadValue")) {
         SimpleDBus::Holder options = msg.extract();
+        ValueOptions value_options = _parse_value_options(options);
 
-        OnReadValue();
+        OnReadValue(value_options);
 
         SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
         reply.append_argument(_properties["Value"]->get(), "ay");
@@ -78,12 +81,13 @@ void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
         SimpleDBus::Holder value = msg.extract();
         msg.extract_next();
         SimpleDBus::Holder options = msg.extract();
+        ValueOptions value_options = _parse_value_options(options);
 
         Value.set(value);
         SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
         _conn->send(reply);
 
-        OnWriteValue(Value.get());
+        OnWriteValue(Value.get(), value_options);
     } else if (msg.is_method_call(_interface_name, "StartNotify")) {
         SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
         _conn->send(reply);
@@ -99,4 +103,48 @@ void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
 
         OnStopNotify();
     }
+}
+
+GattCharacteristic1::ValueOptions GattCharacteristic1::_parse_value_options(const SimpleDBus::Holder& options) {
+    ValueOptions parsed;
+
+    const auto options_map = options.get<std::map<std::string, SimpleDBus::Holder>>();
+
+    if (auto option = options_map.find("device"); option != options_map.end()) {
+        if (option->second.type() == SimpleDBus::Holder::Type::OBJ_PATH) {
+            parsed.device = option->second.get<SimpleDBus::ObjectPath>();
+        }
+    }
+
+    if (auto option = options_map.find("mtu"); option != options_map.end()) {
+        if (option->second.type() == SimpleDBus::Holder::Type::UINT16) {
+            parsed.mtu = option->second.get<uint16_t>();
+        }
+    }
+
+    if (auto option = options_map.find("offset"); option != options_map.end()) {
+        if (option->second.type() == SimpleDBus::Holder::Type::UINT16) {
+            parsed.offset = option->second.get<uint16_t>();
+        }
+    }
+
+    if (auto option = options_map.find("type"); option != options_map.end()) {
+        if (option->second.type() == SimpleDBus::Holder::Type::STRING) {
+            parsed.type = option->second.get<std::string>();
+        }
+    }
+
+    if (auto option = options_map.find("link"); option != options_map.end()) {
+        if (option->second.type() == SimpleDBus::Holder::Type::STRING) {
+            parsed.link = option->second.get<std::string>();
+        }
+    }
+
+    if (auto option = options_map.find("prepare-authorize"); option != options_map.end()) {
+        if (option->second.type() == SimpleDBus::Holder::Type::BOOLEAN) {
+            parsed.prepare_authorize = option->second.get<bool>();
+        }
+    }
+
+    return parsed;
 }

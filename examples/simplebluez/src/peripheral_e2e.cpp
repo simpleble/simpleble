@@ -102,13 +102,20 @@ int main(int argc, char* argv[]) {
     // NOTE: Setting an initial value is not required, as this value doesn't get sent
     // to the central until it attempts to read or notify.
 
-    characteristic0->set_on_read_value([characteristic0]() {
+    characteristic0->set_on_read_value([characteristic0](SimpleBluez::Characteristic::ValueOptions options) {
         std::cout << "ReadValue called" << std::endl;
+        if (options.mtu.has_value()) {
+            std::cout << "Read MTU: " << *options.mtu << std::endl;
+        }
     });
 
-    characteristic0->set_on_write_value([characteristic0](const SimpleBluez::ByteArray& value) {
-        std::cout << "WriteValue called with value: " << value.toHex() << std::endl;
-    });
+    characteristic0->set_on_write_value(
+        [characteristic0](const SimpleBluez::ByteArray& value, SimpleBluez::Characteristic::ValueOptions options) {
+            std::cout << "WriteValue called with value: " << value.toHex() << std::endl;
+            if (options.mtu.has_value()) {
+                std::cout << "Write MTU: " << *options.mtu << std::endl;
+            }
+        });
 
     characteristic0->set_on_notify([characteristic0](bool notify) {
         std::cout << "Notify called with notify: " << notify << std::endl;

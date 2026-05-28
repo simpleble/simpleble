@@ -97,17 +97,22 @@ void Characteristic::set_on_value_changed(std::function<void(ByteArray new_value
 
 void Characteristic::clear_on_value_changed() { gattcharacteristic1()->Value.on_changed.unload(); }
 
-void Characteristic::set_on_read_value(std::function<void()> callback) {
-    gattcharacteristic1()->OnReadValue.load([this, callback]() { callback(); });
+void Characteristic::set_on_read_value(std::function<void(ValueOptions options)> callback) {
+    gattcharacteristic1()->OnReadValue.load([this, callback](ValueOptions options) { callback(options); });
 }
 
-void Characteristic::clear_on_read_value() { gattcharacteristic1()->OnReadValue.unload(); }
-
-void Characteristic::set_on_write_value(std::function<void(ByteArray value)> callback) {
-    gattcharacteristic1()->OnWriteValue.load([this, callback](const ByteArray& value) { callback(value); });
+void Characteristic::clear_on_read_value() {
+    gattcharacteristic1()->OnReadValue.unload();
 }
 
-void Characteristic::clear_on_write_value() { gattcharacteristic1()->OnWriteValue.unload(); }
+void Characteristic::set_on_write_value(std::function<void(ByteArray value, ValueOptions options)> callback) {
+    gattcharacteristic1()->OnWriteValue.load(
+        [this, callback](const ByteArray& value, ValueOptions options) { callback(value, options); });
+}
+
+void Characteristic::clear_on_write_value() {
+    gattcharacteristic1()->OnWriteValue.unload();
+}
 
 void Characteristic::set_on_notify(std::function<void(bool)> callback) {
     gattcharacteristic1()->OnStartNotify.load([this, callback]() { callback(true); });
