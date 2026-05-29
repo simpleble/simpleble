@@ -67,6 +67,14 @@ ByteArray GattCharacteristic1::ReadValue() {
     return Value();
 }
 
+void GattCharacteristic1::enable_acquire_notify() {
+    NotifyAcquired.set(false).emit();
+}
+
+void GattCharacteristic1::disable_acquire_notify() {
+    property_invalidate("NotifyAcquired");
+}
+
 void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
     if (msg.is_method_call(_interface_name, "ReadValue")) {
         SimpleDBus::Holder options = msg.extract();
@@ -88,6 +96,10 @@ void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
         _conn->send(reply);
 
         OnWriteValue(Value.get(), value_options);
+    } else if (msg.is_method_call(_interface_name, "AcquireNotify")) {
+        SimpleDBus::Message reply =
+            SimpleDBus::Message::create_error(msg, "org.bluez.Error.NotSupported", "AcquireNotify not supported");
+        _conn->send(reply);
     } else if (msg.is_method_call(_interface_name, "StartNotify")) {
         SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
         _conn->send(reply);

@@ -46,3 +46,30 @@ reflects the BlueZ `GattCharacteristic1.MTU` property and should not be treated
 as a per-device server-side MTU. BlueZ provides the per-request server MTU in
 `ValueOptions::mtu` for `ReadValue` and `WriteValue` callbacks when that field is
 present.
+
+## Local GATT notify acquisition capability
+
+By default, local GATT characteristics do not expose BlueZ's optional
+`NotifyAcquired` property, so BlueZ uses the `StartNotify` and `StopNotify`
+flow:
+
+```cpp
+characteristic->set_on_notify([](bool notifying) {
+    std::cout << "Notifying: " << notifying << std::endl;
+});
+```
+
+The `NotifyAcquired` property can be exported or removed at runtime:
+
+```cpp
+characteristic->enable_acquire_notify();
+
+// Future BlueZ notification subscriptions can now discover NotifyAcquired.
+
+characteristic->disable_acquire_notify();
+```
+
+`enable_acquire_notify()` exports `NotifyAcquired` with a value of `false`.
+`disable_acquire_notify()` invalidates the property, allowing BlueZ to fall back
+to `StartNotify` and `StopNotify` for future subscriptions. The fd-backed
+`AcquireNotify` session flow is not exposed yet.

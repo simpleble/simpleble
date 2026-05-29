@@ -80,6 +80,27 @@ void Interface::property_emit(const std::string& property_name, Holder value) {
 
 bool Interface::property_exists(const std::string& property_name) { return _properties.count(property_name) > 0; }
 
+bool Interface::property_valid(const std::string& property_name) {
+    if (_properties.count(property_name) == 0) {
+        return false;
+    }
+
+    return _properties[property_name]->valid();
+}
+
+void Interface::property_invalidate(const std::string& property_name) {
+    if (!_loaded || _properties.count(property_name) == 0) {
+        return;
+    }
+
+    _properties[property_name]->invalidate();
+
+    auto properties = std::dynamic_pointer_cast<SimpleDBus::Interfaces::Properties>(
+        proxy()->interface_get("org.freedesktop.DBus.Properties"));
+
+    properties->PropertiesChanged(_interface_name, std::vector<std::string>{property_name});
+}
+
 // ----- HANDLES -----
 
 void Interface::handle_properties_changed(Holder changed_properties, Holder invalidated_properties) {

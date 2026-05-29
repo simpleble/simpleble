@@ -67,6 +67,10 @@ void Characteristic::start_notify() { gattcharacteristic1()->StartNotify(); }
 
 void Characteristic::stop_notify() { gattcharacteristic1()->StopNotify(); }
 
+void Characteristic::enable_acquire_notify() { gattcharacteristic1()->enable_acquire_notify(); }
+
+void Characteristic::disable_acquire_notify() { gattcharacteristic1()->disable_acquire_notify(); }
+
 std::shared_ptr<Descriptor> Characteristic::descriptor_add(const std::string& name) {
     const std::string descriptor_path = _path + "/descriptor_" + name;
     auto descriptor = Proxy::create<Descriptor>(_conn, _bus_name, descriptor_path);

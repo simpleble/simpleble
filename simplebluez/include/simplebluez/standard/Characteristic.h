@@ -25,6 +25,8 @@ class Characteristic : public SimpleDBus::Proxy {
     void write_command(ByteArray value);
     void start_notify();
     void stop_notify();
+    void enable_acquire_notify();
+    void disable_acquire_notify();
 
     // ----- PROPERTIES -----
     std::vector<std::shared_ptr<Descriptor>> descriptors();

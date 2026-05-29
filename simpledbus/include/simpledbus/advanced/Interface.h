@@ -139,8 +139,10 @@ class Interface {
 
     // ----- PROPERTIES -----
     bool property_exists(const std::string& property_name);
+    bool property_valid(const std::string& property_name);
     void property_refresh(const std::string& property_name);
     void property_emit(const std::string& property_name, Holder value);
+    void property_invalidate(const std::string& property_name);
 
     // ----- MESSAGES -----
     virtual void message_handle(Message& msg) {}

@@ -37,6 +37,7 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     Property<SimpleDBus::ObjectPath>& Service = property<SimpleDBus::ObjectPath>("Service");
     Property<ByteArray>& Value = property<ByteArray>("Value");
     Property<bool>& Notifying = property<bool>("Notifying");
+    Property<bool>& NotifyAcquired = property<bool>("NotifyAcquired");
     Property<std::vector<std::string>>& Flags = property<std::vector<std::string>>("Flags", {"read", "write", "notify"});
     // For local GATT server objects, this property is not a per-device negotiated MTU.
     // Use ValueOptions::mtu from server-side ReadValue/WriteValue callbacks instead.
@@ -48,6 +49,10 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     kvn::safe_callback<void(ValueOptions options)> OnReadValue;
     kvn::safe_callback<void()> OnStartNotify;
     kvn::safe_callback<void()> OnStopNotify;
+
+    // ------ SPECIAL METHODS ------
+    void enable_acquire_notify();
+    void disable_acquire_notify();
 
     void message_handle(SimpleDBus::Message& msg) override;
 

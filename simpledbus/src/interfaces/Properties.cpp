@@ -116,9 +116,9 @@ void Properties::message_handle(Message& msg) {
 
         std::shared_ptr<Interface> interface = proxy()->interface_get(iface_name);
 
-        bool property_exists = interface->property_exists(property_name);
+        bool property_valid = interface->property_valid(property_name);
 
-        if (property_exists) {
+        if (property_valid) {
             Holder property_value = interface->handle_property_get(property_name);
             Message reply = Message::create_method_return(msg);
             reply.append_argument(property_value, "v");
