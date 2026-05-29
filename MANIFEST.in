@@ -51,6 +51,7 @@ include simpleble/cmake/simpleble.pc.in
 include simpleble/include/simpleble/Adapter.h
 include simpleble/include/simpleble/AdapterSafe.h
 include simpleble/include/simpleble/Advanced.h
+include simpleble/include/simpleble/Backend.h
 include simpleble/include/simpleble/Characteristic.h
 include simpleble/include/simpleble/Config.h
 include simpleble/include/simpleble/Descriptor.h
@@ -255,7 +256,6 @@ include simpleble/src/external/logfwd.hpp
 include simpleble/src/frontends/base/Adapter.cpp
 include simpleble/src/frontends/base/Advanced.cpp
 include simpleble/src/frontends/base/Backend.cpp
-include simpleble/src/frontends/base/Backend.h
 include simpleble/src/frontends/base/Characteristic.cpp
 include simpleble/src/frontends/base/Descriptor.cpp
 include simpleble/src/frontends/base/Peripheral.cpp
