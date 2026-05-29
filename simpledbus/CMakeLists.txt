@@ -36,6 +36,7 @@ set(SIMPLEDBUS_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Message.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/base/Path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/base/UnixSocket.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Introspectable.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/ObjectManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/Properties.cpp
@@ -126,6 +127,7 @@ if(SIMPLEDBUS_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_proxy_children.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_proxy_lifetime.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_path.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_unix_socket.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/helpers/PythonRunner.cpp)
 
     target_compile_definitions(simpledbus_test PRIVATE FMT_HEADER_ONLY)
