@@ -7,7 +7,7 @@ Key Features
 ------------
 
 * **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
-* **Device Roles**: Full Central support, with Peripheral functionality in Early Preview
+* **Device Roles**: Central across platforms, Peripheral starting with Linux/C++
 * **Easy Integration**: Clean, consistent API across all platforms
 * **Multiple Language Bindings**: Production-ready bindings for C, C++, Python, Java and Rust, with more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
@@ -29,8 +29,8 @@ Language Bindings
 * **C++ (SimpleBLE)**: Core implementation with full platform support
 * **C (SimpleCBLE)**: C-wrapped version of the library
 * **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
-* **Java (SimpleJavaBLE) - Early Preview**: Java bindings.
-* **Rust (SimpleRsBLE) - Early Preview**: Rust bindings with a **NEW API**. See the `SimpleRsBLE`_ Crates.io page for more details.
+* **Java (SimpleJavaBLE)**: Java bindings.
+* **Rust (SimpleRsBLE)**: Rust bindings with a **NEW API**. See the `SimpleRsBLE`_ Crates.io page for more details.
 * **Android (SimpleDroidBLE) - Alpha**: Android-only bindings (alpha).
 * More languages coming soon!
 
