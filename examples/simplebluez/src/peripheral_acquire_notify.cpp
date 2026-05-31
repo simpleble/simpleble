@@ -21,6 +21,9 @@
 
 SimpleBluez::Bluez bluez;
 
+constexpr auto kServiceUuid = "12345678-1234-5678-1234-567812345678";
+constexpr auto kCharacteristicUuid = "12345678-aaaa-5678-1234-567812345678";
+
 std::atomic_bool async_thread_active = true;
 void async_thread_function() {
     while (async_thread_active) {
@@ -145,7 +148,10 @@ int main(int argc, char* argv[]) {
 
     // --- ADAPTER SETUP ---
     std::map<std::string, std::shared_ptr<SimpleBluez::Device>> peripherals;
-    adapter->set_on_device_updated([&peripherals](std::shared_ptr<SimpleBluez::Device> device) {
+    std::mutex peripherals_mutex;
+    adapter->set_on_device_updated([&peripherals, &peripherals_mutex](std::shared_ptr<SimpleBluez::Device> device) {
+        std::scoped_lock lock(peripherals_mutex);
+
         const bool device_connected = device->connected();
         const bool is_new_device = peripherals.find(device->address()) == peripherals.end();
 
@@ -163,11 +169,11 @@ int main(int argc, char* argv[]) {
 
     // --- SERVICE DEFINITION ---
     auto service0 = svc_manager->service_add("my_service");
-    service0->uuid("12345678-1234-5678-1234-567812345678");
+    service0->uuid(kServiceUuid);
     service0->primary(true);
 
     auto characteristic0 = service0->characteristic_add("my_characteristic");
-    characteristic0->uuid("12345678-AAAA-5678-1234-567812345678");
+    characteristic0->uuid(kCharacteristicUuid);
     characteristic0->flags({"read", "write", "notify"});
 
     characteristic0->set_on_read_value([characteristic0](SimpleBluez::Characteristic::ValueOptions options) {
@@ -223,6 +229,7 @@ int main(int argc, char* argv[]) {
     std::map<uint16_t, SimpleBluez::ByteArray> data;
     data[0x1024] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
     advertisement->manufacturer_data(data);
+    advertisement->service_uuids({kServiceUuid});
     advertisement->timeout(10);
     advertisement->local_name("SimpleBluez");
 
@@ -258,15 +265,26 @@ int main(int argc, char* argv[]) {
 
     // --- CLEANUP ---
 
+    characteristic0->clear_on_acquire_notify();
+    adapter->clear_on_device_updated();
+
     {
         std::scoped_lock lock(notify_clients_mutex);
         notify_clients.clear();
     }
 
-    for (auto& peripheral : peripherals) {
-        std::cout << "Disconnecting from " << peripheral.second->name() << " [" << peripheral.second->address() << "]"
-                  << std::endl;
-        peripheral.second->disconnect();
+    std::vector<std::shared_ptr<SimpleBluez::Device>> peripherals_to_disconnect;
+    {
+        std::scoped_lock lock(peripherals_mutex);
+        for (const auto& peripheral : peripherals) {
+            peripherals_to_disconnect.push_back(peripheral.second);
+        }
+        peripherals.clear();
+    }
+
+    for (auto& peripheral : peripherals_to_disconnect) {
+        std::cout << "Disconnecting from " << peripheral->name() << " [" << peripheral->address() << "]" << std::endl;
+        peripheral->disconnect();
     }
 
     adapter->unregister_advertisement(advertisement);
