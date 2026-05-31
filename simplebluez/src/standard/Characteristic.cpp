@@ -3,6 +3,8 @@
 #include <simplebluez/standard/Descriptor.h>
 #include "simplebluez/Types.h"
 
+#include <utility>
+
 using namespace SimpleBluez;
 
 Characteristic::Characteristic(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name,
@@ -126,4 +128,13 @@ void Characteristic::set_on_notify(std::function<void(bool)> callback) {
 void Characteristic::clear_on_notify() {
     gattcharacteristic1()->OnStartNotify.unload();
     gattcharacteristic1()->OnStopNotify.unload();
+}
+
+void Characteristic::set_on_acquire_notify(
+    std::function<void(SimpleDBus::UnixSocket socket, ValueOptions options)> callback) {
+    gattcharacteristic1()->OnAcquireNotify.load(std::move(callback));
+}
+
+void Characteristic::clear_on_acquire_notify() {
+    gattcharacteristic1()->OnAcquireNotify.unload();
 }

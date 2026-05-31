@@ -2,9 +2,11 @@
 
 #include <simpledbus/advanced/Interface.h>
 #include <simpledbus/advanced/InterfaceRegistry.h>
+#include <simpledbus/base/UnixSocket.h>
 
 #include <simplebluez/Types.h>
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -49,6 +51,8 @@ class GattCharacteristic1 : public SimpleDBus::Interface {
     kvn::safe_callback<void(ValueOptions options)> OnReadValue;
     kvn::safe_callback<void()> OnStartNotify;
     kvn::safe_callback<void()> OnStopNotify;
+    // The socket is the application-owned endpoint of the acquired notify stream.
+    kvn::safe_callback<void(SimpleDBus::UnixSocket socket, ValueOptions options)> OnAcquireNotify;
 
     // ------ SPECIAL METHODS ------
     void enable_acquire_notify();

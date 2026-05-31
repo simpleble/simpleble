@@ -62,6 +62,20 @@ characteristic->set_on_notify([](bool notifying) {
 The `NotifyAcquired` property can be exported or removed at runtime:
 
 ```cpp
+struct NotifyClient {
+    SimpleDBus::UnixSocket socket;
+    SimpleBluez::Characteristic::ValueOptions options;
+};
+
+std::vector<NotifyClient> notify_clients;
+
+characteristic->set_on_acquire_notify(
+    [&notify_clients](SimpleDBus::UnixSocket socket, SimpleBluez::Characteristic::ValueOptions options) {
+        std::cout << "Notify MTU: " << options.mtu.value_or(0) << std::endl;
+
+        notify_clients.emplace_back(NotifyClient{std::move(socket), options});
+    });
+
 characteristic->enable_acquire_notify();
 
 // Future BlueZ notification subscriptions can now discover NotifyAcquired.
@@ -71,5 +85,84 @@ characteristic->disable_acquire_notify();
 
 `enable_acquire_notify()` exports `NotifyAcquired` with a value of `false`.
 `disable_acquire_notify()` invalidates the property, allowing BlueZ to fall back
-to `StartNotify` and `StopNotify` for future subscriptions. The fd-backed
-`AcquireNotify` session flow is not exposed yet.
+to `StartNotify` and `StopNotify` for future subscriptions. Existing acquired
+sockets are not closed automatically.
+
+### Acquired notify socket ownership
+
+Each acquired socket is per BlueZ `AcquireNotify` call. SimpleBluez creates a
+connected Unix socket pair, returns one end to BlueZ, and passes the
+application-owned end to the callback. The application must move and store that
+socket if it wants the acquired notify stream to remain alive after the callback
+returns. If the socket is destroyed at the end of the callback, its file
+descriptor is closed and BlueZ treats the acquired stream as released.
+
+The socket passed to the callback is move-only. `socket.fd()` returns a borrowed
+descriptor for polling or integration with an event loop; do not close that raw
+descriptor directly while `UnixSocket` still owns it. Use `socket.close()` to
+release the acquired stream, or `socket.release()` only when transferring the raw
+descriptor to another owner that will close it.
+
+Writing to the socket sends notification or indication payloads through BlueZ.
+SimpleBluez creates acquired notify sockets in non-blocking mode, so `send()` can
+write fewer bytes than requested or fail with `EAGAIN` / `EWOULDBLOCK`. User code
+should poll `socket.fd()` for writability and retry as needed. Use `options.mtu`
+as the negotiated MTU context for that acquired stream. SimpleBluez does not
+chunk payloads, enforce MTU limits, remove closed sockets from user containers,
+or track the lifetime of user-owned sockets after the callback returns.
+
+For indications, poll `socket.fd()` for readability and call `socket.receive()`
+to read confirmation bytes from BlueZ. A hangup or unrecoverable read/write
+error means the acquired notify stream is gone; remove that socket from your
+container and close it if it is still valid. Disabling acquire notify only removes
+the optional `NotifyAcquired` property for future subscriptions; it does not
+close sockets already handed to the application.
+
+The MTU in `options.mtu` belongs to the acquired socket delivered in the same
+callback. It is stable for that socket's lifetime. Store the MTU alongside the
+socket, use it while writing to that socket, and discard both when the socket is
+closed or reports an unrecoverable I/O error. Do not expect SimpleBluez to update
+the MTU for a socket that has already been handed to application code.
+
+When a central stops notifications or indications, BlueZ closes its end of the
+acquired notify socket. SimpleBluez does not receive a separate `StopNotify`
+callback for that fd-backed path. The application should detect the end of the
+stream by polling the socket fd or by handling `send()` / `receive()` failures:
+
+```cpp
+// Requires <cerrno>.
+void notify_all(std::vector<NotifyClient>& clients, const SimpleBluez::ByteArray& payload) {
+    for (auto it = clients.begin(); it != clients.end();) {
+        auto& client = *it;
+        uint16_t mtu = client.options.mtu.value_or(23);
+        size_t max_payload = mtu > 3 ? mtu - 3 : 0;
+
+        if (payload.size() > max_payload) {
+            // Split or drop oversized payloads; SimpleBluez does not chunk them.
+            ++it;
+            continue;
+        }
+
+        ssize_t bytes_sent = client.socket.send(payload.data(), payload.size());
+        if (bytes_sent == static_cast<ssize_t>(payload.size())) {
+            ++it;
+            continue;
+        }
+
+        if (bytes_sent < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            // The non-blocking socket is not ready yet. Poll for POLLOUT and retry later.
+            ++it;
+            continue;
+        }
+
+        // HUP, disconnect, central unsubscribe, or another hard socket error.
+        it = clients.erase(it);
+    }
+}
+```
+
+For event-loop based code, monitor each `socket.fd()` for `POLLHUP`, `POLLERR`,
+or `POLLNVAL` and remove that `NotifyClient` when any of those flags appear.
+Monitor for `POLLOUT` before retrying a payload that previously failed with
+`EAGAIN` / `EWOULDBLOCK`. For indications, also monitor for `POLLIN` and call
+`socket.receive()` to read BlueZ's confirmation byte.

@@ -27,8 +27,13 @@ class UnixSocket {
     static std::pair<UnixSocket, UnixSocket> create_pair(Type type = Type::SEQPACKET, bool non_blocking = true,
                                                          bool close_on_exec = true);
 
+    // Returns a borrowed descriptor. Do not close it directly unless ownership
+    // has first been transferred with release().
     int fd() const;
     bool valid() const;
+
+    // Transfers descriptor ownership to the caller. The caller becomes
+    // responsible for closing the returned descriptor.
     int release();
     void close();
 

@@ -62,6 +62,11 @@ class Characteristic : public SimpleDBus::Proxy {
     void set_on_notify(std::function<void(bool)> callback);
     void clear_on_notify();
 
+    // Server-side AcquireNotify callback. The socket is the application-owned
+    // endpoint; move and store it to keep the acquired notify stream alive.
+    void set_on_acquire_notify(std::function<void(SimpleDBus::UnixSocket socket, ValueOptions options)> callback);
+    void clear_on_acquire_notify();
+
     // ----- INTERNAL CALLBACKS -----
     void on_registration() override;
 

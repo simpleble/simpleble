@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Added**
 
 - (SimpleBluez) Added support for setting LE advertisement secondary channels, including `2M`, and querying supported secondary channels.
+- (SimpleBluez) Added fd-backed `AcquireNotify` callbacks for local GATT characteristics.
 - (SimpleBluez) Added runtime control for the optional `NotifyAcquired` property on local GATT characteristics.
 - (SimpleCBLE) Added C API accessors for SimpleBLE configuration options.
 - (SimpleDBus) Added a Unix socket RAII primitive for D-Bus APIs that exchange file descriptors.

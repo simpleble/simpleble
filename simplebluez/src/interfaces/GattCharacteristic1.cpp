@@ -1,6 +1,8 @@
 #include "simplebluez/interfaces/GattCharacteristic1.h"
 
+#include <exception>
 #include <map>
+#include <utility>
 
 using namespace SimpleBluez;
 
@@ -97,9 +99,42 @@ void GattCharacteristic1::message_handle(SimpleDBus::Message& msg) {
 
         OnWriteValue(Value.get(), value_options);
     } else if (msg.is_method_call(_interface_name, "AcquireNotify")) {
-        SimpleDBus::Message reply =
-            SimpleDBus::Message::create_error(msg, "org.bluez.Error.NotSupported", "AcquireNotify not supported");
+        if (!NotifyAcquired.valid() || !OnAcquireNotify.is_loaded()) {
+            SimpleDBus::Message reply =
+                SimpleDBus::Message::create_error(msg, "org.bluez.Error.NotSupported", "AcquireNotify not supported");
+            _conn->send(reply);
+            return;
+        }
+
+        SimpleDBus::Holder options = msg.extract();
+        ValueOptions value_options = _parse_value_options(options);
+
+        SimpleDBus::UnixSocket bluez_socket;
+        SimpleDBus::UnixSocket session_socket;
+        try {
+            auto sockets = SimpleDBus::UnixSocket::create_pair();
+            bluez_socket = std::move(sockets.first);
+            session_socket = std::move(sockets.second);
+        } catch (const std::exception& e) {
+            SimpleDBus::Message reply = SimpleDBus::Message::create_error(msg, "org.bluez.Error.Failed", e.what());
+            _conn->send(reply);
+            return;
+        }
+
+        uint16_t mtu = value_options.mtu.value_or(0);
+        int fd = bluez_socket.fd();
+        SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
+        DBusMessage* reply_raw = reply;
+        if (!dbus_message_append_args(reply_raw, DBUS_TYPE_UNIX_FD, &fd, DBUS_TYPE_UINT16, &mtu, DBUS_TYPE_INVALID)) {
+            SimpleDBus::Message error = SimpleDBus::Message::create_error(
+                msg, "org.bluez.Error.Failed", "Failed to append AcquireNotify response");
+            _conn->send(error);
+            return;
+        }
+
         _conn->send(reply);
+
+        OnAcquireNotify(std::move(session_socket), value_options);
     } else if (msg.is_method_call(_interface_name, "StartNotify")) {
         SimpleDBus::Message reply = SimpleDBus::Message::create_method_return(msg);
         _conn->send(reply);
