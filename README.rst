@@ -7,7 +7,7 @@ Key Features
 ------------
 
 * **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
-* **Device Roles**: Full Central support, with Peripheral functionality in Early Preview
+* **Device Roles**: Central across platforms, Peripheral starting with Linux/C++
 * **Easy Integration**: Clean, consistent API across all platforms
 * **Multiple Language Bindings**: Production-ready bindings for C, C++, Python, Java and Rust, with more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
