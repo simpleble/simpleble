@@ -1,7 +1,9 @@
 #include <simpleble/Adapter.h>
 #include <simpleble/Backend.h>
+#include <simpleble/PeripheralServer.h>
 
 #include "BuildVec.h"
+#include "BuilderBase.h"
 #include "LoggingInternal.h"
 #include "backends/common/AdapterBase.h"
 #include "backends/common/BackendBase.h"
@@ -103,6 +105,12 @@ std::vector<Peripheral> Adapter::scan_get_results() { return Factory::vector((*t
 std::vector<Peripheral> Adapter::get_paired_peripherals() { return Factory::vector((*this)->get_paired_peripherals()); }
 
 std::vector<Peripheral> Adapter::get_connected_peripherals() { return Factory::vector((*this)->get_connected_peripherals()); }
+
+bool Adapter::supports_peripheral_server() { return (*this)->supports_peripheral_server(); }
+
+PeripheralServer Adapter::create_peripheral_server() {
+    return Factory::build((*this)->create_peripheral_server());
+}
 
 void Adapter::set_callback_on_scan_start(std::function<void()> on_scan_start) {
     (*this)->set_callback_on_scan_start(std::move(on_scan_start));

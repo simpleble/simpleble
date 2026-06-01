@@ -9,6 +9,7 @@
 
 #include <simpleble/Exceptions.h>
 #include <simpleble/Peripheral.h>
+#include <simpleble/PeripheralServer.h>
 #include <simpleble/Types.h>
 
 namespace SimpleBLE {
@@ -81,6 +82,20 @@ class SIMPLEBLE_EXPORT Adapter {
      * NOTE: This method is currently only supported by the Windows backend. (More backends coming soon.)
      */
     std::vector<Peripheral> get_connected_peripherals();
+
+    /**
+     * Check whether this adapter can create local peripheral servers.
+     */
+    bool supports_peripheral_server();
+
+    /**
+     * Create a local peripheral server attached to this adapter.
+     *
+     * The returned object hosts a local GATT database and advertising state.
+     * Peripheral-server support is backend-specific and may throw
+     * SimpleBLE::Exception::OperationNotSupported until implemented.
+     */
+    PeripheralServer create_peripheral_server();
 
     static bool bluetooth_enabled();
 

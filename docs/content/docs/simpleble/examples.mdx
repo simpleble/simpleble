@@ -32,6 +32,14 @@ This example shows how to read the value of a specific characteristic.
 
 This example shows how to write a value to a specific characteristic.
 
+## Peripheral Server
+[peripheral_server](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/peripheral_server.cpp)
+
+This example shows the proposed local peripheral-server flow: define a GATT
+service, attach read/write callbacks, start advertising, and send a notification.
+Backends that do not support peripheral-server mode report that capability before
+creation.
+
 ## Notify
 [notify](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/notify.cpp)
 

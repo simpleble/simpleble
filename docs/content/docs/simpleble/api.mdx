@@ -172,6 +172,17 @@ This class is intended to be used by the user only. Library developers should us
   note="This method is currently only supported by the Windows backend. (More backends coming soon.)"
 />
 
+<ApiMethod
+  signature="bool supports_peripheral_server()"
+  detailed="Check whether this adapter can create local peripheral servers."
+/>
+
+<ApiMethod
+  signature="PeripheralServer create_peripheral_server()"
+  detailed="Create a local peripheral server attached to this adapter."
+  note="Peripheral-server support is backend-specific. If unsupported, this method throws SimpleBLE::Exception::OperationNotSupported."
+/>
+
 ### Public Static Functions [!toc]
 
 <ApiMethod
@@ -182,6 +193,357 @@ This class is intended to be used by the user only. Library developers should us
   signature="static std::vector< Adapter > get_adapters()"
   detailed="Fetches a list of all available adapters from all available backends.  This will cause backends to be instantiated/initialized and adapters too."
   notes={[{ content: "All configuration values must be set prior to calling this function. Please refer to the SimpleBLE::Config documentation for more details.", type: "info" }]}
+/>
+
+</ApiClass>
+
+## Peripheral Mode Types [#simpleble-peripheral-mode-types] [toc]
+
+<Callout type="warn" title="Draft API">
+Peripheral mode is an experimental API surface. The plain backend provides an in-memory implementation for examples and tests; platform backends can report support through `Adapter::supports_peripheral_server()`.
+</Callout>
+
+### Definition Types [!toc]
+
+```cpp
+enum class CharacteristicProperty {
+    READ,
+    WRITE_REQUEST,
+    WRITE_COMMAND,
+    NOTIFY,
+    INDICATE,
+};
+
+enum class AttributePermission {
+    READABLE,
+    WRITABLE,
+    READ_ENCRYPTED,
+    WRITE_ENCRYPTED,
+    READ_AUTHENTICATED,
+    WRITE_AUTHENTICATED,
+};
+
+enum class AttributeError {
+    SUCCESS,
+    INVALID_HANDLE,
+    READ_NOT_PERMITTED,
+    WRITE_NOT_PERMITTED,
+    INVALID_OFFSET,
+    INVALID_VALUE_LENGTH,
+    INSUFFICIENT_AUTHENTICATION,
+    INSUFFICIENT_AUTHORIZATION,
+    INSUFFICIENT_ENCRYPTION,
+    REQUEST_NOT_SUPPORTED,
+    UNLIKELY_ERROR,
+};
+
+struct DescriptorDefinition {
+    BluetoothUUID uuid;
+    ByteArray value;
+    std::vector<AttributePermission> permissions;
+
+    std::function<ReadResponse(ReadRequest)> on_read;
+    std::function<WriteResponse(WriteRequest)> on_write;
+};
+
+struct CharacteristicDefinition {
+    BluetoothUUID uuid;
+    std::vector<CharacteristicProperty> properties;
+    std::vector<AttributePermission> permissions;
+    ByteArray value;
+    std::vector<DescriptorDefinition> descriptors;
+
+    std::function<ReadResponse(ReadRequest)> on_read;
+    std::function<WriteResponse(WriteRequest)> on_write;
+    std::function<void(Central)> on_subscribed;
+    std::function<void(Central)> on_unsubscribed;
+};
+
+struct ServiceDefinition {
+    BluetoothUUID uuid;
+    bool primary = true;
+    std::vector<CharacteristicDefinition> characteristics;
+};
+
+struct AdvertisingData {
+    std::string local_name;
+    std::vector<BluetoothUUID> service_uuids;
+    std::map<uint16_t, ByteArray> manufacturer_data;
+    std::map<BluetoothUUID, ByteArray> service_data;
+    std::optional<uint16_t> appearance;
+    bool connectable = true;
+    bool discoverable = true;
+};
+```
+
+## SimpleBLE::Central [#simpleble-central] [toc]
+
+<ApiClass name="SimpleBLE::Central" detailed="A connected central/client interacting with a local peripheral server. Platform backends may expose different identity details; `identifier()` is the portable identity field.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Central()=default"
+/>
+
+<ApiMethod
+  signature="Central(std::string identifier, BluetoothAddress address=\"\", BluetoothAddressType address_type=BluetoothAddressType::UNSPECIFIED, uint16_t mtu=0)"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="std::string identifier() const"
+/>
+
+<ApiMethod
+  signature="BluetoothAddress address() const"
+/>
+
+<ApiMethod
+  signature="BluetoothAddressType address_type() const"
+/>
+
+<ApiMethod
+  signature="uint16_t mtu() const"
+/>
+
+</ApiClass>
+
+## SimpleBLE::ReadRequest [#simpleble-read-request] [toc]
+
+<ApiClass name="SimpleBLE::ReadRequest" detailed="Context passed to a local characteristic or descriptor read callback.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Central central() const"
+/>
+
+<ApiMethod
+  signature="BluetoothUUID service() const"
+/>
+
+<ApiMethod
+  signature="BluetoothUUID characteristic() const"
+/>
+
+<ApiMethod
+  signature="std::optional< BluetoothUUID > descriptor() const"
+/>
+
+<ApiMethod
+  signature="std::size_t offset() const"
+/>
+
+<ApiMethod
+  signature="uint16_t mtu() const"
+/>
+
+</ApiClass>
+
+## SimpleBLE::WriteRequest [#simpleble-write-request] [toc]
+
+<ApiClass name="SimpleBLE::WriteRequest" detailed="Context passed to a local characteristic or descriptor write callback.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Central central() const"
+/>
+
+<ApiMethod
+  signature="BluetoothUUID service() const"
+/>
+
+<ApiMethod
+  signature="BluetoothUUID characteristic() const"
+/>
+
+<ApiMethod
+  signature="std::optional< BluetoothUUID > descriptor() const"
+/>
+
+<ApiMethod
+  signature="ByteArray value() const"
+/>
+
+<ApiMethod
+  signature="std::size_t offset() const"
+/>
+
+<ApiMethod
+  signature="bool response_required() const"
+/>
+
+<ApiMethod
+  signature="bool prepared() const"
+/>
+
+<ApiMethod
+  signature="uint16_t mtu() const"
+/>
+
+</ApiClass>
+
+## SimpleBLE::ReadResponse [#simpleble-read-response] [toc]
+
+<ApiClass name="SimpleBLE::ReadResponse" detailed="Return value for local read callbacks.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="bool is_success() const"
+/>
+
+<ApiMethod
+  signature="ByteArray value() const"
+/>
+
+<ApiMethod
+  signature="AttributeError error() const"
+/>
+
+### Public Static Functions [!toc]
+
+<ApiMethod
+  signature="static ReadResponse success(ByteArray value)"
+/>
+
+<ApiMethod
+  signature="static ReadResponse error(AttributeError error)"
+/>
+
+</ApiClass>
+
+## SimpleBLE::WriteResponse [#simpleble-write-response] [toc]
+
+<ApiClass name="SimpleBLE::WriteResponse" detailed="Return value for local write callbacks.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="bool is_success() const"
+/>
+
+<ApiMethod
+  signature="AttributeError error() const"
+/>
+
+### Public Static Functions [!toc]
+
+<ApiMethod
+  signature="static WriteResponse success()"
+/>
+
+<ApiMethod
+  signature="static WriteResponse error(AttributeError error)"
+/>
+
+</ApiClass>
+
+## SimpleBLE::PeripheralServer [#simpleble-peripheral-server] [toc]
+
+<ApiClass name="SimpleBLE::PeripheralServer" detailed="Local BLE peripheral/server role. A peripheral server owns a local GATT database and advertising state.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="PeripheralServer()=default"
+/>
+
+<ApiMethod
+  signature="virtual ~PeripheralServer()=default"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="void * underlying() const"
+/>
+
+<ApiMethod
+  signature="void add_service(ServiceDefinition service)"
+/>
+
+<ApiMethod
+  signature="void remove_service(BluetoothUUID const &service)"
+/>
+
+<ApiMethod
+  signature="std::vector< ServiceDefinition > services()"
+/>
+
+<ApiMethod
+  signature="void start()"
+/>
+
+<ApiMethod
+  signature="void stop()"
+/>
+
+<ApiMethod
+  signature="bool is_active()"
+/>
+
+<ApiMethod
+  signature="void start_advertising(AdvertisingData advertising_data)"
+/>
+
+<ApiMethod
+  signature="void stop_advertising()"
+/>
+
+<ApiMethod
+  signature="bool is_advertising()"
+/>
+
+<ApiMethod
+  signature="void notify(BluetoothUUID const &service, BluetoothUUID const &characteristic, ByteArray const &data)"
+/>
+
+<ApiMethod
+  signature="void notify(Central const &central, BluetoothUUID const &service, BluetoothUUID const &characteristic, ByteArray const &data)"
+/>
+
+<ApiMethod
+  signature="void indicate(BluetoothUUID const &service, BluetoothUUID const &characteristic, ByteArray const &data)"
+/>
+
+<ApiMethod
+  signature="void indicate(Central const &central, BluetoothUUID const &service, BluetoothUUID const &characteristic, ByteArray const &data)"
+/>
+
+<ApiMethod
+  signature="std::vector< Central > centrals()"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_started(std::function< void()> on_started)"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_stopped(std::function< void()> on_stopped)"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_advertising_started(std::function< void()> on_started)"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_advertising_stopped(std::function< void()> on_stopped)"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_central_connected(std::function< void(Central)> on_connected)"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_central_disconnected(std::function< void(Central)> on_disconnected)"
 />
 
 </ApiClass>

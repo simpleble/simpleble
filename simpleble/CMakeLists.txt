@@ -37,12 +37,14 @@ set(SIMPLEBLE_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Advanced.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Adapter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Peripheral.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/PeripheralServer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Service.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Characteristic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Descriptor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Backend.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/AdapterBase.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/PeripheralServerBase.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/ServiceBase.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/CharacteristicBase.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/DescriptorBase.cpp
@@ -192,6 +194,7 @@ if(SIMPLEBLE_PLAIN)
 
     target_sources(simpleble PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/AdapterPlain.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/PeripheralServerPlain.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/PeripheralPlain.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/BackendPlain.cpp)
 elseif(SIMPLEBLE_BACKEND_LINUX)
@@ -444,6 +447,7 @@ if(SIMPLEBLE_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_bytearray.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_peripheral_server.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp)
     set_target_properties(simpleble_test PROPERTIES
         CXX_VISIBILITY_PRESET hidden

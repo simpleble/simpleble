@@ -1,5 +1,7 @@
 #include "AdapterBase.h"
 
+#include <simpleble/Exceptions.h>
+
 namespace SimpleBLE {
 
 void AdapterBase::set_callback_on_power_on(std::function<void()> on_power_on) {
@@ -50,4 +52,10 @@ void AdapterBase::set_callback_on_scan_found(std::function<void(Peripheral)> on_
     }
 }
 
+bool AdapterBase::supports_peripheral_server() { return false; }
+
+std::shared_ptr<PeripheralServerBase> AdapterBase::create_peripheral_server() {
+    throw Exception::OperationNotSupported();
 }
+
+}  // namespace SimpleBLE

@@ -39,6 +39,8 @@ class AdapterPlain : public AdapterBase {
     virtual std::vector<std::shared_ptr<PeripheralBase>> scan_get_results() override;
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
+    virtual bool supports_peripheral_server() override;
+    virtual std::shared_ptr<PeripheralServerBase> create_peripheral_server() override;
 
     virtual bool bluetooth_enabled() override;
 

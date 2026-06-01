@@ -3,6 +3,7 @@
   "pages": [
     "usage",
     "platform_notes",
+    "peripheral_mode",
     "tutorial",
     "api",
     "examples",

@@ -54,6 +54,9 @@ configure_simpleble_target(simpleble_read)
 add_executable(simpleble_write src/write.cpp src/utils.cpp)
 configure_simpleble_target(simpleble_write)
 
+add_executable(simpleble_peripheral_server src/peripheral_server.cpp)
+configure_simpleble_target(simpleble_peripheral_server)
+
 add_executable(simpleble_notify src/notify.cpp src/utils.cpp)
 configure_simpleble_target(simpleble_notify)
 

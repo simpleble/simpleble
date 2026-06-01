@@ -1,0 +1,445 @@
+---
+title: Peripheral Mode API Draft
+description: First-pass design notes for a local BLE peripheral/server API in SimpleBLE.
+---
+
+This page is a working draft for adding a local BLE peripheral role to SimpleBLE.
+It is intentionally API-first: the goal is to find the smallest comfortable
+surface that can hide platform differences without making common use cases feel
+ceremonial.
+
+## Vocabulary
+
+`SimpleBLE::Peripheral` already means a remote device discovered by scanning.
+Peripheral mode needs a separate local-role object, so this draft uses
+`SimpleBLE::PeripheralServer`.
+
+Other names worth considering before this hardens:
+
+- `PeripheralServer`: clear that this hosts a GATT server.
+- `LocalPeripheral`: clear that this is the local device, but less explicit
+  about GATT server behavior.
+- `PeripheralManager`: mirrors CoreBluetooth, but less direct for users.
+
+The rest of this page uses `PeripheralServer` because it avoids colliding with
+today's remote-device `Peripheral` API.
+
+## User Experience Target
+
+The common path should be:
+
+1. Get an adapter.
+2. Define a small GATT database.
+3. Attach read/write/subscription callbacks where dynamic behavior is needed.
+4. Start advertising.
+5. Notify or indicate subscribed centrals.
+
+Users should not have to think about D-Bus object paths, WinRT deferrals,
+Android request IDs, CoreBluetooth response calls, CCCD plumbing, or
+notification backpressure for a first working server.
+
+```cpp
+#include <cstdlib>
+
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    const SimpleBLE::BluetoothUUID service_uuid = "12345678-1234-5678-1234-567812345678";
+    const SimpleBLE::BluetoothUUID characteristic_uuid = "12345678-AAAA-5678-1234-567812345678";
+
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    if (!adapter.supports_peripheral_server()) {
+        return EXIT_FAILURE;
+    }
+
+    auto server = adapter.create_peripheral_server();
+
+    SimpleBLE::ByteArray value = {0x00};
+
+    SimpleBLE::CharacteristicDefinition characteristic;
+    characteristic.uuid = characteristic_uuid;
+    characteristic.properties = {
+        SimpleBLE::CharacteristicProperty::READ,
+        SimpleBLE::CharacteristicProperty::WRITE_REQUEST,
+        SimpleBLE::CharacteristicProperty::NOTIFY,
+    };
+    characteristic.value = value;
+    characteristic.on_read = [&](SimpleBLE::ReadRequest request) {
+        return SimpleBLE::ReadResponse::success(value);
+    };
+    characteristic.on_write = [&](SimpleBLE::WriteRequest request) {
+        value = request.value();
+        return SimpleBLE::WriteResponse::success();
+    };
+
+    SimpleBLE::ServiceDefinition service;
+    service.uuid = service_uuid;
+    service.characteristics = {characteristic};
+    server.add_service(service);
+
+    SimpleBLE::AdvertisingData advertising_data;
+    advertising_data.local_name = "SimpleBLE";
+    advertising_data.service_uuids = {service_uuid};
+    server.start_advertising(advertising_data);
+
+    server.notify(service_uuid, characteristic_uuid, value);
+
+    server.stop_advertising();
+}
+```
+
+The example uses assignable value definitions so the API shape remains viable
+for C++17 projects.
+
+## Proposed Public Surface
+
+The first public scaffold for this surface lives in
+`simpleble/include/simpleble/PeripheralServer.h`. Backends can opt in by
+overriding `AdapterBase::supports_peripheral_server()` and
+`AdapterBase::create_peripheral_server()`. Until they do, adapters report that
+peripheral servers are unsupported and creation throws
+`SimpleBLE::Exception::OperationNotSupported`.
+
+The plain backend includes an in-memory `PeripheralServer` implementation for
+unit tests and API ergonomics checks. It stores service definitions, tracks
+active and advertising state, and records notify/indicate calls without touching
+Bluetooth hardware.
+
+```cpp
+namespace SimpleBLE {
+
+enum class CharacteristicProperty {
+    READ,
+    WRITE_REQUEST,
+    WRITE_COMMAND,
+    NOTIFY,
+    INDICATE,
+};
+
+enum class AttributePermission {
+    READABLE,
+    WRITABLE,
+    READ_ENCRYPTED,
+    WRITE_ENCRYPTED,
+    READ_AUTHENTICATED,
+    WRITE_AUTHENTICATED,
+};
+
+enum class AttributeError {
+    SUCCESS,
+    INVALID_HANDLE,
+    READ_NOT_PERMITTED,
+    WRITE_NOT_PERMITTED,
+    INVALID_OFFSET,
+    INVALID_VALUE_LENGTH,
+    INSUFFICIENT_AUTHENTICATION,
+    INSUFFICIENT_AUTHORIZATION,
+    INSUFFICIENT_ENCRYPTION,
+    REQUEST_NOT_SUPPORTED,
+    UNLIKELY_ERROR,
+};
+
+class Central {
+  public:
+    bool initialized() const;
+    std::string identifier();
+    BluetoothAddress address();
+    BluetoothAddressType address_type();
+    uint16_t mtu();
+};
+
+class ReadRequest {
+  public:
+    Central central();
+    BluetoothUUID service();
+    BluetoothUUID characteristic();
+    std::optional<BluetoothUUID> descriptor();
+    std::size_t offset();
+    uint16_t mtu();
+};
+
+class WriteRequest {
+  public:
+    Central central();
+    BluetoothUUID service();
+    BluetoothUUID characteristic();
+    std::optional<BluetoothUUID> descriptor();
+    ByteArray value();
+    std::size_t offset();
+    bool response_required();
+    bool prepared();
+    uint16_t mtu();
+};
+
+class ReadResponse {
+  public:
+    static ReadResponse success(ByteArray value);
+    static ReadResponse error(AttributeError error);
+};
+
+class WriteResponse {
+  public:
+    static WriteResponse success();
+    static WriteResponse error(AttributeError error);
+};
+
+struct DescriptorDefinition {
+    BluetoothUUID uuid;
+    ByteArray value;
+    std::vector<AttributePermission> permissions;
+
+    std::function<ReadResponse(ReadRequest)> on_read;
+    std::function<WriteResponse(WriteRequest)> on_write;
+};
+
+struct CharacteristicDefinition {
+    BluetoothUUID uuid;
+    std::vector<CharacteristicProperty> properties;
+    std::vector<AttributePermission> permissions;
+    ByteArray value;
+    std::vector<DescriptorDefinition> descriptors;
+
+    std::function<ReadResponse(ReadRequest)> on_read;
+    std::function<WriteResponse(WriteRequest)> on_write;
+    std::function<void(Central)> on_subscribed;
+    std::function<void(Central)> on_unsubscribed;
+};
+
+struct ServiceDefinition {
+    BluetoothUUID uuid;
+    bool primary = true;
+    std::vector<CharacteristicDefinition> characteristics;
+};
+
+struct AdvertisingData {
+    std::string local_name;
+    std::vector<BluetoothUUID> service_uuids;
+    std::map<uint16_t, ByteArray> manufacturer_data;
+    std::map<BluetoothUUID, ByteArray> service_data;
+    std::optional<uint16_t> appearance;
+    bool connectable = true;
+    bool discoverable = true;
+};
+
+class PeripheralServer {
+  public:
+    PeripheralServer() = default;
+    virtual ~PeripheralServer() = default;
+
+    bool initialized() const;
+    void* underlying() const;
+
+    void add_service(ServiceDefinition service);
+    void remove_service(BluetoothUUID const& service);
+    std::vector<ServiceDefinition> services();
+
+    void start();
+    void stop();
+    bool is_active();
+
+    void start_advertising(AdvertisingData advertising_data);
+    void stop_advertising();
+    bool is_advertising();
+
+    void notify(BluetoothUUID const& service, BluetoothUUID const& characteristic, ByteArray const& data);
+    void notify(Central const& central, BluetoothUUID const& service, BluetoothUUID const& characteristic, ByteArray const& data);
+    void indicate(BluetoothUUID const& service, BluetoothUUID const& characteristic, ByteArray const& data);
+    void indicate(Central const& central, BluetoothUUID const& service, BluetoothUUID const& characteristic, ByteArray const& data);
+
+    std::vector<Central> centrals();
+
+    void set_callback_on_started(std::function<void()> on_started);
+    void set_callback_on_stopped(std::function<void()> on_stopped);
+    void set_callback_on_advertising_started(std::function<void()> on_started);
+    void set_callback_on_advertising_stopped(std::function<void()> on_stopped);
+    void set_callback_on_central_connected(std::function<void(Central)> on_connected);
+    void set_callback_on_central_disconnected(std::function<void(Central)> on_disconnected);
+};
+
+}  // namespace SimpleBLE
+```
+
+`Adapter` would gain:
+
+```cpp
+bool supports_peripheral_server();
+PeripheralServer create_peripheral_server();
+```
+
+This keeps construction aligned with the current adapter-first flow while still
+allowing backends such as WinRT, where adapter selection may be limited, to
+document the platform behavior.
+
+## Portable Baseline
+
+The first implementation should optimize for this baseline:
+
+- Primary services.
+- Characteristics with read, write request, write command, notify, and indicate.
+- Static characteristic values that can auto-answer simple reads and writes.
+- Dynamic characteristic callbacks that return `ReadResponse` or `WriteResponse`.
+- Automatic CCCD/subscription handling for notify and indicate.
+- Broadcast notify/indicate to subscribed centrals.
+- Targeted notify/indicate when the backend exposes enough central identity.
+- Advertising with local name and service UUIDs.
+- RAII cleanup of service registration, advertising, callbacks, and platform handles.
+
+Features that should be treated as optional capability-checked extensions:
+
+- Manufacturer data and service data in advertisements.
+- Appearance.
+- PHY, advertising interval, secondary channel, and transmit power.
+- Explicit pairing/agent flows.
+- Arbitrary descriptors beyond auto-managed CCCD and simple read-only metadata.
+- Per-adapter server selection on platforms where the OS does not expose it.
+
+## Callback Semantics
+
+Callbacks should return responses instead of mutating hidden platform state.
+That makes it possible to reject writes, handle invalid offsets, and map errors
+to ATT-style failures consistently.
+
+Stored values can provide a no-callback default:
+
+- Read returns the stored value, sliced by offset.
+- Write request updates the stored value and returns success.
+- Write command updates the stored value without requiring a response.
+- Invalid offsets and oversized values are rejected by the library.
+
+Dynamic callbacks override that default. If both `value` and a callback are set,
+the callback wins.
+
+## Central Identity
+
+`Central` should be deliberately small. Platforms expose different identifiers:
+
+- BlueZ and Android can expose device addresses.
+- CoreBluetooth exposes `CBCentral` identity, not a public Bluetooth address.
+- WinRT exposes subscribed client objects, but not a clean cross-platform
+  address story for every event.
+
+The portable guarantee should be `identifier()`. `address()` can return an empty
+string or `UNSPECIFIED` address type when the platform does not expose one.
+
+## Advertising Shape
+
+Advertising should be modeled separately from the GATT database because all
+backends split these concerns internally:
+
+- BlueZ registers a GATT application and LE advertisement separately.
+- Android has `BluetoothGattServer` and `BluetoothLeAdvertiser`.
+- CoreBluetooth publishes services and starts advertising from the
+  `CBPeripheralManager`, but its advertising data is still separate input.
+- WinRT is service-provider centered and has separate advertising parameter
+  objects.
+
+The portable advertising minimum is local name plus service UUIDs. Apple limits
+peripheral-manager advertising to those fields, so richer payloads should either
+be best effort or explicitly capability checked.
+
+## Descriptor Policy
+
+Descriptors should not be the first hill to climb.
+
+Notify and indicate characteristics need CCCD behavior, but users should not
+manually create that descriptor. The library should add and manage it when a
+characteristic has `NOTIFY` or `INDICATE`.
+
+Arbitrary descriptors can be introduced after the backends have comparable
+server-side descriptor support. This is especially important for BlueZ, where
+the current SimpleBluez descriptor wrapper does not yet expose read/write
+server callbacks.
+
+## Platform Mapping
+
+### SimpleBluez
+
+SimpleBluez already has most of the Linux primitives:
+
+- `CustomRoot::advertisement_add`
+- `Adapter::register_advertisement`
+- `ServiceManager`
+- `Service`
+- `Characteristic`
+- `Adapter::register_application`
+
+The SimpleBLE layer should own the object names and lifetime. Users should not
+need to create service managers or D-Bus paths directly.
+
+Before write rejection can be cleanly supported, SimpleBluez will need callback
+flow changes so `WriteValue` can call user code before replying success.
+
+### WinRT
+
+WinRT maps to one `GattServiceProvider` per service, local characteristics on
+`GattLocalService`, and events for reads, writes, and subscriptions. The backend
+should reuse the existing MTA execution pattern and hide WinRT async/deferral
+details.
+
+Sharp edges to account for:
+
+- Some descriptors are generated by the OS.
+- Some reserved services cannot be published.
+- There is no explicit disconnect API for connected GATT clients.
+- Notification payloads need guarding against each subscribed client's maximum.
+
+### CoreBluetooth
+
+CoreBluetooth maps to `CBPeripheralManager`, `CBMutableService`, and
+`CBMutableCharacteristic`. Dynamic values should use a nil native characteristic
+value so reads and writes are delivered to the delegate.
+
+Sharp edges to account for:
+
+- Published services are cached and cannot be mutated in place.
+- Advertising data is limited.
+- Notification updates are flow controlled.
+- Central Bluetooth addresses are not exposed.
+
+### Android
+
+Android maps to `BluetoothGattServer`, `BluetoothGattServerCallback`, and
+`BluetoothLeAdvertiser`.
+
+Sharp edges to account for:
+
+- Permissions differ by Android version.
+- Service addition is asynchronous.
+- Every read/write request must receive `sendResponse`.
+- Prepared writes need queuing and execute/cancel handling.
+- Notifications must respect `onNotificationSent` backpressure.
+
+## Open Questions
+
+- Should `PeripheralServer::start()` implicitly publish services and
+  `start_advertising()` implicitly call `start()`?
+- Should characteristic permissions be inferred from properties by default?
+- Should the first public version expose descriptors at all, or only the
+  auto-managed CCCD behavior?
+- Should `notify()` queue and return immediately, or return a delivery result?
+- Should security be a simple enum per characteristic first, with advanced
+  platform-specific configuration later?
+- Should this API be added to the C, Python, Rust, and Java bindings immediately,
+  or should the C++ API stabilize first?
+
+## Current Recommendation
+
+Start with the `PeripheralServer` shape, stored-value characteristics, dynamic
+read/write callbacks, portable advertising fields, automatic CCCD handling, and
+RAII server lifetime.
+
+Delay arbitrary descriptors, rich advertising controls, and detailed pairing
+until the characteristic read/write/notify loop is working on at least Linux and
+one non-Linux backend.
+
+## Research Inputs
+
+- [SimpleBluez peripheral example](https://github.com/simpleble/simpleble/blob/main/examples/simplebluez/src/peripheral_e2e.cpp)
+- [Microsoft GATT server guide](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/gatt-server)
+- [Microsoft GattServiceProvider](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattserviceprovider)
+- [Microsoft GattLocalCharacteristic](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattlocalcharacteristic)
+- [Apple CoreBluetooth peripheral role guide](https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/PerformingCommonPeripheralRoleTasks/PerformingCommonPeripheralRoleTasks.html)
+- [Android BluetoothGattServer](https://developer.android.com/reference/android/bluetooth/BluetoothGattServer)
+- [Android BluetoothGattServerCallback](https://developer.android.com/reference/android/bluetooth/BluetoothGattServerCallback)
+- [Android BluetoothLeAdvertiser](https://developer.android.com/reference/android/bluetooth/le/BluetoothLeAdvertiser)
+- [Android Bluetooth permissions](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions)

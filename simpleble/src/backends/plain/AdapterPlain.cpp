@@ -5,6 +5,7 @@
 #include "CommonUtils.h"
 #include "PeripheralBase.h"
 #include "PeripheralPlain.h"
+#include "PeripheralServerPlain.h"
 
 #include <memory>
 #include <thread>
@@ -62,4 +63,10 @@ SharedPtrVector<PeripheralBase> AdapterPlain::get_paired_peripherals() {
     peripherals.push_back(std::make_shared<PeripheralPlain>());
 
     return peripherals;
+}
+
+bool AdapterPlain::supports_peripheral_server() { return true; }
+
+std::shared_ptr<PeripheralServerBase> AdapterPlain::create_peripheral_server() {
+    return std::make_shared<PeripheralServerPlain>();
 }
