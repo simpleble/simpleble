@@ -27,8 +27,11 @@ static SharedPtrVector<BackendBase> _get_backends() {
     if constexpr (SIMPLEBLE_BACKEND_LINUX) {
         extern BackendPtr BACKEND_LINUX;
         extern BackendPtr BACKEND_LINUX_LEGACY;
-        add_backend(BACKEND_LINUX());
-        add_backend(BACKEND_LINUX_LEGACY());
+        if (Config::SimpleBluez::use_legacy_bluez_backend) {
+            add_backend(BACKEND_LINUX_LEGACY());
+        } else {
+            add_backend(BACKEND_LINUX());
+        }
     } else if constexpr (SIMPLEBLE_BACKEND_WINDOWS) {
         extern BackendPtr BACKEND_WINDOWS;
         add_backend(BACKEND_WINDOWS());
