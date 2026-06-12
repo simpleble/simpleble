@@ -68,7 +68,7 @@ runs:
           elif [ "${{ inputs.target-arch }}" == "x86" ]; then
             _ARCH_FLAG="-A Win32"
           fi
-          echo "CMAKE_OPTIONS=-G \"Visual Studio 17 2022\" $_ARCH_FLAG -DCMAKE_SYSTEM_VERSION=\"10.0.19041.0\" $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
+          echo "CMAKE_OPTIONS=-G \"Visual Studio 17 2022\" $_ARCH_FLAG -DCMAKE_SYSTEM_VERSION=\"10.0.22621.0\" $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           echo "SHELL=bash" >> $GITHUB_ENV
         elif [ "${{ inputs.os }}" == "macos" ]; then
           _ARCH_FLAG=""
