@@ -76,7 +76,7 @@ set_target_properties(simpleble PROPERTIES
     DEBUG_POSTFIX "-debug")
 
 if(MSVC)
-    # avoid <experimental/coroutine> being triggered by winrt/base.h which fails for MSVC 19.51+`
+    # Avoid <experimental/coroutine> being triggered by winrt/base.h, which fails for MSVC 19.51+.
     set_target_properties(simpleble PROPERTIES CXX_STANDARD 20)
 endif()
 
