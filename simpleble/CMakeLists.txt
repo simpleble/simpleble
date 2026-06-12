@@ -75,6 +75,11 @@ set_target_properties(simpleble PROPERTIES
     MINSIZEREL_POSTFIX "-minsizerel"
     DEBUG_POSTFIX "-debug")
 
+if(MSVC)
+    # avoid <experimental/coroutine> being triggered by winrt/base.h which fails for MSVC 19.51+`
+    set_target_properties(simpleble PROPERTIES CXX_STANDARD 20)
+endif()
+
 generate_export_header(
     simpleble
     BASE_NAME simpleble
