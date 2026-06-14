@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **API CHANGE**: (SimpleBluez) Updated `ReadValue` and `WriteValue` callbacks to expose BlueZ server-side options.
 - (SimpleBluez) Preloaded the D-Bus `Properties` interface on Device proxies to support refreshed BlueZ device properties.
 - (Linux) Switched the default BlueZ backend from the legacy implementation to the new SimpleBluez backend.
+- (Linux) Start the new BlueZ backend dispatch loop before registering the pairing agent.
 - (Windows) Build the SimpleBLE target as C++20 when using MSVC, and require Windows SDK 10.0.22621.0 or newer for compatible C++/WinRT coroutine headers.
 - (Windows) Deprecated `SimpleBLE::Config::WinRT::experimental_use_own_mta_apartment`; SimpleBLE now uses its own WinRT MTA apartment by default and the flag remains only for compatibility.
 

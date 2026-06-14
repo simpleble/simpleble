@@ -27,8 +27,9 @@ class BackendBluez : public BackendSingleton<BackendBluez> {
     virtual bool is_active() override;
 
   private:
-    std::thread* async_thread;
-    std::atomic_bool async_thread_active;
+    std::thread async_thread;
+    std::atomic_bool async_thread_active = false;
+    std::shared_ptr<SimpleBluez::Agent> agent;
     void async_thread_function();
 };
 
@@ -41,17 +42,18 @@ BackendBluez::BackendBluez(buildToken) {
     SimpleBluez::Config::use_system_bus = Config::SimpleBluez::use_system_bus;
 
     bluez.init();
+    agent = bluez.root_custom()->agent_add("default");
+
     async_thread_active = true;
-    async_thread = new std::thread(&BackendBluez::async_thread_function, this);
+    async_thread = std::thread(&BackendBluez::async_thread_function, this);
+    SAFE_RUN({ bluez.register_agent(agent); });
 }
 
 BackendBluez::~BackendBluez() {
     async_thread_active = false;
-    while (!async_thread->joinable()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    if (async_thread.joinable()) {
+        async_thread.join();
     }
-    async_thread->join();
-    delete async_thread;
 }
 
 SharedPtrVector<AdapterBase> BackendBluez::adapters() {
@@ -85,12 +87,6 @@ bool BackendBluez::is_active() {
 std::string BackendBluez::identifier() const noexcept { return "SimpleBluez"; }
 
 void BackendBluez::async_thread_function() {
-    SAFE_RUN({
-        std::shared_ptr<SimpleBluez::Agent> agent = bluez.root_custom()->agent_add("default");
-        // NOTE: We should pin this agent to the backend so that we can directly access the object for advance behaviors.
-        bluez.register_agent(agent);
-    });
-
     while (async_thread_active) {
         SAFE_RUN({ bluez.run_async(); });
         std::this_thread::sleep_for(std::chrono::microseconds(100));
