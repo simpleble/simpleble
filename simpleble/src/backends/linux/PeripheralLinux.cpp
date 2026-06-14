@@ -48,7 +48,7 @@ BluetoothAddressType PeripheralLinux::address_type() {
 
     if (address_type == "public") {
         return BluetoothAddressType::PUBLIC;
-    } else if (address_type == "public") {
+    } else if (address_type == "random") {
         return BluetoothAddressType::RANDOM;
     } else {
         return BluetoothAddressType::UNSPECIFIED;
