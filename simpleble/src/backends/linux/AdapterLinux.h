@@ -12,6 +12,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -46,10 +47,11 @@ class AdapterLinux : public SimpleBLE::AdapterBase {
   private:
     std::shared_ptr<SimpleBluez::Adapter> adapter_;
 
-    std::atomic_bool is_scanning_;
+    std::atomic_bool is_scanning_{false};
 
     std::map<BluetoothAddress, std::shared_ptr<PeripheralLinux>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralLinux>> seen_peripherals_;
+    std::mutex peripherals_mutex_;
 };
 
 }  // namespace SimpleBLE
