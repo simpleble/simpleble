@@ -38,7 +38,7 @@ jobs:
           # publish-to-testpypi: 'false'
           # cibw-build-verbosity: '3'
           # macosx-deployment-target: '13.0'
-          # cibw-skip: '*musllinux_* pp* cp36-* cp37-*'
+          # cibw-skip: '*musllinux_* pp* cp36-* cp37-* cp38-* cp39-*'
 ```
 
 ## Inputs
@@ -51,7 +51,7 @@ jobs:
 | `publish-to-testpypi`   | Whether to publish the built wheels to TestPyPI           | No       | `false`                      |
 | `cibw-build-verbosity`  | Verbosity level for cibuildwheel                          | No       | `3`                          |
 | `macosx-deployment-target` | Minimum macOS version to target                       | No       | `13.0`                       |
-| `cibw-skip`             | Patterns for skipping certain builds                      | No       | `*musllinux_* pp* cp36-* cp37-*` |
+| `cibw-skip`             | Patterns for skipping certain builds                      | No       | `*musllinux_* pp* cp36-* cp37-* cp38-* cp39-*` |
 
 ## Outputs
 
