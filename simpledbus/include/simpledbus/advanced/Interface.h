@@ -41,6 +41,11 @@ class Interface {
             return *this;
         }
 
+        PropertyBase& write() {
+            _interface.property_write(_name, get());
+            return *this;
+        }
+
         void emit() { _interface.property_emit(_name, get()); }
 
         Holder get() const {
@@ -108,6 +113,11 @@ class Interface {
             return *this;
         }
 
+        Property& write() {
+            PropertyBase::write();
+            return *this;
+        }
+
         T get() const {
             std::scoped_lock lock(_mutex);
             return _value.template get<T>();
@@ -141,6 +151,7 @@ class Interface {
     bool property_exists(const std::string& property_name);
     bool property_valid(const std::string& property_name);
     void property_refresh(const std::string& property_name);
+    void property_write(const std::string& property_name, Holder value);
     void property_emit(const std::string& property_name, Holder value);
     void property_invalidate(const std::string& property_name);
 

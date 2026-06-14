@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (Linux) Fixed the new BlueZ backend to wait for locally-dispatched service resolution before reporting a peripheral as connected.
+- (Linux) Fixed `Adapter::power_on` and `Adapter::power_off` in the new BlueZ backend.
 - (Linux) Fixed BlueZ backend selection to avoid constructing both the new and legacy backends.
 - (MacOS) Fixed notification callbacks to snapshot payload data before invoking the user callback.
 - (MacOS) Fixed concurrent access to peripheral advertising data while scan updates are being processed.

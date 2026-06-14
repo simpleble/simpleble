@@ -55,13 +55,13 @@ std::string Adapter::address() { return adapter1()->Address; }
 
 std::string Adapter::alias() { return adapter1()->Alias(); }
 
-void Adapter::alias(std::string alias) { adapter1()->Alias.set(alias).emit(); }
+void Adapter::alias(std::string alias) { adapter1()->Alias.set(alias).write(); }
 
 bool Adapter::discovering() { return adapter1()->Discovering.refresh(); }
 
 bool Adapter::powered() { return adapter1()->Powered.refresh(); }
 
-void Adapter::powered(bool powered) { adapter1()->Powered.set(powered).emit(); }
+void Adapter::powered(bool powered) { adapter1()->Powered.set(powered).write(); }
 
 void Adapter::discovery_filter(const DiscoveryFilter& filter) { adapter1()->SetDiscoveryFilter(filter); }
 
