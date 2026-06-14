@@ -54,6 +54,8 @@ class Device : public SimpleDBus::Proxy {
     void set_on_battery_percentage_changed(std::function<void(uint8_t new_value)> callback);
     void clear_on_battery_percentage_changed();
 
+    void on_registration() override;
+
   private:
     std::shared_ptr<SimpleDBus::Proxy> path_create(const std::string& path) override;
 

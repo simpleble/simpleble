@@ -1,6 +1,7 @@
 #include <simplebluez/standard/Device.h>
 #include <simplebluez/standard/Service.h>
 #include <simplebluez/Exceptions.h>
+#include <simpledbus/interfaces/Properties.h>
 #include "simplebluez/interfaces/Battery1.h"
 
 using namespace SimpleBluez;
@@ -9,6 +10,11 @@ Device::Device(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& 
     : Proxy(conn, bus_name, path) {}
 
 Device::~Device() {}
+
+void Device::on_registration() {
+    auto properties = std::make_shared<SimpleDBus::Interfaces::Properties>(_conn, shared_from_this());
+    _interfaces.emplace(std::make_pair("org.freedesktop.DBus.Properties", properties));
+}
 
 std::shared_ptr<SimpleDBus::Proxy> Device::path_create(const std::string& path) {
     const std::string next_child = SimpleDBus::PathUtils::next_child_strip(_path, path);
