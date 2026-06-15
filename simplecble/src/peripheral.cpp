@@ -4,6 +4,7 @@
 #include <simpleble/Peripheral.h>
 
 #include <climits>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 
@@ -37,8 +38,12 @@ char* simpleble_peripheral_identifier(simpleble_peripheral_t handle) {
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         std::string identifier = peripheral->identifier();
-        char* c_identifier = (char*)malloc(identifier.size() + 1);
-        strcpy(c_identifier, identifier.c_str());
+        char* c_identifier = static_cast<char*>(std::malloc(identifier.size() + 1));
+        if (c_identifier == nullptr) {
+            return nullptr;
+        }
+
+        std::strcpy(c_identifier, identifier.c_str());
         return c_identifier;
     } catch (...) {
         return nullptr;
@@ -53,8 +58,12 @@ char* simpleble_peripheral_address(simpleble_peripheral_t handle) {
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         std::string address = peripheral->address();
-        char* c_address = (char*)malloc(address.size() + 1);
-        strcpy(c_address, address.c_str());
+        char* c_address = static_cast<char*>(std::malloc(address.size() + 1));
+        if (c_address == nullptr) {
+            return nullptr;
+        }
+
+        std::strcpy(c_address, address.c_str());
         return c_address;
     } catch (...) {
         return nullptr;

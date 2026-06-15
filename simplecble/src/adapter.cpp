@@ -3,6 +3,7 @@
 #include <simpleble/Adapter.h>
 #include <simpleble/Exceptions.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 
@@ -67,8 +68,12 @@ char* simpleble_adapter_identifier(simpleble_adapter_t handle) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         std::string identifier = adapter->identifier();
-        char* c_identifier = (char*)malloc(identifier.size() + 1);
-        strcpy(c_identifier, identifier.c_str());
+        char* c_identifier = static_cast<char*>(std::malloc(identifier.size() + 1));
+        if (c_identifier == nullptr) {
+            return nullptr;
+        }
+
+        std::strcpy(c_identifier, identifier.c_str());
         return c_identifier;
     } catch (...) {
         return nullptr;
@@ -83,8 +88,12 @@ char* simpleble_adapter_address(simpleble_adapter_t handle) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         std::string address = adapter->address();
-        char* c_address = (char*)malloc(address.size() + 1);
-        strcpy(c_address, address.c_str());
+        char* c_address = static_cast<char*>(std::malloc(address.size() + 1));
+        if (c_address == nullptr) {
+            return nullptr;
+        }
+
+        std::strcpy(c_address, address.c_str());
         return c_address;
     } catch (...) {
         return nullptr;
