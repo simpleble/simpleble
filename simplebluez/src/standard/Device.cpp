@@ -1,17 +1,33 @@
+#include <simplebluez/Exceptions.h>
 #include <simplebluez/standard/Device.h>
 #include <simplebluez/standard/Service.h>
-#include <simplebluez/Exceptions.h>
 #include <simpledbus/interfaces/Properties.h>
 #include "simplebluez/interfaces/Battery1.h"
+
+#include <utility>
 
 using namespace SimpleBluez;
 
 Device::Device(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path)
     : Proxy(conn, bus_name, path) {}
 
-Device::~Device() {}
+Device::~Device() {
+    _callback_on_connected.unload();
+    _callback_on_disconnected.unload();
+    device1()->Connected.on_changed.unload();
+}
 
 void Device::on_registration() {
+    auto device1 = std::make_shared<Device1>(_conn, shared_from_this());
+    device1->Connected.on_changed.load([this](bool connected) {
+        if (connected) {
+            _callback_on_connected();
+        } else {
+            _callback_on_disconnected();
+        }
+    });
+    _interfaces.emplace(std::make_pair("org.bluez.Device1", device1));
+
     auto properties = std::make_shared<SimpleDBus::Interfaces::Properties>(_conn, shared_from_this());
     _interfaces.emplace(std::make_pair("org.freedesktop.DBus.Properties", properties));
 }
@@ -86,17 +102,23 @@ bool Device::bonded() { return device1()->Bonded.refresh(); }
 
 bool Device::connected() { return device1()->Connected.refresh(); }
 
-bool Device::services_resolved() { return device1()->ServicesResolved.refresh(); }
-
-void Device::set_on_disconnected(std::function<void()> callback) {
-    device1()->Connected.on_changed.load([callback](bool connected) {
-        if (!connected) {
-            callback();
-        }
-    });
+bool Device::services_resolved() {
+    // ServicesResolved is only useful to consumers once SimpleBluez has observed
+    // the local property update. A synchronous refresh can see BlueZ's property
+    // before the matching GATT objects have been dispatched into the local tree.
+    auto& services_resolved = device1()->ServicesResolved;
+    return services_resolved.valid() && services_resolved.get();
 }
 
-void Device::clear_on_disconnected() { device1()->Connected.on_changed.unload(); }
+void Device::set_on_connected(std::function<void()> callback) { _callback_on_connected.load(std::move(callback)); }
+
+void Device::clear_on_connected() { _callback_on_connected.unload(); }
+
+void Device::set_on_disconnected(std::function<void()> callback) {
+    _callback_on_disconnected.load(std::move(callback));
+}
+
+void Device::clear_on_disconnected() { _callback_on_disconnected.unload(); }
 
 void Device::set_on_services_resolved(std::function<void()> callback) {
     device1()->ServicesResolved.on_changed.load([callback](bool services_resolved) {

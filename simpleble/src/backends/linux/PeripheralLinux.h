@@ -72,8 +72,6 @@ class PeripheralLinux : public SimpleBLE::PeripheralBase {
     std::condition_variable disconnection_cv_;
     std::mutex disconnection_mutex_;
 
-    std::atomic_bool services_resolved_{false};
-
     kvn::safe_callback<void()> callback_on_connected_;
     kvn::safe_callback<void()> callback_on_disconnected_;
 

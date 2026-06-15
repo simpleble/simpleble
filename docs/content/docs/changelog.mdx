@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (Linux) Fixed the new BlueZ backend to wait for locally-dispatched service resolution before reporting a peripheral as connected.
+- (Linux) Fixed the new BlueZ backend to avoid timing out connections when services were already locally resolved.
 - (Linux) Fixed `Adapter::power_on` and `Adapter::power_off` in the new BlueZ backend.
 - (Linux) Fixed BlueZ backend selection to avoid constructing both the new and legacy backends.
 - (Linux) Fixed concurrent access to scan result maps in the new BlueZ backend.

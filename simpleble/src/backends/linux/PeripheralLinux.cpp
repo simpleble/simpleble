@@ -6,8 +6,8 @@
 #include "DescriptorBase.h"
 #include "ServiceBase.h"
 
-#include <simpleble/Config.h>
 #include <simpleble/Characteristic.h>
+#include <simpleble/Config.h>
 #include <simpleble/Descriptor.h>
 #include <simpleble/Exceptions.h>
 #include <simpleble/Service.h>
@@ -32,6 +32,7 @@ PeripheralLinux::~PeripheralLinux() {
     this->callback_on_connected_.unload();
     this->callback_on_disconnected_.unload();
 
+    device_->clear_on_connected();
     device_->clear_on_disconnected();
     device_->clear_on_services_resolved();
     _cleanup_characteristics();
@@ -78,11 +79,8 @@ void PeripheralLinux::connect() {
     }
 
     device_->clear_on_disconnected();
-    services_resolved_ = false;
-    device_->set_on_services_resolved([this]() {
-        this->services_resolved_ = true;
-        this->connection_cv_.notify_all();
-    });
+    device_->set_on_connected([this]() { this->connection_cv_.notify_all(); });
+    device_->set_on_services_resolved([this]() { this->connection_cv_.notify_all(); });
 
     // Attempt to connect to the device.
     for (size_t i = 0; i < 5; i++) {
@@ -91,17 +89,19 @@ void PeripheralLinux::connect() {
         }
     }
 
+    device_->clear_on_connected();
+    device_->clear_on_services_resolved();
+
     // Set the on_disconnected callback once the connection attempts are finished, thus
     // preventing disconnection events that should not be seen by the user.
     device_->set_on_disconnected([this]() {
         this->_cleanup_characteristics();
-        this->services_resolved_ = false;
         this->disconnection_cv_.notify_all();
 
         SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
     });
 
-    if (!device_->connected() || !services_resolved_) {
+    if (!is_connected()) {
         throw Exception::OperationFailed();
     }
 
@@ -119,9 +119,7 @@ void PeripheralLinux::disconnect() {
     // Ensure that all characteristics are stopped and cleaned up.
     _cleanup_characteristics();
 
-    device_->set_on_disconnected([this]() {
-        this->disconnection_cv_.notify_all();
-    });
+    device_->set_on_disconnected([this]() { this->disconnection_cv_.notify_all(); });
 
     // Attempt to connect to the device.
     for (size_t i = 0; i < 5; i++) {
@@ -386,8 +384,7 @@ bool PeripheralLinux::_attempt_connect() {
     // Wait for the connection to be confirmed.
     // The condition variable will return false if the connection was not established.
     std::unique_lock<std::mutex> lock(connection_mutex_);
-    return connection_cv_.wait_for(lock, Config::SimpleBluez::connection_timeout,
-                                   [this]() { return device_->connected() && services_resolved_.load(); });
+    return connection_cv_.wait_for(lock, Config::SimpleBluez::connection_timeout, [this]() { return is_connected(); });
 }
 
 bool PeripheralLinux::_attempt_disconnect() {
@@ -396,12 +393,8 @@ bool PeripheralLinux::_attempt_disconnect() {
     // Wait for the disconnection to be confirmed.
     // The condition variable will return false if the connection is still active.
     std::unique_lock<std::mutex> lock(disconnection_mutex_);
-    bool disconnected = disconnection_cv_.wait_for(lock, Config::SimpleBluez::disconnection_timeout,
-                                                   [this]() { return !is_connected(); });
-    if (disconnected) {
-        services_resolved_ = false;
-    }
-    return disconnected;
+    return disconnection_cv_.wait_for(lock, Config::SimpleBluez::disconnection_timeout,
+                                      [this]() { return !is_connected(); });
 }
 
 std::shared_ptr<SimpleBluez::Characteristic> PeripheralLinux::_get_characteristic(
