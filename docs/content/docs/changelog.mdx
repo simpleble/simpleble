@@ -26,19 +26,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - **API CHANGE**: (SimpleBluez) Updated `ReadValue` and `WriteValue` callbacks to expose BlueZ server-side options.
 - (SimpleBluez) Preloaded the D-Bus `Properties` interface on Device proxies to support refreshed BlueZ device properties.
-- (Linux) Switched the default BlueZ backend from the legacy implementation to the new SimpleBluez backend.
-- (Linux) Start the new BlueZ backend dispatch loop before registering the pairing agent.
+- (Linux) Switched the default BlueZ implementation from legacy to SimpleBluez.
+- (Linux) Start the BlueZ dispatch loop before registering the pairing agent.
 - (Windows) Build the SimpleBLE target as C++20 when using MSVC, and require Windows SDK 10.0.22621.0 or newer for compatible C++/WinRT coroutine headers.
 - (Windows) Deprecated `SimpleBLE::Config::WinRT::experimental_use_own_mta_apartment`; SimpleBLE now uses its own WinRT MTA apartment by default and the flag remains only for compatibility.
 
 **Fixed**
 
-- (Linux) Fixed the new BlueZ backend to wait for locally-dispatched service resolution before reporting a peripheral as connected.
-- (Linux) Fixed the new BlueZ backend to avoid timing out connections when services were already locally resolved.
-- (Linux) Fixed `Adapter::power_on` and `Adapter::power_off` in the new BlueZ backend.
-- (Linux) Fixed BlueZ backend selection to avoid constructing both the new and legacy backends.
-- (Linux) Fixed concurrent access to scan result maps in the new BlueZ backend.
-- (Linux) Fixed random address types being reported as unspecified in the new BlueZ backend.
+- (Linux) Fixed connection state reporting to wait for locally-dispatched service resolution.
+- (Linux) Fixed connection timeouts when services were already locally resolved.
+- (Linux) Fixed `Adapter::power_on` and `Adapter::power_off`.
+- (Linux) Fixed BlueZ backend selection to avoid constructing both SimpleBluez and legacy implementations.
+- (Linux) Fixed concurrent access to scan result maps.
+- (Linux) Fixed `Peripheral::services()` to include advertised service data payloads.
+- (Linux) Fixed random address types being reported as unspecified.
 - (MacOS) Fixed notification callbacks to snapshot payload data before invoking the user callback.
 - (MacOS) Fixed concurrent access to peripheral advertising data while scan updates are being processed.
 - (MacOS) Fixed concurrent access to adapter peripheral maps while scan and connection events are processed.

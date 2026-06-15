@@ -200,8 +200,16 @@ SharedPtrVector<ServiceBase> PeripheralLinux::available_services() {
 
 SharedPtrVector<ServiceBase> PeripheralLinux::advertised_services() {
     SharedPtrVector<ServiceBase> service_list;
+
+    auto service_data = device_->service_data();
+    for (auto& [service_uuid, data] : service_data) {
+        service_list.push_back(std::make_shared<ServiceBase>(service_uuid, data));
+    }
+
     for (auto& service_uuid : device_->uuids()) {
-        service_list.push_back(std::make_shared<ServiceBase>(service_uuid));
+        if (service_data.count(service_uuid) == 0) {
+            service_list.push_back(std::make_shared<ServiceBase>(service_uuid));
+        }
     }
 
     return service_list;
