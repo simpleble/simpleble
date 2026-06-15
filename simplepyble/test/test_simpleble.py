@@ -1,5 +1,7 @@
 # Note: This test suite is only evaluating the Python bindings, not the C++ library.
 #       The SimpleBLE implementation to test this on is the PLAIN version.
+import logging
+
 import simplepyble
 
 
@@ -32,6 +34,31 @@ def test_scan_blocking():
 def test_scan_async():
     # TODO: Implement once we have proper callback and advertising emulation.
     pass
+
+
+def test_logging_forwards_to_python_logging(caplog):
+    adapter = simplepyble.Adapter.get_adapters()[0]
+
+    def raise_from_callback():
+        raise RuntimeError("simplepyble logging smoke test")
+
+    adapter.set_callback_on_scan_start(raise_from_callback)
+
+    with caplog.at_level(logging.ERROR, logger="simplepyble"):
+        adapter.scan_start()
+        adapter.scan_stop()
+
+    adapter.set_callback_on_scan_start(None)
+
+    records = [
+        record
+        for record in caplog.records
+        if record.name == "simplepyble" and "simplepyble logging smoke test" in record.getMessage()
+    ]
+    assert len(records) == 1
+    assert records[0].levelno == logging.ERROR
+    assert records[0].simpleble_module == "SimpleBLE"
+    assert records[0].simpleble_function == "scan_start"
 
 
 def test_connect():

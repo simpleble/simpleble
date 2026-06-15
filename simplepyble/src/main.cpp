@@ -20,6 +20,7 @@ void wrap_service(py::module& m);
 void wrap_peripheral(py::module& m);
 void wrap_adapter(py::module& m);
 void wrap_config(py::module& m);
+void wrap_logging(py::module& m);
 
 PYBIND11_MODULE(_simplepyble, m) {
     m.attr("__version__") = SIMPLEPYBLE_VERSION;
@@ -52,4 +53,5 @@ PYBIND11_MODULE(_simplepyble, m) {
     wrap_peripheral(m);
     wrap_adapter(m);
     wrap_config(m);
+    wrap_logging(m);
 }
