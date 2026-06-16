@@ -300,7 +300,7 @@
         throw SimpleBLE::Exception::OperationNotSupported("read", uuid);
     }
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
     BleTask* task = characteristicExtras.task;
 
     @synchronized(task) {
@@ -345,7 +345,7 @@
         throw SimpleBLE::Exception::OperationNotSupported("write_request", uuid);
     }
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
     BleTask* task = characteristicExtras.task;
 
     @synchronized(task) {
@@ -375,7 +375,7 @@
         throw SimpleBLE::Exception::OperationNotSupported("write_command", uuid);
     }
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
     BleTask* task = characteristicExtras.task;
 
     @synchronized(task) {
@@ -394,7 +394,7 @@
 
     CBCharacteristic* characteristic = serviceAndCharacteristic.second;
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
     BleTask* task = characteristicExtras.task;
 
     @synchronized(task) {
@@ -425,7 +425,7 @@
 
     CBCharacteristic* characteristic = serviceAndCharacteristic.second;
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
     BleTask* task = characteristicExtras.task;
 
     @synchronized(task) {
@@ -453,8 +453,8 @@
     CBCharacteristic* characteristic = serviceAndCharacteristic.second;
     CBDescriptor* descriptor = [self findDescriptor:descriptor_uuid characteristic:characteristic];
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
-    DescriptorExtras* descriptorExtras = [characteristicExtras.descriptorExtras objectForKey:descriptor_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
+    DescriptorExtras* descriptorExtras = [characteristicExtras.descriptorExtras objectForKey:uuidToString(descriptor.UUID)];
     BleTask* task = descriptorExtras.task;
 
     @synchronized(task) {
@@ -486,8 +486,8 @@
     CBCharacteristic* characteristic = serviceAndCharacteristic.second;
     CBDescriptor* descriptor = [self findDescriptor:descriptor_uuid characteristic:characteristic];
 
-    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:characteristic_uuid];
-    DescriptorExtras* descriptorExtras = [characteristicExtras.descriptorExtras objectForKey:descriptor_uuid];
+    CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
+    DescriptorExtras* descriptorExtras = [characteristicExtras.descriptorExtras objectForKey:uuidToString(descriptor.UUID)];
     BleTask* task = descriptorExtras.task;
 
     @synchronized(task) {
