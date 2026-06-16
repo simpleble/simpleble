@@ -148,11 +148,11 @@ void IOBluetoothPreferenceSetControllerPowerState(int state);
             break;
         case CBManagerStatePoweredOff:
             // NSLog(@"CBManagerStatePoweredOff!\n");
-            // NOTE: Notify the user that the Bluetooth adapter is turned off.
+            _adapter->delegate_did_power_off();
             break;
         case CBManagerStatePoweredOn:
             // NSLog(@"CBManagerStatePoweredOn!\n");
-            // NOTE: This state is required to be able to operate CoreBluetooth.
+            _adapter->delegate_did_power_on();
             break;
     }
 }

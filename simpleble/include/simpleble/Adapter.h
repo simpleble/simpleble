@@ -47,9 +47,9 @@ class SIMPLEBLE_EXPORT Adapter {
     /**
      * Control the power state of the adapter.
      *
-     * NOTE: The power on/off functionality is only supported on Windows and Linux.
-     *       On other platforms, this method will do nothing.
-     * NOTE: Callbacks are currently a placeholder for future implementation.
+     * NOTE: Power control support depends on the backend and platform.
+     *       Unsupported backends may do nothing.
+     * NOTE: Power callbacks are supported by backends that provide power state change events.
      */
     void power_on();
     void power_off();

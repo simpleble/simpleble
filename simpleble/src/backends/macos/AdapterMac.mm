@@ -184,3 +184,7 @@ void AdapterMac::delegate_did_disconnect_peripheral(void* opaque_peripheral, voi
 
     base_peripheral->delegate_did_disconnect(opaque_error);
 }
+
+void AdapterMac::delegate_did_power_on() { SAFE_CALLBACK_CALL(this->_callback_on_power_on); }
+
+void AdapterMac::delegate_did_power_off() { SAFE_CALLBACK_CALL(this->_callback_on_power_off); }

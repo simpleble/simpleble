@@ -39,6 +39,8 @@ class Adapter : public SimpleDBus::Proxy {
 
     void set_on_device_updated(std::function<void(std::shared_ptr<Device> device)> callback);
     void clear_on_device_updated();
+    void set_on_powered_changed(std::function<void(bool powered)> callback);
+    void clear_on_powered_changed();
 
     void register_advertisement(const std::shared_ptr<Advertisement>& advertisement);
     void unregister_advertisement(const std::shared_ptr<Advertisement>& advertisement);

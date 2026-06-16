@@ -1,5 +1,7 @@
 #include <simplebluez/standard/Adapter.h>
 
+#include <utility>
+
 using namespace SimpleBluez;
 
 Adapter::Adapter(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& bus_name, const std::string& path)
@@ -124,6 +126,12 @@ void Adapter::clear_on_device_updated() {
     _on_device_updated.unload();
     on_child_created.unload();
 }
+
+void Adapter::set_on_powered_changed(std::function<void(bool powered)> callback) {
+    adapter1()->Powered.on_changed.load(std::move(callback));
+}
+
+void Adapter::clear_on_powered_changed() { adapter1()->Powered.on_changed.unload(); }
 
 void Adapter::register_advertisement(const std::shared_ptr<Advertisement>& advertisement) {
     if (supported_advertisement_instances() == 0) {

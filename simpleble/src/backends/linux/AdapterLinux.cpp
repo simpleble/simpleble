@@ -12,9 +12,20 @@ using namespace SimpleBLE;
 
 bool AdapterLinux::bluetooth_enabled() { return adapter_->powered(); }
 
-AdapterLinux::AdapterLinux(std::shared_ptr<SimpleBluez::Adapter> adapter) : adapter_(adapter) {}
+AdapterLinux::AdapterLinux(std::shared_ptr<SimpleBluez::Adapter> adapter) : adapter_(adapter) {
+    adapter_->set_on_powered_changed([this](bool powered) {
+        if (powered) {
+            SAFE_CALLBACK_CALL(this->_callback_on_power_on);
+        } else {
+            SAFE_CALLBACK_CALL(this->_callback_on_power_off);
+        }
+    });
+}
 
-AdapterLinux::~AdapterLinux() { adapter_->clear_on_device_updated(); }
+AdapterLinux::~AdapterLinux() {
+    adapter_->clear_on_device_updated();
+    adapter_->clear_on_powered_changed();
+}
 
 void* AdapterLinux::underlying() const { return adapter_.get(); }
 
