@@ -470,7 +470,7 @@ void PeripheralWindows::_subscribe(BluetoothUUID const& service, BluetoothUUID c
                                                                 const GattValueChangedEventArgs& args) {
             // Convert the payload to a ByteArray.
             ByteArray payload = ibuffer_to_bytearray(args.CharacteristicValue());
-            callback(payload);
+            SAFE_CALLBACK_CALL(callback, payload);
         };
 
         // Register the callback.

@@ -57,6 +57,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Windows) Fixed `Adapter::get_paired_peripherals` and `Adapter::get_connected_peripherals` to avoid materializing invalid WinRT Bluetooth LE device IDs during enumeration.
 - (Windows) Fixed `Peripheral::set_callback_on_disconnected` so user-initiated disconnects trigger the callback once without relying solely on WinRT's connection-status event.
 - (Windows) Fixed `Peripheral::connect` to fail cleanly when Bluetooth is disabled after scanning but before connecting.
+- (Windows) Fixed notification callbacks to safely log user callback exceptions instead of letting them escape the WinRT event handler.
 
 **Removed**
 
