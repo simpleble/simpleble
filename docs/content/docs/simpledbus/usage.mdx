@@ -94,6 +94,8 @@ add_subdirectory(<path-to-simpledbus> ${CMAKE_BINARY_DIR}/simpledbus)
 target_link_libraries(<your-target> simpledbus::simpledbus)
 ```
 
+Set `SIMPLEDBUS_INSTALL=OFF` before `add_subdirectory` if you do not want SimpleDBus to add install rules to the parent project.
+
 ## Usage with CMake (Vendorized)
 
 If you want to use a vendorized copy of SimpleDBus, you can do so by using FetchContent and specifying the location from where SimpleDBus should be consumed from:

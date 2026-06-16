@@ -16,6 +16,7 @@ include(GenerateExportHeader)
 include(GNUInstallDirs)
 
 option(SIMPLEBLE_PLAIN "Use plain version of SimpleBLE" OFF)
+option(SIMPLEBLE_INSTALL "Install SimpleBLE targets and package files" ON)
 
 if(SIMPLEBLE_TEST)
     message(STATUS "Building tests requires plain version of SimpleBLE")
@@ -410,37 +411,39 @@ apply_build_options(simpleble
     "${PRIVATE_LINK_OPTIONS}"
     "${PUBLIC_LINK_OPTIONS}")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpleble.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/simpleble.pc @ONLY)
+if(SIMPLEBLE_INSTALL)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpleble.pc.in
+                ${CMAKE_CURRENT_BINARY_DIR}/simpleble.pc @ONLY)
 
-install(
-    TARGETS simpleble
-    EXPORT simpleble-config
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(
+        TARGETS simpleble
+        EXPORT simpleble-config
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-install(
-    EXPORT simpleble-config
-    NAMESPACE simpleble::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpleble)
+    install(
+        EXPORT simpleble-config
+        NAMESPACE simpleble::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpleble)
 
-install(
-    DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpleble/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble)
+    install(
+        DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpleble/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble)
 
-install(
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/kvn_bytearray.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble/kvn)
+    install(
+        FILES
+            ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/kvn_bytearray.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble/kvn)
 
-install(
-    DIRECTORY ${PROJECT_BINARY_DIR}/export/simpleble/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble)
+    install(
+        DIRECTORY ${PROJECT_BINARY_DIR}/export/simpleble/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpleble)
 
-install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/simpleble.pc
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/simpleble.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 if(SIMPLEBLE_TEST)
     message(STATUS "Building Tests")

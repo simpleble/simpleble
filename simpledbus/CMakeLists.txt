@@ -20,6 +20,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/epilogue.cmake)
 
 include(GNUInstallDirs)
 
+option(SIMPLEDBUS_INSTALL "Install SimpleDBus targets and package files" ON)
+
 find_package(DBus1 REQUIRED)
 
 # Load all variables that would eventually need to be exposed to downstream projects
@@ -85,34 +87,36 @@ apply_build_options(simpledbus
     "${PRIVATE_LINK_OPTIONS}"
     "${PUBLIC_LINK_OPTIONS}")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpledbus.pc.in
-            ${CMAKE_CURRENT_BINARY_DIR}/simpledbus.pc @ONLY)
+if(SIMPLEDBUS_INSTALL)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpledbus.pc.in
+                ${CMAKE_CURRENT_BINARY_DIR}/simpledbus.pc @ONLY)
 
-install(
-    TARGETS simpledbus
-    EXPORT simpledbus-config
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(
+        TARGETS simpledbus
+        EXPORT simpledbus-config
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-install(
-    EXPORT simpledbus-config
-    NAMESPACE simpledbus::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpledbus)
+    install(
+        EXPORT simpledbus-config
+        NAMESPACE simpledbus::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpledbus)
 
-install(
-    DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpledbus/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpledbus)
+    install(
+        DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpledbus/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpledbus)
 
-install(
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/kvn_safe_callback.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/logfwd.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpledbus/kvn)
+    install(
+        FILES
+            ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/kvn_safe_callback.hpp
+            ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/logfwd.hpp
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpledbus/kvn)
 
-install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/simpledbus.pc
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/simpledbus.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 
 if(SIMPLEDBUS_TEST)

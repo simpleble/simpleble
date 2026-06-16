@@ -188,6 +188,8 @@ add_subdirectory(<path-to-simpleble> ${CMAKE_BINARY_DIR}/simpleble)
 target_link_libraries(<your-target> simpleble::simpleble)
 ```
 
+Set `SIMPLEBLE_INSTALL=OFF` before `add_subdirectory` if you do not want SimpleBLE to add install rules to the parent project.
+
 ## Usage with CMake (Vendorized)
 
 If you want to use a vendorized copy of SimpleBLE, you can do so by using FetchContent and specifying the location from where SimpleBLE should be consumed from.
