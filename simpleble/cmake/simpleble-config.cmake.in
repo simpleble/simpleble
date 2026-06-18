@@ -2,12 +2,34 @@
 
 include(CMakeFindDependencyMacro)
 
+set(_simpleble_requires_dbus @SIMPLEBLE_REQUIRES_DBUS@)
 set(_simpleble_requires_threads @SIMPLEBLE_REQUIRES_THREADS@)
+
+if(_simpleble_requires_dbus)
+    find_package(DBus1 CONFIG QUIET)
+
+    if(NOT TARGET DBus1::DBus1)
+        if(TARGET dbus-1)
+            add_library(DBus1::DBus1 INTERFACE IMPORTED)
+            target_link_libraries(DBus1::DBus1 INTERFACE dbus-1)
+        else()
+            find_dependency(PkgConfig)
+
+            if(NOT TARGET PkgConfig::DBus1)
+                pkg_check_modules(DBus1 REQUIRED IMPORTED_TARGET dbus-1)
+            endif()
+
+            add_library(DBus1::DBus1 INTERFACE IMPORTED)
+            target_link_libraries(DBus1::DBus1 INTERFACE PkgConfig::DBus1)
+        endif()
+    endif()
+endif()
 
 if(_simpleble_requires_threads)
     find_dependency(Threads)
 endif()
 
+unset(_simpleble_requires_dbus)
 unset(_simpleble_requires_threads)
 
 include("${CMAKE_CURRENT_LIST_DIR}/simpleble-targets.cmake")

@@ -106,6 +106,7 @@ endif()
 # The installed package config needs to mirror whether this build exported a
 # public Threads dependency, so plain builds do not require Threads downstream.
 set(SIMPLEBLE_REQUIRES_THREADS OFF)
+set(SIMPLEBLE_REQUIRES_DBUS OFF)
 
 list(APPEND PRIVATE_COMPILE_DEFINITIONS SIMPLEBLE_LOG_LEVEL=SIMPLEBLE_LOG_LEVEL_${SIMPLEBLE_LOG_LEVEL})
 list(APPEND PRIVATE_COMPILE_DEFINITIONS SIMPLEBLE_VERSION="${SIMPLEBLE_VERSION}")
@@ -210,6 +211,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
 
     find_package(DBus1 REQUIRED)
     find_package(Threads REQUIRED)
+    set(SIMPLEBLE_REQUIRES_DBUS ON)
     set(SIMPLEBLE_REQUIRES_THREADS ON)
 
     if(NOT SIMPLEDBUS_LOG_LEVEL)
