@@ -1,0 +1,15 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+set(_simpleble_requires_threads @SIMPLEBLE_REQUIRES_THREADS@)
+
+if(_simpleble_requires_threads)
+    find_dependency(Threads)
+endif()
+
+unset(_simpleble_requires_threads)
+
+include("${CMAKE_CURRENT_LIST_DIR}/simpleble-targets.cmake")
+
+check_required_components(simpleble)

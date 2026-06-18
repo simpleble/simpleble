@@ -19,6 +19,7 @@ project(
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/epilogue.cmake)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 option(SIMPLEBLUEZ_INSTALL "Install SimpleBluez targets and package files" ON)
 
@@ -127,20 +128,39 @@ apply_build_options(simplebluez
     "${PUBLIC_LINK_OPTIONS}")
 
 if(SIMPLEBLUEZ_INSTALL)
+    set(SIMPLEBLUEZ_CMAKE_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/simplebluez)
+
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simplebluez.pc.in
                 ${CMAKE_CURRENT_BINARY_DIR}/simplebluez.pc @ONLY)
 
+    configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/simplebluez-config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/simplebluez-config.cmake
+        INSTALL_DESTINATION ${SIMPLEBLUEZ_CMAKE_INSTALL_DIR})
+
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/simplebluez-config-version.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion)
+
     install(
         TARGETS simplebluez
-        EXPORT simplebluez-config
+        EXPORT simplebluez-targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
     install(
-        EXPORT simplebluez-config
+        EXPORT simplebluez-targets
+        FILE simplebluez-targets.cmake
         NAMESPACE simplebluez::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simplebluez)
+        DESTINATION ${SIMPLEBLUEZ_CMAKE_INSTALL_DIR})
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/simplebluez-config.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/simplebluez-config-version.cmake
+        DESTINATION ${SIMPLEBLUEZ_CMAKE_INSTALL_DIR})
 
     install(
         DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simplebluez/

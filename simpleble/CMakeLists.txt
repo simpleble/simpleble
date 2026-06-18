@@ -14,6 +14,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/epilogue.cmake)
 
 include(GenerateExportHeader)
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 option(SIMPLEBLE_PLAIN "Use plain version of SimpleBLE" OFF)
 option(SIMPLEBLE_INSTALL "Install SimpleBLE targets and package files" ON)
@@ -101,6 +102,10 @@ append_sanitize_options("${SIMPLEBLE_SANITIZE}")
 if(NOT SIMPLEBLE_LOG_LEVEL)
     set(SIMPLEBLE_LOG_LEVEL "INFO")
 endif()
+
+# The installed package config needs to mirror whether this build exported a
+# public Threads dependency, so plain builds do not require Threads downstream.
+set(SIMPLEBLE_REQUIRES_THREADS OFF)
 
 list(APPEND PRIVATE_COMPILE_DEFINITIONS SIMPLEBLE_LOG_LEVEL=SIMPLEBLE_LOG_LEVEL_${SIMPLEBLE_LOG_LEVEL})
 list(APPEND PRIVATE_COMPILE_DEFINITIONS SIMPLEBLE_VERSION="${SIMPLEBLE_VERSION}")
@@ -204,6 +209,8 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
     message(STATUS "Linux Host Detected")
 
     find_package(DBus1 REQUIRED)
+    find_package(Threads REQUIRED)
+    set(SIMPLEBLE_REQUIRES_THREADS ON)
 
     if(NOT SIMPLEDBUS_LOG_LEVEL)
         set(SIMPLEDBUS_LOG_LEVEL "FATAL")
@@ -302,7 +309,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/ObjectManager.cpp
     )
 
-    target_link_libraries(simpleble PUBLIC pthread)
+    target_link_libraries(simpleble PUBLIC Threads::Threads)
     target_link_libraries(simpleble PRIVATE ${DBus1_LIBRARIES})
 
     target_include_directories(simpleble PRIVATE
@@ -412,20 +419,39 @@ apply_build_options(simpleble
     "${PUBLIC_LINK_OPTIONS}")
 
 if(SIMPLEBLE_INSTALL)
+    set(SIMPLEBLE_CMAKE_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/simpleble)
+
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpleble.pc.in
                 ${CMAKE_CURRENT_BINARY_DIR}/simpleble.pc @ONLY)
 
+    configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpleble-config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/simpleble-config.cmake
+        INSTALL_DESTINATION ${SIMPLEBLE_CMAKE_INSTALL_DIR})
+
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/simpleble-config-version.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion)
+
     install(
         TARGETS simpleble
-        EXPORT simpleble-config
+        EXPORT simpleble-targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
     install(
-        EXPORT simpleble-config
+        EXPORT simpleble-targets
+        FILE simpleble-targets.cmake
         NAMESPACE simpleble::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/simpleble)
+        DESTINATION ${SIMPLEBLE_CMAKE_INSTALL_DIR})
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/simpleble-config.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/simpleble-config-version.cmake
+        DESTINATION ${SIMPLEBLE_CMAKE_INSTALL_DIR})
 
     install(
         DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simpleble/
