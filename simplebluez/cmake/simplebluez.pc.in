@@ -7,5 +7,5 @@ Name: SimpleBluez
 Description: "A simple C++ wrapper around Bluez with a commercially-friendly licence."
 Version: @simplebluez_VERSION@
 Libs: -L${libdir} -lsimplebluez @CMAKE_THREAD_LIBS_INIT@
-Cflags: -I${includedir}
+Cflags: -I${includedir} -I${includedir}/simplebluez
 Conflicts:

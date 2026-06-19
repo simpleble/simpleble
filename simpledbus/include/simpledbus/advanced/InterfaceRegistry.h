@@ -50,7 +50,7 @@ struct AutoRegisterInterface {
     AutoRegisterInterface(const std::string& iface_name, CreatorFunction creator) {
         static_assert(std::is_base_of<Interface, T>::value, "T must inherit from Interface");
         InterfaceRegistry::getInstance().registerClass<T>(iface_name, creator);
-        LOG_DEBUG("Registered class with iface_name {}", iface_name);
+        LOG_DEBUG(std::string("Registered class with iface_name ") + iface_name);
     }
 };
 

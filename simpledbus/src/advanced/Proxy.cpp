@@ -4,6 +4,7 @@
 #include <simpledbus/base/Exceptions.h>
 #include <simpledbus/base/Logging.h>
 #include <simpledbus/base/Path.h>
+#include <fmt/core.h>
 #include <algorithm>
 #include <iostream>
 
@@ -112,7 +113,7 @@ void Proxy::interfaces_load(Holder managed_interfaces) {
                 _interfaces.emplace(std::make_pair(iface_name, InterfaceRegistry::getInstance().create(
                                                                    iface_name, _conn, shared_from_this(), options)));
             } else {
-                LOG_WARN("Interface {} not registered within SimpleDBus", iface_name);
+                LOG_WARN(fmt::format("Interface {} not registered within SimpleDBus", iface_name));
             }
         } else {
             _interfaces[iface_name]->load(options);
@@ -333,7 +334,7 @@ void Proxy::message_handle(Message& msg) {
         interface_get(msg.get_interface())->message_handle(msg);
         handled = true;
     } else {
-        LOG_WARN("Unhandled message for interface {}: {}", msg.get_interface(), msg.to_string());
+        LOG_WARN(fmt::format("Unhandled message for interface {}: {}", msg.get_interface(), msg.to_string()));
         if (msg.get_type() == Message::Type::METHOD_CALL) {
             Message reply = Message::create_error(msg, "org.freedesktop.DBus.Error.UnknownInterface",
                                                   "Unknown interface: " + msg.get_interface());
@@ -347,6 +348,6 @@ void Proxy::message_handle(Message& msg) {
     }
 
     if (!handled) {
-        LOG_ERROR("Unhandled message: {}", msg.to_string());
+        LOG_ERROR(fmt::format("Unhandled message: {}", msg.to_string()));
     }
 }

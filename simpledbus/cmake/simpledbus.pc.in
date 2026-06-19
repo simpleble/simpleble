@@ -7,5 +7,5 @@ Name: SimpleDBus
 Description: "A simple C++ wrapper around DBus with a commercially-friendly licence."
 Version: @simpledbus_VERSION@
 Libs: -L${libdir} -lsimpledbus @CMAKE_THREAD_LIBS_INIT@
-Cflags: -I${includedir}
+Cflags: -I${includedir} -I${includedir}/simpledbus
 Conflicts:

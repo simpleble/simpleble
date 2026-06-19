@@ -117,7 +117,8 @@ target_include_directories(simplebluez INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/external>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/simplebluez>)
 
 append_sanitize_options("${SIMPLEBLUEZ_SANITIZE}")
 
@@ -173,12 +174,6 @@ if(SIMPLEBLUEZ_INSTALL)
     install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/include/simpledbus/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simpledbus)
-
-    install(
-        FILES
-            ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/kvn_safe_callback.hpp
-            ${CMAKE_CURRENT_LIST_DIR}/../dependencies/external/kvn/logfwd.hpp
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/kvn)
 
     install(
         FILES ${CMAKE_CURRENT_BINARY_DIR}/simplebluez.pc
