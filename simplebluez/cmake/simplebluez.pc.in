@@ -6,6 +6,7 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 Name: SimpleBluez
 Description: "A simple C++ wrapper around Bluez with a commercially-friendly licence."
 Version: @simplebluez_VERSION@
+Requires: dbus-1
 Libs: -L${libdir} -lsimplebluez @CMAKE_THREAD_LIBS_INIT@
 Cflags: -I${includedir} -I${includedir}/simplebluez
 Conflicts:

@@ -422,6 +422,11 @@ apply_build_options(simpleble
 
 if(SIMPLEBLE_INSTALL)
     set(SIMPLEBLE_CMAKE_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/simpleble)
+    set(SIMPLEBLE_PC_REQUIRES_PRIVATE "")
+
+    if(SIMPLEBLE_REQUIRES_DBUS)
+        set(SIMPLEBLE_PC_REQUIRES_PRIVATE "dbus-1")
+    endif()
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/simpleble.pc.in
                 ${CMAKE_CURRENT_BINARY_DIR}/simpleble.pc @ONLY)

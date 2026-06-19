@@ -6,6 +6,7 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 Name: SimpleDBus
 Description: "A simple C++ wrapper around DBus with a commercially-friendly licence."
 Version: @simpledbus_VERSION@
+Requires: dbus-1
 Libs: -L${libdir} -lsimpledbus @CMAKE_THREAD_LIBS_INIT@
 Cflags: -I${includedir} -I${includedir}/simpledbus
 Conflicts:

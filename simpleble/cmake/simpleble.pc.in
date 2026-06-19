@@ -6,6 +6,7 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 Name: SimpleBLE
 Description: "The ultimate fully-fledged cross-platform library for Bluetooth Low Energy (BLE)."
 Version: @simpleble_VERSION@
+Requires.private: @SIMPLEBLE_PC_REQUIRES_PRIVATE@
 Libs: -L${libdir} -lsimpleble @CMAKE_THREAD_LIBS_INIT@
 Cflags: -I${includedir}
 Conflicts:
