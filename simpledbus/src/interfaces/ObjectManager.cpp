@@ -26,7 +26,7 @@ Holder ObjectManager::GetManagedObjects() {
         return proxy()->path_collect();
     }
 
-    Message query_msg = Message::create_method_call(_bus_name, _path, _interface_name, "GetManagedObjects");
+    Message query_msg = create_method_call("GetManagedObjects");
     Message reply_msg = _conn->send_with_reply_and_block(query_msg);
     return reply_msg.extract();
 }

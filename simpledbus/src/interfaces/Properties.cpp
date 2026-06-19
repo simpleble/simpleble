@@ -22,7 +22,7 @@ Properties::Properties(std::shared_ptr<Connection> conn, std::shared_ptr<Proxy> 
 Properties::~Properties() = default;
 
 Holder Properties::Get(const std::string& interface_name, const std::string& property_name) {
-    Message query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Properties", "Get");
+    Message query_msg = create_method_call("Get");
 
     Holder h_interface = Holder::create<std::string>(interface_name);
     query_msg.append_argument(h_interface, "s");
@@ -36,7 +36,7 @@ Holder Properties::Get(const std::string& interface_name, const std::string& pro
 }
 
 Holder Properties::GetAll(const std::string& interface_name) {
-    Message query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Properties", "GetAll");
+    Message query_msg = create_method_call("GetAll");
 
     Holder h_interface = Holder::create<std::string>(interface_name);
     query_msg.append_argument(h_interface, "s");
@@ -47,7 +47,7 @@ Holder Properties::GetAll(const std::string& interface_name) {
 }
 
 void Properties::Set(const std::string& interface_name, const std::string& property_name, const Holder& value) {
-    Message query_msg = Message::create_method_call(_bus_name, _path, "org.freedesktop.DBus.Properties", "Set");
+    Message query_msg = create_method_call("Set");
 
     Holder h_interface = Holder::create<std::string>(interface_name);
     query_msg.append_argument(h_interface, "s");
