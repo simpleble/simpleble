@@ -129,6 +129,29 @@ cmake --build <your-build-directory> -j4
 
 If `BUILD_SHARED_LIBS` is not set, the project's `CMakeLists.txt` determines the default behavior.
 
+## Consuming CMake Projects from Xcode
+
+When using a CMake-based library from Xcode, create a small CMake consumer project instead of manually adding the built library file to a native Xcode project. Find the installed package and link against its exported imported target, such as `simpleble::simpleble`, in your `CMakeLists.txt`:
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(MyApp LANGUAGES CXX)
+
+find_package(simpleble REQUIRED CONFIG)
+
+add_executable(MyApp main.cpp)
+target_link_libraries(MyApp PRIVATE simpleble::simpleble)
+```
+
+Then generate an Xcode project from that consumer project:
+
+```bash
+cmake -S . -B build-xcode -G Xcode
+open build-xcode/MyApp.xcodeproj
+```
+
+This keeps CMake in charge of the dependency information attached to the imported target, including include paths, compile options, libraries, and Apple framework link flags. Manually adding a naked static library to a native Xcode project skips those transitive usage requirements and often leads to missing headers or linker errors.
+
 ## Passing Configuration Options
 
 CMake allows customization through variables set with the `-D` flag during configuration. These variables control project-specific settings defined in the `CMakeLists.txt`. For example:
