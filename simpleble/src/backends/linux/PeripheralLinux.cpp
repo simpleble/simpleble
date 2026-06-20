@@ -35,7 +35,7 @@ PeripheralLinux::~PeripheralLinux() {
     device_->clear_on_connected();
     device_->clear_on_disconnected();
     device_->clear_on_services_resolved();
-    _cleanup_characteristics();
+    _cleanup_characteristics(true);
 }
 
 void* PeripheralLinux::underlying() const { return device_.get(); }
@@ -95,7 +95,7 @@ void PeripheralLinux::connect() {
     // Set the on_disconnected callback once the connection attempts are finished, thus
     // preventing disconnection events that should not be seen by the user.
     device_->set_on_disconnected([this]() {
-        this->_cleanup_characteristics();
+        this->_cleanup_characteristics(false);
         this->disconnection_cv_.notify_all();
 
         SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
@@ -117,7 +117,7 @@ void PeripheralLinux::disconnect() {
     device_->clear_on_disconnected();
 
     // Ensure that all characteristics are stopped and cleaned up.
-    _cleanup_characteristics();
+    _cleanup_characteristics(true);
 
     device_->set_on_disconnected([this]() { this->disconnection_cv_.notify_all(); });
 
@@ -339,7 +339,7 @@ void PeripheralLinux::set_callback_on_disconnected(std::function<void()> on_disc
 
 // Private methods
 
-void PeripheralLinux::_cleanup_characteristics() noexcept {
+void PeripheralLinux::_cleanup_characteristics(bool stop_notifications) noexcept {
     // As this method can be called in multiple stages of a disconnection or object
     // destruction, the entire execution of this method is wrapped in a try-catch
     // block to prevent any exceptions from being thrown, as these will most certainly
@@ -361,7 +361,11 @@ void PeripheralLinux::_cleanup_characteristics() noexcept {
             }
         }
 
-        // Stop notifying all characteristics.
+        if (!stop_notifications || !device_->valid() || !device_->connected()) {
+            return;
+        }
+
+        // Stop notifying all characteristics while the device is still connected.
         for (auto bluez_service : device_->services()) {
             for (auto bluez_characteristic : bluez_service->characteristics()) {
                 try {

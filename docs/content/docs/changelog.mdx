@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Linux) Fixed `Adapter::power_on` and `Adapter::power_off`.
 - (Linux) Fixed BlueZ backend selection to avoid constructing both SimpleBluez and legacy implementations.
 - (Linux) Fixed concurrent access to scan result maps.
+- (Linux) Fixed notification cleanup after abrupt BlueZ peripheral disconnects.
 - (Linux) Fixed `Peripheral::services()` to include advertised service data payloads.
 - (Linux) Fixed random address types being reported as unspecified.
 - (MacOS) Fixed characteristic and descriptor operations with standard UUIDs.

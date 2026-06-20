@@ -39,7 +39,7 @@ std::shared_ptr<GattCharacteristic1> Characteristic::gattcharacteristic1() {
     return std::dynamic_pointer_cast<GattCharacteristic1>(interface_get("org.bluez.GattCharacteristic1"));
 }
 
-bool Characteristic::notifying() { return gattcharacteristic1()->Notifying.refresh(); }
+bool Characteristic::notifying() { return valid() && gattcharacteristic1()->Notifying.refresh(); }
 
 std::string Characteristic::uuid() { return gattcharacteristic1()->UUID; }
 void Characteristic::uuid(std::string uuid) { gattcharacteristic1()->UUID.set(uuid); }
@@ -67,7 +67,10 @@ void Characteristic::write_command(ByteArray value) {
 
 void Characteristic::start_notify() { gattcharacteristic1()->StartNotify(); }
 
-void Characteristic::stop_notify() { gattcharacteristic1()->StopNotify(); }
+void Characteristic::stop_notify() {
+    if (!valid()) return;
+    gattcharacteristic1()->StopNotify();
+}
 
 void Characteristic::enable_acquire_notify() { gattcharacteristic1()->enable_acquire_notify(); }
 

@@ -76,7 +76,10 @@ void Device::cancel_pairing() { device1()->CancelPairing(); }
 
 void Device::connect() { device1()->Connect(); }
 
-void Device::disconnect() { device1()->Disconnect(); }
+void Device::disconnect() {
+    if (!valid()) return;
+    device1()->Disconnect();
+}
 
 std::string Device::address() { return device1()->Address; }
 
@@ -96,13 +99,15 @@ std::map<uint16_t, ByteArray> Device::manufacturer_data() { return device1()->Ma
 
 std::map<std::string, ByteArray> Device::service_data() { return device1()->ServiceData.refresh(); }
 
-bool Device::paired() { return device1()->Paired.refresh(); }
+bool Device::paired() { return valid() && device1()->Paired.refresh(); }
 
-bool Device::bonded() { return device1()->Bonded.refresh(); }
+bool Device::bonded() { return valid() && device1()->Bonded.refresh(); }
 
-bool Device::connected() { return device1()->Connected.refresh(); }
+bool Device::connected() { return valid() && device1()->Connected.refresh(); }
 
 bool Device::services_resolved() {
+    if (!valid()) return false;
+
     // ServicesResolved is only useful to consumers once SimpleBluez has observed
     // the local property update. A synchronous refresh can see BlueZ's property
     // before the matching GATT objects have been dispatched into the local tree.
