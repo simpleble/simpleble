@@ -102,6 +102,7 @@ class Proxy : public std::enable_shared_from_this<Proxy> {
 
     // ----- INTERNAL CALLBACKS -----
     virtual void on_registration();
+    virtual void on_child_signal_received(std::shared_ptr<Proxy> child);
 
   protected:
     bool _valid;
@@ -109,6 +110,7 @@ class Proxy : public std::enable_shared_from_this<Proxy> {
     std::string _bus_name;
 
     std::shared_ptr<Connection> _conn;
+    std::weak_ptr<Proxy> _parent;
 
     std::map<std::string, std::shared_ptr<Interface>> _interfaces;
     std::map<std::string, std::shared_ptr<Proxy>> _children;
@@ -119,6 +121,7 @@ class Proxy : public std::enable_shared_from_this<Proxy> {
   private:
     // ----- PATH HANDLING -----
     bool _registered;
+    void notify_parent_signal_received();
     void revalidate();
     void register_object_path();
     void unregister_object_path();

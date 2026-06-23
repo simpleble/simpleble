@@ -53,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleBLE) Fixed installed CMake package configs to include version files and separate target exports.
 - (SimpleCBLE) Fixed allocation-failure handling in C string getters for adapter and peripheral identifiers and addresses.
 - (SimpleBluez) Fixed custom peripheral D-Bus objects to use the connection's unique bus name instead of the unowned `org.simplebluez` name.
+- (SimpleBluez) Fixed device update notifications to avoid retaining discovered devices.
 - (SimpleDBus) Fixed local `ObjectManager::GetManagedObjects()` calls to return the local object tree directly instead of blocking on a D-Bus self-call.
 - (SimpleDBus) Fixed descendant proxies staying valid after an ancestor D-Bus object path is removed.
 - (SimpleDBus) Fixed retained proxies remaining invalid after their D-Bus object path is removed and later added again.

@@ -24,6 +24,8 @@ Proxy::~Proxy() {
 
 void Proxy::on_registration() {}
 
+void Proxy::on_child_signal_received(std::shared_ptr<Proxy> /*child*/) { notify_parent_signal_received(); }
+
 std::shared_ptr<Proxy> Proxy::path_create(const std::string& path) {
     return std::make_shared<Proxy>(_conn, _bus_name, path);
 }
@@ -65,6 +67,14 @@ void Proxy::register_object_path() {
 void Proxy::unregister_object_path() {
     if (_registered && _conn && _conn->unregister_object_path(_path)) {
         _registered = false;
+    }
+}
+
+void Proxy::notify_parent_signal_received() {
+    auto parent = _parent.lock();
+    auto self = weak_from_this().lock();
+    if (parent && self) {
+        parent->on_child_signal_received(self);
     }
 }
 
@@ -188,6 +198,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
     if (PathUtils::is_child(_path, path)) {
         // If the path is a direct child of the proxy path, create a new proxy for it.
         std::shared_ptr<Proxy> child = path_create(path);
+        child->_parent = weak_from_this();
         child->interfaces_load(managed_interfaces);
         _children.emplace(std::make_pair(path, child));
         on_child_created(path);
@@ -207,6 +218,7 @@ void Proxy::path_add(const std::string& path, SimpleDBus::Holder managed_interfa
             // This path will be taken if an empty proxy object needs to be created for an intermediate path.
             std::string child_path = PathUtils::next_child(_path, path);
             std::shared_ptr<Proxy> child = path_create(child_path);
+            child->_parent = weak_from_this();
             _children.emplace(std::make_pair(child_path, child));
             child->path_add(path, managed_interfaces);
             on_child_created(child_path);
@@ -308,7 +320,10 @@ void Proxy::path_append_child(const std::string& path, std::shared_ptr<Proxy> ch
 
     // As children will be extensively accessed, we need to lock the child access mutex.
     std::scoped_lock lock(_child_access_mutex);
-    _children.emplace(std::make_pair(path, child));
+    auto emplace_result = _children.emplace(std::make_pair(path, child));
+    if (emplace_result.second) {
+        child->_parent = weak_from_this();
+    }
 }
 
 void Proxy::path_remove_child(const std::string& path) {
@@ -321,6 +336,9 @@ void Proxy::path_remove_child(const std::string& path) {
     }
 
     std::scoped_lock lock(_child_access_mutex);
+    if (path_exists(path)) {
+        _children.at(path)->_parent.reset();
+    }
     _children.erase(path);
 }
 
@@ -345,6 +363,7 @@ void Proxy::message_handle(Message& msg) {
 
     if (msg.get_type() == Message::Type::SIGNAL) {
         on_signal_received();
+        notify_parent_signal_received();
     }
 
     if (!handled) {

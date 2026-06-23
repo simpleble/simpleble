@@ -27,9 +27,16 @@ void Adapter::on_registration() {
 }
 
 std::shared_ptr<SimpleDBus::Proxy> Adapter::path_create(const std::string& path) {
-    auto child = Proxy::create<Device>(_conn, _bus_name, path);
-    child->on_signal_received.load([this, child]() { _on_device_updated(child); });
-    return child;
+    return Proxy::create<Device>(_conn, _bus_name, path);
+}
+
+void Adapter::on_child_signal_received(std::shared_ptr<SimpleDBus::Proxy> child) {
+    auto device = std::dynamic_pointer_cast<Device>(child);
+    if (device) {
+        _on_device_updated(device);
+    }
+
+    Proxy::on_child_signal_received(child);
 }
 
 std::shared_ptr<Adapter1> Adapter::adapter1() {

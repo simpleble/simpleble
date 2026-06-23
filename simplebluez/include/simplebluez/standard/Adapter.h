@@ -54,6 +54,7 @@ class Adapter : public SimpleDBus::Proxy {
 
   private:
     std::shared_ptr<SimpleDBus::Proxy> path_create(const std::string& path) override;
+    void on_child_signal_received(std::shared_ptr<SimpleDBus::Proxy> child) override;
     std::shared_ptr<SimpleDBus::Interfaces::Properties> properties();
     std::shared_ptr<Adapter1> adapter1();
     std::shared_ptr<GattManager1> gatt_manager1();
