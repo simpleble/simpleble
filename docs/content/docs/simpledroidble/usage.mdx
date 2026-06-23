@@ -14,6 +14,27 @@ This code is currently under active development and some features are not yet im
 - Android NDK. The repository currently builds with NDK r29.
 - Bluetooth permissions declared in `AndroidManifest.xml` and requested at runtime.
 
+## Using Release AARs
+
+Download `simpledroidble.zip` and `libsimpleble_android_plugins.zip` from the [releases page](https://github.com/simpleble/simpleble/releases/latest). Extract `simpledroidble-release.aar` and `simpledroidbridge-release.aar`, then copy both files into your app module's `libs` directory.
+
+Make sure AndroidX is enabled in `gradle.properties`:
+
+```properties
+android.useAndroidX=true
+```
+
+Then add both AARs to your app module's `build.gradle.kts`. Local AAR files do not provide transitive Gradle dependency metadata, so keep the AndroidX Core and Kotlin coroutines runtime dependencies on your app classpath too:
+
+```kotlin
+dependencies {
+    implementation(files("libs/simpledroidble-release.aar"))
+    implementation(files("libs/simpledroidbridge-release.aar"))
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+}
+```
+
 ## Consuming Locally
 
 If you want to use SimpleDroidBLE as part of your project from a local copy, you can do so by adding the following to your `settings.gradle` or `settings.gradle.kts` file. Make sure this include is before your `include(":app")` statement.
