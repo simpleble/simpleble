@@ -59,6 +59,19 @@ class AdapterBase {
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_connected_peripherals() { return {}; };
 
     /**
+     * Retrieve known peripherals by their identifier/address WITHOUT scanning.
+     *
+     * Backends that can resolve a peripheral handle directly from a previously
+     * seen identifier (e.g. macOS/iOS CoreBluetooth
+     * retrievePeripherals(withIdentifiers:)) should override this. The default
+     * returns an empty vector.
+     */
+    virtual std::vector<std::shared_ptr<PeripheralBase>> get_peripherals_by_identifiers(
+        const std::vector<BluetoothAddress>& identifiers) {
+        return {};
+    }
+
+    /**
      * Checks if Bluetooth is enabled.
      *
      * The enabled state may be a global setting for the system/backend, or

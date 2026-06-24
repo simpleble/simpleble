@@ -130,6 +130,27 @@ void IOBluetoothPreferenceSetControllerPowerState(int state);
     return self.uuid;
 }
 
+- (NSArray<CBPeripheral*>*)retrievePeripheralsWithIdentifiers:(NSArray<NSString*>*)uuidStrings {
+    // CoreBluetooth can only vend known peripherals once the central is
+    // powered on; calling earlier returns nothing.
+    if (self.centralManager.state != CBManagerStatePoweredOn) {
+        return @[];
+    }
+
+    NSMutableArray<NSUUID*>* uuids = [NSMutableArray arrayWithCapacity:uuidStrings.count];
+    for (NSString* uuidString in uuidStrings) {
+        NSUUID* uuid = [[NSUUID alloc] initWithUUIDString:uuidString];
+        if (uuid != nil) {
+            [uuids addObject:uuid];
+        }
+    }
+    if (uuids.count == 0) {
+        return @[];
+    }
+
+    return [self.centralManager retrievePeripheralsWithIdentifiers:uuids];
+}
+
 #pragma mark - CBCentralManagerDelegate
 
 - (void)centralManagerDidUpdateState:(CBCentralManager*)central {

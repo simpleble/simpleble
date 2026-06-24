@@ -104,6 +104,10 @@ std::vector<Peripheral> Adapter::get_paired_peripherals() { return Factory::vect
 
 std::vector<Peripheral> Adapter::get_connected_peripherals() { return Factory::vector((*this)->get_connected_peripherals()); }
 
+std::vector<Peripheral> Adapter::get_peripherals_by_identifiers(std::vector<BluetoothAddress> identifiers) {
+    return Factory::vector((*this)->get_peripherals_by_identifiers(identifiers));
+}
+
 void Adapter::set_callback_on_scan_start(std::function<void()> on_scan_start) {
     (*this)->set_callback_on_scan_start(std::move(on_scan_start));
 }

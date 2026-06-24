@@ -82,6 +82,19 @@ class SIMPLEBLE_EXPORT Adapter {
      */
     std::vector<Peripheral> get_connected_peripherals();
 
+    /**
+     * Retrieve known peripherals by their identifier/address, without scanning.
+     *
+     * On macOS/iOS this maps to CBCentralManager
+     * retrievePeripherals(withIdentifiers:): it returns a connectable handle
+     * for a peripheral the system already knows, allowing a reconnect without
+     * running a discovery scan. Identifiers that are unknown to the system (and
+     * backends that do not support this) yield no entry / an empty vector.
+     *
+     * NOTE: This method is currently only supported by the macOS and iOS backends.
+     */
+    std::vector<Peripheral> get_peripherals_by_identifiers(std::vector<BluetoothAddress> identifiers);
+
     static bool bluetooth_enabled();
 
     /**

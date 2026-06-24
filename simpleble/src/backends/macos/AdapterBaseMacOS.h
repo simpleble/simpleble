@@ -26,4 +26,6 @@
 
 - (NSString*)address;
 
+- (NSArray<CBPeripheral*>*)retrievePeripheralsWithIdentifiers:(NSArray<NSString*>*)uuidStrings;
+
 @end
