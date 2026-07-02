@@ -23,6 +23,12 @@ PeripheralAndroid::PeripheralAndroid(Android::BluetoothDevice device) : _device(
                 _gatt.requestConnectionPriority(static_cast<int>(Config::Android::connection_priority_request));
             }
 
+            // Optionally request a larger ATT MTU before service discovery. Android
+            // defaults to 23 bytes, which truncates larger characteristic payloads.
+            if (Config::Android::mtu_request > 0) {
+                _gatt.requestMtu(Config::Android::mtu_request);
+            }
+
             // If a connection has been established, request service discovery.
             _gatt.discoverServices();
         } else {

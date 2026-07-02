@@ -17,6 +17,7 @@ namespace Config {
 
     namespace Android {
         ConnectionPriorityRequest connection_priority_request = ConnectionPriorityRequest::DISABLED;
+        int mtu_request = 0;
     }  // namespace Android
 
     namespace Dongl {

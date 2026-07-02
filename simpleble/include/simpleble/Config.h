@@ -50,7 +50,14 @@ namespace Android {
 
     extern SIMPLEBLE_EXPORT ConnectionPriorityRequest connection_priority_request;
 
-    static void reset() { connection_priority_request = ConnectionPriorityRequest::DISABLED; }
+    // MTU to request on connection (0 = disabled, leave to Android's 23-byte default).
+    // BLE 4.2+ negotiates up to 517; older peripherals support 23-185.
+    extern SIMPLEBLE_EXPORT int mtu_request;
+
+    static void reset() {
+        connection_priority_request = ConnectionPriorityRequest::DISABLED;
+        mtu_request = 0;
+    }
 }  // namespace Android
 
 namespace Dongl {
