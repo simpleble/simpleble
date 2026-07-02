@@ -43,6 +43,7 @@ We're here to help you succeed with SimpleBLE:
 * **Documentation**: Visit our `Documentation`_ page for comprehensive guides.
 * **Community**: Join our `Discord`_ server for discussions and help.
 * **Commercial Support**: Check out |website|_ or |email|_ about licensing and professional services.
+* **Merch**: Gear for people who ship Bluetooth, in the official `SimpleBLE Store`_. Merch that pairs on the first try.
 * **Extension Libraries**: Learn about `SimpleBluez`_, our BlueZ abstraction layer, and `SimpleDBus`_, our DBus object hierarchy handler.
 
 Explore projects built with SimpleBLE, including `BrainFlow`_, `InsideBlue`_, and `NodeWebBluetooth`_.
@@ -123,6 +124,8 @@ Join us to expand SimpleBLE's reach!
 .. _Discord: https://discord.gg/N9HqNEcvP3
 
 .. _Documentation: https://docs.simpleble.org/
+
+.. _SimpleBLE Store: https://simpleble.store?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
 
 .. _Software.com.br: https://software.com.br/
 
