@@ -8,8 +8,10 @@
 #include <simplebluez/Config.h>
 
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 
 namespace SimpleBLE {
@@ -31,6 +33,9 @@ class BackendBluez : public BackendSingleton<BackendBluez> {
     std::atomic_bool async_thread_active = false;
     std::shared_ptr<SimpleBluez::Agent> agent;
     void async_thread_function();
+
+    std::map<std::string, std::shared_ptr<AdapterLinux>> adapters_;
+    std::mutex adapters_mutex_;
 };
 
 std::shared_ptr<BackendBase> BACKEND_LINUX() { return BackendBluez::get(); }
@@ -60,8 +65,18 @@ SharedPtrVector<AdapterBase> BackendBluez::adapters() {
     SharedPtrVector<AdapterBase> adapter_list;
 
     auto internal_adapters = bluez.get_adapters();
+    std::scoped_lock lock(adapters_mutex_);
     for (auto& adapter : internal_adapters) {
-        adapter_list.push_back(std::make_shared<AdapterLinux>(adapter));
+        auto path = adapter->path();
+
+        // Reuse the cached wrapper for this adapter if one exists, as creating a
+        // second wrapper around the same adapter would clear the existing wrapper's
+        // callbacks once it gets destroyed.
+        if (adapters_.count(path) == 0) {
+            adapters_.insert(std::make_pair(path, std::make_shared<AdapterLinux>(adapter)));
+        }
+
+        adapter_list.push_back(adapters_.at(path));
     }
     return adapter_list;
 }
