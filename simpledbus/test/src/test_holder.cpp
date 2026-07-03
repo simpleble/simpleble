@@ -201,8 +201,9 @@ TEST(Holder, DictionaryObjectPathKey) {
     });
 
     // Check getting the dict back
+    using ObjectPathDict = std::map<ObjectPath, Holder>;
     EXPECT_NO_THROW({
-        auto out = h.get<std::map<ObjectPath, Holder>>();
+        auto out = h.get<ObjectPathDict>();
         EXPECT_EQ(out.size(), 1);
         EXPECT_EQ(out[ObjectPath("/test")].get<int32_t>(), 123);
     });

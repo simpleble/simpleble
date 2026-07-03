@@ -120,7 +120,9 @@ class Holder {
     static Holder create(T value) {
         Holder h;
         using U = std::decay_t<T>;
-        if constexpr (std::is_same_v<U, bool>) {
+        if constexpr (std::is_same_v<U, Holder>) {
+            return value;
+        } else if constexpr (std::is_same_v<U, bool>) {
             h._type = BOOLEAN;
             h.holder_boolean = value;
         } else if constexpr (std::is_integral_v<U>) {

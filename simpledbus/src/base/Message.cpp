@@ -481,9 +481,9 @@ Holder Message::_extract_generic(DBusMessageIter* iter) {
                 return Holder::create<uint8_t>(contents);
             }
             case DBUS_TYPE_BOOLEAN: {
-                bool contents;
+                dbus_bool_t contents;
                 dbus_message_iter_get_basic(iter, &contents);
-                return Holder::create<bool>(contents);
+                return Holder::create<bool>(contents != 0);
             }
             case DBUS_TYPE_INT16: {
                 int16_t contents;
