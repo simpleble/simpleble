@@ -65,6 +65,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleDBus) Fixed descendant proxies staying valid after an ancestor D-Bus object path is removed.
 - (SimpleDBus) Fixed retained proxies remaining invalid after their D-Bus object path is removed and later added again.
 - (SimpleDBus) Fixed exported proxies to return a D-Bus `UnknownInterface` error for method calls targeting unsupported interfaces.
+- (SimpleDBus) Fixed a stack overwrite when extracting booleans from D-Bus messages.
+- (SimpleDBus) Fixed `Holder::create` silently returning an empty holder when the given value was already a `Holder`.
 - (SimpleJavaBLE) Fixed Windows JVM crashes when loading the native bindings with JDKs that bundle older MSVC runtime DLLs.
 - (SimpleJavaBLE) Fixed duplicate Java peripheral wrappers replacing connect and disconnect callbacks for the same native peripheral.
 - (Windows) Fixed `Adapter::get_paired_peripherals` and `Adapter::get_connected_peripherals` to avoid materializing invalid WinRT Bluetooth LE device IDs during enumeration.
