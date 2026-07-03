@@ -185,10 +185,11 @@ void IOBluetoothPreferenceSetControllerPowerState(int state);
 
     // Extract Manufacturer Data
     NSData* rawManufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey];
-    if (rawManufacturerData != nil) {
+    if (rawManufacturerData != nil && rawManufacturerData.length >= 2) {
         const char* manufacturerDataBytes = (const char*)rawManufacturerData.bytes;
 
-        uint16_t manufacturerID = *((uint16_t*)manufacturerDataBytes);
+        uint16_t manufacturerID;
+        memcpy(&manufacturerID, manufacturerDataBytes, sizeof(manufacturerID));
         SimpleBLE::ByteArray manufacturerData = SimpleBLE::ByteArray(&manufacturerDataBytes[2], (size_t)(rawManufacturerData.length - 2));
         advertisingData.manufacturer_data[manufacturerID] = manufacturerData;
     }
@@ -207,7 +208,10 @@ void IOBluetoothPreferenceSetControllerPowerState(int state);
     NSArray* services = advertisementData[CBAdvertisementDataServiceUUIDsKey];
     if (services != nil) {
         for (CBUUID* serviceUuid in services) {
-            advertisingData.service_data[uuidToSimpleBLE(serviceUuid)] = SimpleBLE::ByteArray();
+            SimpleBLE::BluetoothUUID uuid = uuidToSimpleBLE(serviceUuid);
+            if (advertisingData.service_data.count(uuid) == 0) {
+                advertisingData.service_data[uuid] = SimpleBLE::ByteArray();
+            }
         }
     }
 
