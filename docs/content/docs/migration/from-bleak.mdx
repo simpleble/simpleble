@@ -1,0 +1,118 @@
+---
+title: Migrating from Bleak
+description: A side-by-side mapping between bleak's asyncio API and SimplePyBLE's synchronous API for Python developers.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[Bleak](https://github.com/hbldh/bleak) is an asyncio-based BLE client library for Python; SimplePyBLE is the Python binding for SimpleBLE's synchronous C++ core. Both cover the central role (scan, connect, GATT operations, notifications) on Windows, macOS, and Linux. Migrating is mostly a mechanical translation: remove the `async`/`await` scaffolding and swap the method names.
+
+## The mental-model shift
+
+Bleak structures your program around an event loop: every operation is a coroutine, and callbacks are delivered on the loop. SimplePyBLE structures it around plain blocking calls: `connect()` returns when the connection is up, `scan_for(5000)` returns when the scan is done, and callbacks are delivered on a native background thread.
+
+<Callout type="info" title="The GIL is not an argument for asyncio here">
+SimplePyBLE releases the GIL during every blocking operation (`scan_for`, `connect`, `read`, `write_request`, …) — the actual BLE work happens on native OS threads, not in the Python interpreter. A blocking `connect()` does not stall your other Python threads. This means wrapping SimplePyBLE in asyncio executors gains you little unless the rest of your application is already async; plain threads work just as well.
+</Callout>
+
+## API mapping
+
+| Task | bleak (asyncio) | SimplePyBLE (sync) |
+| --- | --- | --- |
+| Pick an adapter | implicit (or `adapter=` kwarg on some backends) | `simplepyble.Adapter.get_adapters()[0]` |
+| One-shot scan | `await BleakScanner.discover(timeout=5.0)` | `adapter.scan_for(5000)` then `adapter.scan_get_results()` |
+| Live scan callback | `BleakScanner(detection_callback)` | `adapter.set_callback_on_scan_found(cb)` + `adapter.scan_start()` / `scan_stop()` |
+| Connect | `async with BleakClient(device) as client:` | `peripheral.connect()` … `peripheral.disconnect()` |
+| Connection state | `client.is_connected` | `peripheral.is_connected()` |
+| Disconnect hook | `BleakClient(device, disconnected_callback=cb)` | `peripheral.set_callback_on_disconnected(cb)` |
+| Enumerate GATT | `client.services` | `peripheral.services()` |
+| Read | `await client.read_gatt_char(char_uuid)` | `peripheral.read(service_uuid, char_uuid)` |
+| Write (with response) | `await client.write_gatt_char(char_uuid, data, response=True)` | `peripheral.write_request(service_uuid, char_uuid, data)` |
+| Write (no response) | `await client.write_gatt_char(char_uuid, data, response=False)` | `peripheral.write_command(service_uuid, char_uuid, data)` |
+| Subscribe | `await client.start_notify(char_uuid, cb)` | `peripheral.notify(service_uuid, char_uuid, cb)` |
+| Unsubscribe | `await client.stop_notify(char_uuid)` | `peripheral.unsubscribe(service_uuid, char_uuid)` |
+| MTU | `client.mtu_size` | `peripheral.mtu()` |
+| Pairing state | `await client.pair()` | `peripheral.is_paired()` / `peripheral.unpair()` (pairing is triggered by the OS when needed) |
+
+Two structural differences to note while translating:
+
+1. **Characteristics are addressed by (service, characteristic) pairs.** Bleak lets you pass just a characteristic UUID; SimplePyBLE always wants the service UUID too. If your bleak code only stored characteristic UUIDs, recover the service UUID from `peripheral.services()` once after connecting.
+2. **Peripherals come from scan results, not addresses.** Bleak can construct a `BleakClient("AA:BB:CC:…")` directly from an address. In SimplePyBLE you obtain `Peripheral` objects from `adapter.scan_get_results()` (or `adapter.get_paired_peripherals()` on Linux/Windows/Android) and filter by `address()` or `identifier()`. Plan a scan step in flows that used hardcoded addresses; note that address-based connection was never portable to macOS, where the OS exposes host-local identifiers instead of MAC addresses.
+
+## Side-by-side: scan, connect, notify
+
+**bleak:**
+
+```python
+import asyncio
+from bleak import BleakClient, BleakScanner
+
+HR_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb"
+HR_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
+
+async def main():
+    device = await BleakScanner.find_device_by_name("Polar H10", timeout=10.0)
+
+    def on_data(characteristic, data: bytearray):
+        print(f"Received: {data.hex()}")
+
+    async with BleakClient(device) as client:
+        await client.start_notify(HR_MEASUREMENT, on_data)
+        await asyncio.sleep(30)
+        await client.stop_notify(HR_MEASUREMENT)
+
+asyncio.run(main())
+```
+
+**SimplePyBLE:**
+
+```python
+import time
+
+import simplepyble
+
+HR_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb"
+HR_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(10000)
+device = next(p for p in adapter.scan_get_results() if p.identifier() == "Polar H10")
+
+def on_data(data):
+    print(f"Received: {data.hex()}")
+
+device.connect()
+try:
+    device.notify(HR_SERVICE, HR_MEASUREMENT, on_data)
+    time.sleep(30)
+    device.unsubscribe(HR_SERVICE, HR_MEASUREMENT)
+finally:
+    device.disconnect()
+```
+
+Note the callback signature: bleak passes `(characteristic, data)`, SimplePyBLE passes just the payload.
+
+## Callback threading differences
+
+Bleak delivers detection and notification callbacks on the asyncio event loop, so they can safely touch your async state. SimplePyBLE delivers callbacks on a native background thread owned by the OS Bluetooth stack:
+
+- Protect shared state with locks or `queue.Queue`.
+- Don't call blocking SimplePyBLE operations from inside a callback — on some platforms that deadlocks. Signal a worker thread instead. The full rules are in [Concurrency](../fundamentals/concurrency).
+- If you're bridging into an asyncio application, hop back onto the loop with `loop.call_soon_threadsafe(...)` from the callback.
+
+## Keeping an async codebase
+
+If the rest of your application is asyncio and you just want SimplePyBLE underneath, wrap the blocking calls with `asyncio.to_thread` — since the GIL is released, this behaves well:
+
+```python
+peripheral = await asyncio.to_thread(find_and_connect)   # blocking scan + connect
+value = await asyncio.to_thread(peripheral.read, HR_SERVICE, SOME_CHAR)
+```
+
+But if you're starting fresh, consider whether you need asyncio at all: for most BLE tools — CLI utilities, test rigs, data loggers — a plain synchronous script with one worker thread is simpler to write and debug.
+
+## What bleak has that SimpleBLE doesn't (and vice versa)
+
+- Bleak exposes advertisement data through a dedicated `AdvertisementData` object in scan callbacks; SimplePyBLE exposes the equivalents as peripheral methods (`manufacturer_data()`, `rssi()`, `tx_power()`, and advertised services via `services()` while unconnected).
+- SimpleBLE supports Android (via the same C++ core) and ships bindings for C, C++, Rust, and Java from the same codebase — useful if your Python prototype later needs to become an embedded or mobile product.
+- Licensing differs: bleak is MIT, while SimpleBLE is available under the Business Source License 1.1 — free for non-commercial use, with commercial licenses (including free ones for small projects) described in [Licensing](../licensing).

@@ -1,30 +1,136 @@
 ---
 title: Concurrency within SimpleBLE
-description: Understanding how SimpleBLE handles threading and concurrency.
+description: The threading and callback contract for SimpleBLE's synchronous API, including which threads run your callbacks and every timeout in the library.
 ---
 
-When designing your application using SimpleBLE, concurrency is a key aspect that needs to be taken into account. 
+import { Callout } from 'fumadocs-ui/components/callout';
 
-## Internal Threading
+SimpleBLE deliberately exposes a **blocking, synchronous API**. Calls like `connect()`, `read()`, or `scan_for()` do not return until the operation has completed, failed, or timed out. This is a design choice: control flow stays linear and understandable, there is no async runtime to integrate against, and the same mental model works identically from C++, Python, Java, or any other binding.
 
-Internally, SimpleBLE relies on a thread pool to handle asynchronous operations and poll the operating system's Bluetooth stack. This design allows the library to provide a responsive API without blocking your main application thread for long-running operations like scanning or connecting.
+The cost of that choice is that the threading rules become part of the API contract. This page is that contract: which threads your callbacks run on, what you are allowed to call from inside a callback, and how long every operation can block.
 
-However, this means that:
-1.  **Callbacks are executed on internal threads:** When you set a callback (e.g., `set_callback_on_scan_found`), that function will be called from one of SimpleBLE's internal threads, not your main thread.
-2.  **Thread Safety:** You must ensure that any data accessed or modified within these callbacks is handled in a thread-safe manner (e.g., using mutexes or atomic variables).
+## Which thread runs your callbacks
 
-## UI Applications and Event Loops
+SimpleBLE never invokes callbacks on your application's main thread. Every backend delivers callbacks — `set_callback_on_scan_found`, `set_callback_on_scan_updated`, notification/indication callbacks, connect/disconnect callbacks — from an internal thread owned by the library or the operating system:
 
-Using SimpleBLE with UI frameworks (such as WxWidgets, Qt, or Unity) requires special care. Most UI frameworks are not thread-safe and require all UI updates to happen on the "Main" or "UI" thread.
+| Platform | Callback thread | Notes |
+| --- | --- | --- |
+| Linux (BlueZ) | A single DBus dispatch thread owned by SimpleBLE | Spawned when the backend initializes; it pumps all DBus messages, signals, and method replies for the whole process. All callbacks are serialized on it. |
+| macOS / iOS | A serial CoreBluetooth dispatch queue | One serial queue per adapter. CoreBluetooth delegate events and your callbacks are serialized on it. |
+| Windows | WinRT threadpool threads | Advertisement and GATT events arrive on arbitrary threadpool threads belonging to the multithreaded apartment (MTA). Callbacks are **not** guaranteed to arrive on the same thread every time. |
+| Android | A single SimpleJNI runner thread owned by SimpleBLE | JNI callbacks from the Android stack are enqueued onto this thread; all callbacks are serialized on it. |
 
-If you attempt to update a UI element directly from a SimpleBLE callback, your application might crash or freeze. Instead, you should:
-*   Use the UI framework's message passing or "invoke on main thread" mechanism.
-*   Signal an event that the main thread's loop will pick up and process.
+Two consequences apply on every platform:
 
-## Contention and Performance
+1. **Thread safety is your responsibility.** Any data your callback touches must be protected (mutex, atomic, thread-safe queue) if the rest of your application also touches it.
+2. **Callbacks block the delivery pipeline.** On Linux, macOS, and Android a single thread (or serial queue) delivers *all* events. While your callback runs, no other scan result, notification, or disconnection event can be delivered. Keep callbacks short.
 
-Because SimpleBLE shares a limited number of threads for all Bluetooth operations, performing heavy computations or blocking operations inside a callback can cause contention. This can lead to:
-*   Delayed notifications.
-*   Application instability.
+## Calling SimpleBLE from inside a callback
 
-**Rule of thumb:** Keep your callbacks as lightweight as possible. If you need to perform significant processing on received data, offload that work to a separate worker thread.
+Because most SimpleBLE operations block until an event is delivered — and callbacks run on the very thread that delivers events — calling back into SimpleBLE from inside a callback is unsafe on most platforms, with consequences that range from delayed events to a deadlock depending on the backend.
+
+**The portable rule: treat callbacks like interrupt handlers.** Copy the data you need, signal another thread (queue, condition variable, channel), and return. Do all SimpleBLE calls from your own threads.
+
+The per-platform details:
+
+### Linux
+
+Method calls to BlueZ — `connect()`, `disconnect()`, `unpair()`, `read()`, `write_request()`, `write_command()`, `notify()`, `indicate()`, `unsubscribe()`, `scan_start()`, `scan_stop()` — are sent asynchronously and their replies are pumped by the same dispatch thread that runs your callbacks. Calling any of them from inside a callback therefore stalls: the reply can never be processed, the call blocks for the full 30-second DBus reply timeout, and then throws.
+
+Property reads — `rssi()`, `is_connected()`, `is_paired()`, `identifier()`, `address()` and similar — use blocking DBus calls that do not depend on the dispatch thread and are safe to call from callbacks.
+
+### macOS / iOS
+
+GATT operations block the calling thread in a poll loop until the corresponding CoreBluetooth delegate event fires — and delegate events are delivered on the same serial queue your callback is running on. Calling `read()`, `write_request()`, `notify()`, `unsubscribe()`, or any other peripheral operation from inside a notification or scan callback **deadlocks permanently**: most of these waits are unbounded, so no timeout will unblock the call. Do not call peripheral methods from callbacks on macOS.
+
+### Windows
+
+SimpleBLE marshals its own WinRT calls onto a dedicated internal MTA thread, which is separate from the threadpool threads that deliver your callbacks. Calling SimpleBLE methods from inside a callback therefore does not self-deadlock, but it blocks a threadpool event thread and can delay other events; short calls are tolerable, long blocking calls (like `connect()` or a blocking `disconnect()`) should still be moved to your own thread.
+
+### Android
+
+Operation completions are delivered through the same single runner thread that executes your callbacks. Calling a blocking operation from inside a callback stalls until its timeout expires and then throws: 5 seconds for GATT reads/writes, 8 seconds for `connect()`/`disconnect()`.
+
+<Callout type="warn" title="Notification callbacks are the common trap">
+The most frequent mistake on every platform is issuing a `read()` or `write_request()` from inside a notification callback — for example, responding to a device's notification with a command. On macOS this deadlocks forever; on Linux it stalls 30 seconds and throws; on Android it stalls 5 seconds and throws. Push the notification payload into a queue and let a worker thread issue the response instead.
+</Callout>
+
+## Timeout reference
+
+Every blocking operation in SimpleBLE eventually gives up. The table below lists every wait in the library, per backend. "Hardcoded" means the value cannot be changed through `SimpleBLE::Config`.
+
+### Linux (BlueZ backend)
+
+| Operation | Timeout | Configurable |
+| --- | --- | --- |
+| Any BlueZ method reply (connect, read, write, notify, scan control, …) | 30 s | Hardcoded (internal DBus reply timeout) |
+| Connect: wait for connection + service resolution | 2 s per attempt, 5 attempts | `Config::SimpleBluez::connection_timeout` |
+| Disconnect: wait for disconnection | 1 s per attempt, 5 attempts | `Config::SimpleBluez::disconnection_timeout` |
+| Unsubscribe: wait for notification session to stop | 5 s (50 ms poll) | Hardcoded |
+
+On failure after all attempts, `connect()`/`disconnect()` throw `SimpleBLE::Exception::OperationFailed`.
+
+### macOS / iOS (CoreBluetooth backend)
+
+| Operation | Timeout | Configurable |
+| --- | --- | --- |
+| Connect | 5 s | Hardcoded |
+| Adapter power on/off, central manager startup | 5 s | Hardcoded |
+| Disconnect | Unbounded | — |
+| Service / characteristic / descriptor discovery | Unbounded | — |
+| Read, write, notify, indicate, unsubscribe, descriptor ops | Unbounded | — |
+
+The unbounded waits poll every 10 ms until the corresponding CoreBluetooth delegate event arrives. In practice CoreBluetooth reports errors promptly, but if the OS never delivers an event (for example, the peripheral vanished mid-operation) the call can hang indefinitely.
+
+### Windows (WinRT backend)
+
+| Operation | Timeout | Configurable |
+| --- | --- | --- |
+| Disconnect (blocking mode) | 10 s | Only reached when `Config::WinRT::use_deferred_disconnect = false` |
+| Scan start: wait for pending deferred disconnects | 5 s (100 ms poll) | Only when `use_deferred_disconnect = true` (default) |
+| Scan stop acknowledgment | 1 s (silent on timeout) | Hardcoded |
+| GATT operations | Unbounded (WinRT async completion) | — |
+
+### Android
+
+| Operation | Timeout | Configurable |
+| --- | --- | --- |
+| Connect (including service discovery) | 8 s | Hardcoded |
+| Disconnect | 8 s | Hardcoded |
+| Characteristic read / write | 5 s | Hardcoded |
+| Descriptor read / write | 5 s | Hardcoded |
+
+## Configuration knobs
+
+`SimpleBLE::Config` (in `simpleble/Config.h`) exposes the tunable subset of the behavior above. **All values must be set before calling `Adapter::get_adapters()`** — changes made after the backend is instantiated may not take effect.
+
+| Knob | Default | Effect |
+| --- | --- | --- |
+| `Config::SimpleBluez::connection_timeout` | 2 s | Per-attempt wait for connection + service resolution on Linux (5 attempts). |
+| `Config::SimpleBluez::disconnection_timeout` | 1 s | Per-attempt wait for disconnection on Linux (5 attempts). |
+| `Config::SimpleBluez::use_system_bus` | `true` | Connect to the DBus system bus (new BlueZ backend only). |
+| `Config::SimpleBluez::use_legacy_bluez_backend` | `false` | Fall back to the legacy BlueZ backend. |
+| `Config::WinRT::use_deferred_disconnect` | `true` | Disconnects return immediately and clean up in the background instead of blocking up to 10 s. |
+| `Config::WinRT::experimental_use_own_mta_apartment` | `true` | SimpleBLE runs its own MTA thread for WinRT calls. Disabling runs WinRT calls on your calling thread. |
+| `Config::Android::connection_priority_request` | `DISABLED` | Request a connection priority (`BALANCED`, `HIGH`, `LOW_POWER`, `DCK`) after connecting. |
+
+The 30-second DBus reply timeout on Linux is internal to the DBus layer and is not exposed through `SimpleBLE::Config`.
+
+## UI applications and event loops
+
+Using SimpleBLE with UI frameworks (Qt, WxWidgets, WinForms, Unity, …) requires special care. Most UI frameworks are not thread-safe and require all UI updates to happen on the main/UI thread — and as established above, SimpleBLE callbacks never run there.
+
+If you attempt to update a UI element directly from a SimpleBLE callback, your application might crash or freeze. Instead:
+
+*   Use the UI framework's message passing or "invoke on main thread" mechanism (`QMetaObject::invokeMethod`, `Control.BeginInvoke`, Unity's main-thread dispatcher patterns, …).
+*   Or signal an event that the main thread's loop picks up and processes.
+
+The same applies in reverse: don't run blocking SimpleBLE operations (`connect()`, `scan_for()`) on the UI thread, or your interface will freeze for the duration. A dedicated BLE worker thread that owns all SimpleBLE calls, fed by a message queue and feeding results back to the UI thread, is the pattern that works in every framework.
+
+## Rules of thumb
+
+1. Keep callbacks lightweight: copy data out and return.
+2. Never call SimpleBLE operations from inside a callback; hand the work to another thread.
+3. Own all blocking SimpleBLE calls from a dedicated worker thread, not the UI thread.
+4. Protect any state shared between callbacks and the rest of your application.
+5. Set `Config` values before touching `Adapter::get_adapters()`.

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Added**
 
+- (SimpleAIBLE) Added a `simpleaible` command with `install` and `uninstall` subcommands for the agent skill.
 - (SimpleBluez) Added support for setting LE advertisement secondary channels, including `2M`, and querying supported secondary channels.
 - (SimpleBluez) Added fd-backed `AcquireNotify` callbacks for local GATT characteristics.
 - (SimpleBluez) Added runtime control for the optional `NotifyAcquired` property on local GATT characteristics.
@@ -28,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Changed**
 
+- (SimpleAIBLE) Bundled the agent skill into the Python package.
 - **API CHANGE**: (SimpleBluez) Updated `ReadValue` and `WriteValue` callbacks to expose BlueZ server-side options.
 - (SimpleBluez) Preloaded the D-Bus `Properties` interface on Device proxies to support refreshed BlueZ device properties.
 - (Linux) Switched the default BlueZ implementation from legacy to SimpleBluez.

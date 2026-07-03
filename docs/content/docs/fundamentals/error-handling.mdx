@@ -1,0 +1,86 @@
+---
+title: Error Handling
+description: SimpleBLE's exception taxonomy, which errors are recoverable, timeout semantics, and what happens to in-flight operations on disconnect.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+SimpleBLE reports errors by throwing exceptions. All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. In Python, exceptions surface as `RuntimeError` with the same message text. The C bindings translate exceptions into return codes instead.
+
+## Exception taxonomy
+
+| Exception | Thrown when | Typical cause |
+| --- | --- | --- |
+| `NotInitialized` | Any method is called on a default-constructed `Adapter` or `Peripheral` | Programming error — obtain objects from `get_adapters()` / scan results |
+| `InvalidReference` | The internal object behind a handle is no longer valid | Programming error — a stale handle outlived its backend object |
+| `NotConnected` | A GATT operation is called while the peripheral is not connected | Device disconnected, or `connect()` was never called |
+| `ServiceNotFound` | The requested service UUID isn't in the discovered GATT database | Wrong UUID, or the device doesn't expose that service |
+| `CharacteristicNotFound` | The requested characteristic UUID isn't under that service | Wrong UUID pair |
+| `DescriptorNotFound` | The requested descriptor UUID isn't under that characteristic | Wrong UUID triple |
+| `OperationNotSupported` | The characteristic doesn't have the required capability | e.g. calling `read()` on a write-only characteristic |
+| `OperationFailed` | The operation was attempted but did not complete successfully | Timeouts, stack-level errors, connection failures |
+| `WinRTException` | A WinRT API call failed (Windows only) | Carries the WinRT error code and message |
+| `CoreBluetoothException` | A CoreBluetooth operation failed (macOS/iOS only) | Carries the `NSError` description |
+
+### Recoverable vs. fatal
+
+As a rule of thumb:
+
+*   **Programming errors — fix your code, don't retry:** `NotInitialized`, `InvalidReference`, `OperationNotSupported`, and the three `*NotFound` exceptions. If the UUIDs and capabilities are right, these should never fire in production. The one nuance: `*NotFound` can also occur when talking to a fleet of devices with different firmware revisions — in that case treat it as "this device doesn't support the feature," not as a retry candidate.
+*   **Runtime errors — retry or reconnect:** `NotConnected`, `OperationFailed`, `WinRTException`, `CoreBluetoothException`. These reflect transient radio and stack conditions. The standard recovery is: check `is_connected()`, reconnect if needed, re-establish subscriptions, and retry the operation. See the [reconnect loop recipe](../recipes/reconnect-loop) for a production-ready pattern.
+
+## Catch `std::exception`, not just `BaseException`
+
+<Callout type="warn" title="Platform-layer exceptions">
+On some platforms, lower-layer errors surface through the public API without being translated into `SimpleBLE::Exception` types. On Linux, a failed DBus call inside a GATT operation can surface as a `SimpleDBus::Exception::SendFailed` (which derives from `std::exception` but **not** from `BaseException`), and the internal 30-second DBus reply timeout throws a plain `std::runtime_error`. On Android, GATT operation timeouts throw plain `std::runtime_error` as well.
+</Callout>
+
+To cover both the classified exceptions and platform-layer errors, catch at two levels:
+
+```cpp
+try {
+    auto value = peripheral.read(service_uuid, characteristic_uuid);
+} catch (const SimpleBLE::Exception::BaseException& e) {
+    // Classified SimpleBLE error: inspect the concrete type if needed.
+    std::cerr << "BLE error: " << e.what() << std::endl;
+} catch (const std::exception& e) {
+    // Lower-layer error that escaped translation (DBus failure, timeout, ...).
+    std::cerr << "Unclassified error: " << e.what() << std::endl;
+}
+```
+
+In Python everything arrives as `RuntimeError`, so a single `except RuntimeError` handler covers both cases:
+
+```python
+try:
+    value = peripheral.read(service_uuid, characteristic_uuid)
+except RuntimeError as e:
+    print(f"BLE error: {e}")
+```
+
+## Timeout semantics
+
+Every blocking SimpleBLE call eventually gives up; the complete per-platform timeout table lives in [Concurrency](./concurrency#timeout-reference). What a timeout *means* is worth spelling out:
+
+*   **A timeout is not a rollback.** When `connect()` or a GATT operation throws after its timeout, the underlying OS operation may still be in flight and may even complete afterwards. SimpleBLE does not attempt to cancel it on every platform.
+*   **State is uncertain after a timeout.** The only reliable move is to re-check observable state: call `is_connected()`, and if you were mid-transaction with the device, verify the device-side effect before repeating a non-idempotent write.
+*   **Timeouts usually surface as `OperationFailed`** (connect/disconnect on most platforms), with the Linux/Android caveats described above.
+
+## What happens to in-flight operations on disconnect
+
+When a device drops the connection while an operation is blocked waiting for its result, behavior differs by platform:
+
+| Platform | In-flight operation outcome on disconnect |
+| --- | --- |
+| Linux | BlueZ fails the pending DBus call; the error escapes as a DBus-layer exception (see callout above). The `on_disconnected` callback fires after internal cleanup. |
+| Windows | The WinRT operation completes with a failure status and SimpleBLE throws `OperationFailed`. |
+| macOS / iOS | Pending operations are unblocked without an error being recorded: an in-flight `read()` can return empty or stale data without throwing, and an in-flight `write_request()` can return as if it succeeded. A `read()` on a characteristic that is actively notifying waits for the next notification — if the device disconnects instead, that call can hang indefinitely. |
+| Android | The completion callback never arrives, so the operation stalls for its full 5-second timeout and then throws. |
+
+<Callout type="info" title="Design guidance">
+Treat any result that races a disconnect as suspect. Use `set_callback_on_disconnected` as the source of truth for link state, prefer idempotent device commands where the protocol allows, and validate critical reads (e.g. sequence numbers or checksums in the payload) rather than trusting that a returned buffer implies a healthy link.
+</Callout>
+
+## Errors inside callbacks
+
+Exceptions thrown from *your* callbacks do not propagate into SimpleBLE: the library invokes every user callback inside a try/catch and logs the failure. A throwing callback will not crash your application, but it also won't be reported anywhere except the log — do your own error handling inside callbacks that matter.

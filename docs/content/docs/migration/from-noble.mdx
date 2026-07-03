@@ -1,0 +1,73 @@
+---
+title: Migrating from noble (Node.js)
+description: Where to go after noble — mapping noble's event-driven Node API to SimpleBLE's C++, C, and Python bindings.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[noble](https://github.com/abandonware/noble) was the de-facto BLE central library for Node.js for a decade. Its maintained fork was archived in July 2025, leaving Node BLE projects without an actively maintained stack. This guide maps noble's concepts onto SimpleBLE for teams evaluating a migration.
+
+<Callout type="info" title="No Node.js binding (yet)">
+SimpleBLE does not currently ship a Node.js binding. The practical migration paths are the C++ library ([SimpleBLE](../simpleble/usage)), the C bindings ([SimpleCBLE](../simplecble/usage)) — which can back a native Node addon via N-API if you want to stay in JavaScript — or a sidecar process in Python ([SimplePyBLE](../simplepyble/usage)). If a first-party Node binding matters to you, [let us know](mailto:contact@simpleble.org) — user demand is a key input to the roadmap.
+</Callout>
+
+## Concept mapping
+
+noble is event-driven and callback-based; SimpleBLE is synchronous and blocking. Most noble state machines collapse into straight-line code.
+
+| noble | SimpleBLE (C++) | SimplePyBLE (Python) |
+| --- | --- | --- |
+| `noble.on('stateChange', ...)` → wait for `poweredOn` | `Adapter::bluetooth_enabled()` / `adapter.is_powered()` | `simplepyble.Adapter.bluetooth_enabled()` |
+| `noble.startScanning([serviceUuids])` | `adapter.scan_start()` or `adapter.scan_for(ms)` (filter in your callback) | `adapter.scan_start()` / `adapter.scan_for(ms)` |
+| `noble.on('discover', peripheral => ...)` | `adapter.set_callback_on_scan_found(...)` | `adapter.set_callback_on_scan_found(...)` |
+| `peripheral.connect(cb)` | `peripheral.connect()` (blocking; throws on failure) | `peripheral.connect()` |
+| `peripheral.discoverServices(...)` / `discoverAllServicesAndCharacteristics` | automatic during `connect()`; enumerate with `peripheral.services()` | `peripheral.services()` |
+| `characteristic.read(cb)` | `peripheral.read(service, characteristic)` | `peripheral.read(service, characteristic)` |
+| `characteristic.write(data, withoutResponse, cb)` | `write_request(...)` (with response) / `write_command(...)` (without) | `write_request(...)` / `write_command(...)` |
+| `characteristic.subscribe()` + `characteristic.on('data', ...)` | `peripheral.notify(service, characteristic, callback)` | `peripheral.notify(...)` |
+| `characteristic.unsubscribe()` | `peripheral.unsubscribe(service, characteristic)` | `peripheral.unsubscribe(...)` |
+| `peripheral.once('disconnect', ...)` | `peripheral.set_callback_on_disconnected(...)` | `peripheral.set_callback_on_disconnected(...)` |
+| `peripheral.rssi` / `peripheral.advertisement` | `peripheral.rssi()`, `manufacturer_data()`, `services()` while unconnected | same names |
+
+Differences worth planning around:
+
+- **No `poweredOn` dance.** SimpleBLE initializes the adapter when you call `Adapter::get_adapters()`; there's no state-machine event to wait for.
+- **Service discovery is implicit.** `connect()` blocks until services are resolved, so there is no separate `discoverServices` step or its nested callbacks.
+- **Characteristics are addressed by UUID pair**, not by object handles held from a discovery callback: `read(service_uuid, characteristic_uuid)`.
+- **Callbacks run on internal threads**, not on a JavaScript event loop — read [Concurrency](../fundamentals/concurrency) before porting event-handler logic.
+- **Licensing:** noble is MIT; SimpleBLE is BUSL-1.1 — free for non-commercial use, commercial licenses described in [Licensing](../licensing).
+
+## Skeleton: noble's canonical example, translated
+
+The noble README's heart-rate example — scan for `180d`, connect, subscribe — becomes, in Python:
+
+```python
+import time
+import simplepyble
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next(
+    p for p in adapter.scan_get_results()
+    if "0000180d-0000-1000-8000-00805f9b34fb" in [s.uuid() for s in p.services()]
+)
+
+peripheral.connect()
+peripheral.notify(
+    "0000180d-0000-1000-8000-00805f9b34fb",
+    "00002a37-0000-1000-8000-00805f9b34fb",
+    lambda data: print(f"Heart rate payload: {data.hex()}"),
+)
+time.sleep(30)
+peripheral.disconnect()
+```
+
+The same flow in C++ is shown step-by-step in the [heart rate monitor recipe](../recipes/heart-rate-monitor), which also covers parsing the measurement payload.
+
+## Staying in JavaScript
+
+If a rewrite is off the table, two architectures keep your Node code intact:
+
+1. **Native addon over SimpleCBLE.** The [C API](../simplecble/api) is a stable, flat surface designed for FFI; wrapping the handful of calls your app uses with N-API is a bounded task.
+2. **Sidecar process.** Run BLE in a small SimplePyBLE (or C++) process and talk to it over stdio/IPC/HTTP from Node. This also isolates BLE stack crashes from your main process.

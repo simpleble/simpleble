@@ -15,17 +15,36 @@ Agent skills are reusable instruction sets that provide domain-specific knowledg
 
 ## Installation
 
-You can install the SimpleAIBLE skill using the `skills` CLI. This works across multiple agents including Cursor, Claude Code, and others.
+### Using the SimpleAIBLE CLI (Recommended)
 
-### Using npx (Recommended)
+If you have already [installed the `simpleaible` package](./mcp#installation), the bundled installer detects supported agents on your machine and installs the skill for each of them:
 
-Run the following command in your terminal:
+```bash
+simpleaible install
+```
+
+The command currently detects **Claude Code** (`~/.claude`) and **Codex** (`~/.codex`) and copies the skill into each agent's `skills/` directory. To target a specific agent, pass `--agent`:
+
+```bash
+simpleaible install --agent claude
+simpleaible install --agent codex
+```
+
+To remove the skill again:
+
+```bash
+simpleaible uninstall
+```
+
+Because the skill ships inside the `simpleaible` package, re-running `simpleaible install` after upgrading the package updates the installed skill to match.
+
+### Using npx
+
+For agents not covered by the installer, the `skills` CLI works across Cursor, Windsurf, and many others:
 
 ```bash
 npx skills add https://github.com/simpleble/simpleble --skill simpleaible
 ```
-
-### Options
 
 - **Target specific agents**: Use `-a` or `--agent` (e.g., `-a cursor -a claude-code`).
 - **Global installation**: Use `-g` or `--global` to make the skill available across all your projects.

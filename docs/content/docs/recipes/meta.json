@@ -3,6 +3,8 @@
   "pages": [
     "scan",
     "connect",
-    "read-write-notify"
+    "read-write-notify",
+    "reconnect-loop",
+    "heart-rate-monitor"
   ]
 }

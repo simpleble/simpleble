@@ -16,5 +16,8 @@ A beginner-friendly guide to using CMake to configure, build, and install Simple
 ### [Permissions](./permissions)
 A guide to the various permissions required by different operating systems (Windows, macOS, Linux, Android, and iOS) to access Bluetooth functionality.
 
+### [Error Handling](./error-handling)
+SimpleBLE's exception taxonomy, which errors are worth retrying, what timeouts actually mean, and how in-flight operations behave when a device disconnects.
+
 ### [Concurrency](./concurrency)
-Learn how SimpleBLE handles threading internally, how to safely use callbacks, and how to integrate the library with UI frameworks like Qt, WinForms, or Unity.
+The threading and callback contract for SimpleBLE's synchronous API: which threads run your callbacks on each platform, what you can safely call from inside a callback, every timeout in the library, and how to integrate with UI frameworks like Qt, WinForms, or Unity.

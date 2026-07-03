@@ -1,0 +1,233 @@
+---
+title: Reconnect Loop
+description: A production-grade pattern for surviving BLE disconnections, with backoff and notification re-subscription.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+
+BLE links drop. Devices go out of range, sleep to save power, or reset mid-session. A production application treats disconnection as a normal event, not an error: it detects the drop, reconnects with backoff, and re-establishes its notification subscriptions.
+
+## Flow
+
+1. Register `set_callback_on_disconnected` **before** connecting.
+2. From the callback, only *signal* a reconnect worker — never reconnect inside the callback itself.
+3. In the worker, retry `connect()` with exponential backoff (plus a cap).
+4. After every successful connect, re-subscribe all notifications. Subscriptions do not survive a disconnect.
+5. Stop cleanly: a user-initiated `disconnect()` should not trigger the reconnect machinery.
+
+<Callout type="warn" title="Never reconnect from inside the callback">
+The disconnect callback runs on SimpleBLE's internal event thread. Calling `connect()` there stalls or deadlocks on most platforms — see [Concurrency](../fundamentals/concurrency#calling-simpleble-from-inside-a-callback). The pattern below signals a dedicated worker thread instead.
+</Callout>
+
+## Implementation
+
+<Tabs items={["C++", "Python"]}>
+<Tab value="C++">
+
+```cpp
+#include <simpleble/SimpleBLE.h>
+
+#include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <iostream>
+#include <mutex>
+#include <thread>
+#include <vector>
+
+class ReconnectingPeripheral {
+  public:
+    ReconnectingPeripheral(SimpleBLE::Peripheral peripheral) : peripheral_(peripheral) {
+        peripheral_.set_callback_on_disconnected([this]() {
+            // Runs on SimpleBLE's event thread: only signal, never reconnect here.
+            std::lock_guard<std::mutex> lock(mutex_);
+            link_up_ = false;
+            cv_.notify_all();
+        });
+    }
+
+    void subscribe(const SimpleBLE::BluetoothUUID& service, const SimpleBLE::BluetoothUUID& characteristic,
+                   std::function<void(SimpleBLE::ByteArray)> callback) {
+        // Remember the subscription so it can be re-established after a reconnect.
+        std::lock_guard<std::mutex> lock(mutex_);
+        subscriptions_.push_back({service, characteristic, std::move(callback)});
+    }
+
+    void run() {
+        running_ = true;
+        worker_ = std::thread([this]() { maintain_link(); });
+    }
+
+    void stop() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            running_ = false;
+            cv_.notify_all();
+        }
+        worker_.join();
+        if (peripheral_.is_connected()) {
+            peripheral_.disconnect();
+        }
+    }
+
+  private:
+    struct Subscription {
+        SimpleBLE::BluetoothUUID service;
+        SimpleBLE::BluetoothUUID characteristic;
+        std::function<void(SimpleBLE::ByteArray)> callback;
+    };
+
+    void maintain_link() {
+        auto backoff = std::chrono::seconds(1);
+        const auto max_backoff = std::chrono::seconds(30);
+
+        while (true) {
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                // Sleep until the link drops or we're told to stop.
+                cv_.wait(lock, [this]() { return !running_ || !link_up_; });
+                if (!running_) return;
+            }
+
+            try {
+                peripheral_.connect();
+
+                std::lock_guard<std::mutex> lock(mutex_);
+                for (auto& sub : subscriptions_) {
+                    peripheral_.notify(sub.service, sub.characteristic, sub.callback);
+                }
+                link_up_ = true;
+                backoff = std::chrono::seconds(1);  // Reset after success.
+                std::cout << "Link established." << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "Connect failed: " << e.what() << " — retrying in " << backoff.count() << "s"
+                          << std::endl;
+                std::unique_lock<std::mutex> lock(mutex_);
+                cv_.wait_for(lock, backoff, [this]() { return !running_; });
+                if (!running_) return;
+                backoff = std::min(backoff * 2, max_backoff);
+            }
+        }
+    }
+
+    SimpleBLE::Peripheral peripheral_;
+    std::vector<Subscription> subscriptions_;
+
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    bool link_up_ = false;
+    bool running_ = false;
+    std::thread worker_;
+};
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().front();
+    adapter.scan_for(5000);
+
+    for (auto& peripheral : adapter.scan_get_results()) {
+        if (peripheral.identifier() != "MyDevice") continue;
+
+        ReconnectingPeripheral link(peripheral);
+        link.subscribe("0000180d-0000-1000-8000-00805f9b34fb", "00002a37-0000-1000-8000-00805f9b34fb",
+                       [](SimpleBLE::ByteArray payload) { std::cout << "Data: " << payload << std::endl; });
+        link.run();
+
+        std::this_thread::sleep_for(std::chrono::minutes(5));
+        link.stop();
+        break;
+    }
+
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import threading
+import time
+
+import simplepyble
+
+
+class ReconnectingPeripheral:
+    def __init__(self, peripheral):
+        self.peripheral = peripheral
+        self.subscriptions = []
+        self.link_down = threading.Event()
+        self.stop_requested = threading.Event()
+        self.worker = None
+
+        # Runs on SimpleBLE's event thread: only signal, never reconnect here.
+        peripheral.set_callback_on_disconnected(self.link_down.set)
+
+    def subscribe(self, service_uuid, characteristic_uuid, callback):
+        """Remember the subscription so it can be re-established after a reconnect."""
+        self.subscriptions.append((service_uuid, characteristic_uuid, callback))
+
+    def run(self):
+        self.link_down.set()  # Not connected yet: trigger the first connect.
+        self.worker = threading.Thread(target=self._maintain_link, daemon=True)
+        self.worker.start()
+
+    def stop(self):
+        self.stop_requested.set()
+        self.link_down.set()  # Wake the worker so it can exit.
+        self.worker.join()
+        if self.peripheral.is_connected():
+            self.peripheral.disconnect()
+
+    def _maintain_link(self):
+        backoff = 1.0
+        max_backoff = 30.0
+
+        while not self.stop_requested.is_set():
+            self.link_down.wait()
+            if self.stop_requested.is_set():
+                return
+
+            try:
+                self.peripheral.connect()
+                for service_uuid, characteristic_uuid, callback in self.subscriptions:
+                    self.peripheral.notify(service_uuid, characteristic_uuid, callback)
+                self.link_down.clear()
+                backoff = 1.0  # Reset after success.
+                print("Link established.")
+            except RuntimeError as e:
+                print(f"Connect failed: {e} — retrying in {backoff:.0f}s")
+                if self.stop_requested.wait(timeout=backoff):
+                    return
+                backoff = min(backoff * 2, max_backoff)
+
+
+if __name__ == "__main__":
+    adapter = simplepyble.Adapter.get_adapters()[0]
+    adapter.scan_for(5000)
+
+    peripheral = next(p for p in adapter.scan_get_results() if p.identifier() == "MyDevice")
+
+    link = ReconnectingPeripheral(peripheral)
+    link.subscribe(
+        "0000180d-0000-1000-8000-00805f9b34fb",
+        "00002a37-0000-1000-8000-00805f9b34fb",
+        lambda data: print(f"Data: {data}"),
+    )
+    link.run()
+
+    time.sleep(300)
+    link.stop()
+```
+
+</Tab>
+</Tabs>
+
+## Practical notes
+
+- **Register the disconnect callback before `connect()`**, or a drop during setup can go unnoticed.
+- **Re-subscribe after every reconnect.** The GATT session — including notification state — is gone after a disconnect on every platform.
+- **Reset the backoff on success** so a healthy device that drops once doesn't inherit a 30-second penalty.
+- **`connect()` itself retries and times out internally** (per-platform values in the [timeout reference](../fundamentals/concurrency#timeout-reference)), so each loop iteration can already take several seconds; keep your initial backoff short.
+- **If reconnects keep failing for a long time, rescan.** Some stacks eventually drop cached knowledge of the device; discovering it again with a fresh scan restores a usable `Peripheral`.
+- A user-initiated shutdown also fires the disconnect callback on some platforms — the `stop_requested` / `running_` flag is what prevents the worker from reconnecting after your own `disconnect()`.

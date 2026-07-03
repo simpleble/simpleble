@@ -1,0 +1,81 @@
+---
+title: "Tutorial: Drive a BLE Device from an AI Agent"
+description: Set up the SimpleAIBLE MCP server and walk an AI agent through scanning, connecting, and streaming data from a real BLE device.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+This tutorial takes you from zero to an AI agent that can autonomously discover a nearby BLE device, connect to it, explore its GATT database, and stream live data — using the SimpleAIBLE MCP server and the bundled agent skill. A heart rate monitor is used as the example device, but any BLE peripheral you own works the same way.
+
+## What you'll build
+
+An agent session where you can type *"find my heart rate strap and show me my current heart rate"* and the agent handles the rest: scan, identify the device by its advertised service, connect, subscribe to measurements, interpret the bytes, and disconnect cleanly.
+
+## Prerequisites
+
+- An MCP-capable agent client (Claude Code, Claude Desktop, Cursor, …).
+- Bluetooth hardware on the host machine, with the OS-level permissions described in [Permissions](../fundamentals/permissions).
+- A BLE device to talk to — a heart rate strap, a smart bulb, a dev kit, anything that advertises.
+
+## Step 1 — Install and register the MCP server
+
+Install the server (full options, including per-client configuration snippets, are in [MCP Server](./mcp)):
+
+```bash
+uv tool install simpleaible
+```
+
+Then register it with your client. For Claude Code:
+
+```bash
+claude mcp add simpleaible -- simpleaible
+```
+
+For Claude Desktop or Cursor, add `{"command": "simpleaible"}` to the client's MCP configuration as shown on the [MCP Server](./mcp) page.
+
+## Step 2 — Verify the toolset
+
+Once connected, the agent has access to these tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `bluetooth_enabled`, `get_adapters` | Check the radio and enumerate adapters |
+| `scan_for` | Scan for nearby peripherals (default 5 s) and return their advertisements |
+| `connect` / `disconnect` | Manage the connection by device address |
+| `services` | List the GATT services and characteristics of a connected device |
+| `read`, `write_request`, `write_command` | One-shot GATT operations |
+| `notify`, `indicate`, `get_notifications`, `unsubscribe` | Subscribe to streaming data; notifications are buffered and retrieved by polling `get_notifications` |
+
+A quick smoke test: ask the agent *"scan for BLE devices for five seconds and list what you find."* You should see it call `scan_for` and report identifiers, addresses, and RSSI values.
+
+## Step 3 — The walkthrough
+
+Ask the agent for the end goal, not the individual steps — e.g. *"Connect to my heart rate monitor and stream my heart rate for 30 seconds."* A well-behaved session looks like:
+
+1. **Scan:** the agent calls `scan_for` and picks the peripheral advertising the Heart Rate service (`0x180D`) from the results.
+2. **Connect:** it calls `connect` with the device's `address` field from the scan results. (On macOS this is a host-local UUID, not a MAC address — the agent should use whatever the scan returned, never a hardcoded MAC.)
+3. **Explore:** `services` reveals the GATT database, confirming the Heart Rate Measurement characteristic (`0x2A37`) supports notifications.
+4. **Stream:** the agent calls `notify`, then polls `get_notifications` to drain buffered measurements, decoding the payload from the `data_hex` field (flags byte first — see the [heart rate recipe](../recipes/heart-rate-monitor#the-measurement-format) for the exact format).
+5. **Clean up:** `unsubscribe`, then `disconnect`.
+
+If the agent skips steps (a common failure is connecting without a fresh scan, or forgetting to disconnect), that's what the skill in the next step fixes.
+
+## Step 4 — Add the agent skill
+
+SimpleAIBLE ships an agent skill — a `SKILL.md` plus reference files — that encodes the correct workflow so the agent doesn't have to rediscover it every session: always scan before connecting, use `data_hex` for protocol work, poll `get_notifications` while subscribed, always disconnect when done.
+
+The skill is bundled with the `simpleaible` package. The installer detects Claude Code and Codex on your machine and installs the skill for each:
+
+```bash
+simpleaible install
+```
+
+Run `simpleaible uninstall` to remove it again. For other agents, or for per-project installation, see [Agent Skills](./skills) for the `npx skills` alternative.
+
+With the skill installed, the agent automatically follows the scan → connect → services → interact → disconnect discipline and knows the platform quirks (macOS UUID addressing, UTF-8 vs hex payload fields) without being told.
+
+## Where to go next
+
+- **Custom agents and non-MCP stacks:** the [HTTP bridge](./http) exposes the same capabilities as a REST API, which suits agent frameworks that prefer function-calling over MCP.
+- **Beyond one device:** the MCP tools operate on addresses, so multi-device sessions (e.g. "compare the RSSI of all my beacons") work naturally — just watch connection limits on your OS.
+- **Understanding failures:** when a tool call errors, the taxonomy in [Error Handling](../fundamentals/error-handling) explains what's retryable; timeouts and platform limits are in [Concurrency](../fundamentals/concurrency).
