@@ -39,6 +39,37 @@
 
 // --------------------------------------------------
 
+// CBDescriptor.value is `id`: NSNumber for CCCD (0x2902), Extended Properties (0x2900) and
+// Server Characteristic Configuration (0x2903), NSString for User Description (0x2901), and
+// NSData for all others, as documented per descriptor UUID in CoreBluetooth's CBUUID.h and at
+// https://developer.apple.com/documentation/corebluetooth/cbdescriptor
+// Numeric values are serialized as little-endian uint16 to match the raw on-the-wire bytes
+// returned by the Linux and Windows backends.
+static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
+    if (value == nil) {
+        return SimpleBLE::ByteArray();
+    }
+
+    if ([value isKindOfClass:[NSData class]]) {
+        NSData* data = (NSData*)value;
+        return SimpleBLE::ByteArray((const char*)data.bytes, data.length);
+    }
+
+    if ([value isKindOfClass:[NSString class]]) {
+        NSData* data = [(NSString*)value dataUsingEncoding:NSUTF8StringEncoding];
+        return SimpleBLE::ByteArray((const char*)data.bytes, data.length);
+    }
+
+    if ([value isKindOfClass:[NSNumber class]]) {
+        uint16_t numericValue = [(NSNumber*)value unsignedShortValue];
+        char bytes[2] = {(char)(numericValue & 0xFF), (char)((numericValue >> 8) & 0xFF)};
+        return SimpleBLE::ByteArray(bytes, sizeof(bytes));
+    }
+
+    throw SimpleBLE::Exception::OperationFailed(
+        std::string("Unsupported descriptor value type: ") + [NSStringFromClass([value class]) UTF8String]);
+}
+
 @interface BleTask : NSObject
 @property(strong, atomic) NSError* error;
 @property(atomic) BOOL pending;
@@ -470,9 +501,7 @@
             [self throwBasedOnError:task.error withFormat:@"Descriptor %@ Read", descriptor.UUID];
         }
 
-        const char* bytes = (const char*)[descriptor.value bytes];
-
-        return SimpleBLE::ByteArray(bytes, [descriptor.value length]);
+        return descriptorValueToByteArray(descriptor.value);
     }
 }
 

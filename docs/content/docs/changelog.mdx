@@ -51,6 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (MacOS) Fixed concurrent access to adapter peripheral maps while scan and connection events are processed.
 - (MacOS) Fixed out-of-bounds read when parsing advertised manufacturer data shorter than 2 bytes.
 - (MacOS) Fixed advertised service UUIDs overwriting service data payloads from the same advertisement.
+- (MacOS) Fixed crash when reading descriptors whose values CoreBluetooth returns as numbers or strings, such as the CCCD or User Description.
 - (SimpleBLE) Cleaned up `kvn::bytearray` slicing to avoid an unnecessary temporary allocation and resolve a Coverity iterator-container warning.
 - (SimpleBLE) Fixed installed CMake package configs to include version files and separate target exports.
 - (SimpleCBLE) Fixed allocation-failure handling in C string getters for adapter and peripheral identifiers and addresses.
