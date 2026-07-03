@@ -36,6 +36,14 @@ dependencies = [
 [project.scripts]
 simpleaible-mcp = "simpleaible.mcp:main"
 simpleaible-http = "simpleaible.http:main"
+simpleaible = "simpleaible.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+simpleaible = [
+    "py.typed",
+    "skills/*/SKILL.md",
+    "skills/*/references/*.md",
+]

@@ -58,7 +58,12 @@ See the `HTTP Server docs`_ for the full API reference.
 Agent Skills
 ------------
 
-Install the SimpleAIBLE skill to give your AI agent built-in knowledge of BLE workflows: ::
+Install the SimpleAIBLE skill to give your AI agent built-in knowledge of BLE workflows.
+The bundled installer detects Claude Code and Codex automatically: ::
+
+   simpleaible install
+
+Run ``simpleaible uninstall`` to remove the skill again. For other agents, use the ``skills`` CLI: ::
 
    npx skills add https://github.com/simpleble/simpleble --skill simpleaible
 
