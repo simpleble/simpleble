@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Fixed**
 
+- (Android) Fixed GATT read, write, service discovery and MTU-change callbacks to honor the reported GATT status instead of always reporting success.
+- (Android) Fixed stale service discovery state not being reset on disconnect, which broke reconnection.
 - (Linux) Fixed connection state reporting to wait for locally-dispatched service resolution.
 - (Linux) Fixed connection timeouts when services were already locally resolved.
 - (Linux) Fixed `Adapter::power_on` and `Adapter::power_off`.

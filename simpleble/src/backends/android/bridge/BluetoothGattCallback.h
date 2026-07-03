@@ -27,24 +27,24 @@ class BluetoothGattCallback {
     void clear_callback_onCharacteristicChanged(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic);
 
     void set_flag_characteristicWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic);
-    void clear_flag_characteristicWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic);
+    void clear_flag_characteristicWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic, int status);
     void wait_flag_characteristicWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic);
 
     void set_flag_characteristicReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic);
-    void clear_flag_characteristicReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic, std::vector<uint8_t> value);
+    void clear_flag_characteristicReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic, std::vector<uint8_t> value, int status);
     std::vector<uint8_t> wait_flag_characteristicReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic);
 
     void set_flag_descriptorWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor);
-    void clear_flag_descriptorWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor);
+    void clear_flag_descriptorWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor, int status);
     void wait_flag_descriptorWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor);
 
     void set_flag_descriptorReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor);
-    void clear_flag_descriptorReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor, std::vector<uint8_t> value);
+    void clear_flag_descriptorReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor, std::vector<uint8_t> value, int status);
     std::vector<uint8_t> wait_flag_descriptorReadPending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> descriptor);
 
-    bool connected;
-    bool services_discovered;
-    uint16_t mtu;
+    std::atomic<bool> connected;
+    std::atomic<bool> services_discovered;
+    std::atomic<uint16_t> mtu;
 
     // Not for public use
     // clang-format off
@@ -69,6 +69,7 @@ class BluetoothGattCallback {
   private:
     struct FlagData {
         bool flag = false;
+        int status = 0;  // GATT status of the completed operation (0 == GATT_SUCCESS)
         std::condition_variable cv;
         std::mutex mtx;
         std::vector<uint8_t> value;
