@@ -118,7 +118,18 @@ SharedPtrVector<PeripheralBase> AdapterLinux::get_paired_peripherals() {
 
     auto paired_list = adapter_->device_paired_get();
     for (auto& device : paired_list) {
-        peripherals.push_back(std::make_shared<PeripheralLinux>(device, this->adapter_));
+        auto address = device->address();
+
+        // Reuse the cached wrapper for this device if one exists, as creating a
+        // second wrapper around the same device would clear the existing wrapper's
+        // callbacks once it gets destroyed.
+        std::scoped_lock lock(peripherals_mutex_);
+        if (peripherals_.count(address) == 0) {
+            auto base_peripheral = std::make_shared<PeripheralLinux>(device, this->adapter_);
+            peripherals_.insert(std::make_pair(address, base_peripheral));
+        }
+
+        peripherals.push_back(peripherals_.at(address));
     }
 
     return peripherals;

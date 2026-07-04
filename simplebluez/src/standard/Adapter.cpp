@@ -90,10 +90,9 @@ std::vector<std::shared_ptr<Device>> Adapter::device_paired_get() {
     // Traverse all child paths and return only those that are paired.
     std::vector<std::shared_ptr<Device>> paired_devices;
 
-    for (auto& [path, child] : _children) {
-        if (!child->valid()) continue;
+    for (auto& device : children_casted<Device>()) {
+        if (!device || !device->valid()) continue;
 
-        std::shared_ptr<Device> device = std::dynamic_pointer_cast<Device>(child);
         if (device->paired()) {
             paired_devices.push_back(device);
         }
@@ -106,10 +105,9 @@ std::vector<std::shared_ptr<Device>> Adapter::device_bonded_get() {
     // Traverse all child paths and return only those that are bonded.
     std::vector<std::shared_ptr<Device>> bonded_devices;
 
-    for (auto& [path, child] : _children) {
-        if (!child->valid()) continue;
+    for (auto& device : children_casted<Device>()) {
+        if (!device || !device->valid()) continue;
 
-        std::shared_ptr<Device> device = std::dynamic_pointer_cast<Device>(child);
         if (device->bonded()) {
             bonded_devices.push_back(device);
         }

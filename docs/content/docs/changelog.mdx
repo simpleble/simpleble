@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Linux) Fixed BlueZ backend selection to avoid constructing both SimpleBluez and legacy implementations.
 - (Linux) Fixed concurrent access to scan result maps.
 - (Linux) Fixed notification cleanup after abrupt BlueZ peripheral disconnects.
+- (Linux) Fixed adapter and peripheral callbacks being cleared when `Adapter::get_adapters` or `Adapter::get_paired_peripherals` is called again.
 - (Linux) Fixed `Peripheral::services()` to include advertised service data payloads.
 - (Linux) Fixed random address types being reported as unspecified.
 - (MacOS) Fixed characteristic and descriptor operations with standard UUIDs.
@@ -61,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleCBLE) Fixed allocation-failure handling in C string getters for adapter and peripheral identifiers and addresses.
 - (SimpleBluez) Fixed custom peripheral D-Bus objects to use the connection's unique bus name instead of the unowned `org.simplebluez` name.
 - (SimpleBluez) Fixed device update notifications to avoid retaining discovered devices.
+- (SimpleBluez) Fixed concurrent access to adapter children while listing paired or bonded devices.
 - (SimpleDBus) Fixed local `ObjectManager::GetManagedObjects()` calls to return the local object tree directly instead of blocking on a D-Bus self-call.
 - (SimpleDBus) Fixed descendant proxies staying valid after an ancestor D-Bus object path is removed.
 - (SimpleDBus) Fixed retained proxies remaining invalid after their D-Bus object path is removed and later added again.
