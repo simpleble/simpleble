@@ -76,7 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* Plausible Analytics */}
         <Script
-          src="https://plausible.io/js/pa-COmM4LSGsz8Def-zvuyEx.js"
+          src="https://plausible.io/js/pa-M7zY0s35yU2_4lvyBcS60.js"
           strategy="afterInteractive"
         />
         <Script id="plausible-analytics" strategy="afterInteractive">
