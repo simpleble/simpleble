@@ -1,16 +1,28 @@
 ---
 title: Examples
-description: Code examples for SimpleDroidBLE.
+description: Example Android app for SimpleDroidBLE.
 ---
 
-To learn how to use SimpleDroidBLE, please refer to the [examples](https://github.com/simpleble/simpleble/tree/main/examples/simpleble-android) provided in the repository.
+The production-style Android example lives in [`examples/simpleble-android`](https://github.com/simpleble/simpleble/tree/main/examples/simpleble-android).
 
-The example app includes:
+It demonstrates:
 
-- **List Adapters**: Display available Android Bluetooth adapters.
-- **Scan**: Collect scan events and display nearby peripherals.
-- **Connect**: Select a peripheral, connect, and list its services and characteristics.
-- **Read**: Read characteristic values from a connected peripheral.
-- **Notify**: Subscribe to characteristic notifications and unsubscribe after a delay.
+- requesting Android Bluetooth permissions with the Activity Result API,
+- explaining Android adapter selection,
+- scanning and showing discovered peripherals,
+- connecting and disconnecting cleanly,
+- listing services and characteristics with capabilities,
+- reading a selected characteristic,
+- writing with request or command,
+- subscribing to notify or indicate characteristics,
+- showing errors in the UI,
+- stopping scans on activity pause and cleaning up notification/connection work from the ViewModel.
 
-For setup details, see [Usage](./usage), [Installation](../installation), and [Quickstart](../quickstart).
+Run it from Android Studio by opening `examples/simpleble-android`, or from the command line:
+
+```bash
+cd examples/simpleble-android
+./gradlew :app:assembleDebug
+```
+
+Install the debug APK on an Android API 31+ device with BLE support. An emulator is useful for build checks, but real scan, connect, GATT read/write, and notification flows require physical Bluetooth hardware.

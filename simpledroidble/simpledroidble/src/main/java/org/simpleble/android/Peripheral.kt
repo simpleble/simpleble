@@ -3,7 +3,12 @@ package org.simpleble.android
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -11,26 +16,23 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
 
     private var instanceId: Long = newInstanceId
     private var adapterId: Long = newAdapterId
+    private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    private val _onConnected = MutableSharedFlow<Unit>()
-    private val _onConnectionActive = MutableSharedFlow<Boolean>()
-    private val _onDisconnected = MutableSharedFlow<Unit>()
+    private val _onConnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _onConnectionActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1)
+    private val _onDisconnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     private val callbacks = object : Callback {
         override fun onConnected() {
-            CoroutineScope(Dispatchers.Main).launch {
+            callbackScope.launch {
                 _onConnected.emit(Unit)
-            }
-            CoroutineScope(Dispatchers.Main).launch {
                 _onConnectionActive.emit(true)
             }
         }
 
         override fun onDisconnected() {
-            CoroutineScope(Dispatchers.Main).launch {
+            callbackScope.launch {
                 _onDisconnected.emit(Unit)
-            }
-            CoroutineScope(Dispatchers.Main).launch {
                 _onConnectionActive.emit(false)
             }
         }
@@ -106,45 +108,47 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
     }
 
     fun writeRequest(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
-        // TODO: Implement
+        nativePeripheralWriteRequest(adapterId, instanceId, service.toString(), characteristic.toString(), data)
     }
 
     fun writeCommand(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
-        // TODO: Implement
+        nativePeripheralWriteCommand(adapterId, instanceId, service.toString(), characteristic.toString(), data)
     }
 
     fun notify(
         service: BluetoothUUID,
         characteristic: BluetoothUUID
-    ): MutableSharedFlow<ByteArray> {
-        val payloadFlow = MutableSharedFlow<ByteArray>()
+    ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    payloadFlow.emit(data)
-                }
+                trySend(data)
             }
         }
 
         nativePeripheralNotify(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
-        return payloadFlow
+        awaitClose {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { unsubscribe(service, characteristic) }
+            }
+        }
     }
 
     fun indicate(
         service: BluetoothUUID,
         characteristic: BluetoothUUID
-    ): MutableSharedFlow<ByteArray> {
-        val payloadFlow = MutableSharedFlow<ByteArray>()
+    ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    payloadFlow.emit(data)
-                }
+                trySend(data)
             }
         }
 
         nativePeripheralIndicate(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
-        return payloadFlow
+        awaitClose {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { unsubscribe(service, characteristic) }
+            }
+        }
     }
 
     fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
@@ -156,8 +160,13 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
         characteristic: BluetoothUUID,
         descriptor: BluetoothUUID
     ): ByteArray {
-        // TODO: Implement
-        return ByteArray(0)
+        return nativePeripheralDescriptorRead(
+            adapterId,
+            instanceId,
+            service.toString(),
+            characteristic.toString(),
+            descriptor.toString()
+        )
     }
 
     fun write(
@@ -166,14 +175,21 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
         descriptor: BluetoothUUID,
         data: ByteArray
     ) {
-        // TODO: Implement
+        nativePeripheralDescriptorWrite(
+            adapterId,
+            instanceId,
+            service.toString(),
+            characteristic.toString(),
+            descriptor.toString(),
+            data
+        )
     }
 
-    val onConnected get() = _onConnected
+    val onConnected: SharedFlow<Unit> get() = _onConnected
 
-    val onDisconnected get() = _onDisconnected
+    val onDisconnected: SharedFlow<Unit> get() = _onDisconnected
 
-    val onConnectionActive get() = _onConnectionActive
+    val onConnectionActive: SharedFlow<Boolean> get() = _onConnectionActive
 
     /// ----------------------------------------------------------------------------
 

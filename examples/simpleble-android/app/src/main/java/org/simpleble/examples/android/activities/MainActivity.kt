@@ -1,68 +1,72 @@
-package org.simpleble.examples.android.activities;
+package org.simpleble.examples.android.activities
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.BottomNavigation
-import androidx.compose.material.BottomNavigationItem
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
-import androidx.compose.material.Icon
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
-import org.simpleble.android.Adapter
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import org.simpleble.android.SimpleDroidBle
 import org.simpleble.examples.android.viewmodels.BluetoothViewModel
-import org.simpleble.examples.android.views.ConnectContent
-import org.simpleble.examples.android.views.ListAdaptersContent
-import org.simpleble.examples.android.views.NotifyContent
-import org.simpleble.examples.android.views.ReadContent
-import org.simpleble.examples.android.views.ScanContent
-import java.lang.ref.WeakReference
+import org.simpleble.examples.android.viewmodels.capabilitySummary
 
 class MainActivity : ComponentActivity() {
-    private val bluetoothHasPermissions = mutableStateOf(false)
-    private val bluetoothViewModel = BluetoothViewModel()
+    private val bluetoothViewModel: BluetoothViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Set the activity reference for SimpleDroidBle. This is required for requesting permissions.
-        // NOTE: This is a bit of a hacky way to do this, but it's the only way to do it for now.
-        SimpleDroidBle.contextReference = WeakReference(this)
-        bluetoothHasPermissions.value = SimpleDroidBle.hasPermissions
+        SimpleDroidBle.initialize(applicationContext)
 
         setContent {
             MaterialTheme {
-                Surface {
-                    if (bluetoothHasPermissions.value) {
-                        ExampleView(bluetoothViewModel)
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    var hasPermissions by remember {
+                        mutableStateOf(SimpleDroidBle.hasPermissions(this@MainActivity))
+                    }
+                    val permissionLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestMultiplePermissions()
+                    ) {
+                        hasPermissions = SimpleDroidBle.hasPermissions(this@MainActivity)
+                        if (hasPermissions) {
+                            bluetoothViewModel.loadAdapters()
+                        }
+                    }
+
+                    if (hasPermissions) {
+                        LaunchedEffect(Unit) {
+                            bluetoothViewModel.loadAdapters()
+                        }
+                        BleExampleScreen(bluetoothViewModel)
                     } else {
-                        Column {
-                            Button(onClick = { SimpleDroidBle.requestPermissions() }) {
-                                Text("Request Bluetooth Permissions")
-                            }
-                            Text("Bluetooth permissions are required to use this app")
-                            Text("Please grant the permissions and restart the app")
+                        PermissionScreen {
+                            permissionLauncher.launch(SimpleDroidBle.requiredPermissions)
                         }
                     }
                 }
@@ -70,67 +74,197 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        SimpleDroidBle.handleOnRequestPermissionsResult(requestCode, permissions, grantResults)
-        bluetoothHasPermissions.value = SimpleDroidBle.hasPermissions
+    override fun onPause() {
+        bluetoothViewModel.onActivityPaused()
+        super.onPause()
     }
 }
-
-
 
 @Composable
-fun ExampleView(bluetoothViewModel: BluetoothViewModel) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+private fun PermissionScreen(onRequestPermissions: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("SimpleBLE Android Example", style = MaterialTheme.typography.h5)
+        Spacer(Modifier.height(12.dp))
+        Text("Bluetooth scan and connect permissions are required before the adapter can be used.")
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRequestPermissions) {
+            Text("Grant Bluetooth permissions")
+        }
+    }
+}
 
-    Scaffold(
-        bottomBar = {
-            BottomNavigation {
-                BottomNavigationItem(
-                    label = { Text("Adapter") },
-                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
-                )
-                BottomNavigationItem(
-                    label = { Text("Scan") },
-                    icon = { Icon(Icons.Default.AccountBox, contentDescription = null) },
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
-                )
-                BottomNavigationItem(
-                    label = { Text("Connect") },
-                    icon = { Icon(Icons.Default.AccountBox, contentDescription = null) },
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 }
-                )
-                BottomNavigationItem(
-                    label = { Text("Read") },
-                    icon = { Icon(Icons.Default.AccountBox, contentDescription = null) },
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 }
-                )
-                BottomNavigationItem(
-                    label = { Text("Notify") },
-                    icon = { Icon(Icons.Default.AccountBox, contentDescription = null) },
-                    selected = selectedTab == 4,
-                    onClick = { selectedTab = 4 }
-                )
+@Composable
+private fun BleExampleScreen(viewModel: BluetoothViewModel) {
+    val state = viewModel.state
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text("SimpleBLE Android Example", style = MaterialTheme.typography.h5)
+            Text("Version ${state.version}")
+            Text("Bluetooth enabled: ${state.bluetoothEnabled}")
+            Text(state.adapterSummary)
+            state.error?.let { Text(it, color = MaterialTheme.colors.error) }
+            Text(state.status)
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = viewModel::loadAdapters) {
+                    Text("Refresh adapter")
+                }
+                Button(
+                    onClick = {
+                        if (state.isScanning) viewModel.stopScan() else viewModel.startScan()
+                    },
+                    enabled = state.bluetoothEnabled && state.hasAdapter
+                ) {
+                    Text(if (state.isScanning) "Stop scan" else "Start scan")
+                }
             }
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            when (selectedTab) {
-                0 -> ListAdaptersContent()
-                1 -> ScanContent(bluetoothViewModel)
-                2 -> ConnectContent(bluetoothViewModel)
-                3 -> ReadContent(bluetoothViewModel)
-                4 -> NotifyContent(bluetoothViewModel)
-                else -> ListAdaptersContent() // Default
+
+        item {
+            SectionTitle("Discovered peripherals")
+        }
+
+        if (state.peripherals.isEmpty()) {
+            item {
+                Text(if (state.isScanning) "Scanning..." else "No peripherals discovered yet.")
+            }
+        } else {
+            items(state.peripherals, key = { it.address }) { peripheral ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.selectPeripheral(peripheral.address) }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(peripheral.name.ifBlank { "(unnamed)" }, fontWeight = FontWeight.Bold)
+                    Text("${peripheral.address}  RSSI ${peripheral.rssi} dBm  ${if (peripheral.connectable) "connectable" else "not connectable"}")
+                }
+                Divider()
+            }
+        }
+
+        state.selectedPeripheral?.let { selected ->
+            item {
+                SectionTitle("Connection")
+                Text("${selected.name.ifBlank { "(unnamed)" }} [${selected.address}]")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            if (state.connected) viewModel.disconnect() else viewModel.connectSelected()
+                        },
+                        enabled = selected.connectable || state.connected
+                    ) {
+                        Text(if (state.connected) "Disconnect" else "Connect")
+                    }
+                    Button(onClick = viewModel::loadServices, enabled = state.connected) {
+                        Text("Refresh services")
+                    }
+                }
+            }
+        }
+
+        if (state.connected) {
+            item {
+                SectionTitle("Services")
+            }
+
+            if (state.services.isEmpty()) {
+                item { Text("No services discovered.") }
+            } else {
+                state.services.forEach { service ->
+                    item {
+                        Text(service.uuid, fontWeight = FontWeight.Bold)
+                    }
+                    items(service.characteristics, key = { "${service.uuid}:${it.uuid}" }) { characteristic ->
+                        val selected = state.selectedCharacteristic?.service == service.uuid &&
+                            state.selectedCharacteristic.characteristic == characteristic.uuid
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.selectCharacteristic(service.uuid, characteristic.uuid)
+                                }
+                                .padding(start = 12.dp, top = 6.dp, bottom = 6.dp)
+                        ) {
+                            Text(if (selected) "> ${characteristic.uuid}" else characteristic.uuid)
+                            Text(characteristic.capabilitySummary())
+                        }
+                    }
+                }
+            }
+
+            item {
+                CharacteristicActions(viewModel)
             }
         }
     }
 }
 
+@Composable
+private fun CharacteristicActions(viewModel: BluetoothViewModel) {
+    val state = viewModel.state
+    val target = state.selectedCharacteristic ?: return
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Characteristic")
+        Text("${target.service}\n${target.characteristic}")
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = viewModel::readSelected, enabled = target.canRead) {
+                Text("Read")
+            }
+            Button(
+                onClick = {
+                    if (state.notifying) viewModel.stopNotifications() else viewModel.startNotifications()
+                },
+                enabled = target.canNotify || target.canIndicate || state.notifying
+            ) {
+                Text(if (state.notifying) "Stop notify" else "Subscribe")
+            }
+        }
+
+        OutlinedTextField(
+            value = state.writeHex,
+            onValueChange = viewModel::setWriteHex,
+            label = { Text("Write bytes as hex, for example 01 02 ff") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = viewModel::writeRequest, enabled = target.canWriteRequest) {
+                Text("Write request")
+            }
+            Button(onClick = viewModel::writeCommand, enabled = target.canWriteCommand) {
+                Text("Write command")
+            }
+        }
+
+        if (state.readValue.isNotEmpty()) {
+            Text("Last read: ${state.readValue}")
+        }
+
+        if (state.notifications.isNotEmpty()) {
+            Text("Notifications", fontWeight = FontWeight.Bold)
+            state.notifications.takeLast(8).forEach { payload ->
+                Text(payload)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.h6)
+}

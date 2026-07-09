@@ -9,6 +9,7 @@ foundation = "1.6.4"
 material = "1.6.4"
 activity-ktx = "1.8.2"
 activity-compose = "1.8.2"
+lifecycle = "2.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -21,9 +22,9 @@ foundation = { module = "androidx.compose.foundation:foundation", version.ref = 
 material = { module = "androidx.compose.material:material", version.ref = "material" }
 activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activity-ktx" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-

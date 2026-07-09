@@ -151,7 +151,12 @@ peripheral.write_command(&service_uuid, &characteristic_uuid, &payload).unwrap()
 </Tab>
 <Tab value="Android">
 
-SimpleDroidBLE currently exposes `writeRequest` and `writeCommand` placeholders, but characteristic writes are not implemented in the alpha Android-only binding yet. Use C++ SimpleBLE through the Android backend when you need write support today, or track SimpleDroidBLE until those methods are completed.
+```kotlin
+val payload = byteArrayOf(0x01, 0x02, 0x03)
+
+peripheral.writeRequest(serviceUuid, characteristicUuid, payload)
+peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
+```
 
 </Tab>
 </Tabs>
@@ -254,7 +259,6 @@ val job = CoroutineScope(Dispatchers.Main).launch {
 }
 
 delay(10_000)
-peripheral.unsubscribe(serviceUuid, characteristicUuid)
 job.cancel()
 ```
 
