@@ -16,7 +16,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimplePyBLE](./simplepyble/usage) | Python | Production-ready | Scripts, tools, data pipelines, tests | PyPI or local source |
 | [SimpleJavaBLE](./simplejavable/usage) | Java | Production-ready | JVM desktop apps and integrations | Gradle from source |
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
-| [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Alpha | Android-only applications | Gradle composite build |
+| [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Gradle composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBluez](./simplebluez/usage) | C++ | Lower-level utility | Direct BlueZ integration on Linux | CMake from source |
 | [SimpleDBus](./simpledbus/usage) | C++ | Lower-level utility | DBus object model work | CMake from source |
@@ -148,7 +148,7 @@ simplersble = { path = "path/to/simpleble" }
 </Tab>
 <Tab value="Android">
 
-SimpleDroidBLE is currently consumed as a Gradle composite build from a local checkout.
+SimpleDroidBLE can be consumed from release AARs or as a Gradle composite build from a local checkout.
 
 In `settings.gradle.kts`, include the library before `include(":app")`:
 

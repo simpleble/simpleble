@@ -11,6 +11,7 @@ jstring to_jstring(JNIEnv* env, const std::string& str);
 std::string from_jstring(JNIEnv* env, jstring str);
 
 jbyteArray to_jbyteArray(JNIEnv* env, const std::string& data);
+std::string from_jbyteArray(JNIEnv* env, jbyteArray data);
 
 jobject jarraylist_new(JNIEnv* env);
 void jarraylist_add(JNIEnv* env, jobject arrayList, jobject element);

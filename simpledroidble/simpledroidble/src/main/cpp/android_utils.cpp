@@ -19,18 +19,15 @@ std::string from_jstring(JNIEnv* env, jstring str) {
 jbyteArray to_jbyteArray(JNIEnv* env, const std::string& data) {
     jbyteArray result = env->NewByteArray(data.size());
     env->SetByteArrayRegion(result, 0, data.size(), reinterpret_cast<const jbyte*>(data.data()));
+    return result;
+}
 
-    jsize length = env->GetArrayLength(result);
-    jbyte* bytes = env->GetByteArrayElements(result, NULL);
+std::string from_jbyteArray(JNIEnv* env, jbyteArray data) {
+    if (data == nullptr) return {};
 
-    std::string arrayOut = "Array: ";
-    for (jsize i = 0; i < length; i++) {
-        arrayOut += fmt::format("{:02x} ", bytes[i]);
-    }
-    log_debug(arrayOut);
-
-    env->ReleaseByteArrayElements(result, bytes, JNI_ABORT);
-
+    jsize length = env->GetArrayLength(data);
+    std::string result(static_cast<size_t>(length), '\0');
+    env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte*>(result.data()));
     return result;
 }
 
@@ -50,6 +47,10 @@ void jarraylist_add(JNIEnv* env, jobject arrayList, jobject element) {
 void throw_exception(JNIEnv* env, const std::string& msg) {
     log_error(fmt::format("Throwing exception: {}", msg));
 
-    jclass Exception = env->FindClass("java/lang/Exception");
+    jclass Exception = env->FindClass("org/simpleble/android/SimpleDroidBleException");
+    if (Exception == nullptr) {
+        env->ExceptionClear();
+        Exception = env->FindClass("java/lang/RuntimeException");
+    }
     env->ThrowNew(Exception, msg.c_str());
 }

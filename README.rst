@@ -31,7 +31,7 @@ Language Bindings
 * **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
 * **Java (SimpleJavaBLE)**: Java bindings.
 * **Rust (SimpleRsBLE)**: Rust bindings with a **NEW API**. See the `SimpleRsBLE`_ Crates.io page for more details.
-* **Android (SimpleDroidBLE) - Alpha**: Android-only bindings (alpha).
+* **Android (SimpleDroidBLE) - Beta**: Android-only Kotlin bindings.
 * More languages coming soon!
 
 Support & Resources
