@@ -5,6 +5,7 @@ import { useState, type ReactElement } from "react";
 
 import { DocsHomeHero } from "@/components/home/docs-home-hero";
 import { DocsHomeSearch } from "@/components/home/docs-home-search";
+import { Footer } from "@/components/home/footer";
 import { HoverIlluminationLink } from "@/components/ui/hover-illumination-link";
 
 type CardLink = Readonly<{
@@ -213,6 +214,7 @@ export const DocsHome = ({ className }: DocsHomeProps): ReactElement => {
           </div>
         </section>
       </div>
+      <Footer />
     </main>
   );
 };
