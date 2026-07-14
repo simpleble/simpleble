@@ -76,31 +76,35 @@ Before releasing a new version of the project, the following steps should be per
 
    - `VERSION`
    - `Cargo.toml` (Remove the -dev1 suffix)
-   - `docs/content/docs/changelog.rst` (Add the release date)
+   - `docs/content/docs/changelog.mdx` (Add the release date)
    - `simpleaible/pyproject.toml` (Remove the -dev1 suffix)
 
 3. Commit the changes to the repository.
 
-4. Tag the commit with the new version number.
+4. Push the release commit to the remote repository without a tag.
 
-5. Push the commit and the tag to the remote repository.
+5. Wait for the `CI Main` workflow triggered by the branch push to finish successfully.
 
-6. Create a new release on GitHub.
+6. Tag the commit with the new version number using the `vX.Y.Z` format.
 
-7. Wait for `ci_release.yml` to finish.
+7. Push the tag to the remote repository.
 
-8. Advance the version number in the following files:
+8. Create and publish a new release on GitHub for that tag.
+
+9. Wait for the release-triggered `CI Main` workflow to finish. This workflow uploads the release artifacts and publishes the packages.
+
+10. Advance the version number in the following files:
 
    - `VERSION`
    - `Cargo.toml` (and include a `-dev1` suffix)
-   - `docs/content/docs/changelog.rst`
+   - `docs/content/docs/changelog.mdx`
    - `simpleaible/pyproject.toml` (and include a `-dev1` suffix)
 
-9. Run `cargo build` to ensure that `Cargo.toml` is correct.
+11. Run `cargo build` to ensure that `Cargo.toml` is correct.
 
-10. Run `minion deploy` to deploy the documentation.
+12. Run `minion deploy` to deploy the documentation.
 
-11. TODO: SOCIAL MEDIA
+13. TODO: SOCIAL MEDIA
 
 ## Hardware In The Loop - Recommended Tests
 

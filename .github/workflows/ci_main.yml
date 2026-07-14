@@ -4,7 +4,11 @@ permissions:
   contents: read
 
 on:
+  # Stable builds are triggered by publishing a GitHub release. Running CI for
+  # tag pushes only duplicates that work.
   push:
+    branches:
+      - "**"
   pull_request:
   release:
     types: [published]

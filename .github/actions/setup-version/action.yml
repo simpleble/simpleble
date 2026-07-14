@@ -13,8 +13,10 @@ runs:
         # Read the base version from the VERSION file
         version_str=$(cat VERSION | tr -d ' \t\n\r')
 
-        # Check if the current commit is tagged
-        if ! git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+        # Only a published GitHub release produces a stable version. A branch
+        # push may see a tag created at the same time, so checking only whether
+        # HEAD is tagged can accidentally publish the stable version twice.
+        if [[ "${GITHUB_EVENT_NAME:-}" != "release" ]]; then
           # Get the number of commits since the last version bump
           latest_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -n "$latest_tag" ]; then
