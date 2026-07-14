@@ -74,6 +74,8 @@ License
 
 SimpleAIBLE is available under the Business Source License 1.1 (BUSL-1.1). Each
 version of SimpleAIBLE will convert to the GNU General Public License version 3 after four years of its initial release.
+Qualifying non-commercial users may instead continue using and distributing that version under the original
+BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
 
 The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
 also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!

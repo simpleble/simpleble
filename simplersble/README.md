@@ -2,11 +2,9 @@
 
 The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE), designed for simplicity and ease of use.
 
-**IMPORTANT:** SimpleRsBLE has a new API! Check it out and leave your feedback!
-
 ## Key Features
 
-* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
+* **Cross-Platform**: Enterprise-grade support for Windows, macOS, and Linux
 * **Easy Integration**: Clean, consistent API across all platforms
 * **Multiple Language Bindings**: Production-ready bindings for C, C++, Python, Java and Rust, with more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
@@ -16,7 +14,7 @@ The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE),
 We're here to help you succeed with SimpleBLE:
 
 * **Documentation**: Visit our [Documentation](https://docs.simpleble.org) page for comprehensive guides
-* **Commercial Support**: Check our [our website](https://simpleble.org?utm_source=crates_io&utm_medium=referral&utm_campaign=simplersble_readme) or [email us](mailto:contact@simpleble.org) about licensing and professional services
+* **Commercial Support**: Check [our website](https://simpleble.org?utm_source=crates_io&utm_medium=referral&utm_campaign=simplersble_readme) or [email us](mailto:contact@simpleble.org) about licensing and professional services
 * **Community**: Join our [Discord](https://discord.gg/N9HqNEcvP3) server for discussions and help
 * **Dongl**: Try the [official SimpleBLE Bluetooth dongle](https://www.simpleble.org/dongl?utm_source=crates_io&utm_medium=referral&utm_campaign=dongl_launch) for reliable prototyping and production
 
@@ -24,11 +22,16 @@ We're here to help you succeed with SimpleBLE:
 
 ## Installation
 
-You can add SimpleRsBLE to your project by adding the following lines to your `Cargo.toml`:
+Requirements:
 
-```toml
-[dependencies]
-simplersble = "0.10.4"
+- Rust 1.82 or newer
+- CMake 3.21 or newer
+- On Debian or Ubuntu, DBus development headers: `sudo apt-get install libdbus-1-dev`
+
+Add SimpleRsBLE to your project from crates.io:
+
+```bash
+cargo add simplersble
 ```
 
 Please review our [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplersble/src/bin) on GitHub for more information on how to use SimpleRsBLE.
@@ -37,6 +40,8 @@ Please review our [code examples](https://github.com/simpleble/simpleble/tree/ma
 
 Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1). Each
 version of SimpleBLE will convert to the GNU General Public License version 3 after four years of its initial release.
+Qualifying non-commercial users may instead continue using and distributing that version under the original
+BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in `LICENSE.md`.
 
 The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
 also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!

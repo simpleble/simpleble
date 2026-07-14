@@ -30,7 +30,7 @@ Language Bindings
 * **C (SimpleCBLE)**: C-wrapped version of the library
 * **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
 * **Java (SimpleJavaBLE)**: Java bindings.
-* **Rust (SimpleRsBLE)**: Rust bindings with a **NEW API**. See the `SimpleRsBLE`_ Crates.io page for more details.
+* **Rust (SimpleRsBLE)**: Rust bindings. See the `SimpleRsBLE`_ Crates.io page for more details.
 * **Android (SimpleDroidBLE) - Alpha**: Android-only bindings (alpha).
 * More languages coming soon!
 
@@ -55,6 +55,8 @@ License
 
 Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1). Each
 version of SimpleBLE will convert to the GNU General Public License version 3 after four years of its initial release.
+Qualifying non-commercial users may instead continue using and distributing that version under the original
+BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
 
 The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
 also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!

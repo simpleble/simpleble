@@ -32,6 +32,10 @@ You can install SimplePyBLE from PyPI using pip: ::
 
    pip install simplepyble
 
+When building from source on Debian or Ubuntu, install the DBus development headers first: ::
+
+   sudo apt-get install libdbus-1-dev
+
 Usage
 -----
 
@@ -65,16 +69,13 @@ Example: ::
 
 Check out the `async examples`_ for more details.
 
-To run the built-in REST server, you can use the following command: ::
-
-   python3 -m simplepyble.server --host 127.0.0.1 --port 8000
-
-
 License
 =======
 
 Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1). Each
 version of SimpleBLE will convert to the GNU General Public License version 3 after four years of its initial release.
+Qualifying non-commercial users may instead continue using and distributing that version under the original
+BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
 
 The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
 also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!
