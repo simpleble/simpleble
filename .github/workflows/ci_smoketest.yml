@@ -191,7 +191,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Compile SimpleBLE
-        run: |
-          cargo install cargo-edit --bin cargo-set-version
-          cargo set-version ${{ env.VERSION }}
-          cargo publish --allow-dirty --dry-run
+        run: cargo publish --allow-dirty --dry-run

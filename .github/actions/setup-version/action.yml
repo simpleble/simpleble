@@ -1,10 +1,10 @@
-name: 'Add Version Suffix'
-description: 'Adds a version suffix to the VERSION file'
+name: 'Set Build Version'
+description: 'Sets the build version in VERSION and Cargo.toml'
 
 runs:
   using: 'composite'
   steps:
-    - name: Update VERSION file
+    - name: Update version files
       shell: bash
       run: |
         # Configure Git to trust this repository
@@ -30,7 +30,11 @@ runs:
           fi
         fi
 
-        # Update the VERSION file
+        # Use a backup suffix for compatibility with both GNU and BSD sed,
+        # then remove the backup.
         echo "$version_str" > VERSION
+        sed -i.bak 's/^version = .*/version = "'"$version_str"'"/' Cargo.toml
+        rm Cargo.toml.bak
         echo "Updated VERSION file to: $version_str"
+        grep '^version = ' Cargo.toml
         echo "VERSION=$version_str" >> $GITHUB_ENV

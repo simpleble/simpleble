@@ -54,7 +54,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Compile SimpleBLE
-        run: |
-          cargo install cargo-edit --bin cargo-set-version
-          cargo set-version ${{ env.VERSION }}
-          cargo build ${{ matrix.build-type-cmd }}
+        run: cargo build ${{ matrix.build-type-cmd }}
