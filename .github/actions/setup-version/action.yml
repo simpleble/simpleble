@@ -1,5 +1,5 @@
 name: 'Set Build Version'
-description: 'Sets the build version in VERSION and Cargo.toml'
+description: 'Sets the build version in project manifests'
 
 runs:
   using: 'composite'
@@ -35,6 +35,9 @@ runs:
         echo "$version_str" > VERSION
         sed -i.bak 's/^version = .*/version = "'"$version_str"'"/' Cargo.toml
         rm Cargo.toml.bak
+        sed -i.bak 's/^version = .*/version = "'"$version_str"'"/' simpleaible/pyproject.toml
+        rm simpleaible/pyproject.toml.bak
         echo "Updated VERSION file to: $version_str"
         grep '^version = ' Cargo.toml
+        grep '^version = ' simpleaible/pyproject.toml
         echo "VERSION=$version_str" >> $GITHUB_ENV

@@ -25,11 +25,6 @@ jobs:
       - name: Install dependencies
         run: pip install build
 
-      - name: Update pyproject.toml version
-        run: |
-          sed -i 's/^version = .*/version = "'"$VERSION"'"/' simpleaible/pyproject.toml
-          grep "^version =" simpleaible/pyproject.toml
-
       - name: Build
         run: python3 -m build simpleaible
 
