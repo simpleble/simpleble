@@ -103,6 +103,47 @@ SharedPtrVector<PeripheralBase> AdapterMac::scan_get_results() {
 
 SharedPtrVector<PeripheralBase> AdapterMac::get_paired_peripherals() { return {}; }
 
+SharedPtrVector<PeripheralBase> AdapterMac::get_peripherals_by_identifiers(const std::vector<BluetoothAddress>& identifiers) {
+    AdapterBaseMacOS* internal = (__bridge AdapterBaseMacOS*)opaque_internal_;
+    void* opaque_adapter = [internal underlying];
+
+    NSMutableArray<NSString*>* uuid_strings = [NSMutableArray arrayWithCapacity:identifiers.size()];
+    for (const auto& identifier : identifiers) {
+        [uuid_strings addObject:[NSString stringWithUTF8String:identifier.c_str()]];
+    }
+
+    NSArray<CBPeripheral*>* retrieved = [internal retrievePeripheralsWithIdentifiers:uuid_strings];
+
+    SharedPtrVector<PeripheralBase> result;
+    for (CBPeripheral* cb_peripheral in retrieved) {
+        void* opaque_peripheral = (__bridge void*)cb_peripheral;
+
+        // A retrieved peripheral carries no advertising data (it was not
+        // scanned), so synthesise a connectable-by-default record. Register it
+        // in the same tables as a scanned peripheral so connect/GATT delegate
+        // callbacks route back to it.
+        advertising_data_t advertising_data{};
+        advertising_data.connectable = true;
+        advertising_data.rssi = INT16_MIN;
+        advertising_data.tx_power = INT16_MIN;
+
+        std::shared_ptr<PeripheralMac> base_peripheral;
+        {
+            std::scoped_lock lock(peripherals_mutex_);
+            if (this->peripherals_.count(opaque_peripheral) == 0) {
+                base_peripheral = std::make_shared<PeripheralMac>(opaque_peripheral, opaque_adapter, advertising_data);
+                this->peripherals_.insert(std::make_pair(opaque_peripheral, base_peripheral));
+            } else {
+                base_peripheral = this->peripherals_.at(opaque_peripheral);
+            }
+            this->seen_peripherals_[opaque_peripheral] = base_peripheral;
+        }
+        result.push_back(base_peripheral);
+    }
+
+    return result;
+}
+
 // Delegate methods passed for AdapterBaseMacOS
 
 void AdapterMac::delegate_did_discover_peripheral(void* opaque_peripheral, void* opaque_adapter, advertising_data_t advertising_data) {
