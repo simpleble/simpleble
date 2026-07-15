@@ -9,7 +9,7 @@ The documentation for SimpleBLE is built using [Fumadocs](https://fumadocs.verce
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
+- Node.js 20.9+ or Bun
 - npm, pnpm, or bun package manager
 
 ### Installation
@@ -17,7 +17,7 @@ The documentation for SimpleBLE is built using [Fumadocs](https://fumadocs.verce
 First, install the dependencies:
 
 ```bash
-cd <path-to-repository>/docs-new
+cd <path-to-repository>/docs
 npm install
 # or
 bun install
@@ -55,56 +55,98 @@ bun start
 
 ### Content Structure
 
-- **Content files**: Located in `docs-new/content/docs/`
-- **Components**: Located in `docs-new/src/components/`
-- **API documentation**: Generated using custom React components in `docs-new/src/components/api/`
+- **Content files**: Located in `docs/content/docs/`
+- **Components**: Located in `docs/src/components/`
+- **API documentation**: Generated using custom React components in `docs/src/components/api/`
 
 Documentation is written in MDX (Markdown with JSX), allowing you to use React components within your documentation.
 
 ## Release checklist
 
-Before releasing a new version of the project, the following steps should be performed:
+Before releasing a new version of the project, perform the following steps in order.
+
+### Prepare the release
 
 1. Ensure content parity between all readmes and the documentation.
 
    - `README.rst`
    - `LICENSE.md`
+   - `simpleaible/README.rst`
    - `simplepyble/README.rst`
    - `simplersble/README.md`
 
-2. Review the version number in the following files, make sure they match:
+2. Update and review the release version in the following files:
 
    - `VERSION`
-   - `Cargo.toml` (Remove the -dev1 suffix)
-   - `docs/content/docs/changelog.mdx` (Add the release date)
-   - `simpleaible/pyproject.toml` (Remove the -dev1 suffix)
+   - `Cargo.toml` (remove the `-dev1` suffix)
+   - `Cargo.lock`
+   - `docs/content/docs/changelog.mdx` (add the actual release date)
+   - `simpleaible/pyproject.toml` (remove the `-dev1` suffix)
 
-3. Commit the changes to the repository.
+3. Run the Hardware In The Loop tests listed below.
 
-4. Push the release commit to the remote repository without a tag.
+4. Run the pre-release checks from the repository root:
 
-5. Wait for the `CI Main` workflow triggered by the branch push to finish successfully.
+   ```bash
+   ./scripts/check_version.sh
+   cargo build
+   (cd docs && npm run types:check && npm run build)
+   ```
 
-6. Tag the commit with the new version number using the `vX.Y.Z` format.
+   Review the resulting diff and confirm that `Cargo.lock` contains the release version.
 
-7. Push the tag to the remote repository.
+5. Commit the release changes to the repository.
 
-8. Create and publish a new release on GitHub for that tag.
+6. Push the release commit to the remote repository without a tag.
 
-9. Wait for the release-triggered `CI Main` workflow to finish. This workflow uploads the release artifacts and publishes the packages.
+7. Wait for the branch-triggered `CI Main` workflow to finish successfully. A `main` push publishes development packages: `X.Y.Z-devN` to crates.io and `X.Y.Z.devN` to PyPI.
 
-10. Advance the version number in the following files:
+   Confirm that SimpleRsBLE, SimplePyBLE, and SimpleAIBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing.
 
-   - `VERSION`
-   - `Cargo.toml` (and include a `-dev1` suffix)
-   - `docs/content/docs/changelog.mdx`
-   - `simpleaible/pyproject.toml` (and include a `-dev1` suffix)
+### Tag and publish the release
 
-11. Run `cargo build` to ensure that `Cargo.toml` is correct.
+8. Confirm that the latest commit on `main` is the exact commit whose `CI Main` workflow succeeded, then create an annotated tag:
 
-12. Run `minion deploy` to deploy the documentation.
+   ```bash
+   git tag -a vX.Y.Z -m "SimpleBLE vX.Y.Z release"
+   ```
 
-13. TODO: SOCIAL MEDIA
+9. Push the tag to the remote repository. Tag-only pushes intentionally do not start `CI Main`; there is no workflow to cancel.
+
+10. Create and publish a stable GitHub release for that tag. A draft does not trigger publication, and the release must not be marked as a prerelease.
+
+11. Wait for the release-triggered `CI Main` workflow to finish. Do not cancel it. This workflow uploads the GitHub release artifacts and publishes the stable packages.
+
+12. Verify the published release:
+
+    - The GitHub release contains the expected artifacts and no filenames with a development suffix.
+    - SimplePyBLE `X.Y.Z` is available on PyPI.
+    - SimpleAIBLE `X.Y.Z` is available on PyPI.
+    - SimpleRsBLE `X.Y.Z` is available and not yanked on crates.io.
+
+### Start the next development version
+
+13. Advance to the next development version in the following files:
+
+    - `VERSION` (next version without a development suffix)
+    - `Cargo.toml` (next version with a `-dev1` suffix)
+    - `Cargo.lock` (next version with a `-dev1` suffix)
+    - `docs/content/docs/changelog.mdx` (add an empty section for the next version)
+    - `simpleaible/pyproject.toml` (next version with a `-dev1` suffix)
+
+14. Validate the development bump and documentation:
+
+    ```bash
+    cargo build
+    (cd docs && npm run types:check && npm run build)
+    ```
+
+15. Commit and push the development-version bump.
+
+16. Wait for the branch-triggered `CI Main` workflow to finish successfully and confirm that the new development packages were published with the expected `-devN`/`.devN` versions.
+
+17. From the documentation root, run `minion deploy` to deploy the documentation.
+
 
 ## Hardware In The Loop - Recommended Tests
 
