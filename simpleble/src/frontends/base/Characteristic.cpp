@@ -32,6 +32,18 @@ std::vector<std::string> Characteristic::capabilities() {
         capabilities.push_back("indicate");
     }
 
+    if (can_broadcast()) {
+        capabilities.push_back("broadcast");
+    }
+
+    if (can_write_authenticated_signed()) {
+        capabilities.push_back("authenticated_signed_writes");
+    }
+
+    if (has_extended_properties()) {
+        capabilities.push_back("extended_properties");
+    }
+
     return capabilities;
 }
 
@@ -54,3 +66,6 @@ bool Characteristic::can_write_request() { return (*this)->can_write_request(); 
 bool Characteristic::can_write_command() { return (*this)->can_write_command(); }
 bool Characteristic::can_notify() { return (*this)->can_notify(); }
 bool Characteristic::can_indicate() { return (*this)->can_indicate(); }
+bool Characteristic::can_broadcast() { return (*this)->can_broadcast(); }
+bool Characteristic::can_write_authenticated_signed() { return (*this)->can_write_authenticated_signed(); }
+bool Characteristic::has_extended_properties() { return (*this)->has_extended_properties(); }

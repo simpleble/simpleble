@@ -484,6 +484,7 @@ if(SIMPLEBLE_TEST)
 
     add_executable(simpleble_test
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_characteristic.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_bytearray.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp)

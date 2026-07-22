@@ -139,10 +139,13 @@ SharedPtrVector<ServiceBase> PeripheralAndroid::available_services() {
             bool can_write_command = flags & Android::BluetoothGattCharacteristic::PROPERTY_WRITE_NO_RESPONSE;
             bool can_notify = flags & Android::BluetoothGattCharacteristic::PROPERTY_NOTIFY;
             bool can_indicate = flags & Android::BluetoothGattCharacteristic::PROPERTY_INDICATE;
+            bool can_broadcast = flags & Android::BluetoothGattCharacteristic::PROPERTY_BROADCAST;
+            bool can_write_authenticated_signed = flags & Android::BluetoothGattCharacteristic::PROPERTY_SIGNED_WRITE;
+            bool has_extended_properties = flags & Android::BluetoothGattCharacteristic::PROPERTY_EXTENDED_PROPS;
 
-            characteristic_list.push_back(
-                std::make_shared<CharacteristicBase>(characteristic.getUuid(), descriptor_list, can_read,
-                                                     can_write_request, can_write_command, can_notify, can_indicate));
+            characteristic_list.push_back(std::make_shared<CharacteristicBase>(
+                characteristic.getUuid(), descriptor_list, can_read, can_write_request, can_write_command, can_notify,
+                can_indicate, can_broadcast, can_write_authenticated_signed, has_extended_properties));
         }
 
         service_list.push_back(std::make_shared<ServiceBase>(service.getUuid(), characteristic_list));

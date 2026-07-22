@@ -113,7 +113,9 @@ SharedPtrVector<ServiceBase> PeripheralDongl::available_services() {
             }
             characteristic_list.push_back(std::make_shared<CharacteristicBase>(
                 characteristic.uuid, descriptor_list, characteristic.can_read, characteristic.can_write_request,
-                characteristic.can_write_command, characteristic.can_notify, characteristic.can_indicate));
+                characteristic.can_write_command, characteristic.can_notify, characteristic.can_indicate,
+                characteristic.can_broadcast, characteristic.can_write_authenticated_signed,
+                characteristic.has_extended_properties));
         }
         service_list.push_back(std::make_shared<ServiceBase>(service.uuid, characteristic_list));
     }
@@ -427,6 +429,9 @@ void PeripheralDongl::notify_characteristic_discovered(simpleble_CharacteristicD
         evt.props.write_wo_resp,
         evt.props.notify,
         evt.props.indicate,
+        evt.props.broadcast,
+        evt.props.auth_signed_wr,
+        false,
     });
 }
 

@@ -65,7 +65,7 @@ SharedPtrVector<ServiceBase> PeripheralPlain::available_services() {
     SharedPtrVector<ServiceBase> service_list;
     SharedPtrVector<DescriptorBase> descriptor_list;
     SharedPtrVector<CharacteristicBase> characteristic_list = {std::make_shared<CharacteristicBase>(
-        BATTERY_CHARACTERISTIC_UUID, descriptor_list, true, false, false, true, false)};
+        BATTERY_CHARACTERISTIC_UUID, descriptor_list, true, false, false, true, false, false, false, false)};
 
     service_list.push_back(std::make_shared<ServiceBase>(BATTERY_SERVICE_UUID, characteristic_list));
     return service_list;

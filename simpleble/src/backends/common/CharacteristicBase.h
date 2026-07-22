@@ -12,7 +12,8 @@ class CharacteristicBase {
   public:
     CharacteristicBase(const BluetoothUUID& uuid, std::vector<std::shared_ptr<DescriptorBase>> descriptors,
                        bool can_read, bool can_write_request, bool can_write_command, bool can_notify,
-                       bool can_indicate);
+                       bool can_indicate, bool can_broadcast, bool can_write_authenticated_signed,
+                       bool has_extended_properties);
     virtual ~CharacteristicBase() = default;
 
     BluetoothUUID uuid();
@@ -23,6 +24,9 @@ class CharacteristicBase {
     bool can_write_command();
     bool can_notify();
     bool can_indicate();
+    bool can_broadcast();
+    bool can_write_authenticated_signed();
+    bool has_extended_properties();
 
   protected:
     BluetoothUUID uuid_;
@@ -33,6 +37,9 @@ class CharacteristicBase {
     bool can_write_command_ = false;
     bool can_notify_ = false;
     bool can_indicate_ = false;
+    bool can_broadcast_ = false;
+    bool can_write_authenticated_signed_ = false;
+    bool has_extended_properties_ = false;
 };
 
 }  // namespace SimpleBLE
