@@ -308,10 +308,17 @@ static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
             bool can_write_command = (characteristic.properties & CBCharacteristicPropertyWriteWithoutResponse) != 0;
             bool can_notify = (characteristic.properties & CBCharacteristicPropertyNotify) != 0;
             bool can_indicate = (characteristic.properties & CBCharacteristicPropertyIndicate) != 0;
+            bool can_broadcast = (characteristic.properties & CBCharacteristicPropertyBroadcast) != 0;
+            bool can_write_authenticated_signed =
+                (characteristic.properties & CBCharacteristicPropertyAuthenticatedSignedWrites) != 0;
+            bool has_extended_properties =
+                (characteristic.properties & CBCharacteristicPropertyExtendedProperties) != 0;
 
             characteristic_list.push_back(std::make_shared<SimpleBLE::CharacteristicBase>(uuidToSimpleBLE(characteristic.UUID),
                                                                                           descriptor_list, can_read, can_write_request,
-                                                                                          can_write_command, can_notify, can_indicate));
+                                                                                          can_write_command, can_notify, can_indicate,
+                                                                                          can_broadcast, can_write_authenticated_signed,
+                                                                                          has_extended_properties));
         }
         service_list.push_back(std::make_shared<SimpleBLE::ServiceBase>(uuidToSimpleBLE(service.UUID), characteristic_list));
     }

@@ -154,10 +154,14 @@ SharedPtrVector<ServiceBase> PeripheralLinuxLegacy::available_services() {
             bool can_write_command = std::find(flags.begin(), flags.end(), "write-without-response") != flags.end();
             bool can_notify = std::find(flags.begin(), flags.end(), "notify") != flags.end();
             bool can_indicate = std::find(flags.begin(), flags.end(), "indicate") != flags.end();
+            bool can_broadcast = std::find(flags.begin(), flags.end(), "broadcast") != flags.end();
+            bool can_write_authenticated_signed = std::find(flags.begin(), flags.end(),
+                                                            "authenticated-signed-writes") != flags.end();
+            bool has_extended_properties = std::find(flags.begin(), flags.end(), "extended-properties") != flags.end();
 
-            characteristic_list.push_back(
-                std::make_shared<CharacteristicBase>(bluez_characteristic->uuid(), descriptor_list, can_read,
-                                                     can_write_request, can_write_command, can_notify, can_indicate));
+            characteristic_list.push_back(std::make_shared<CharacteristicBase>(
+                bluez_characteristic->uuid(), descriptor_list, can_read, can_write_request, can_write_command,
+                can_notify, can_indicate, can_broadcast, can_write_authenticated_signed, has_extended_properties));
         }
 
         service_list.push_back(std::make_shared<ServiceBase>(bluez_service->uuid(), characteristic_list));
@@ -168,7 +172,7 @@ SharedPtrVector<ServiceBase> PeripheralLinuxLegacy::available_services() {
         // Emulate the battery service through the Battery1 interface.
         SharedPtrVector<DescriptorBase> descriptor_list;
         SharedPtrVector<CharacteristicBase> characteristic_list = {std::make_shared<CharacteristicBase>(
-            BATTERY_CHARACTERISTIC_UUID, descriptor_list, true, false, false, true, false)};
+            BATTERY_CHARACTERISTIC_UUID, descriptor_list, true, false, false, true, false, false, false, false)};
         service_list.push_back(std::make_shared<ServiceBase>(BATTERY_SERVICE_UUID, characteristic_list));
     }
 

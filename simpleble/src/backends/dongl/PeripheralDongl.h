@@ -92,6 +92,9 @@ class PeripheralDongl : public PeripheralBase {
         bool can_write_command;
         bool can_notify;
         bool can_indicate;
+        bool can_broadcast;
+        bool can_write_authenticated_signed;
+        bool has_extended_properties;
 
         std::vector<DescriptorDefinition> descriptors;
     };

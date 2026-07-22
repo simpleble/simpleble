@@ -31,9 +31,12 @@ class BluetoothGattCharacteristic {
 
     SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> getObject() const { return _obj; }
 
+    static const int PROPERTY_BROADCAST = 0x00000001;
     static const int PROPERTY_INDICATE = 0x00000020;
     static const int PROPERTY_NOTIFY = 0x00000010;
     static const int PROPERTY_READ = 0x00000002;
+    static const int PROPERTY_SIGNED_WRITE = 0x00000040;
+    static const int PROPERTY_EXTENDED_PROPS = 0x00000080;
     static const int PROPERTY_WRITE = 0x00000008;
     static const int PROPERTY_WRITE_NO_RESPONSE = 0x00000004;
 
