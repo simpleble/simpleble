@@ -189,8 +189,8 @@ class Peripheral:
 
     def set_callback_on_connected(self, callback: Callable[[], None] | None):
         if callback is None:
-             self._internal.set_callback_on_connected(None)
-             return
+            self._internal.set_callback_on_connected(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -201,8 +201,8 @@ class Peripheral:
 
     def set_callback_on_disconnected(self, callback: Callable[[], None] | None):
         if callback is None:
-             self._internal.set_callback_on_disconnected(None)
-             return
+            self._internal.set_callback_on_disconnected(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -288,8 +288,8 @@ class Adapter:
 
     def set_callback_on_scan_start(self, callback: Callable[[], None] | None):
         if callback is None:
-             self._internal.set_callback_on_scan_start(None)
-             return
+            self._internal.set_callback_on_scan_start(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -300,8 +300,8 @@ class Adapter:
 
     def set_callback_on_scan_stop(self, callback: Callable[[], None] | None):
         if callback is None:
-             self._internal.set_callback_on_scan_stop(None)
-             return
+            self._internal.set_callback_on_scan_stop(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -312,8 +312,8 @@ class Adapter:
 
     def set_callback_on_scan_found(self, callback: Callable[[Peripheral], None] | None):
         if callback is None:
-             self._internal.set_callback_on_scan_found(None)
-             return
+            self._internal.set_callback_on_scan_found(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper(peripheral: simplepyble.Peripheral):
             # Wrap the peripheral before passing it to the callback
@@ -326,8 +326,8 @@ class Adapter:
 
     def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], None] | None):
         if callback is None:
-             self._internal.set_callback_on_scan_updated(None)
-             return
+            self._internal.set_callback_on_scan_updated(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper(peripheral: simplepyble.Peripheral):
             # Wrap the peripheral before passing it to the callback
@@ -340,8 +340,8 @@ class Adapter:
 
     def set_callback_on_power_on(self, callback: Callable[[], None] | None):
         if callback is None:
-             self._internal.set_callback_on_power_on(None)
-             return
+            self._internal.set_callback_on_power_on(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
@@ -352,8 +352,8 @@ class Adapter:
 
     def set_callback_on_power_off(self, callback: Callable[[], None] | None):
         if callback is None:
-             self._internal.set_callback_on_power_off(None)
-             return
+            self._internal.set_callback_on_power_off(None)
+            return
         loop = asyncio.get_running_loop()
         def wrapper():
             if asyncio.iscoroutinefunction(callback):
