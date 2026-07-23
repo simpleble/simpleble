@@ -1,7 +1,7 @@
 import asyncio
 import atexit
 import weakref
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import simplepyble
 
 _active_peripherals = weakref.WeakSet()
@@ -154,7 +154,7 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._internal.write_command, service_uuid, characteristic_uuid, payload)
 
-    async def notify(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
+    async def notify(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], Awaitable[None] | None]):
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
         def wrapper(payload: bytes):
@@ -164,7 +164,7 @@ class Peripheral:
                 loop.call_soon_threadsafe(callback, payload)
         return await loop.run_in_executor(None, self._internal.notify, service_uuid, characteristic_uuid, wrapper)
 
-    async def indicate(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
+    async def indicate(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], Awaitable[None] | None]):
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
         def wrapper(payload: bytes):
@@ -187,7 +187,7 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._internal.descriptor_write, service_uuid, characteristic_uuid, descriptor_uuid, payload)
 
-    def set_callback_on_connected(self, callback: Callable[[], None] | None):
+    def set_callback_on_connected(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_connected(None)
             return
@@ -199,7 +199,7 @@ class Peripheral:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_connected(wrapper)
 
-    def set_callback_on_disconnected(self, callback: Callable[[], None] | None):
+    def set_callback_on_disconnected(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_disconnected(None)
             return
@@ -286,7 +286,7 @@ class Adapter:
     def get_connected_peripherals(self) -> list[Peripheral]:
         return [Peripheral(p) for p in self._internal.get_connected_peripherals()]
 
-    def set_callback_on_scan_start(self, callback: Callable[[], None] | None):
+    def set_callback_on_scan_start(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_start(None)
             return
@@ -298,7 +298,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_start(wrapper)
 
-    def set_callback_on_scan_stop(self, callback: Callable[[], None] | None):
+    def set_callback_on_scan_stop(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_stop(None)
             return
@@ -310,7 +310,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_stop(wrapper)
 
-    def set_callback_on_scan_found(self, callback: Callable[[Peripheral], None] | None):
+    def set_callback_on_scan_found(self, callback: Callable[[Peripheral], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_found(None)
             return
@@ -324,7 +324,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_found(wrapper)
 
-    def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], None] | None):
+    def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_updated(None)
             return
@@ -338,7 +338,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_updated(wrapper)
 
-    def set_callback_on_power_on(self, callback: Callable[[], None] | None):
+    def set_callback_on_power_on(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_power_on(None)
             return
@@ -350,7 +350,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_power_on(wrapper)
 
-    def set_callback_on_power_off(self, callback: Callable[[], None] | None):
+    def set_callback_on_power_off(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_power_off(None)
             return
