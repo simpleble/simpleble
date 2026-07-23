@@ -1,7 +1,7 @@
 import asyncio
 import atexit
 import weakref
-from typing import List, Callable, Optional, Union, Any, Dict, Set
+from collections.abc import Callable
 import simplepyble
 
 _active_peripherals = weakref.WeakSet()
@@ -51,10 +51,10 @@ class Characteristic:
     def uuid(self) -> str:
         return self._internal.uuid()
 
-    def descriptors(self) -> List[Descriptor]:
+    def descriptors(self) -> list[Descriptor]:
         return [Descriptor(d) for d in self._internal.descriptors()]
 
-    def capabilities(self) -> List[str]:
+    def capabilities(self) -> list[str]:
         return self._internal.capabilities()
 
     def can_read(self) -> bool:
@@ -85,13 +85,13 @@ class Service:
     def data(self) -> bytes:
         return self._internal.data()
 
-    def characteristics(self) -> List[Characteristic]:
+    def characteristics(self) -> list[Characteristic]:
         return [Characteristic(c) for c in self._internal.characteristics()]
 
 class Peripheral:
     def __init__(self, internal_peripheral: simplepyble.Peripheral):
         self._internal = internal_peripheral
-        self._subscriptions: Set[tuple] = set()
+        self._subscriptions: set[tuple] = set()
         _active_peripherals.add(self)
 
     def initialized(self) -> bool:
@@ -136,10 +136,10 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._internal.unpair)
 
-    def services(self) -> List[Service]:
+    def services(self) -> list[Service]:
         return [Service(s) for s in self._internal.services()]
 
-    def manufacturer_data(self) -> Dict[int, bytes]:
+    def manufacturer_data(self) -> dict[int, bytes]:
         return self._internal.manufacturer_data()
 
     async def read(self, service_uuid: str, characteristic_uuid: str) -> bytes:
@@ -157,7 +157,7 @@ class Peripheral:
     async def notify(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
-        def wrapper(payload):
+        def wrapper(payload: bytes):
             if asyncio.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(payload), loop)
             else:
@@ -167,7 +167,7 @@ class Peripheral:
     async def indicate(self, service_uuid: str, characteristic_uuid: str, callback: Callable[[bytes], None]):
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
-        def wrapper(payload):
+        def wrapper(payload: bytes):
             if asyncio.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(payload), loop)
             else:
@@ -187,7 +187,7 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._internal.descriptor_write, service_uuid, characteristic_uuid, descriptor_uuid, payload)
 
-    def set_callback_on_connected(self, callback: Optional[Callable[[], None]]):
+    def set_callback_on_connected(self, callback: Callable[[], None] | None):
         if callback is None:
              self._internal.set_callback_on_connected(None)
              return
@@ -199,7 +199,7 @@ class Peripheral:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_connected(wrapper)
 
-    def set_callback_on_disconnected(self, callback: Optional[Callable[[], None]]):
+    def set_callback_on_disconnected(self, callback: Callable[[], None] | None):
         if callback is None:
              self._internal.set_callback_on_disconnected(None)
              return
@@ -236,7 +236,7 @@ class Adapter:
         self._internal = internal_adapter
 
     @classmethod
-    def get_adapters(cls) -> List['Adapter']:
+    def get_adapters(cls) -> list['Adapter']:
         return [cls(adapter) for adapter in simplepyble.Adapter.get_adapters()]
 
     def identifier(self) -> str:
@@ -277,16 +277,16 @@ class Adapter:
     def scan_is_active(self) -> bool:
         return self._internal.scan_is_active()
 
-    def scan_get_results(self) -> List[Peripheral]:
+    def scan_get_results(self) -> list[Peripheral]:
         return [Peripheral(p) for p in self._internal.scan_get_results()]
         
-    def get_paired_peripherals(self) -> List[Peripheral]:
+    def get_paired_peripherals(self) -> list[Peripheral]:
         return [Peripheral(p) for p in self._internal.get_paired_peripherals()]
 
-    def get_connected_peripherals(self) -> List[Peripheral]:
+    def get_connected_peripherals(self) -> list[Peripheral]:
         return [Peripheral(p) for p in self._internal.get_connected_peripherals()]
 
-    def set_callback_on_scan_start(self, callback: Optional[Callable[[], None]]):
+    def set_callback_on_scan_start(self, callback: Callable[[], None] | None):
         if callback is None:
              self._internal.set_callback_on_scan_start(None)
              return
@@ -298,7 +298,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_start(wrapper)
 
-    def set_callback_on_scan_stop(self, callback: Optional[Callable[[], None]]):
+    def set_callback_on_scan_stop(self, callback: Callable[[], None] | None):
         if callback is None:
              self._internal.set_callback_on_scan_stop(None)
              return
@@ -310,12 +310,12 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_scan_stop(wrapper)
 
-    def set_callback_on_scan_found(self, callback: Optional[Callable[[Peripheral], None]]):
+    def set_callback_on_scan_found(self, callback: Callable[[Peripheral], None] | None):
         if callback is None:
              self._internal.set_callback_on_scan_found(None)
              return
         loop = asyncio.get_running_loop()
-        def wrapper(peripheral):
+        def wrapper(peripheral: simplepyble.Peripheral):
             # Wrap the peripheral before passing it to the callback
             wrapped_peripheral = Peripheral(peripheral)
             if asyncio.iscoroutinefunction(callback):
@@ -324,12 +324,12 @@ class Adapter:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_found(wrapper)
 
-    def set_callback_on_scan_updated(self, callback: Optional[Callable[[Peripheral], None]]):
+    def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], None] | None):
         if callback is None:
              self._internal.set_callback_on_scan_updated(None)
              return
         loop = asyncio.get_running_loop()
-        def wrapper(peripheral):
+        def wrapper(peripheral: simplepyble.Peripheral):
             # Wrap the peripheral before passing it to the callback
             wrapped_peripheral = Peripheral(peripheral)
             if asyncio.iscoroutinefunction(callback):
@@ -338,7 +338,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
         self._internal.set_callback_on_scan_updated(wrapper)
 
-    def set_callback_on_power_on(self, callback: Optional[Callable[[], None]]):
+    def set_callback_on_power_on(self, callback: Callable[[], None] | None):
         if callback is None:
              self._internal.set_callback_on_power_on(None)
              return
@@ -350,7 +350,7 @@ class Adapter:
                 loop.call_soon_threadsafe(callback)
         self._internal.set_callback_on_power_on(wrapper)
 
-    def set_callback_on_power_off(self, callback: Optional[Callable[[], None]]):
+    def set_callback_on_power_off(self, callback: Callable[[], None] | None):
         if callback is None:
              self._internal.set_callback_on_power_off(None)
              return
