@@ -43,7 +43,11 @@ jobs:
           build-config: "Release"
           os: "${{ matrix.config.os }}"
           target-arch: "${{ matrix.config.architecture }}"
-          cmake-options: "-DBUILD_SHARED_LIBS=OFF"
+          cmake-options: "-DBUILD_SHARED_LIBS=OFF -DSIMPLEJAVABLE_TEST=${{ matrix.config.os == 'linux' && matrix.config.architecture == 'x64' && 'ON' || 'OFF' }}"
+
+      - name: Test SimpleJavaBLE JNI
+        if: matrix.config.os == 'linux' && matrix.config.architecture == 'x64'
+        run: ctest --test-dir "$GITHUB_WORKSPACE/build_simplejavable" --build-config Release --output-on-failure
 
       - name: Upload JNI Binaries
         if: matrix.config.os != 'windows'
