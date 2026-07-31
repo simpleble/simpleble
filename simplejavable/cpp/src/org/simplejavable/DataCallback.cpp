@@ -1,5 +1,7 @@
 #include "DataCallback.h"
 
+#include <simpleble/Logging.h>
+
 namespace Org {
 namespace SimpleJavaBLE {
 
@@ -23,9 +25,18 @@ DataCallback::DataCallback(jobject obj) : _obj(obj, _cls.get()) {
     }
 }
 
-void DataCallback::on_data_received(jbyteArray data) {
-    if (_obj.is_valid()) {
-        _obj.to_local().call_void_method(_method_on_data_received, data);
+void DataCallback::on_data_received(jbyteArray data) noexcept {
+    try {
+        if (_obj) {
+            _obj.to_local().call_void_method(_method_on_data_received, data);
+        }
+    } catch (const std::exception& exception) {
+        SimpleBLE::Logging::Logger::get()->log(
+            SimpleBLE::Logging::Level::Error, "SimpleJavaBLE", __FILE__, __LINE__, __func__,
+            "Java notification callback failed: " + std::string(exception.what()));
+    } catch (...) {
+        SimpleBLE::Logging::Logger::get()->log(SimpleBLE::Logging::Level::Error, "SimpleJavaBLE", __FILE__, __LINE__,
+                                              __func__, "Java notification callback failed with an unknown error");
     }
 }
 

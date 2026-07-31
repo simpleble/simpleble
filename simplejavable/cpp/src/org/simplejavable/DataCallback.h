@@ -28,7 +28,7 @@ class DataCallback {
     /**
      * @brief Invoke the onDataReceived method on the Java DataCallback object.
      */
-    void on_data_received(jbyteArray data);
+    void on_data_received(jbyteArray data) noexcept;
 
   private:
     // Static JNI resources, populated by Registrar during JNI_OnLoad
@@ -38,7 +38,8 @@ class DataCallback {
     static const SimpleJNI::JNIDescriptor descriptor;
     static const SimpleJNI::AutoRegister<DataCallback> registrar;
 
-    SimpleJNI::Object<SimpleJNI::WeakRef> _obj;
+    // Keep method-argument callbacks alive for the duration of the native subscription.
+    SimpleJNI::Object<SimpleJNI::GlobalRef> _obj;
 };
 
 }  // namespace SimpleJavaBLE
