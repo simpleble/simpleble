@@ -186,6 +186,7 @@ if(SIMPLEBLUEZ_TEST)
 
     add_executable(simplebluez_test
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_standard_lookup.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/helpers/PythonRunner.cpp)
 
     target_compile_definitions(simplebluez_test PRIVATE FMT_HEADER_ONLY)

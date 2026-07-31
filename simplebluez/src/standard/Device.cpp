@@ -53,10 +53,8 @@ std::shared_ptr<Battery1> Device::battery1() {
 std::vector<std::shared_ptr<Service>> Device::services() { return children_casted_with_prefix<Service>("service"); }
 
 std::shared_ptr<Service> Device::get_service(const std::string& uuid) {
-    auto services_all = services();
-
-    for (auto& service : services_all) {
-        if (service->uuid() == uuid) {
+    for (auto& service : services()) {
+        if (service && service->valid() && service->uuid() == uuid) {
             return service;
         }
     }

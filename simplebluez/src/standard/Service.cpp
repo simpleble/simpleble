@@ -61,10 +61,8 @@ void Service::characteristic_remove(const std::string& name) {
 }
 
 std::shared_ptr<Characteristic> Service::get_characteristic(const std::string& uuid) {
-    auto characteristics_all = characteristics();
-
-    for (auto& characteristic : characteristics_all) {
-        if (characteristic->uuid() == uuid) {
+    for (auto& characteristic : characteristics()) {
+        if (characteristic && characteristic->valid() && characteristic->uuid() == uuid) {
             return characteristic;
         }
     }
