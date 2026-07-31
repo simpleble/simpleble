@@ -383,6 +383,7 @@ void PeripheralWindows::unsubscribe(BluetoothUUID const& service, BluetoothUUID 
             // Unregister the callback.
             gatt_characteristic.ValueChanged(gatt_characteristic_holder.value_changed_token);
             gatt_characteristic_holder.value_changed_token = {0};
+            gatt_characteristic_holder.value_changed_callback = nullptr;
         }
 
         // Start the indication.

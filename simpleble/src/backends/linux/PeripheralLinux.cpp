@@ -309,6 +309,7 @@ void PeripheralLinux::unsubscribe(BluetoothUUID const& service, BluetoothUUID co
     while (characteristic_object->notifying() && std::chrono::steady_clock::now() < timeout) {
         std::this_thread::sleep_for(50ms);
     }
+    characteristic_object->clear_on_value_changed();
 }
 
 ByteArray PeripheralLinux::read(BluetoothUUID const& service, BluetoothUUID const& characteristic,
