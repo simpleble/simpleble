@@ -29,13 +29,13 @@ class Exception : public std::runtime_error {
         JNIEnv* env = SimpleJNI::VM::env();
         _cls = LocalRef<jclass>(env->GetObjectClass(_ref.get()));
 
-        jmethodID method_get_name = env->GetMethodID(_cls.get(), "getName", "()Ljava/lang/String;");
-        jmethodID method_get_message = env->GetMethodID(_cls.get(), "getMessage", "()Ljava/lang/String;");
+        jmethodID method_to_string = env->GetMethodID(_cls.get(), "toString", "()Ljava/lang/String;");
+        std::string exception_description = call_string_method(env, _ref.get(), method_to_string);
 
-        std::string exception_name = call_string_method(env, _ref.get(), method_get_name);
-        std::string exception_message = call_string_method(env, _ref.get(), method_get_message);
-
-        _what = "Java Exception: " + exception_name + ": " + exception_message;
+        _what = "Java Exception";
+        if (!exception_description.empty()) {
+            _what += ": " + exception_description;
+        }
     }
 
     const char* what() const noexcept override { return _what.c_str(); }
@@ -46,11 +46,28 @@ class Exception : public std::runtime_error {
     LocalRef<jclass> _cls;
 
     static std::string call_string_method(JNIEnv* env, jthrowable obj, jmethodID method) {
+        if (!method) {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            return "";
+        }
+
         auto jstr = static_cast<jstring>(env->CallObjectMethod(obj, method));
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+            return "";
+        }
         if (!jstr) return "";
+
         const char* c_str = env->GetStringUTFChars(jstr, nullptr);
+        if (!c_str) {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            env->DeleteLocalRef(jstr);
+            return "";
+        }
+
         std::string result(c_str);
         env->ReleaseStringUTFChars(jstr, c_str);
+        env->DeleteLocalRef(jstr);
         return result;
     }
 };
@@ -216,9 +233,12 @@ class Object {
 
     static void check_exception(JNIEnv* env) {
         if (env->ExceptionCheck()) {
-            Object<LocalRef, jthrowable> exception(env->ExceptionOccurred());
+            jthrowable throwable = env->ExceptionOccurred();
             env->ExceptionClear();
-            throw Exception(exception.get());
+
+            Exception exception(throwable);
+            env->DeleteLocalRef(throwable);
+            throw exception;
         }
     }
 
