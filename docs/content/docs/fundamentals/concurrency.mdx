@@ -108,8 +108,7 @@ The unbounded waits poll every 10 ms until the corresponding CoreBluetooth deleg
 | --- | --- | --- |
 | `Config::SimpleBluez::connection_timeout` | 2 s | Per-attempt wait for connection + service resolution on Linux (5 attempts). |
 | `Config::SimpleBluez::disconnection_timeout` | 1 s | Per-attempt wait for disconnection on Linux (5 attempts). |
-| `Config::SimpleBluez::use_system_bus` | `true` | Connect to the DBus system bus (new BlueZ backend only). |
-| `Config::SimpleBluez::use_legacy_bluez_backend` | `false` | Fall back to the legacy BlueZ backend. |
+| `Config::SimpleBluez::use_system_bus` | `true` | Connect the Linux BlueZ backend to the DBus system bus. |
 | `Config::WinRT::use_deferred_disconnect` | `true` | Disconnects return immediately and clean up in the background instead of blocking up to 10 s. |
 | `Config::WinRT::experimental_use_own_mta_apartment` | `true` | SimpleBLE runs its own MTA thread for WinRT calls. Disabling runs WinRT calls on your calling thread. |
 | `Config::Android::connection_priority_request` | `DISABLED` | Request a connection priority (`BALANCED`, `HIGH`, `LOW_POWER`, `DCK`) after connecting. |

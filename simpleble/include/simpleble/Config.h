@@ -13,13 +13,11 @@ namespace SimpleBLE {
  */
 namespace Config {
 namespace SimpleBluez {
-    extern SIMPLEBLE_EXPORT bool use_legacy_bluez_backend;
-    extern SIMPLEBLE_EXPORT bool use_system_bus; // NOTE: This is only available in the new Bluez backend.
+    extern SIMPLEBLE_EXPORT bool use_system_bus;
     extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration connection_timeout;
     extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration disconnection_timeout;
 
     static void reset() {
-        use_legacy_bluez_backend = false;
         use_system_bus = true;
         connection_timeout = std::chrono::seconds(2);
         disconnection_timeout = std::chrono::seconds(1);

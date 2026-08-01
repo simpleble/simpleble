@@ -12,6 +12,7 @@ except ImportError:
 # Folders to completely ignore during search
 IGNORED_FOLDERS = {
     '.git',
+    '.claude',
     '__pycache__',
     '.pytest_cache',
     '*.egg-info',

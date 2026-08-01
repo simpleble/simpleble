@@ -95,9 +95,7 @@ bool BackendBluez::bluetooth_enabled() {
     return enabled;
 }
 
-bool BackendBluez::is_active() {
-    return !Config::SimpleBluez::use_legacy_bluez_backend;
-}
+bool BackendBluez::is_active() { return true; }
 
 std::string BackendBluez::identifier() const noexcept { return "SimpleBluez"; }
 

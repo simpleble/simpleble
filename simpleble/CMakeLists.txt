@@ -275,40 +275,6 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/interfaces/Introspectable.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/interfaces/ObjectManager.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/src/interfaces/Properties.cpp
-
-        # Legacy BlueZ backend
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/BackendBluezLegacy.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/AdapterLinuxLegacy.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/PeripheralLinuxLegacy.cpp
-
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Agent.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Device.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Characteristic.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Exceptions.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Service.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Adapter.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Bluez.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/BluezRoot.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/BluezOrg.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/BluezOrgBluez.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/Descriptor.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/Adapter1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/Agent1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/GattDescriptor1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/GattCharacteristic1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/GattService1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/Device1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/Battery1.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/AgentManager1.cpp
-
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/advanced/Interface.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/advanced/Proxy.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/base/Connection.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/base/Exceptions.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/base/Holder.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/base/Message.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/base/Path.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/src/interfaces/ObjectManager.cpp
     )
 
     target_link_libraries(simpleble PUBLIC Threads::Threads)
@@ -316,8 +282,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
 
     target_include_directories(simpleble PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../simplebluez/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux_legacy/include)
+        ${CMAKE_CURRENT_SOURCE_DIR}/../simpledbus/include)
 
     set_property(TARGET simpleble PROPERTY INSTALL_RPATH $ORIGIN)
 

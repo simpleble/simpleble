@@ -26,8 +26,6 @@ typedef enum {
 SIMPLECBLE_EXPORT void simpleble_config_reset_all(void);
 
 SIMPLECBLE_EXPORT void simpleble_config_simplebluez_reset(void);
-SIMPLECBLE_EXPORT bool simpleble_config_simplebluez_get_use_legacy_bluez_backend(void);
-SIMPLECBLE_EXPORT void simpleble_config_simplebluez_set_use_legacy_bluez_backend(bool enabled);
 SIMPLECBLE_EXPORT bool simpleble_config_simplebluez_get_use_system_bus(void);
 SIMPLECBLE_EXPORT void simpleble_config_simplebluez_set_use_system_bus(bool enabled);
 SIMPLECBLE_EXPORT int64_t simpleble_config_simplebluez_get_connection_timeout_ms(void);

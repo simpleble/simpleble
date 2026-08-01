@@ -8,14 +8,6 @@ void simpleble_config_reset_all(void) { SimpleBLE::Config::Base::reset_all(); }
 
 void simpleble_config_simplebluez_reset(void) { SimpleBLE::Config::SimpleBluez::reset(); }
 
-bool simpleble_config_simplebluez_get_use_legacy_bluez_backend(void) {
-    return SimpleBLE::Config::SimpleBluez::use_legacy_bluez_backend;
-}
-
-void simpleble_config_simplebluez_set_use_legacy_bluez_backend(bool enabled) {
-    SimpleBLE::Config::SimpleBluez::use_legacy_bluez_backend = enabled;
-}
-
 bool simpleble_config_simplebluez_get_use_system_bus(void) {
     return SimpleBLE::Config::SimpleBluez::use_system_bus;
 }
