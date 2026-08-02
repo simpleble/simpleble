@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+
+#include <simpleble/Adapter.h>
 #include <simpleble/export.h>
 
 #if __APPLE__
@@ -22,12 +25,42 @@ namespace SimpleBLE::Advanced::Windows {}
 #endif
 
 #if TARGET_OS_OSX
-namespace SimpleBLE::Advanced::MacOS {}
+namespace SimpleBLE::Advanced::MacOS {
+
+/**
+ * Retrieve peripherals that CoreBluetooth can resolve from its system cache.
+ *
+ * This does not scan or guarantee that a returned peripheral is reachable.
+ * Invalid identifiers and identifiers unknown to CoreBluetooth are omitted.
+ * The adapter must be powered on.
+ *
+ * NOTE: "Cached" refers to CoreBluetooth's system cache, not SimpleBLE's
+ * in-memory cache.
+ */
+std::vector<Peripheral> SIMPLEBLE_EXPORT retrieve_cached_peripherals(Adapter& adapter,
+                                                                     const std::vector<BluetoothAddress>& identifiers);
+
+}  // namespace SimpleBLE::Advanced::MacOS
 
 #endif
 
 #if TARGET_OS_IOS
-namespace SimpleBLE::Advanced::iOS {}
+namespace SimpleBLE::Advanced::iOS {
+
+/**
+ * Retrieve peripherals that CoreBluetooth can resolve from its system cache.
+ *
+ * This does not scan or guarantee that a returned peripheral is reachable.
+ * Invalid identifiers and identifiers unknown to CoreBluetooth are omitted.
+ * The adapter must be powered on.
+ *
+ * NOTE: "Cached" refers to CoreBluetooth's system cache, not SimpleBLE's
+ * in-memory cache.
+ */
+std::vector<Peripheral> SIMPLEBLE_EXPORT retrieve_cached_peripherals(Adapter& adapter,
+                                                                     const std::vector<BluetoothAddress>& identifiers);
+
+}  // namespace SimpleBLE::Advanced::iOS
 
 #endif
 

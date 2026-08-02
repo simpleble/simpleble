@@ -47,6 +47,9 @@ class AdapterMac : public AdapterBase {
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
 
+    std::vector<std::shared_ptr<PeripheralBase>> retrieve_cached_peripherals(
+        const std::vector<BluetoothAddress>& identifiers);
+
     virtual bool bluetooth_enabled() override;
 
     void delegate_did_discover_peripheral(void* opaque_peripheral, void* opaque_adapter,
@@ -77,6 +80,8 @@ class AdapterMac : public AdapterBase {
 
   private:
     BluetoothAddress address() const;
+    std::shared_ptr<PeripheralMac> get_or_create_peripheral(void* opaque_peripheral, void* opaque_adapter,
+                                                            advertising_data_t advertising_data);
 };
 
 }  // namespace SimpleBLE

@@ -5,7 +5,26 @@
 #include <type_traits>
 #include <utility>
 
+#include <simpleble/Exceptions.h>
+
 namespace SimpleBLE::Factory {
+
+template <typename T>
+struct InternalAccessor : public T {
+    explicit InternalAccessor(const T& object) : T(object) {}
+
+    using T::operator->;
+};
+
+template <typename InternalT, typename T>
+InternalT& get_internal(T& object) {
+    InternalAccessor<T> accessor(object);
+    auto* internal = dynamic_cast<InternalT*>(accessor.operator->());
+    if (internal == nullptr) {
+        throw Exception::OperationNotSupported();
+    }
+    return *internal;
+}
 
 /**
  * Generic builder class for PIMP classes that have an "internal_" member variable.

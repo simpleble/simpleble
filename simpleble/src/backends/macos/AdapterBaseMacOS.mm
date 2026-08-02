@@ -126,6 +126,30 @@ void IOBluetoothPreferenceSetControllerPowerState(int state);
     return [self.centralManager isScanning];
 }
 
+- (NSArray<CBPeripheral*>*)retrieveCachedPeripherals:(const std::vector<SimpleBLE::BluetoothAddress>&)identifiers {
+    if (self.centralManager.state != CBManagerStatePoweredOn) {
+        return @[];
+    }
+
+    NSMutableArray<NSUUID*>* uuids = [NSMutableArray arrayWithCapacity:identifiers.size()];
+    for (const auto& identifier : identifiers) {
+        NSString* uuidString = [[NSString alloc] initWithBytes:identifier.data() length:identifier.size() encoding:NSUTF8StringEncoding];
+        if (uuidString == nil) {
+            continue;
+        }
+        NSUUID* uuid = [[NSUUID alloc] initWithUUIDString:uuidString];
+        if (uuid != nil) {
+            [uuids addObject:uuid];
+        }
+    }
+
+    if (uuids.count == 0) {
+        return @[];
+    }
+
+    return [self.centralManager retrievePeripheralsWithIdentifiers:uuids];
+}
+
 - (NSString*)address {
     return self.uuid;
 }

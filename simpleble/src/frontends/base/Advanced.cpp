@@ -6,12 +6,32 @@ namespace SimpleBLE::Advanced::Windows {}
 #endif
 
 #if TARGET_OS_OSX
-namespace SimpleBLE::Advanced::MacOS {}
+#include "BuildVec.h"
+#include "backends/macos/AdapterMac.h"
+
+namespace SimpleBLE::Advanced::MacOS {
+
+std::vector<Peripheral> retrieve_cached_peripherals(Adapter& adapter,
+                                                    const std::vector<BluetoothAddress>& identifiers) {
+    return Factory::vector(Factory::get_internal<AdapterMac>(adapter).retrieve_cached_peripherals(identifiers));
+}
+
+}  // namespace SimpleBLE::Advanced::MacOS
 
 #endif
 
 #if TARGET_OS_IOS
-namespace SimpleBLE::Advanced::iOS {}
+#include "BuildVec.h"
+#include "backends/macos/AdapterMac.h"
+
+namespace SimpleBLE::Advanced::iOS {
+
+std::vector<Peripheral> retrieve_cached_peripherals(Adapter& adapter,
+                                                    const std::vector<BluetoothAddress>& identifiers) {
+    return Factory::vector(Factory::get_internal<AdapterMac>(adapter).retrieve_cached_peripherals(identifiers));
+}
+
+}  // namespace SimpleBLE::Advanced::iOS
 
 #endif
 

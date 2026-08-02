@@ -23,6 +23,7 @@
 - (void)scanStart;
 - (void)scanStop;
 - (bool)scanIsActive;
+- (NSArray<CBPeripheral*>*)retrieveCachedPeripherals:(const std::vector<SimpleBLE::BluetoothAddress>&)identifiers;
 
 - (NSString*)address;
 

@@ -9,6 +9,7 @@
 #include <fmt/core.h>
 
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <thread>
 
@@ -103,22 +104,30 @@ SharedPtrVector<PeripheralBase> AdapterMac::scan_get_results() {
 
 SharedPtrVector<PeripheralBase> AdapterMac::get_paired_peripherals() { return {}; }
 
+SharedPtrVector<PeripheralBase> AdapterMac::retrieve_cached_peripherals(const std::vector<BluetoothAddress>& identifiers) {
+    AdapterBaseMacOS* internal = (__bridge AdapterBaseMacOS*)opaque_internal_;
+
+    advertising_data_t advertising_data{};
+    advertising_data.connectable = true;
+    advertising_data.rssi = std::numeric_limits<int16_t>::min();
+    advertising_data.tx_power = std::numeric_limits<int16_t>::min();
+
+    void* opaque_adapter = [internal underlying];
+    NSArray<CBPeripheral*>* retrieved = [internal retrieveCachedPeripherals:identifiers];
+
+    SharedPtrVector<PeripheralBase> peripherals;
+    peripherals.reserve(retrieved.count);
+    for (CBPeripheral* cb_peripheral in retrieved) {
+        peripherals.push_back(get_or_create_peripheral((__bridge void*)cb_peripheral, opaque_adapter, advertising_data));
+    }
+    return peripherals;
+}
+
 // Delegate methods passed for AdapterBaseMacOS
 
 void AdapterMac::delegate_did_discover_peripheral(void* opaque_peripheral, void* opaque_adapter, advertising_data_t advertising_data) {
-    std::shared_ptr<PeripheralMac> base_peripheral;
     bool is_new_peripheral = false;
-
-    {
-        std::scoped_lock lock(peripherals_mutex_);
-        if (this->peripherals_.count(opaque_peripheral) == 0) {
-            // If the incoming peripheral has never been seen before, create and save a reference to it.
-            base_peripheral = std::make_shared<PeripheralMac>(opaque_peripheral, opaque_adapter, advertising_data);
-            this->peripherals_.insert(std::make_pair(opaque_peripheral, base_peripheral));
-        } else {
-            base_peripheral = this->peripherals_.at(opaque_peripheral);
-        }
-    }
+    auto base_peripheral = get_or_create_peripheral(opaque_peripheral, opaque_adapter, advertising_data);
 
     // Update the received advertising data.
     base_peripheral->update_advertising_data(advertising_data);
@@ -141,6 +150,16 @@ void AdapterMac::delegate_did_discover_peripheral(void* opaque_peripheral, void*
     } else {
         SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, peripheral);
     }
+}
+
+std::shared_ptr<PeripheralMac> AdapterMac::get_or_create_peripheral(void* opaque_peripheral, void* opaque_adapter,
+                                                                    advertising_data_t advertising_data) {
+    std::scoped_lock lock(peripherals_mutex_);
+    auto& peripheral = peripherals_[opaque_peripheral];
+    if (!peripheral) {
+        peripheral = std::make_shared<PeripheralMac>(opaque_peripheral, opaque_adapter, advertising_data);
+    }
+    return peripheral;
 }
 
 void AdapterMac::delegate_did_connect_peripheral(void* opaque_peripheral) {
