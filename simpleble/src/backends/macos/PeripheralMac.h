@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <mutex>
+#include <string>
 
 namespace SimpleBLE {
 
@@ -72,6 +73,7 @@ class PeripheralMac : public PeripheralBase {
 
     bool manual_disconnect_triggered_;
 
+    std::string advertised_identifier_;
     std::map<uint16_t, ByteArray> manufacturer_data_;
     std::map<BluetoothUUID, ByteArray> service_data_;
     std::mutex advertising_data_mutex_;

@@ -185,12 +185,19 @@ void IOBluetoothPreferenceSetControllerPowerState(int state);
     didDiscoverPeripheral:(CBPeripheral*)peripheral
         advertisementData:(NSDictionary<NSString*, id>*)advertisementData
                      RSSI:(NSNumber*)RSSI {
-    SimpleBLE::advertising_data_t advertisingData;
+    SimpleBLE::advertising_data_t advertisingData{};
 
     // Parse advertisementData to extract all relevant information
 
-    // TODO: Do we need to extract the name as well?
-    // NSString* advertisingName = advertisementData[CBAdvertisementDataLocalNameKey];
+    // Prefer the live advertised name over CBPeripheral.name, which CoreBluetooth
+    // may populate from its cached GAP device name.
+    NSString* advertisingName = advertisementData[CBAdvertisementDataLocalNameKey];
+    if ([advertisingName isKindOfClass:[NSString class]]) {
+        const char* utf8Name = advertisingName.UTF8String;
+        if (utf8Name != nullptr) {
+            advertisingData.identifier = utf8Name;
+        }
+    }
 
     // Check if the peripheral is connectable
     NSNumber* isConnectable = advertisementData[CBAdvertisementDataIsConnectable];

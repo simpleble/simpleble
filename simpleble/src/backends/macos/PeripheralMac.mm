@@ -17,6 +17,7 @@ PeripheralMac::PeripheralMac(void* opaque_peripheral, void* opaque_adapter, adve
 
     is_connectable_ = advertising_data.connectable;
     manual_disconnect_triggered_ = false;
+    advertised_identifier_ = advertising_data.identifier;
     manufacturer_data_ = advertising_data.manufacturer_data;
     service_data_ = advertising_data.service_data;
     rssi_ = advertising_data.rssi;
@@ -38,6 +39,11 @@ void* PeripheralMac::underlying() const {
 }
 
 std::string PeripheralMac::identifier() {
+    std::scoped_lock lock(advertising_data_mutex_);
+    if (!advertised_identifier_.empty()) {
+        return advertised_identifier_;
+    }
+
     PeripheralBaseMacOS* internal = (__bridge PeripheralBaseMacOS*)opaque_internal_;
     return std::string([[internal identifier] UTF8String]);
 }
@@ -66,6 +72,9 @@ uint16_t PeripheralMac::mtu() {
 
 void PeripheralMac::update_advertising_data(advertising_data_t advertising_data) {
     std::scoped_lock lock(advertising_data_mutex_);
+    if (!advertising_data.identifier.empty()) {
+        advertised_identifier_ = advertising_data.identifier;
+    }
     is_connectable_ = advertising_data.connectable;
     manufacturer_data_ = advertising_data.manufacturer_data;
     rssi_ = advertising_data.rssi;
