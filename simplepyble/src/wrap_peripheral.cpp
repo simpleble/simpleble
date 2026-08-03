@@ -124,7 +124,8 @@ void wrap_peripheral(py::module& m) {
         .def("mtu", &SimpleBLE::Peripheral::mtu, kDocsPeripheralMtu)
         .def("connect", &SimpleBLE::Peripheral::connect, py::call_guard<py::gil_scoped_release>(),
              kDocsPeripheralConnect)
-        .def("disconnect", &SimpleBLE::Peripheral::disconnect, kDocsPeripheralDisconnect)
+        .def("disconnect", &SimpleBLE::Peripheral::disconnect, py::call_guard<py::gil_scoped_release>(),
+             kDocsPeripheralDisconnect)
         .def("is_connected", &SimpleBLE::Peripheral::is_connected, kDocsPeripheralIsConnected)
         .def("is_connectable", &SimpleBLE::Peripheral::is_connectable, kDocsPeripheralIsConnectable)
         .def("is_paired", &SimpleBLE::Peripheral::is_paired, kDocsPeripheralIsPaired)

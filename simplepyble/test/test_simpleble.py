@@ -1,8 +1,76 @@
 # Note: This test suite is only evaluating the Python bindings, not the C++ library.
 #       The SimpleBLE implementation to test this on is the PLAIN version.
+import asyncio
 import logging
 
 import simplepyble
+from simplepyble import aio
+
+
+def test_configuration_parity():
+    simplepyble.config.base.reset_all()
+
+    try:
+        assert simplepyble.config.simplebluez.use_system_bus is True
+        assert simplepyble.config.simplebluez.connection_timeout_ms == 2000
+        assert simplepyble.config.simplebluez.disconnection_timeout_ms == 1000
+        assert (
+            simplepyble.config.android.connection_priority_request
+            == simplepyble.AndroidConnectionPriority.DISABLED
+        )
+        assert simplepyble.config.dongl.use_dongl_backend is False
+        assert simplepyble.config.dongl.auto_update is False
+        assert simplepyble.config.dongl.force_update is False
+
+        simplepyble.config.simplebluez.use_system_bus = False
+        simplepyble.config.simplebluez.connection_timeout_ms = 1234
+        simplepyble.config.simplebluez.disconnection_timeout_ms = 5678
+        simplepyble.config.android.connection_priority_request = simplepyble.AndroidConnectionPriority.HIGH
+        simplepyble.config.dongl.use_dongl_backend = True
+        simplepyble.config.dongl.auto_update = True
+        simplepyble.config.dongl.force_update = True
+
+        assert simplepyble.config.simplebluez.use_system_bus is False
+        assert simplepyble.config.simplebluez.connection_timeout_ms == 1234
+        assert simplepyble.config.simplebluez.disconnection_timeout_ms == 5678
+        assert simplepyble.config.android.connection_priority_request == simplepyble.AndroidConnectionPriority.HIGH
+        assert simplepyble.config.dongl.use_dongl_backend is True
+        assert simplepyble.config.dongl.auto_update is True
+        assert simplepyble.config.dongl.force_update is True
+    finally:
+        simplepyble.config.base.reset_all()
+
+
+def test_backend_parity():
+    backends = simplepyble.Backend.get_backends()
+
+    assert len(backends) == 1
+    assert backends[0].initialized() is True
+    assert backends[0].identifier() == "Plain"
+    assert backends[0].bluetooth_enabled() is True
+    assert len(backends[0].adapters()) == 1
+
+    async_backends = aio.Backend.get_backends()
+    assert len(async_backends) == 1
+    assert async_backends[0].identifier() == "Plain"
+    assert len(async_backends[0].adapters()) == 1
+
+
+def test_platform_enums():
+    assert simplepyble.OperatingSystem.IOS.name == "IOS"
+    assert simplepyble.OperatingSystem.ANDROID.name == "ANDROID"
+
+
+def test_async_adapter_parity():
+    async def run():
+        adapter = aio.Adapter.get_adapters()[0]
+        assert adapter.initialized() is True
+        assert adapter.bluetooth_enabled() is True
+        assert adapter.is_powered() is True
+        await adapter.power_on()
+        await adapter.power_off()
+
+    asyncio.run(run())
 
 
 def test_get_adapters():

@@ -11,18 +11,32 @@ __version__: str
 
 class OperatingSystem(Enum):
     """Operating system enumeration."""
-    WINDOWS: int
-    MACOS: int
-    LINUX: int
+    WINDOWS = ...
+    MACOS = ...
+    IOS = ...
+    LINUX = ...
+    ANDROID = ...
 
 class BluetoothAddressType(Enum):
     """Bluetooth address type enumeration."""
-    PUBLIC: int
-    RANDOM: int
-    UNSPECIFIED: int
+    PUBLIC = ...
+    RANDOM = ...
+    UNSPECIFIED = ...
+
+class AndroidConnectionPriority(Enum):
+    """Android connection priority request."""
+    DISABLED = ...
+    BALANCED = ...
+    HIGH = ...
+    LOW_POWER = ...
+    DCK = ...
 
 class Descriptor:
     """Represents a GATT descriptor."""
+
+    def initialized(self) -> bool:
+        """Check if the descriptor is initialized."""
+        ...
     
     def uuid(self) -> str:
         """
@@ -35,6 +49,10 @@ class Descriptor:
 
 class Characteristic:
     """Represents a GATT characteristic."""
+
+    def initialized(self) -> bool:
+        """Check if the characteristic is initialized."""
+        ...
     
     def uuid(self) -> str:
         """
@@ -110,6 +128,10 @@ class Characteristic:
 
 class Service:
     """Represents a GATT service."""
+
+    def initialized(self) -> bool:
+        """Check if the service is initialized."""
+        ...
     
     def uuid(self) -> str:
         """
@@ -354,7 +376,7 @@ class Peripheral:
         """
         ...
     
-    def set_callback_on_connected(self, callback: Callable[[], None]) -> None:
+    def set_callback_on_connected(self, callback: Optional[Callable[[], None]]) -> None:
         """
         Set the callback to be called when the peripheral connects.
         
@@ -363,7 +385,7 @@ class Peripheral:
         """
         ...
     
-    def set_callback_on_disconnected(self, callback: Callable[[], None]) -> None:
+    def set_callback_on_disconnected(self, callback: Optional[Callable[[], None]]) -> None:
         """
         Set the callback to be called when the peripheral disconnects.
         
@@ -474,7 +496,7 @@ class Adapter:
         """
         ...
     
-    def set_callback_on_scan_start(self, callback: Callable[[], None]) -> None:
+    def set_callback_on_scan_start(self, callback: Optional[Callable[[], None]]) -> None:
         """
         Set the callback to be called when scanning starts.
         
@@ -483,7 +505,7 @@ class Adapter:
         """
         ...
     
-    def set_callback_on_scan_stop(self, callback: Callable[[], None]) -> None:
+    def set_callback_on_scan_stop(self, callback: Optional[Callable[[], None]]) -> None:
         """
         Set the callback to be called when scanning stops.
         
@@ -492,7 +514,7 @@ class Adapter:
         """
         ...
     
-    def set_callback_on_scan_found(self, callback: Callable[[Peripheral], None]) -> None:
+    def set_callback_on_scan_found(self, callback: Optional[Callable[[Peripheral], None]]) -> None:
         """
         Set the callback to be called when a peripheral is found.
         
@@ -501,7 +523,7 @@ class Adapter:
         """
         ...
     
-    def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], None]) -> None:
+    def set_callback_on_scan_updated(self, callback: Optional[Callable[[Peripheral], None]]) -> None:
         """
         Set the callback to be called when a peripheral is updated.
         
@@ -519,6 +541,42 @@ class Adapter:
         """
         ...
 
+    def set_callback_on_power_on(self, callback: Optional[Callable[[], None]]) -> None:
+        """Set the callback to be called when the adapter is powered on."""
+        ...
+
+    def set_callback_on_power_off(self, callback: Optional[Callable[[], None]]) -> None:
+        """Set the callback to be called when the adapter is powered off."""
+        ...
+
+    def get_connected_peripherals(self) -> List[Peripheral]:
+        """Get all connected peripherals."""
+        ...
+
+class Backend:
+    """Represents a SimpleBLE backend."""
+
+    @staticmethod
+    def get_backends() -> List['Backend']:
+        """Get all enabled SimpleBLE backends."""
+        ...
+
+    def initialized(self) -> bool:
+        """Check if the backend is initialized."""
+        ...
+
+    def adapters(self) -> List[Adapter]:
+        """Get all adapters provided by this backend."""
+        ...
+
+    def bluetooth_enabled(self) -> bool:
+        """Check if Bluetooth is enabled for this backend."""
+        ...
+
+    def identifier(self) -> str:
+        """Get the backend identifier."""
+        ...
+
 class _WinRTConfig:
     """WinRT-specific configuration options."""
     
@@ -527,6 +585,9 @@ class _WinRTConfig:
     
     experimental_reinitialize_winrt_apartment_on_main_thread: bool
     """Reinitialize the WinRT apartment on the main thread (experimental)"""
+
+    use_deferred_disconnect: bool
+    """Defer WinRT disconnect completion so disconnect calls return without waiting for the OS."""
     
     @staticmethod
     def reset() -> None:
@@ -535,6 +596,15 @@ class _WinRTConfig:
 
 class _SimpleBluezConfig:
     """SimpleBluez-specific configuration options."""
+
+    use_system_bus: bool
+    """Use the system D-Bus instead of the session D-Bus."""
+
+    connection_timeout_ms: int
+    """Connection timeout in milliseconds."""
+
+    disconnection_timeout_ms: int
+    """Disconnection timeout in milliseconds."""
     
     @staticmethod
     def reset() -> None:
@@ -551,10 +621,30 @@ class _CoreBluetoothConfig:
 
 class _AndroidConfig:
     """Android-specific configuration options."""
+
+    connection_priority_request: AndroidConnectionPriority
+    """Android connection priority request."""
     
     @staticmethod
     def reset() -> None:
         """Reset Android configuration options to their default values."""
+        ...
+
+class _DonglConfig:
+    """SimpleBLE Dongl configuration options."""
+
+    use_dongl_backend: bool
+    """Enable the SimpleBLE Dongl backend."""
+
+    auto_update: bool
+    """Automatically update SimpleBLE Dongl firmware."""
+
+    force_update: bool
+    """Force a SimpleBLE Dongl firmware update."""
+
+    @staticmethod
+    def reset() -> None:
+        """Reset SimpleBLE Dongl configuration options to their default values."""
         ...
 
 class _BaseConfig:
@@ -566,7 +656,7 @@ class _BaseConfig:
         ...
 
 class _Config:
-    """Configuration options for SimpleBLE."""
+    """Configuration options for SimpleBLE. Set values before retrieving any adapter."""
     
     winrt: _WinRTConfig
     """WinRT-specific configuration"""
@@ -579,12 +669,29 @@ class _Config:
     
     android: _AndroidConfig
     """Android-specific configuration"""
+
+    dongl: _DonglConfig
+    """SimpleBLE Dongl configuration"""
     
     base: _BaseConfig
     """Base configuration"""
 
 config: _Config
 """Configuration module for SimpleBLE"""
+
+class _AdvancedMacOS:
+    """Advanced CoreBluetooth APIs."""
+
+    def retrieve_cached_peripherals(self, adapter: Adapter, identifiers: List[str]) -> List[Peripheral]:
+        """Retrieve peripherals that CoreBluetooth can resolve from its system cache."""
+        ...
+
+class _Advanced:
+    """Platform-specific advanced SimpleBLE APIs."""
+
+    macos: _AdvancedMacOS
+
+advanced: _Advanced
 
 def get_operating_system() -> OperatingSystem:
     """

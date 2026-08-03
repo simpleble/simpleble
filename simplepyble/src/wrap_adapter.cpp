@@ -97,8 +97,8 @@ constexpr auto kDocsAdapterGetConnectedPeripherals = R"pbdoc(
 void wrap_adapter(py::module& m) {
     // TODO: Add __str__ and __repr__ methods
     py::class_<SimpleBLE::Adapter>(m, "Adapter")
-        .def("bluetooth_enabled", &SimpleBLE::Adapter::bluetooth_enabled, kDocsAdapterBluetoothEnabled)
-        .def("get_adapters", &SimpleBLE::Adapter::get_adapters, kDocsAdapterGetAdapters)
+        .def_static("bluetooth_enabled", &SimpleBLE::Adapter::bluetooth_enabled, kDocsAdapterBluetoothEnabled)
+        .def_static("get_adapters", &SimpleBLE::Adapter::get_adapters, kDocsAdapterGetAdapters)
         .def("initialized", &SimpleBLE::Adapter::initialized, kDocsAdapterInitialized)
         .def("identifier", &SimpleBLE::Adapter::identifier, kDocsAdapterIdentifier)
         .def("address", &SimpleBLE::Adapter::address, kDocsAdapterAddress)

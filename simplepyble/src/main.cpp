@@ -19,6 +19,8 @@ void wrap_characteristic(py::module& m);
 void wrap_service(py::module& m);
 void wrap_peripheral(py::module& m);
 void wrap_adapter(py::module& m);
+void wrap_backend(py::module& m);
+void wrap_advanced(py::module& m);
 void wrap_config(py::module& m);
 void wrap_logging(py::module& m);
 
@@ -52,6 +54,8 @@ PYBIND11_MODULE(_simplepyble, m) {
     wrap_service(m);
     wrap_peripheral(m);
     wrap_adapter(m);
+    wrap_backend(m);
+    wrap_advanced(m);
     wrap_config(m);
     wrap_logging(m);
 }

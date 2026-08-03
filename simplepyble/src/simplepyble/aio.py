@@ -4,7 +4,7 @@ import weakref
 from typing import List, Callable, Optional, Union, Any, Dict, Set
 import simplepyble
 
-_active_peripherals = weakref.WeakSet()
+_active_peripherals: weakref.WeakSet[Any] = weakref.WeakSet()
 
 def _global_cleanup():
     # Clear all adapters known to SimpleBLE
@@ -14,6 +14,8 @@ def _global_cleanup():
             a.set_callback_on_scan_stop(None)
             a.set_callback_on_scan_found(None)
             a.set_callback_on_scan_updated(None)
+            a.set_callback_on_power_on(None)
+            a.set_callback_on_power_off(None)
             try:
                 if a.scan_is_active():
                     a.scan_stop()
@@ -103,7 +105,7 @@ class Peripheral:
     def address(self) -> str:
         return self._internal.address()
 
-    def address_type(self) -> str:
+    def address_type(self) -> simplepyble.BluetoothAddressType:
         return self._internal.address_type()
 
     def rssi(self) -> int:
@@ -251,8 +253,9 @@ class Adapter:
     def initialized(self) -> bool:
         return self._internal.initialized()
         
-    def bluetooth_enabled(self) -> bool:
-        return self._internal.bluetooth_enabled()
+    @staticmethod
+    def bluetooth_enabled() -> bool:
+        return simplepyble.Adapter.bluetooth_enabled()
 
     async def power_on(self):
         loop = asyncio.get_running_loop()
@@ -369,6 +372,8 @@ class Adapter:
             self._internal.set_callback_on_scan_stop(None)
             self._internal.set_callback_on_scan_found(None)
             self._internal.set_callback_on_scan_updated(None)
+            self._internal.set_callback_on_power_on(None)
+            self._internal.set_callback_on_power_off(None)
             if self._internal.scan_is_active():
                 self._internal.scan_stop()
         except:
@@ -379,3 +384,41 @@ class Adapter:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self._clear_all_callbacks_sync()
+
+class Backend:
+    def __init__(self, internal_backend: simplepyble.Backend):
+        self._internal = internal_backend
+
+    @classmethod
+    def get_backends(cls) -> List['Backend']:
+        return [cls(backend) for backend in simplepyble.Backend.get_backends()]
+
+    def initialized(self) -> bool:
+        return self._internal.initialized()
+
+    def adapters(self) -> List[Adapter]:
+        return [Adapter(adapter) for adapter in self._internal.adapters()]
+
+    def bluetooth_enabled(self) -> bool:
+        return self._internal.bluetooth_enabled()
+
+    def identifier(self) -> str:
+        return self._internal.identifier()
+
+class _MacOSAdvanced:
+    async def retrieve_cached_peripherals(self, adapter: Adapter, identifiers: List[str]) -> List[Peripheral]:
+        loop = asyncio.get_running_loop()
+        peripherals = await loop.run_in_executor(
+            None,
+            simplepyble.advanced.macos.retrieve_cached_peripherals,
+            adapter._internal,
+            identifiers,
+        )
+        return [Peripheral(peripheral) for peripheral in peripherals]
+
+class _Advanced:
+    def __init__(self):
+        if hasattr(simplepyble.advanced, "macos"):
+            self.macos = _MacOSAdvanced()
+
+advanced = _Advanced()

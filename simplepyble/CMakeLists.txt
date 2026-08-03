@@ -19,6 +19,8 @@ pybind11_add_module(
     _simplepyble
     src/main.cpp
     src/wrap_adapter.cpp
+    src/wrap_backend.cpp
+    src/wrap_advanced.cpp
     src/wrap_peripheral.cpp
     src/wrap_service.cpp
     src/wrap_characteristic.cpp
@@ -29,7 +31,15 @@ pybind11_add_module(
 )
 
 target_link_libraries(_simplepyble PRIVATE simpleble::simpleble)
-target_compile_definitions(_simplepyble PRIVATE "-DSIMPLEPYBLE_VERSION=\"${SIMPLEPYBLE_VERSION}\"")
+
+set(SIMPLEPYBLE_HAS_MACOS_ADVANCED 0)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT SIMPLEBLE_PLAIN)
+    set(SIMPLEPYBLE_HAS_MACOS_ADVANCED 1)
+endif()
+
+target_compile_definitions(_simplepyble PRIVATE
+    "-DSIMPLEPYBLE_VERSION=\"${SIMPLEPYBLE_VERSION}\""
+    SIMPLEPYBLE_HAS_MACOS_ADVANCED=${SIMPLEPYBLE_HAS_MACOS_ADVANCED})
 
 set_target_properties(
     _simplepyble PROPERTIES

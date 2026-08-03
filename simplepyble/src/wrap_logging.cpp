@@ -53,5 +53,7 @@ void forward_to_python_logging(SimpleBLE::Logging::Level level, const std::strin
 }  // namespace
 
 void wrap_logging(py::module& /*m*/) {
-    SimpleBLE::Logging::Logger::get()->set_callback(forward_to_python_logging);
+    auto* logger = SimpleBLE::Logging::Logger::get();
+    logger->set_level(SimpleBLE::Logging::Level::Verbose);
+    logger->set_callback(forward_to_python_logging);
 }

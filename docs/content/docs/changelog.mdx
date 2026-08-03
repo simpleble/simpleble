@@ -16,14 +16,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Added**
 
 - (MacOS/iOS) Added advanced retrieval of cached CoreBluetooth peripherals by UUID.
+- (Python) Completed configuration bindings and exposed backend enumeration and advanced cached CoreBluetooth peripheral retrieval.
 
 **Changed**
 
--
+- (Python) Delegated runtime log filtering to the standard `logging` module without exposing native logging controls.
 
 **Fixed**
 
 - (MacOS) Fixed peripheral identifiers to prefer advertised local names over cached GAP names.
+- (Python) Released the GIL while disconnecting so concurrent blocking disconnects can overlap.
 - (SimpleBluez) Fixed UUID lookups returning invalid service and characteristic proxies.
 - (Linux/Windows) Fixed notification callbacks remaining retained after unsubscribe.
 - (SimpleJavaBLE) Fixed notification callbacks being garbage-collected while subscriptions are active.
