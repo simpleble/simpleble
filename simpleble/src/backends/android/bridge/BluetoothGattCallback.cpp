@@ -34,7 +34,7 @@ const SimpleJNI::AutoRegister<BluetoothGattCallback> BluetoothGattCallback::regi
         callback_opt.value();                                                                              \
     })
 
-BluetoothGattCallback::BluetoothGattCallback() : connected(false), services_discovered(false), mtu(UINT16_MAX) {
+BluetoothGattCallback::BluetoothGattCallback() : connected(false), services_discovered(false), mtu(23) {
     if (!_cls.get()) {
         throw std::runtime_error("BluetoothGattCallback JNI resources not preloaded. Ensure SimpleJNI::Registrar::preload() is called.");
     }

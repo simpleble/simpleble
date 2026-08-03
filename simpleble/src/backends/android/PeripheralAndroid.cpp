@@ -86,6 +86,7 @@ int16_t PeripheralAndroid::tx_power() { return tx_power_; }
 uint16_t PeripheralAndroid::mtu() { return _btGattCallback.mtu; }
 
 void PeripheralAndroid::connect() {
+    _btGattCallback.mtu = 23;
     _gatt = _device.connectGatt(false, _btGattCallback);
 
     // Wait for the connection to be confirmed.
@@ -194,6 +195,13 @@ void PeripheralAndroid::write_request(BluetoothUUID const& service, BluetoothUUI
 void PeripheralAndroid::write_command(BluetoothUUID const& service, BluetoothUUID const& characteristic,
                                       ByteArray const& data) {
     SIMPLEBLE_LOG_INFO("Writing command to characteristic " + characteristic);
+
+    const size_t max_payload_size = _btGattCallback.mtu.load() - 3;
+    if (data.size() > max_payload_size) {
+        throw SimpleBLE::Exception::OperationFailed("Write command payload size " + std::to_string(data.size()) +
+                                                    " exceeds the negotiated maximum of " +
+                                                    std::to_string(max_payload_size) + " bytes");
+    }
 
     auto characteristic_obj = _fetch_characteristic(service, characteristic);
 
