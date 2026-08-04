@@ -5,6 +5,7 @@
 #include <any>
 #include <map>
 #include <string>
+#include <vector>
 
 using namespace SimpleDBus;
 
@@ -148,6 +149,34 @@ TEST(Holder, DictionaryHomogeneousString) {
     EXPECT_EQ(h.signature(), "a{ss}");
 
     EXPECT_EQ(h.represent(), "Dictionary:\nstring_key1:\n  value1\nstring_key2:\n  value2\nstring_key3:\n  value3\n");
+}
+
+TEST(Holder, DictionaryStringKeysWithVariantValues) {
+    Holder h = Holder::create<std::map<std::string, Holder>>();
+    Holder uuids = Holder::create<std::vector<Holder>>();
+    uuids.array_append(Holder::create<std::string>("0000180d-0000-1000-8000-00805f9b34fb"));
+
+    h.dict_append(Holder::Type::STRING, "UUIDs", uuids);
+    h.dict_append(Holder::Type::STRING, "RSSI", Holder::create<int16_t>(-70));
+    h.dict_append(Holder::Type::STRING, "DuplicateData", Holder::create<bool>(false));
+    h.dict_append(Holder::Type::STRING, "Transport", Holder::create<std::string>("le"));
+
+    EXPECT_EQ(h.type(), Holder::Type::DICT);
+    EXPECT_EQ(h.signature(), "a{sv}");
+
+    auto dict = h.get<std::map<std::string, Holder>>();
+    ASSERT_EQ(dict.size(), 4);
+    ASSERT_EQ(dict.count("UUIDs"), 1);
+    ASSERT_EQ(dict.count("RSSI"), 1);
+    ASSERT_EQ(dict.count("DuplicateData"), 1);
+    ASSERT_EQ(dict.count("Transport"), 1);
+
+    auto uuid_values = dict["UUIDs"].get<std::vector<Holder>>();
+    ASSERT_EQ(uuid_values.size(), 1);
+    EXPECT_EQ(uuid_values[0].get<std::string>(), "0000180d-0000-1000-8000-00805f9b34fb");
+    EXPECT_EQ(dict["RSSI"].get<int16_t>(), -70);
+    EXPECT_EQ(dict["DuplicateData"].get<bool>(), false);
+    EXPECT_EQ(dict["Transport"].get<std::string>(), "le");
 }
 
 TEST(Holder, DictionaryHeterogeneous) {

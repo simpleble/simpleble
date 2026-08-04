@@ -45,16 +45,16 @@ void Adapter1::SetDiscoveryFilter(DiscoveryFilter filter) {
         for (size_t i = 0; i < filter.UUIDs.size(); i++) {
             uuids.array_append(SimpleDBus::Holder::create<std::string>(filter.UUIDs.at(i)));
         }
-        properties.dict_append(SimpleDBus::Holder::Type::ARRAY, "UUIDs", uuids);
+        properties.dict_append(SimpleDBus::Holder::Type::STRING, "UUIDs", uuids);
     }
 
     if (filter.RSSI.has_value()) {
-        properties.dict_append(SimpleDBus::Holder::Type::INT16, "RSSI",
+        properties.dict_append(SimpleDBus::Holder::Type::STRING, "RSSI",
                                SimpleDBus::Holder::create<int16_t>(filter.RSSI.value()));
     }
 
     if (filter.Pathloss.has_value()) {
-        properties.dict_append(SimpleDBus::Holder::Type::UINT16, "Pathloss",
+        properties.dict_append(SimpleDBus::Holder::Type::STRING, "Pathloss",
                                SimpleDBus::Holder::create<uint16_t>(filter.Pathloss.value()));
     }
 
@@ -77,13 +77,13 @@ void Adapter1::SetDiscoveryFilter(DiscoveryFilter filter) {
     }
 
     if (!filter.DuplicateData) {
-        properties.dict_append(SimpleDBus::Holder::Type::BOOLEAN, "DuplicateData",
+        properties.dict_append(SimpleDBus::Holder::Type::STRING, "DuplicateData",
                                SimpleDBus::Holder::create<bool>(false));
     }
 
     if (filter.Discoverable) {
-        properties.dict_append(SimpleDBus::Holder::Type::BOOLEAN, "Discoverable",
-                               SimpleDBus::Holder::create<bool>(false));
+        properties.dict_append(SimpleDBus::Holder::Type::STRING, "Discoverable",
+                               SimpleDBus::Holder::create<bool>(true));
     }
 
     if (filter.Pattern.size() > 0) {
