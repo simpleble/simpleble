@@ -1,7 +1,8 @@
 #pragma once
 
-#include "simplejni/Common.hpp"
 #include "bridge/ScanCallback.h"
+#include "simplejni/Common.hpp"
+#include "types/android/bluetooth/le/ScanSettings.h"
 
 namespace SimpleBLE {
 namespace Android {
@@ -11,6 +12,7 @@ class BluetoothScanner {
     BluetoothScanner(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
 
     void startScan(Bridge::ScanCallback& callback);
+    void startScan(const ScanSettings& settings, Bridge::ScanCallback& callback);
     void stopScan(Bridge::ScanCallback& callback);
 
     std::string toString();
@@ -25,6 +27,7 @@ class BluetoothScanner {
     static SimpleJNI::GlobalRef<jclass> _cls;
     static jmethodID _constructor;
     static jmethodID _method_startScan;
+    static jmethodID _method_startScanWithSettings;
     static jmethodID _method_stopScan;
     static jmethodID _method_toString;
 

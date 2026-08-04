@@ -68,7 +68,13 @@ bool AdapterAndroid::is_powered() { return _btAdapter.isEnabled(); }
 
 void AdapterAndroid::scan_start() {
     seen_peripherals_.clear();
-    _btScanner.startScan(_btScanCallback);
+
+    Android::ScanSettings::Builder settings_builder;
+    auto settings = settings_builder.setLegacy(false)
+                        .setPhy(Android::ScanSettings::PHY_LE_ALL_SUPPORTED)
+                        .build();
+    _btScanner.startScan(settings, _btScanCallback);
+
     scanning_ = true;
     SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
 }
