@@ -14,6 +14,7 @@
 #include "winrt/Windows.Devices.Radios.h"
 #include "winrt/Windows.Devices.Enumeration.h"
 #include "winrt/Windows.Foundation.Collections.h"
+#include "winrt/Windows.Foundation.Metadata.h"
 #include "winrt/Windows.Foundation.h"
 #include "winrt/base.h"
 
@@ -42,6 +43,11 @@ AdapterWindows::AdapterWindows(std::string device_id)
 
     // Configure the scanner object
     scanner_ = Advertisement::BluetoothLEAdvertisementWatcher();
+    if (Foundation::Metadata::ApiInformation::IsPropertyPresent(
+            L"Windows.Devices.Bluetooth.Advertisement.BluetoothLEAdvertisementWatcher",
+            L"AllowExtendedAdvertisements")) {
+        scanner_.AllowExtendedAdvertisements(true);
+    }
 
     // Register member functions directly as callback handlers
     radio_state_changed_token_ = radio_.StateChanged({this, &AdapterWindows::on_power_state_changed});
