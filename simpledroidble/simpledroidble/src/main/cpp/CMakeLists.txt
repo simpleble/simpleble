@@ -42,3 +42,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 )
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0)
+target_compile_definitions(
+    ${CMAKE_PROJECT_NAME} PRIVATE SIMPLEDROIDBLE_PLAIN=$<BOOL:${SIMPLEBLE_PLAIN}>
+)

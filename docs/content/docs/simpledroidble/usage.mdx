@@ -57,6 +57,8 @@ dependencies {
 }
 ```
 
+Consumer builds always use the Android Bluetooth backend. The PLAIN backend is available only as a repository test build.
+
 ## Android Permissions
 
 Declare Android 12+ Bluetooth permissions in your app manifest:
@@ -73,13 +75,12 @@ Declare Android 12+ Bluetooth permissions in your app manifest:
 
 If your app uses BLE scans to infer physical location, review Android location policy before using `neverForLocation`.
 
-Initialize the library once with an application or activity context, then request the runtime permissions before calling adapter APIs:
+Request the runtime permissions before calling adapter APIs. The permission helpers are stateless; the native library loads automatically on the first adapter call.
 
 ```kotlin
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        SimpleDroidBle.initialize(applicationContext)
 
         if (!SimpleDroidBle.hasPermissions(this)) {
             SimpleDroidBle.requestPermissions(this)
@@ -95,20 +96,20 @@ In modern Android apps, you can also use `ActivityResultContracts.RequestMultipl
 
 ## Quickstart
 
-SimpleDroidBLE exposes scan and connection events as flows. `scanFor`, `connect`, and `disconnect` are suspending calls; characteristic and descriptor GATT operations are synchronous today, so call them from a coroutine or worker thread in UI apps:
+SimpleDroidBLE exposes scan and connection events as flows. Operations that wait for Android Bluetooth callbacks are suspending and safe to call from the main thread:
 
 ```kotlin
 val adapter = Adapter.getAdapters().first()
 
-val scanJob = CoroutineScope(Dispatchers.Main).launch {
+val scanJob = lifecycleScope.launch {
     adapter.onScanFound.collect { peripheral ->
         Log.d("SimpleBLE", "Found ${peripheral.identifier} [${peripheral.address}]")
     }
 }
 
-CoroutineScope(Dispatchers.Main).launch {
+lifecycleScope.launch {
     adapter.scanFor(5_000)
-    scanJob.cancel()
+    scanJob.cancelAndJoin()
 }
 ```
 
@@ -136,13 +137,13 @@ val characteristic = BluetoothUUID("00002a19-0000-1000-8000-00805f9b34fb")
 val value = peripheral.read(service, characteristic)
 peripheral.writeRequest(service, characteristic, byteArrayOf(0x01, 0x02))
 
-val notifyJob = CoroutineScope(Dispatchers.Main).launch {
+val notifyJob = lifecycleScope.launch {
     peripheral.notify(service, characteristic).collect { payload ->
         Log.d("SimpleBLE", "Notification bytes: ${payload.size}")
     }
 }
 
-notifyJob.cancel() // Automatically unsubscribes.
+notifyJob.cancelAndJoin() // Waits for automatic unsubscribe.
 peripheral.disconnect()
 ```
 
@@ -150,11 +151,11 @@ Use `writeRequest` for acknowledged writes and `writeCommand` for write-without-
 
 ## Lifecycle And Threading
 
-- Call `SimpleDroidBle.initialize(context)` before using permission helpers.
 - Create adapters only after runtime permissions have been granted.
 - Stop active scans from `onPause()` or an equivalent lifecycle callback.
-- Keep notification collection in a lifecycle-aware coroutine. Cancelling the `notify` or `indicate` flow unsubscribes from the characteristic.
-- Scan, connection, and notification events are delivered through Kotlin flows on the main dispatcher. Do expensive parsing or follow-up GATT operations from a separate coroutine instead of inside the callback path.
+- Keep notification collection in a lifecycle-aware coroutine. Cancelling the `notify` or `indicate` flow waits for native unsubscribe before collection finishes.
+- Only one `notify` or `indicate` collector may be active for a characteristic. Cancel and join the old collector before starting another.
+- Flow collectors resume in their own coroutine context. Keep payload parsing short; blocking GATT operations dispatch to `Dispatchers.IO` internally.
 - Android exposes one active Bluetooth adapter through the backend today. `Adapter.getAdapters()` returns a list for API consistency.
 
 ## Error Handling

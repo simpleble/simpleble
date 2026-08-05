@@ -126,13 +126,21 @@ for peripheral in adapter.scan_get_results().unwrap() {
 ```kotlin
 val adapter = Adapter.getAdapters().first()
 
-adapter.onScanFound.collect { peripheral ->
-    Log.d("SimpleBLE", "Found ${peripheral.identifier} [${peripheral.address}]")
+coroutineScope {
+    val events = launch {
+        adapter.onScanFound.collect { peripheral ->
+            Log.d("SimpleBLE", "Found ${peripheral.identifier} [${peripheral.address}]")
+        }
+    }
+
+    try {
+        adapter.scanFor(5000)
+    } finally {
+        events.cancelAndJoin()
+    }
+
+    val results = adapter.scanGetResults()
 }
-
-adapter.scanFor(5000)
-
-val results = adapter.scanGetResults()
 ```
 
 </Tab>

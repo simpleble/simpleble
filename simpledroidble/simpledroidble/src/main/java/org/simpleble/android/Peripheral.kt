@@ -1,22 +1,18 @@
 package org.simpleble.android
 
-import android.util.Log
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
-
-    private var instanceId: Long = newInstanceId
-    private var adapterId: Long = newAdapterId
-    private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+class Peripheral internal constructor(
+    private val adapterId: Long,
+    private val instanceId: Long
+) {
 
     private val _onConnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val _onConnectionActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1)
@@ -24,32 +20,21 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
 
     private val callbacks = object : Callback {
         override fun onConnected() {
-            callbackScope.launch {
-                _onConnected.emit(Unit)
-                _onConnectionActive.emit(true)
-            }
+            _onConnected.tryEmit(Unit)
+            _onConnectionActive.tryEmit(true)
         }
 
         override fun onDisconnected() {
-            callbackScope.launch {
-                _onDisconnected.emit(Unit)
-                _onConnectionActive.emit(false)
-            }
+            _onDisconnected.tryEmit(Unit)
+            _onConnectionActive.tryEmit(false)
         }
     }
 
-    init {
-        Log.d("SimpleBLE", "Peripheral ${this.hashCode()}.init")
-        nativePeripheralRegister(adapterId, instanceId, callbacks)
-    }
+    init { nativePeripheralRegister(adapterId, instanceId, callbacks) }
 
-    val identifier: String get() {
-        return nativePeripheralIdentifier(adapterId, instanceId) ?: ""
-    }
+    val identifier: String get() = nativePeripheralIdentifier(adapterId, instanceId)
 
-    val address: BluetoothAddress get() {
-        return BluetoothAddress(nativePeripheralAddress(adapterId, instanceId) ?: "")
-    }
+    val address: BluetoothAddress get() = BluetoothAddress(nativePeripheralAddress(adapterId, instanceId))
 
     val addressType: BluetoothAddressType get() {
         return BluetoothAddressType.fromInt(nativePeripheralAddressType(adapterId, instanceId))
@@ -103,16 +88,22 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
         return nativePeripheralManufacturerData(adapterId, instanceId)
     }
 
-    fun read(service: BluetoothUUID, characteristic: BluetoothUUID): ByteArray {
-        return nativePeripheralRead(adapterId, instanceId, service.toString(), characteristic.toString())
+    suspend fun read(service: BluetoothUUID, characteristic: BluetoothUUID): ByteArray {
+        return withContext(Dispatchers.IO) {
+            nativePeripheralRead(adapterId, instanceId, service.toString(), characteristic.toString())
+        }
     }
 
-    fun writeRequest(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
-        nativePeripheralWriteRequest(adapterId, instanceId, service.toString(), characteristic.toString(), data)
+    suspend fun writeRequest(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
+        withContext(Dispatchers.IO) {
+            nativePeripheralWriteRequest(adapterId, instanceId, service.toString(), characteristic.toString(), data)
+        }
     }
 
-    fun writeCommand(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
-        nativePeripheralWriteCommand(adapterId, instanceId, service.toString(), characteristic.toString(), data)
+    suspend fun writeCommand(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
+        withContext(Dispatchers.IO) {
+            nativePeripheralWriteCommand(adapterId, instanceId, service.toString(), characteristic.toString(), data)
+        }
     }
 
     fun notify(
@@ -125,10 +116,18 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
             }
         }
 
-        nativePeripheralNotify(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
-        awaitClose {
-            CoroutineScope(Dispatchers.IO).launch {
-                runCatching { unsubscribe(service, characteristic) }
+        var subscribed = false
+        try {
+            withContext(NonCancellable + Dispatchers.IO) {
+                nativePeripheralNotify(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
+                subscribed = true
+            }
+            awaitClose {}
+        } finally {
+            if (subscribed) {
+                withContext(NonCancellable) {
+                    unsubscribe(service, characteristic)
+                }
             }
         }
     }
@@ -143,46 +142,60 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
             }
         }
 
-        nativePeripheralIndicate(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
-        awaitClose {
-            CoroutineScope(Dispatchers.IO).launch {
-                runCatching { unsubscribe(service, characteristic) }
+        var subscribed = false
+        try {
+            withContext(NonCancellable + Dispatchers.IO) {
+                nativePeripheralIndicate(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
+                subscribed = true
+            }
+            awaitClose {}
+        } finally {
+            if (subscribed) {
+                withContext(NonCancellable) {
+                    unsubscribe(service, characteristic)
+                }
             }
         }
     }
 
-    fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
-        nativePeripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
+    suspend fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
+        withContext(Dispatchers.IO) {
+            nativePeripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
+        }
     }
 
-    fun read(
+    suspend fun read(
         service: BluetoothUUID,
         characteristic: BluetoothUUID,
         descriptor: BluetoothUUID
     ): ByteArray {
-        return nativePeripheralDescriptorRead(
-            adapterId,
-            instanceId,
-            service.toString(),
-            characteristic.toString(),
-            descriptor.toString()
-        )
+        return withContext(Dispatchers.IO) {
+            nativePeripheralDescriptorRead(
+                adapterId,
+                instanceId,
+                service.toString(),
+                characteristic.toString(),
+                descriptor.toString()
+            )
+        }
     }
 
-    fun write(
+    suspend fun write(
         service: BluetoothUUID,
         characteristic: BluetoothUUID,
         descriptor: BluetoothUUID,
         data: ByteArray
     ) {
-        nativePeripheralDescriptorWrite(
-            adapterId,
-            instanceId,
-            service.toString(),
-            characteristic.toString(),
-            descriptor.toString(),
-            data
-        )
+        withContext(Dispatchers.IO) {
+            nativePeripheralDescriptorWrite(
+                adapterId,
+                instanceId,
+                service.toString(),
+                characteristic.toString(),
+                descriptor.toString(),
+                data
+            )
+        }
     }
 
     val onConnected: SharedFlow<Unit> get() = _onConnected
@@ -195,9 +208,9 @@ class Peripheral internal constructor(newAdapterId: Long, newInstanceId: Long) {
 
     private external fun nativePeripheralRegister(adapterId: Long, instanceId: Long, callback: Callback)
 
-    private external fun nativePeripheralIdentifier(adapterId: Long, instanceId: Long): String?
+    private external fun nativePeripheralIdentifier(adapterId: Long, instanceId: Long): String
 
-    private external fun nativePeripheralAddress(adapterId: Long, instanceId: Long): String?
+    private external fun nativePeripheralAddress(adapterId: Long, instanceId: Long): String
 
     private external fun nativePeripheralAddressType(adapterId: Long, instanceId: Long): Int
 

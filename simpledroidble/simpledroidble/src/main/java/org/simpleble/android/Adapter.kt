@@ -1,65 +1,50 @@
 package org.simpleble.android
 
-import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class Adapter private constructor(newInstanceId: Long) {
-    private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+class Adapter private constructor(private val instanceId: Long) {
     private val _onScanStart = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val _onScanStop = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val _onScanActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val _onScanUpdated = MutableSharedFlow<Peripheral>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val _onScanFound = MutableSharedFlow<Peripheral>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    private var instanceId: Long = newInstanceId
+    private val peripherals = ConcurrentHashMap<Long, Peripheral>()
+
+    private fun peripheral(peripheralId: Long): Peripheral {
+        return peripherals.computeIfAbsent(peripheralId) { Peripheral(instanceId, it) }
+    }
 
     private val callbacks = object : Callback {
         override fun onScanStart() {
-            callbackScope.launch {
-                _onScanStart.emit(Unit)
-                _onScanActive.emit(true)
-            }
+            _onScanStart.tryEmit(Unit)
+            _onScanActive.tryEmit(true)
         }
 
         override fun onScanStop() {
-            callbackScope.launch {
-                _onScanStop.emit(Unit)
-                _onScanActive.emit(false)
-            }
+            _onScanStop.tryEmit(Unit)
+            _onScanActive.tryEmit(false)
         }
 
         override fun onScanUpdated(peripheralId: Long) {
-            callbackScope.launch {
-                _onScanUpdated.emit(Peripheral(instanceId, peripheralId))
-            }
+            _onScanUpdated.tryEmit(peripheral(peripheralId))
         }
 
         override fun onScanFound(peripheralId: Long) {
-            callbackScope.launch {
-                _onScanFound.emit(Peripheral(instanceId, peripheralId))
-            }
+            _onScanFound.tryEmit(peripheral(peripheralId))
         }
     }
 
-    init {
-        Log.d("SimpleBLE", "Adapter ${this.hashCode()}.init")
-        nativeAdapterRegister(instanceId, callbacks)
-    }
+    init { nativeAdapterRegister(instanceId, callbacks) }
 
-    val identifier: String get() {
-        return nativeAdapterIdentifier(instanceId) ?: ""
-    }
+    val identifier: String get() = nativeAdapterIdentifier(instanceId)
 
-    val address: BluetoothAddress get() {
-        return BluetoothAddress(nativeAdapterAddress(instanceId) ?: "")
-    }
+    val address: BluetoothAddress get() = BluetoothAddress(nativeAdapterAddress(instanceId))
 
     fun scanStart() {
         nativeAdapterScanStart(instanceId)
@@ -80,7 +65,7 @@ class Adapter private constructor(newInstanceId: Long) {
     }
 
     fun scanGetResults(): List<Peripheral> {
-        return nativeAdapterScanGetResults(instanceId).map { Peripheral(instanceId, it) }
+        return nativeAdapterScanGetResults(instanceId).map(::peripheral)
     }
 
     val onScanStart: SharedFlow<Unit> get() = _onScanStart
@@ -94,10 +79,13 @@ class Adapter private constructor(newInstanceId: Long) {
     val onScanFound: SharedFlow<Peripheral> get() = _onScanFound
 
     fun getPairedPeripherals(): List<Peripheral> {
-        return nativeAdapterGetPairedPeripherals(instanceId).map { Peripheral(instanceId, it) }
+        return nativeAdapterGetPairedPeripherals(instanceId).map(::peripheral)
     }
 
     companion object {
+        init {
+            SimpleDroidBle.ensureLoaded()
+        }
 
         @JvmStatic
         fun isBluetoothEnabled(): Boolean {
@@ -106,15 +94,12 @@ class Adapter private constructor(newInstanceId: Long) {
 
         @JvmStatic
         fun getAdapters(): List<Adapter> {
-            val nativeAdapterIds = nativeGetAdapters()
-            val adapters = ArrayList<Adapter>()
-
-            for (nativeAdapterId in nativeAdapterIds) {
-                adapters.add(Adapter(nativeAdapterId))
+            return nativeGetAdapters().map { adapterId ->
+                adapterCache.computeIfAbsent(adapterId, ::Adapter)
             }
-
-            return adapters
         }
+
+        private val adapterCache = ConcurrentHashMap<Long, Adapter>()
 
         @JvmStatic
         private external fun nativeGetAdapters(): LongArray
@@ -126,9 +111,9 @@ class Adapter private constructor(newInstanceId: Long) {
 
     private external fun nativeAdapterRegister(adapterId: Long, callback: Callback)
 
-    private external fun nativeAdapterIdentifier(adapterId: Long): String?
+    private external fun nativeAdapterIdentifier(adapterId: Long): String
 
-    private external fun nativeAdapterAddress(adapterId: Long): String?
+    private external fun nativeAdapterAddress(adapterId: Long): String
 
     private external fun nativeAdapterScanStart(adapterId: Long)
 

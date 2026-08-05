@@ -18,11 +18,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Android) Added support for scanning extended advertisements.
 - (MacOS/iOS) Added advanced retrieval of cached CoreBluetooth peripherals by UUID.
 - (Python) Completed configuration bindings and exposed backend enumeration and advanced cached CoreBluetooth peripheral retrieval.
+- (SimpleDroidBLE) Added permission helpers, paired peripherals, write operations, and descriptor access.
+- (SimpleDroidBLE) Added the SimpleBLE Explorer example and a PLAIN test build for simulation.
 - (Windows) Added support for scanning extended advertisements.
 
 **Changed**
 
 - (Python) Delegated runtime log filtering to the standard `logging` module without exposing native logging controls.
+- **API CHANGE**: (SimpleDroidBLE) Exposed callbacks as read-only flows and notification streams as cancellation-aware `Flow`s.
+- **API CHANGE**: (SimpleDroidBLE) Made blocking GATT operations main-safe suspending calls.
 - (Windows) Ignored synthetic WinRT out-of-range scan events.
 
 **Fixed**
@@ -33,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Python) Released the GIL while disconnecting so concurrent blocking disconnects can overlap.
 - (SimpleBluez) Fixed discovery filters dropping non-string values.
 - (SimpleBluez) Fixed UUID lookups returning invalid service and characteristic proxies.
+- (SimpleDroidBLE) Fixed JNI error propagation, byte-array conversion, and callback cleanup.
 - (Linux/Windows) Fixed notification callbacks remaining retained after unsubscribe.
 - (Windows) Fixed restricted GATT services preventing discovery of subsequent services.
 - (SimpleJavaBLE) Fixed notification callbacks being garbage-collected while subscriptions are active.

@@ -10,6 +10,13 @@ android {
 
     defaultConfig {
         minSdk = 31
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "VERSION_NAME",
+            "\"${rootProject.version.toString().removePrefix("v")}\""
+        )
 
         consumerProguardFiles("consumer-rules.pro")
         externalNativeBuild {
@@ -20,6 +27,11 @@ android {
     }
 
     buildTypes {
+        create("plain") {
+            initWith(getByName("debug"))
+            matchingFallbacks += "debug"
+            externalNativeBuild.cmake.arguments += "-DSIMPLEBLE_PLAIN=ON"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -28,6 +40,7 @@ android {
             )
         }
     }
+    testBuildType = "plain"
     externalNativeBuild {
         cmake {
             path("src/main/cpp/CMakeLists.txt")
@@ -35,11 +48,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
+    }
+    buildFeatures {
+        buildConfig = true
     }
 }
 
@@ -47,4 +63,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.simpledroidbridge)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

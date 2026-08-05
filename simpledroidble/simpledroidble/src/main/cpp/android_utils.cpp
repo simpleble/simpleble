@@ -35,6 +35,7 @@ jobject jarraylist_new(JNIEnv* env) {
     jclass arrayListClass = env->FindClass("java/util/ArrayList");
     jmethodID arrayListConstructor = env->GetMethodID(arrayListClass, "<init>", "()V");
     jobject arrayList = env->NewObject(arrayListClass, arrayListConstructor);
+    env->DeleteLocalRef(arrayListClass);
     return arrayList;
 }
 
@@ -42,6 +43,7 @@ void jarraylist_add(JNIEnv* env, jobject arrayList, jobject element) {
     jclass arrayListClass = env->GetObjectClass(arrayList);
     jmethodID arrayListAdd = env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z");
     env->CallBooleanMethod(arrayList, arrayListAdd, element);
+    env->DeleteLocalRef(arrayListClass);
 }
 
 void throw_exception(JNIEnv* env, const std::string& msg) {
@@ -53,4 +55,5 @@ void throw_exception(JNIEnv* env, const std::string& msg) {
         Exception = env->FindClass("java/lang/RuntimeException");
     }
     env->ThrowNew(Exception, msg.c_str());
+    env->DeleteLocalRef(Exception);
 }

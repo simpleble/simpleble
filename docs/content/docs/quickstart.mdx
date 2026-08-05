@@ -250,9 +250,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.simpleble.android.Adapter
 
 @Composable
@@ -269,9 +267,7 @@ fun ScanScreen() {
             }
         }
 
-        withContext(Dispatchers.IO) {
-            adapter.scanFor(5000)
-        }
+        adapter.scanFor(5000)
     }
 }
 ```

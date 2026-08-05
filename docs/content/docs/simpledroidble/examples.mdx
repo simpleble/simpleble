@@ -3,7 +3,7 @@ title: Examples
 description: Example Android app for SimpleDroidBLE.
 ---
 
-The production-style Android example lives in [`examples/simpleble-android`](https://github.com/simpleble/simpleble/tree/main/examples/simpleble-android).
+The **SimpleBLE Explorer** Android app lives in [`examples/simpleble-android`](https://github.com/simpleble/simpleble/tree/main/examples/simpleble-android).
 
 It demonstrates:
 
@@ -25,4 +25,10 @@ cd examples/simpleble-android
 ./gradlew :app:assembleDebug
 ```
 
-Install the debug APK on an Android API 31+ device with BLE support. An emulator is useful for build checks, but real scan, connect, GATT read/write, and notification flows require physical Bluetooth hardware.
+Install the APK on an Android API 31+ device with BLE support. For deterministic emulator development, build the PLAIN test build instead:
+
+```bash
+./gradlew :app:assemblePlain
+```
+
+The repository-only PLAIN build uses the same Kotlin and JNI layers with SimpleBLE's simulated backend. It supports the Explorer scan, connect, service, read, and notification workflow without Bluetooth hardware. Use the regular build on a physical phone before claiming real scan, connection, reconnection, or GATT behavior is verified.

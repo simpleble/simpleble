@@ -2,16 +2,16 @@
 agp = "8.7.1"
 kotlin = "1.9.23"
 coreKtx = "1.12.0"
-appcompat = "1.6.1"
-material = "1.11.0"
 coroutines = "1.8.1"
+androidxTestExt = "1.1.5"
+androidxTestRunner = "1.5.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 simpledroidbridge = { group = "org.simpleble.android.bridge", name = "simpledroidbridge" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 
 [plugins]
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

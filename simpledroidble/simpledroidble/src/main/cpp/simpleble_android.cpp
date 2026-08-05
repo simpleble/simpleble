@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <mutex>
 #include "ThreadRunner.h"
 #include <android/log.h>
 
@@ -22,8 +23,79 @@ static std::map<size_t, std::vector<jweak>> cached_adapter_callbacks;
 static std::map<size_t, std::map<size_t, SimpleBLE::Safe::Peripheral>> cached_peripherals;
 static std::map<size_t, std::map<size_t, std::vector<jweak>>> cached_peripheral_callbacks;
 static std::map<size_t, std::map<size_t, std::map<size_t, jobject>>> cached_peripheral_data_callbacks;
+static std::mutex cached_peripheral_data_callbacks_mutex;
 static ThreadRunner threadRunner;
 static JavaVM *jvm;
+
+JNIEnv* get_env();
+
+jobject get_peripheral_data_callback(JNIEnv* env, size_t adapter_id, size_t peripheral_id, size_t callback_id) {
+    std::lock_guard<std::mutex> lock(cached_peripheral_data_callbacks_mutex);
+    auto adapter_it = cached_peripheral_data_callbacks.find(adapter_id);
+    if (adapter_it == cached_peripheral_data_callbacks.end()) return nullptr;
+
+    auto peripheral_it = adapter_it->second.find(peripheral_id);
+    if (peripheral_it == adapter_it->second.end()) return nullptr;
+
+    auto callback_it = peripheral_it->second.find(callback_id);
+    if (callback_it == peripheral_it->second.end()) return nullptr;
+
+    return env->NewLocalRef(callback_it->second);
+}
+
+bool add_peripheral_data_callback(size_t adapter_id, size_t peripheral_id, size_t callback_id, jobject callback) {
+    std::lock_guard<std::mutex> lock(cached_peripheral_data_callbacks_mutex);
+    auto& callbacks = cached_peripheral_data_callbacks[adapter_id][peripheral_id];
+    return callbacks.emplace(callback_id, callback).second;
+}
+
+void remove_peripheral_data_callback(JNIEnv* env, size_t adapter_id, size_t peripheral_id, size_t callback_id,
+                                     jobject expected_callback = nullptr) {
+    jobject callback = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(cached_peripheral_data_callbacks_mutex);
+        auto adapter_it = cached_peripheral_data_callbacks.find(adapter_id);
+        if (adapter_it == cached_peripheral_data_callbacks.end()) return;
+
+        auto peripheral_it = adapter_it->second.find(peripheral_id);
+        if (peripheral_it == adapter_it->second.end()) return;
+
+        auto callback_it = peripheral_it->second.find(callback_id);
+        if (callback_it == peripheral_it->second.end()) return;
+        if (expected_callback != nullptr && callback_it->second != expected_callback) return;
+
+        callback = callback_it->second;
+        peripheral_it->second.erase(callback_it);
+        if (peripheral_it->second.empty()) adapter_it->second.erase(peripheral_it);
+        if (adapter_it->second.empty()) cached_peripheral_data_callbacks.erase(adapter_it);
+    }
+
+    env->DeleteGlobalRef(callback);
+}
+
+void deliver_peripheral_data(size_t adapter_id, size_t peripheral_id, size_t callback_id,
+                             const SimpleBLE::ByteArray& payload) {
+    JNIEnv* env = get_env();
+    jobject callback = get_peripheral_data_callback(env, adapter_id, peripheral_id, callback_id);
+    if (callback == nullptr) return;
+
+    jclass callback_class = env->GetObjectClass(callback);
+    jmethodID on_data_received =
+        callback_class == nullptr ? nullptr : env->GetMethodID(callback_class, "onDataReceived", "([B)V");
+    jbyteArray j_payload = to_jbyteArray(env, payload);
+
+    if (on_data_received != nullptr && j_payload != nullptr) {
+        env->CallVoidMethod(callback, on_data_received, j_payload);
+    }
+
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+    if (j_payload != nullptr) env->DeleteLocalRef(j_payload);
+    if (callback_class != nullptr) env->DeleteLocalRef(callback_class);
+    env->DeleteLocalRef(callback);
+}
 
 JNIEnv* get_env() {
     JNIEnv *env;
@@ -34,7 +106,9 @@ JNIEnv* get_env() {
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     jvm = vm;
     threadRunner.set_jvm(vm);
+#if !SIMPLEDROIDBLE_PLAIN
     SimpleBLE::Advanced::Android::set_jvm(vm);
+#endif
 
 //    // Find your class. JNI_OnLoad is called from the correct class loader context for this to work.
 //    jclass c = env->FindClass("com/example/app/package/MyClass");
@@ -107,6 +181,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
                 if (env->IsSameObject(weakCallbackRef, nullptr) == JNI_FALSE) {
                     // Retrieve the strong reference from the weak reference
                     jobject callbackRef = env->NewLocalRef(weakCallbackRef);
+                    if (callbackRef == nullptr) continue;
 
                     // Find the Java class and method to invoke
                     // TODO: We should cache the class and method IDs
@@ -117,6 +192,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
                     env->CallVoidMethod(callbackRef, onScanStartMethod);
 
                     // Delete the local reference
+                    env->DeleteLocalRef(callbackClass);
                     env->DeleteLocalRef(callbackRef);
                 }
             }
@@ -136,6 +212,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
                 if (env->IsSameObject(weakCallbackRef, nullptr) == JNI_FALSE) {
                     // Retrieve the strong reference from the weak reference
                     jobject callbackRef = env->NewLocalRef(weakCallbackRef);
+                    if (callbackRef == nullptr) continue;
 
                     // Find the Java class and method to invoke
                     // TODO: We should cache the class and method IDs
@@ -146,6 +223,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
                     env->CallVoidMethod(callbackRef, onScanStopMethod);
 
                     // Delete the local reference
+                    env->DeleteLocalRef(callbackClass);
                     env->DeleteLocalRef(callbackRef);
                 }
             }
@@ -173,6 +251,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
 
                     // Retrieve the strong reference from the weak reference
                     jobject callbackRef = env->NewLocalRef(weakCallbackRef);
+                    if (callbackRef == nullptr) continue;
 
                     // Find the Java class and method to invoke
                     // TODO: We should cache the class and method IDs
@@ -183,6 +262,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
                     env->CallVoidMethod(callbackRef, onScanFoundMethod, peripheral_hash);
 
                     // Delete the local reference
+                    env->DeleteLocalRef(callbackClass);
                     env->DeleteLocalRef(callbackRef);
 
                 }
@@ -211,6 +291,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
 
                     // Retrieve the strong reference from the weak reference
                     jobject callbackRef = env->NewLocalRef(weakCallbackRef);
+                    if (callbackRef == nullptr) continue;
 
                     // Find the Java class and method to invoke
                     // TODO: We should cache the class and method IDs
@@ -221,6 +302,7 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
                     env->CallVoidMethod(callbackRef, onScanFoundMethod, peripheral_hash);
 
                     // Delete the local reference
+                    env->DeleteLocalRef(callbackClass);
                     env->DeleteLocalRef(callbackRef);
 
                 }
@@ -232,14 +314,21 @@ Java_org_simpleble_android_Adapter_nativeAdapterRegister(JNIEnv *env, jobject th
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_org_simpleble_android_Adapter_00024Companion_nativeIsBluetoothEnabled(JNIEnv *env, jobject thiz) {
-    return SimpleBLE::Safe::Adapter::bluetooth_enabled().value_or(false);
+    auto enabled = SimpleBLE::Safe::Adapter::bluetooth_enabled();
+    if (!enabled.has_value()) {
+        throw_exception(env, "Failed to read Bluetooth adapter state");
+        return false;
+    }
+    return enabled.value();
 }
 
 extern "C" JNIEXPORT jlongArray JNICALL Java_org_simpleble_android_Adapter_nativeGetAdapters(JNIEnv *env, jclass clazz) {
     auto adapters = SimpleBLE::Safe::Adapter::get_adapters();
 
-    // If an error occurred, return an empty list.
-    if (!adapters.has_value()) return env->NewLongArray(0);
+    if (!adapters.has_value()) {
+        throw_exception(env, "Failed to get Bluetooth adapters");
+        return nullptr;
+    }
 
     // Go over the results, cache whatever doesn't exist and return the full list.
     jsize j_adapter_index = 0;
@@ -264,14 +353,22 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simpleble_android_Adapter_nativ
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simpleble_android_Adapter_nativeAdapterIdentifier(JNIEnv *env, jobject thiz, jlong adapter_id) {
     auto adapter = cached_adapters.at(adapter_id);
-    // TODO: Should throw exception in case of failure.
-    return to_jstring(env, adapter.identifier().value_or("Unknown"));
+    auto identifier = adapter.identifier();
+    if (!identifier.has_value()) {
+        throw_exception(env, "Failed to get adapter identifier");
+        return nullptr;
+    }
+    return to_jstring(env, identifier.value());
 }
 
 extern "C" JNIEXPORT jstring JNICALL Java_org_simpleble_android_Adapter_nativeAdapterAddress(JNIEnv *env, jobject thiz, jlong adapter_id) {
     auto adapter = cached_adapters.at(adapter_id);
-    // TODO: Should throw exception in case of failure.
-    return to_jstring(env, adapter.address().value_or("Unknown"));
+    auto address = adapter.address();
+    if (!address.has_value()) {
+        throw_exception(env, "Failed to get adapter address");
+        return nullptr;
+    }
+    return to_jstring(env, address.value());
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_Adapter_nativeAdapterScanStart(JNIEnv *env, jobject thiz, jlong adapter_id) {
@@ -303,8 +400,12 @@ extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_Adapter_nativeAdapt
 
 extern "C" JNIEXPORT jboolean JNICALL Java_org_simpleble_android_Adapter_nativeAdapterScanIsActive(JNIEnv *env, jobject thiz, jlong adapter_id) {
     auto adapter = cached_adapters.at(adapter_id);
-    // TODO: Should throw exception in case of failure.
-    return adapter.scan_is_active().value_or(false);
+    auto active = adapter.scan_is_active();
+    if (!active.has_value()) {
+        throw_exception(env, "Failed to get scan state");
+        return false;
+    }
+    return active.value();
 }
 
 extern "C" JNIEXPORT jlongArray JNICALL Java_org_simpleble_android_Adapter_nativeAdapterScanGetResults(JNIEnv *env, jobject thiz, jlong adapter_id) {
@@ -312,8 +413,10 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simpleble_android_Adapter_nativ
 
     auto peripherals = adapter.scan_get_results();
 
-    // If an error occurred, return an empty list.
-    if (!peripherals.has_value()) return env->NewLongArray(0);
+    if (!peripherals.has_value()) {
+        throw_exception(env, "Failed to get scan results");
+        return nullptr;
+    }
 
     jsize j_peripheral_index = 0;
     jlongArray j_peripheral_result = env->NewLongArray(static_cast<int>(peripherals.value().size()));
@@ -338,7 +441,10 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simpleble_android_Adapter_nativ
     auto adapter = cached_adapters.at(adapter_id);
     auto peripherals = adapter.get_paired_peripherals();
 
-    if (!peripherals.has_value()) return env->NewLongArray(0);
+    if (!peripherals.has_value()) {
+        throw_exception(env, "Failed to get paired peripherals");
+        return nullptr;
+    }
 
     jsize j_peripheral_index = 0;
     jlongArray j_peripheral_result = env->NewLongArray(static_cast<int>(peripherals.value().size()));
@@ -390,6 +496,7 @@ Java_org_simpleble_android_Peripheral_nativePeripheralRegister(JNIEnv *env, jobj
                 if (env->IsSameObject(weakCallbackRef, nullptr) == JNI_FALSE) {
                     // Retrieve the strong reference from the weak reference
                     jobject callbackRef = env->NewLocalRef(weakCallbackRef);
+                    if (callbackRef == nullptr) continue;
 
                     // Find the Java class and method to invoke
                     // TODO: We should cache the class and method IDs
@@ -400,6 +507,7 @@ Java_org_simpleble_android_Peripheral_nativePeripheralRegister(JNIEnv *env, jobj
                     env->CallVoidMethod(callbackRef, onConnectedMethod);
 
                     // Delete the local reference
+                    env->DeleteLocalRef(callbackClass);
                     env->DeleteLocalRef(callbackRef);
                 }
             }
@@ -420,6 +528,7 @@ Java_org_simpleble_android_Peripheral_nativePeripheralRegister(JNIEnv *env, jobj
                 if (env->IsSameObject(weakCallbackRef, nullptr) == JNI_FALSE) {
                     // Retrieve the strong reference from the weak reference
                     jobject callbackRef = env->NewLocalRef(weakCallbackRef);
+                    if (callbackRef == nullptr) continue;
 
                     // Find the Java class and method to invoke
                     // TODO: We should cache the class and method IDs
@@ -430,6 +539,7 @@ Java_org_simpleble_android_Peripheral_nativePeripheralRegister(JNIEnv *env, jobj
                     env->CallVoidMethod(callbackRef, onConnectedMethod);
 
                     // Delete the local reference
+                    env->DeleteLocalRef(callbackClass);
                     env->DeleteLocalRef(callbackRef);
                 }
             }
@@ -443,7 +553,12 @@ Java_org_simpleble_android_Peripheral_nativePeripheralIdentifier(JNIEnv *env, jo
                                                                  jlong adapter_id,
                                                                  jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    return to_jstring(env, peripheral.identifier().value_or("Unknown"));
+    auto identifier = peripheral.identifier();
+    if (!identifier.has_value()) {
+        throw_exception(env, "Failed to get peripheral identifier");
+        return nullptr;
+    }
+    return to_jstring(env, identifier.value());
 }
 
 extern "C"
@@ -451,7 +566,12 @@ JNIEXPORT jstring JNICALL
 Java_org_simpleble_android_Peripheral_nativePeripheralAddress(JNIEnv *env, jobject thiz,
                                                               jlong adapter_id, jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    return to_jstring(env, peripheral.address().value_or("Unknown"));
+    auto address = peripheral.address();
+    if (!address.has_value()) {
+        throw_exception(env, "Failed to get peripheral address");
+        return nullptr;
+    }
+    return to_jstring(env, address.value());
 }
 
 extern "C"
@@ -460,7 +580,12 @@ Java_org_simpleble_android_Peripheral_nativePeripheralAddressType(JNIEnv *env, j
                                                                   jlong adapter_id,
                                                                   jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    return peripheral.address_type().value_or(SimpleBLE::BluetoothAddressType::UNSPECIFIED);
+    auto address_type = peripheral.address_type();
+    if (!address_type.has_value()) {
+        throw_exception(env, "Failed to get peripheral address type");
+        return SimpleBLE::BluetoothAddressType::UNSPECIFIED;
+    }
+    return address_type.value();
 }
 
 extern "C"
@@ -468,7 +593,12 @@ JNIEXPORT jint JNICALL
 Java_org_simpleble_android_Peripheral_nativePeripheralRssi(JNIEnv *env, jobject thiz,
                                                            jlong adapter_id, jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    return peripheral.rssi().value_or(INT16_MIN);
+    auto rssi = peripheral.rssi();
+    if (!rssi.has_value()) {
+        throw_exception(env, "Failed to get peripheral RSSI");
+        return 0;
+    }
+    return rssi.value();
 }
 
 extern "C"
@@ -476,7 +606,12 @@ JNIEXPORT jint JNICALL
 Java_org_simpleble_android_Peripheral_nativePeripheralTxPower(JNIEnv *env, jobject thiz,
                                                               jlong adapter_id, jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    return peripheral.tx_power().value_or(INT16_MIN);
+    auto tx_power = peripheral.tx_power();
+    if (!tx_power.has_value()) {
+        throw_exception(env, "Failed to get peripheral transmit power");
+        return 0;
+    }
+    return tx_power.value();
 }
 
 extern "C"
@@ -484,7 +619,12 @@ JNIEXPORT jint JNICALL
 Java_org_simpleble_android_Peripheral_nativePeripheralMtu(JNIEnv *env, jobject thiz,
                                                           jlong adapter_id, jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    return peripheral.mtu().value_or(UINT16_MAX);
+    auto mtu = peripheral.mtu();
+    if (!mtu.has_value()) {
+        throw_exception(env, "Failed to get peripheral MTU");
+        return 0;
+    }
+    return mtu.value();
 }
 
 extern "C"
@@ -505,7 +645,9 @@ Java_org_simpleble_android_Peripheral_nativePeripheralDisconnect(JNIEnv *env, jo
                                                                  jlong adapter_id,
                                                                  jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    peripheral.disconnect();
+    if (!peripheral.disconnect()) {
+        throw_exception(env, "Failed to disconnect");
+    }
 }
 
 extern "C"
@@ -521,47 +663,23 @@ Java_org_simpleble_android_Peripheral_nativePeripheralNotify(JNIEnv *env, jobjec
     std::string service_characteristic = service + "_" + characteristic;
     size_t service_characteristic_hash = std::hash<std::string>{}(service_characteristic);
 
-    if (cached_peripheral_data_callbacks[adapter_id][peripheral_id].count(service_characteristic_hash) != 0) {
-        env->DeleteGlobalRef(cached_peripheral_data_callbacks[adapter_id][peripheral_id].at(service_characteristic_hash));
-        cached_peripheral_data_callbacks[adapter_id][peripheral_id].erase(service_characteristic_hash);
-    }
-
     jobject callbackRef = env->NewGlobalRef(callback);
-    cached_peripheral_data_callbacks[adapter_id][peripheral_id].insert({service_characteristic_hash, callbackRef});
+    if (callbackRef == nullptr) return;
+    if (!add_peripheral_data_callback(adapter_id, peripheral_id, service_characteristic_hash, callbackRef)) {
+        env->DeleteGlobalRef(callbackRef);
+        throw_exception(env, "A notification collector is already active for characteristic " + characteristic);
+        return;
+    }
 
     auto peripheral = cached_peripherals[adapter_id].at(peripheral_id);
     bool success = peripheral.notify(service, characteristic, [adapter_id, peripheral_id, service_characteristic_hash](SimpleBLE::ByteArray payload){
-
-        std::string payload_contents;
-        for (int i = 0; i < payload.size(); i++) {
-            payload_contents += fmt::format("{:02X}", (int)(payload[i]));
-        }
-
-        log_info("Received payload: " + payload_contents);
-
         threadRunner.enqueue([adapter_id, peripheral_id, service_characteristic_hash, payload]() {
-            JNIEnv *env = get_env();
-
-            // Retrieve the weak references from the cached_adapter_callbacks map
-            if (cached_peripheral_data_callbacks[adapter_id][peripheral_id].count(service_characteristic_hash) == 0) {
-                return;
-            }
-
-            jobject callbackRef = cached_peripheral_data_callbacks[adapter_id][peripheral_id].at(service_characteristic_hash);
-            jbyteArray j_payload = to_jbyteArray(env, payload);
-
-            // TODO: We should cache the class and method IDs
-            jclass callbackClass = env->GetObjectClass(callbackRef);
-            jmethodID onDataReceivedMethod = env->GetMethodID(callbackClass, "onDataReceived", "([B)V");
-
-            // Invoke the Java callback method
-            env->CallVoidMethod(callbackRef, onDataReceivedMethod, j_payload);
-            env->DeleteLocalRef(j_payload);
-
+            deliver_peripheral_data(adapter_id, peripheral_id, service_characteristic_hash, payload);
         });
     });
 
     if (!success) {
+        remove_peripheral_data_callback(env, adapter_id, peripheral_id, service_characteristic_hash, callbackRef);
         throw_exception(env, "Failed to notify");
     }
 }
@@ -580,48 +698,24 @@ Java_org_simpleble_android_Peripheral_nativePeripheralIndicate(JNIEnv *env, jobj
     std::string service_characteristic = service + "_" + characteristic;
     size_t service_characteristic_hash = std::hash<std::string>{}(service_characteristic);
 
-    if (cached_peripheral_data_callbacks[adapter_id][peripheral_id].count(service_characteristic_hash) != 0) {
-        env->DeleteGlobalRef(cached_peripheral_data_callbacks[adapter_id][peripheral_id].at(service_characteristic_hash));
-        cached_peripheral_data_callbacks[adapter_id][peripheral_id].erase(service_characteristic_hash);
-    }
-
     jobject callbackRef = env->NewGlobalRef(callback);
-    cached_peripheral_data_callbacks[adapter_id][peripheral_id].insert({service_characteristic_hash, callbackRef});
+    if (callbackRef == nullptr) return;
+    if (!add_peripheral_data_callback(adapter_id, peripheral_id, service_characteristic_hash, callbackRef)) {
+        env->DeleteGlobalRef(callbackRef);
+        throw_exception(env, "An indication collector is already active for characteristic " + characteristic);
+        return;
+    }
 
     auto peripheral = cached_peripherals[adapter_id].at(peripheral_id);
     bool success = peripheral.indicate(service, characteristic, [adapter_id, peripheral_id, service_characteristic_hash](SimpleBLE::ByteArray payload){
-
-        std::string payload_contents;
-        for (int i = 0; i < payload.size(); i++) {
-            payload_contents += fmt::format("{:02X}", (int)(payload[i]));
-        }
-
-        log_info("Received payload: " + payload_contents);
-
         threadRunner.enqueue([adapter_id, peripheral_id, service_characteristic_hash, payload]() {
-            JNIEnv *env = get_env();
-
-            // Retrieve the weak references from the cached_adapter_callbacks map
-            if (cached_peripheral_data_callbacks[adapter_id][peripheral_id].count(service_characteristic_hash) == 0) {
-                return;
-            }
-
-            jobject callbackRef = cached_peripheral_data_callbacks[adapter_id][peripheral_id].at(service_characteristic_hash);
-            jbyteArray j_payload = to_jbyteArray(env, payload);
-
-            // TODO: We should cache the class and method IDs
-            jclass callbackClass = env->GetObjectClass(callbackRef);
-            jmethodID onDataReceivedMethod = env->GetMethodID(callbackClass, "onDataReceived", "([B)V");
-
-            // Invoke the Java callback method
-            env->CallVoidMethod(callbackRef, onDataReceivedMethod, j_payload);
-            env->DeleteLocalRef(j_payload);
-
+            deliver_peripheral_data(adapter_id, peripheral_id, service_characteristic_hash, payload);
         });
     });
 
     if (!success) {
-        throw_exception(env, "Failed to notify");
+        remove_peripheral_data_callback(env, adapter_id, peripheral_id, service_characteristic_hash, callbackRef);
+        throw_exception(env, "Failed to indicate");
     }
 }
 extern "C"
@@ -639,15 +733,9 @@ Java_org_simpleble_android_Peripheral_nativePeripheralUnsubscribe(JNIEnv *env, j
     auto peripheral = cached_peripherals[adapter_id].at(peripheral_id);
     bool success = peripheral.unsubscribe(service, characteristic);
 
-    if (!success) {
-        throw_exception(env, "Failed to unsubscribe");
-    }
+    remove_peripheral_data_callback(env, adapter_id, peripheral_id, service_characteristic_hash);
 
-    if (cached_peripheral_data_callbacks[adapter_id][peripheral_id].count(service_characteristic_hash) != 0) {
-        jobject callbackRef = cached_peripheral_data_callbacks[adapter_id][peripheral_id].at(service_characteristic_hash);
-        env->DeleteGlobalRef(callbackRef);
-        cached_peripheral_data_callbacks[adapter_id][peripheral_id].erase(service_characteristic_hash);
-    }
+    if (!success) throw_exception(env, "Failed to unsubscribe");
 }
 
 extern "C"
@@ -656,7 +744,12 @@ Java_org_simpleble_android_Peripheral_nativePeripheralIsConnected(JNIEnv *env, j
                                                                   jlong adapter_id,
                                                                   jlong instance_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(instance_id);
-    return peripheral.is_connected().value_or(false);
+    auto connected = peripheral.is_connected();
+    if (!connected.has_value()) {
+        throw_exception(env, "Failed to get connection state");
+        return false;
+    }
+    return connected.value();
 }
 
 extern "C"
@@ -665,7 +758,12 @@ Java_org_simpleble_android_Peripheral_nativePeripheralIsConnectable(JNIEnv *env,
                                                                     jlong adapter_id,
                                                                     jlong instance_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(instance_id);
-    return peripheral.is_connectable().value_or(false);
+    auto connectable = peripheral.is_connectable();
+    if (!connectable.has_value()) {
+        throw_exception(env, "Failed to get connectable state");
+        return false;
+    }
+    return connectable.value();
 }
 
 extern "C"
@@ -674,7 +772,12 @@ Java_org_simpleble_android_Peripheral_nativePeripheralIsPaired(JNIEnv *env, jobj
                                                                jlong adapter_id,
                                                                jlong instance_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(instance_id);
-    return peripheral.is_paired().value_or(false);
+    auto paired = peripheral.is_paired();
+    if (!paired.has_value()) {
+        throw_exception(env, "Failed to get paired state");
+        return false;
+    }
+    return paired.value();
 }
 
 extern "C"
@@ -691,7 +794,11 @@ Java_org_simpleble_android_Peripheral_nativePeripheralServices(JNIEnv* env, jobj
                                                                jlong adapter_id,
                                                                jlong peripheral_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    auto services = peripheral.services().value_or(std::vector<SimpleBLE::Service>{});
+    auto services = peripheral.services();
+    if (!services.has_value()) {
+        throw_exception(env, "Failed to get peripheral services");
+        return nullptr;
+    }
 
     jclass serviceClass = env->FindClass("org/simpleble/android/Service");
     jclass characteristicClass = env->FindClass("org/simpleble/android/Characteristic");
@@ -703,7 +810,7 @@ Java_org_simpleble_android_Peripheral_nativePeripheralServices(JNIEnv* env, jobj
 
     jobject serviceArray = jarraylist_new(env);
 
-    for (auto service : services) {
+    for (auto service : services.value()) {
         jstring serviceUUID = to_jstring(env, service.uuid());
         jobject charList = jarraylist_new(env);
 
@@ -715,6 +822,8 @@ Java_org_simpleble_android_Peripheral_nativePeripheralServices(JNIEnv* env, jobj
                 jstring descUUID = to_jstring(env, descriptor.uuid());
                 jobject jDescriptor = env->NewObject(descriptorClass, descriptorConstructor, descUUID);
                 jarraylist_add(env, descList, jDescriptor);
+                env->DeleteLocalRef(jDescriptor);
+                env->DeleteLocalRef(descUUID);
             }
 
             jobject jCharacteristic = env->NewObject(characteristicClass, characteristicConstructor,
@@ -725,11 +834,21 @@ Java_org_simpleble_android_Peripheral_nativePeripheralServices(JNIEnv* env, jobj
                                                      characteristic.can_notify(),
                                                      characteristic.can_indicate());
             jarraylist_add(env, charList, jCharacteristic);
+            env->DeleteLocalRef(jCharacteristic);
+            env->DeleteLocalRef(descList);
+            env->DeleteLocalRef(charUUID);
         }
 
         jobject jService = env->NewObject(serviceClass, serviceConstructor, serviceUUID, charList);
         jarraylist_add(env, serviceArray, jService);
+        env->DeleteLocalRef(jService);
+        env->DeleteLocalRef(charList);
+        env->DeleteLocalRef(serviceUUID);
     }
+
+    env->DeleteLocalRef(descriptorClass);
+    env->DeleteLocalRef(characteristicClass);
+    env->DeleteLocalRef(serviceClass);
 
     return serviceArray;
 }
@@ -742,9 +861,11 @@ jobject NewHashMap(JNIEnv* env) {
     }
     jmethodID hashMapConstructor = env->GetMethodID(hashMapClass, "<init>", "()V");
     if (hashMapConstructor == nullptr) {
+        env->DeleteLocalRef(hashMapClass);
         return nullptr; // Constructor method not found
     }
     jobject hashMap = env->NewObject(hashMapClass, hashMapConstructor);
+    env->DeleteLocalRef(hashMapClass);
     return hashMap;
 }
 
@@ -756,9 +877,12 @@ void HashMapPut(JNIEnv* env, jobject hashMap, jobject key, jobject value) {
     }
     jmethodID hashMapPut = env->GetMethodID(hashMapClass, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
     if (hashMapPut == nullptr) {
+        env->DeleteLocalRef(hashMapClass);
         return; // Method not found
     }
-    env->CallObjectMethod(hashMap, hashMapPut, key, value);
+    jobject previousValue = env->CallObjectMethod(hashMap, hashMapPut, key, value);
+    if (previousValue != nullptr) env->DeleteLocalRef(previousValue);
+    env->DeleteLocalRef(hashMapClass);
 }
 
 
@@ -768,9 +892,13 @@ jobject to_jInteger(JNIEnv* env, jint value) {
     if (!integerClass) return nullptr;  // Class not found
 
     jmethodID integerConstructor = env->GetMethodID(integerClass, "<init>", "(I)V");
-    if (!integerConstructor) return nullptr;  // Constructor method not found
+    if (!integerConstructor) {
+        env->DeleteLocalRef(integerClass);
+        return nullptr;  // Constructor method not found
+    }
 
     jobject integerObject = env->NewObject(integerClass, integerConstructor, value);
+    env->DeleteLocalRef(integerClass);
     return integerObject;
 }
 
@@ -779,12 +907,16 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_org_simpleble_android_Peripheral_nativePeripheralManufacturerData(JNIEnv* env, jobject thiz, jlong adapter_id, jlong instance_id) {
     auto& peripheral = cached_peripherals[adapter_id].at(instance_id);
-    auto manufacturer_data = peripheral.manufacturer_data().value_or(std::map<uint16_t, SimpleBLE::ByteArray>{});
+    auto manufacturer_data = peripheral.manufacturer_data();
+    if (!manufacturer_data.has_value()) {
+        throw_exception(env, "Failed to get manufacturer data");
+        return nullptr;
+    }
 
     jobject hashMap = NewHashMap(env);
     if (!hashMap) return nullptr;  // Error creating HashMap
 
-    for (const auto& data : manufacturer_data) {
+    for (const auto& data : manufacturer_data.value()) {
         jobject key = to_jInteger(env, static_cast<jint>(data.first));
         jbyteArray value = to_jbyteArray(env, data.second);
 
@@ -807,9 +939,13 @@ Java_org_simpleble_android_Peripheral_nativePeripheralRead(JNIEnv *env, jobject 
     std::string characteristic = from_jstring(env, j_characteristic);
 
     auto peripheral = cached_peripherals[adapter_id].at(peripheral_id);
-    SimpleBLE::ByteArray result = peripheral.read(service, characteristic).value_or(SimpleBLE::ByteArray{});
+    auto result = peripheral.read(service, characteristic);
+    if (!result.has_value()) {
+        throw_exception(env, "Failed to read characteristic " + characteristic);
+        return nullptr;
+    }
 
-    return to_jbyteArray(env, result);
+    return to_jbyteArray(env, result.value());
 }
 extern "C"
 JNIEXPORT void JNICALL
@@ -858,9 +994,13 @@ Java_org_simpleble_android_Peripheral_nativePeripheralDescriptorRead(JNIEnv *env
     std::string descriptor = from_jstring(env, j_descriptor);
 
     auto peripheral = cached_peripherals[adapter_id].at(instance_id);
-    SimpleBLE::ByteArray result = peripheral.read(service, characteristic, descriptor).value_or(SimpleBLE::ByteArray{});
+    auto result = peripheral.read(service, characteristic, descriptor);
+    if (!result.has_value()) {
+        throw_exception(env, "Failed to read descriptor " + descriptor);
+        return nullptr;
+    }
 
-    return to_jbyteArray(env, result);
+    return to_jbyteArray(env, result.value());
 }
 extern "C"
 JNIEXPORT void JNICALL

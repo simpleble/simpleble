@@ -16,6 +16,9 @@ using namespace std::chrono_literals;
 
 const SimpleBLE::BluetoothUUID BATTERY_SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
 const SimpleBLE::BluetoothUUID BATTERY_CHARACTERISTIC_UUID = "00002a19-0000-1000-8000-00805f9b34fb";
+const SimpleBLE::BluetoothUUID CLIENT_CONFIGURATION_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
+const SimpleBLE::BluetoothUUID TEST_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
+const SimpleBLE::BluetoothUUID TEST_CHARACTERISTIC_UUID = "0000fff1-0000-1000-8000-00805f9b34fb";
 
 PeripheralPlain::PeripheralPlain() {}
 
@@ -63,11 +66,15 @@ SharedPtrVector<ServiceBase> PeripheralPlain::available_services() {
     if (!connected_) return {};
 
     SharedPtrVector<ServiceBase> service_list;
-    SharedPtrVector<DescriptorBase> descriptor_list;
-    SharedPtrVector<CharacteristicBase> characteristic_list = {std::make_shared<CharacteristicBase>(
-        BATTERY_CHARACTERISTIC_UUID, descriptor_list, true, false, false, true, false)};
+    SharedPtrVector<DescriptorBase> battery_descriptors = {
+        std::make_shared<DescriptorBase>(CLIENT_CONFIGURATION_DESCRIPTOR_UUID)};
+    SharedPtrVector<CharacteristicBase> battery_characteristics = {std::make_shared<CharacteristicBase>(
+        BATTERY_CHARACTERISTIC_UUID, battery_descriptors, true, false, false, true, false)};
+    SharedPtrVector<CharacteristicBase> test_characteristics = {std::make_shared<CharacteristicBase>(
+        TEST_CHARACTERISTIC_UUID, SharedPtrVector<DescriptorBase>{}, true, true, true, false, false)};
 
-    service_list.push_back(std::make_shared<ServiceBase>(BATTERY_SERVICE_UUID, characteristic_list));
+    service_list.push_back(std::make_shared<ServiceBase>(BATTERY_SERVICE_UUID, battery_characteristics));
+    service_list.push_back(std::make_shared<ServiceBase>(TEST_SERVICE_UUID, test_characteristics));
     return service_list;
 }
 

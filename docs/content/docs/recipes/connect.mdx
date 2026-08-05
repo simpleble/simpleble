@@ -140,7 +140,8 @@ val peripheral = selectedPeripheral
 peripheral.connect()
 
 Log.d("SimpleBLE", "MTU: ${peripheral.mtu}")
-for (service in peripheral.services()) {
+val services = peripheral.services()
+for (service in services) {
     Log.d("SimpleBLE", "Service: ${service.uuid}")
 
     for (characteristic in service.characteristics) {

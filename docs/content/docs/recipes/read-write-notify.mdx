@@ -252,18 +252,41 @@ peripheral.unsubscribe(&service_uuid, &characteristic_uuid).unwrap();
 <Tab value="Android">
 
 ```kotlin
-val job = CoroutineScope(Dispatchers.Main).launch {
+withTimeoutOrNull(10_000) {
     peripheral.notify(serviceUuid, characteristicUuid).collect { payload ->
         Log.d("SimpleBLE", "Notification: ${payload.joinToString(" ") { "%02x".format(it) }}")
     }
 }
-
-delay(10_000)
-job.cancel()
 ```
 
 </Tab>
 </Tabs>
+
+On Android, collecting the flow subscribes to the characteristic. When collection is cancelled or completes, SimpleDroidBLE unsubscribes and waits for native cleanup to finish. The timeout above is only a compact way to demonstrate a ten-second subscription.
+
+## Production Android apps
+
+Choose the subscription lifetime based on what the app promises:
+
+- For data needed only while a screen is visible, collect inside [`repeatOnLifecycle`](https://developer.android.com/topic/libraries/architecture/views/coroutines-views). Leaving the screen cancels collection and unsubscribes; returning starts a new subscription.
+- For a connection that must survive screen changes, let a ViewModel or connection controller own the collection job and expose parsed values as UI state. Cancel and join that job before disconnecting, selecting another peripheral, or subscribing again.
+- A notification flow does not reconnect automatically. After reconnecting, refresh services and collect a new flow.
+- Serialize connect, read, write, subscribe, and disconnect actions so taps and lifecycle events cannot start conflicting GATT operations.
+- Surface subscription failures through UI state. Cancellation is normal lifecycle cleanup and should not be shown as an error.
+
+A screen-scoped subscription can stay small:
+
+```kotlin
+lifecycleScope.launch {
+    repeatOnLifecycle(Lifecycle.State.STARTED) {
+        peripheral.notify(serviceUuid, characteristicUuid).collect { payload ->
+            viewModel.onNotification(payload)
+        }
+    }
+}
+```
+
+If notifications must continue while the app is not visible, a ViewModel is not sufficient. Follow Android's [background BLE guidance](https://developer.android.com/develop/connectivity/bluetooth/ble/background) and use a companion-device service or a `connectedDevice` foreground service as appropriate.
 
 ## Common pitfalls
 
@@ -271,4 +294,5 @@ job.cancel()
 - Use `write_command` / `writeCommand` only when the characteristic supports write-without-response.
 - Subscribe only to characteristics that advertise notify or indicate capability.
 - Keep the process, activity, or coroutine alive while notifications are active.
-- Unsubscribe before disconnecting when your workflow has a clear end.
+- Unsubscribe before disconnecting when your workflow has a clear end. On Android, cancel and join the collector to unsubscribe automatically.
+- On Android, only one notify or indicate collector may be active for a characteristic. Cancel and join it before resubscribing.
