@@ -26,13 +26,12 @@ const SimpleJNI::AutoRegister<AdapterCallback> AdapterCallback::registrar{&descr
 /**
  * @brief Construct a Callback from a Java object.
  *
- * Initializes the internal SimpleJNI::Object with the provided jobject and the preloaded
- * jclass. The check for _cls.get() ensures that JNI_OnLoad has run and preloaded the
- * necessary resources, throwing an exception otherwise to catch initialization issues early.
+ * Initializes the internal SimpleJNI::Object with the provided jobject. The check for
+ * _cls.get() ensures that JNI_OnLoad has preloaded the callback method IDs.
  * @param obj The Java object implementing the Callback interface.
  * @throws std::runtime_error if JNI resources are not preloaded.
  */
-AdapterCallback::AdapterCallback(jobject obj) : _obj(obj, _cls.get()) {
+AdapterCallback::AdapterCallback(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("AdapterCallback JNI resources not preloaded");
     }

@@ -18,8 +18,9 @@ set(BUILD_SHARED_LIBS ON)
 
 add_library(
     ${CMAKE_PROJECT_NAME} SHARED
+    JniTypes.cpp
+    NativeCache.cpp
     simpleble_android.cpp
-    android_utils.cpp
     ${SIMPLEJNI_SOURCES}
 )
 

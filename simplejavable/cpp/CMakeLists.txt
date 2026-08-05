@@ -10,8 +10,6 @@ project(
     LANGUAGES CXX
 )
 
-option(SIMPLEJAVABLE_TEST "Build SimpleJavaBLE JNI tests" OFF)
-
 include(${PROJECT_ROOT_DIR}/cmake/epilogue.cmake)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -67,41 +65,3 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE FMT_HEADER_ONLY FMT_UNICODE=0)
-
-if(SIMPLEJAVABLE_TEST)
-    enable_testing()
-    find_package(Java 17 COMPONENTS Development REQUIRED)
-
-    set(SIMPLEJAVABLE_TEST_CLASSES_DIR ${CMAKE_CURRENT_BINARY_DIR}/test-classes)
-    set(SIMPLEJAVABLE_TEST_JAVA_SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/java/org/simplejavable/ThrowingCallback.java)
-    set(SIMPLEJAVABLE_TEST_JAVA_STAMP ${SIMPLEJAVABLE_TEST_CLASSES_DIR}/.compiled)
-
-    add_custom_command(
-        OUTPUT ${SIMPLEJAVABLE_TEST_JAVA_STAMP}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${SIMPLEJAVABLE_TEST_CLASSES_DIR}
-        COMMAND ${Java_JAVAC_EXECUTABLE}
-            --release 17
-            -d ${SIMPLEJAVABLE_TEST_CLASSES_DIR}
-            ${SIMPLEJAVABLE_TEST_JAVA_SOURCE}
-        COMMAND ${CMAKE_COMMAND} -E touch ${SIMPLEJAVABLE_TEST_JAVA_STAMP}
-        DEPENDS ${SIMPLEJAVABLE_TEST_JAVA_SOURCE}
-        VERBATIM)
-
-    add_executable(
-        simplejavable_test
-        test/src/test_exception_translation.cpp
-        ${SIMPLEJNI_SOURCES})
-    target_compile_features(simplejavable_test PRIVATE cxx_std_17)
-    target_include_directories(
-        simplejavable_test PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/external
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/internal/include
-        ${JNI_INCLUDE_DIRS})
-    target_link_libraries(simplejavable_test PRIVATE ${JNI_LIBRARIES})
-    add_custom_target(simplejavable_test_java DEPENDS ${SIMPLEJAVABLE_TEST_JAVA_STAMP})
-    add_dependencies(simplejavable_test simplejavable_test_java)
-
-    add_test(NAME simplejavable.exception_translation
-        COMMAND simplejavable_test ${SIMPLEJAVABLE_TEST_CLASSES_DIR})
-endif()

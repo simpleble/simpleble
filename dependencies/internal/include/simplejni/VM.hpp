@@ -21,10 +21,14 @@ class VM {
             }
             instance._jvm = jvm_override;
         } else if (instance._jvm == nullptr) {
+#ifdef __ANDROID__
+            throw std::runtime_error("JavaVM pointer has not been set");
+#else
             jsize count;
             if (JNI_GetCreatedJavaVMs(&instance._jvm, 1, &count) != JNI_OK || count == 0) {
                 throw std::runtime_error("Failed to retrieve the Java Virtual Machine");
             }
+#endif
         }
         return instance._jvm;
     }

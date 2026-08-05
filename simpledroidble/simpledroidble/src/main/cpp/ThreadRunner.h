@@ -1,18 +1,20 @@
 #pragma once
 
-#include <fmt/core.h>
-#include <jni.h>
+#include <simpleble/Logging.h>
+
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <string>
 #include <thread>
-#include "android_utils.h"
+
+#include "simplejni/VM.hpp"
 
 class ThreadRunner {
   public:
-    ThreadRunner() : _stop(false), _jvm(nullptr) {}
+    ThreadRunner() = default;
 
     ~ThreadRunner() {
         {
@@ -24,8 +26,6 @@ class ThreadRunner {
             _thread->join();
         }
     }
-
-    void set_jvm(JavaVM* jvm) { _jvm = jvm; }
 
     void enqueue(std::function<void()> func) {
         {
@@ -40,17 +40,16 @@ class ThreadRunner {
     }
 
   private:
-    void threadFunc() {
-        if (!_jvm) {
-            log_error("No JVM provided");
-            return;
-        }
+    static void log_error(const std::string& message) noexcept {
+        SimpleBLE::Logging::Logger::get()->log(SimpleBLE::Logging::Level::Error, "SimpleDroidBLE", __FILE__, __LINE__,
+                                               __func__, message);
+    }
 
-        // Attach the thread to the JVM
-        JNIEnv* env;
-        jint result = _jvm->AttachCurrentThread(&env, NULL);
-        if (result != JNI_OK) {
-            log_error("Failed to attach thread");
+    void threadFunc() noexcept {
+        try {
+            SimpleJNI::VM::attach();
+        } catch (const std::exception& exception) {
+            log_error(std::string("Failed to attach callback thread: ") + exception.what());
             return;
         }
 
@@ -72,18 +71,18 @@ class ThreadRunner {
             try {
                 func();
             } catch (const std::exception& e) {
-                log_error(fmt::format("Exception in thread: {}", e.what()));
+                log_error(std::string("Exception in callback thread: ") + e.what());
+            } catch (...) {
+                log_error("Unknown exception in callback thread");
             }
         }
 
-        // Detach the thread from the JVM
-        _jvm->DetachCurrentThread();
+        SimpleJNI::VM::detach();
     }
 
-    JavaVM* _jvm;
     std::optional<std::thread> _thread;
     std::mutex _mutex;
     std::condition_variable _cv;
     std::queue<std::function<void()>> _queue;
-    bool _stop;
+    bool _stop = false;
 };

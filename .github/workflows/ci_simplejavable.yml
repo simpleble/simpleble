@@ -35,6 +35,13 @@ jobs:
           distribution: "temurin"
           architecture: ${{ matrix.config.architecture }}
 
+      - name: Test SimpleJNI
+        if: matrix.config.os == 'linux' && matrix.config.architecture == 'x64'
+        run: |
+          cmake -S "$GITHUB_WORKSPACE/dependencies/internal/test/simplejni" -B "$GITHUB_WORKSPACE/build_simplejni" -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$GITHUB_WORKSPACE/build_simplejni" --parallel
+          ctest --test-dir "$GITHUB_WORKSPACE/build_simplejni" --build-config Release --output-on-failure
+
       - name: Build SimpleJavaBLE JNI Wrapper
         uses: ./.github/actions/build-native
         with:
@@ -43,11 +50,7 @@ jobs:
           build-config: "Release"
           os: "${{ matrix.config.os }}"
           target-arch: "${{ matrix.config.architecture }}"
-          cmake-options: "-DBUILD_SHARED_LIBS=OFF -DSIMPLEJAVABLE_TEST=${{ matrix.config.os == 'linux' && matrix.config.architecture == 'x64' && 'ON' || 'OFF' }}"
-
-      - name: Test SimpleJavaBLE JNI
-        if: matrix.config.os == 'linux' && matrix.config.architecture == 'x64'
-        run: ctest --test-dir "$GITHUB_WORKSPACE/build_simplejavable" --build-config Release --output-on-failure
+          cmake-options: "-DBUILD_SHARED_LIBS=OFF"
 
       - name: Upload JNI Binaries
         if: matrix.config.os != 'windows'

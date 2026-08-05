@@ -6,12 +6,20 @@
 
 namespace SimpleJNI {
 
+// Marks a JNI-created local reference whose ownership is transferred to the wrapper.
+struct AdoptLocalRefTag {};
+inline constexpr AdoptLocalRefTag adopt_local_ref;
+
 template <typename T>
 class GlobalRef {
   public:
     GlobalRef() = default;
 
     explicit GlobalRef(T obj) : _obj(obj ? static_cast<T>(VM::env()->NewGlobalRef(obj)) : nullptr) {}
+
+    GlobalRef(AdoptLocalRefTag, T obj) : GlobalRef(obj) {
+        if (obj) VM::env()->DeleteLocalRef(obj);
+    }
 
     ~GlobalRef() {
         if (_obj && VM::is_jvm_alive()) VM::env()->DeleteGlobalRef(_obj);
@@ -55,6 +63,8 @@ class LocalRef {
     LocalRef() = default;
 
     explicit LocalRef(T obj) : _obj(obj ? static_cast<T>(VM::env()->NewLocalRef(obj)) : nullptr) {}
+
+    LocalRef(AdoptLocalRefTag, T obj) : _obj(obj) {}
 
     ~LocalRef() {
         if (_obj) VM::env()->DeleteLocalRef(_obj);
@@ -109,6 +119,10 @@ class WeakRef {
     WeakRef() = default;
 
     explicit WeakRef(T obj) : _obj(obj ? static_cast<T>(VM::env()->NewWeakGlobalRef(obj)) : nullptr) {}
+
+    WeakRef(AdoptLocalRefTag, T obj) : WeakRef(obj) {
+        if (obj) VM::env()->DeleteLocalRef(obj);
+    }
 
     ~WeakRef() {
         if (_obj && VM::is_jvm_alive()) VM::env()->DeleteWeakGlobalRef(_obj);

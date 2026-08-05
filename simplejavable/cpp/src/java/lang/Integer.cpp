@@ -43,7 +43,7 @@ Integer<RefType>::Integer(int value) : _obj() {
     }
     JNIEnv* env = SimpleJNI::VM::env();
     jobject obj = env->NewObject(_cls.get(), _method_init, value);
-    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
+    _obj = SimpleJNI::Object<RefType, jobject>(SimpleJNI::adopt_local_ref, obj);
 }
 
 template <template <typename> class RefType>

@@ -123,8 +123,7 @@ class Registrar {
                 throw std::runtime_error("Failed to load class: " + desc->class_name);
             }
 
-            GlobalRef<jclass> class_target(local_cls);
-            env->DeleteLocalRef(local_cls);  // Clean up the local reference
+            GlobalRef<jclass> class_target(adopt_local_ref, local_cls);
 
             // If *desc->class_target is null, we don't set it.
             if (desc->class_target != nullptr) {
@@ -158,8 +157,7 @@ class Registrar {
                 throw std::runtime_error("Failed to load class: " + desc->class_name);
             }
 
-            GlobalRef<jclass> class_target(local_cls);
-            env->DeleteLocalRef(local_cls);  // Clean up the local reference
+            GlobalRef<jclass> class_target(adopt_local_ref, local_cls);
 
             // If *desc->class_target is null, we don't set it.
             if (desc->class_target != nullptr) {

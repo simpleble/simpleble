@@ -19,7 +19,7 @@ const SimpleJNI::JNIDescriptor PeripheralCallback::descriptor{
 // Define the AutoRegister instance
 const SimpleJNI::AutoRegister<PeripheralCallback> PeripheralCallback::registrar{&descriptor};
 
-PeripheralCallback::PeripheralCallback(jobject obj) : _obj(obj, _cls.get()) {
+PeripheralCallback::PeripheralCallback(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("PeripheralCallback JNI resources not preloaded");
     }

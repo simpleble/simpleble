@@ -29,7 +29,7 @@ Iterator<RefType>::Iterator(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("Iterator JNI resources not preloaded");
     }
-    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
+    _obj = SimpleJNI::Object<RefType, jobject>(obj);
 }
 
 template <template <typename> class RefType>

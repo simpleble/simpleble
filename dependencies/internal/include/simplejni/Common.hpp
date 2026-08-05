@@ -23,52 +23,57 @@ namespace SimpleJNI {
 
 class Exception : public std::runtime_error {
   public:
-    Exception(jthrowable obj) : std::runtime_error("Java Exception"), _ref(), _cls() {
-        _ref = LocalRef<jthrowable>(obj);
-
-        JNIEnv* env = SimpleJNI::VM::env();
-        _cls = LocalRef<jclass>(env->GetObjectClass(_ref.get()));
-
-        jmethodID method_to_string = env->GetMethodID(_cls.get(), "toString", "()Ljava/lang/String;");
-        std::string exception_description = call_string_method(env, _ref.get(), method_to_string);
-
-        _what = "Java Exception";
-        if (!exception_description.empty()) {
-            _what += ": " + exception_description;
-        }
-    }
+    Exception(AdoptLocalRefTag, jthrowable obj) : std::runtime_error("Java Exception"), _what(describe(obj)) {}
 
     const char* what() const noexcept override { return _what.c_str(); }
 
+    static void check(JNIEnv* env) {
+        jthrowable throwable = env->ExceptionOccurred();
+        if (!throwable) return;
+
+        env->ExceptionClear();
+        throw Exception(adopt_local_ref, throwable);
+    }
+
   private:
     std::string _what;
-    LocalRef<jthrowable> _ref;
-    LocalRef<jclass> _cls;
 
-    static std::string call_string_method(JNIEnv* env, jthrowable obj, jmethodID method) {
-        if (!method) {
+    static std::string describe(jthrowable obj) {
+        LocalRef<jthrowable> ref(adopt_local_ref, obj);
+        if (!ref.get()) return "Java Exception";
+
+        JNIEnv* env = SimpleJNI::VM::env();
+        LocalRef<jclass> cls(adopt_local_ref, env->GetObjectClass(ref.get()));
+        if (!cls.get()) {
             if (env->ExceptionCheck()) env->ExceptionClear();
-            return "";
+            return "Java Exception";
         }
 
-        auto jstr = static_cast<jstring>(env->CallObjectMethod(obj, method));
+        std::string what = "Java Exception";
+        jmethodID method_to_string = env->GetMethodID(cls.get(), "toString", "()Ljava/lang/String;");
+        if (!method_to_string) {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            return what;
+        }
+
+        LocalRef<jstring> jstr(adopt_local_ref,
+                               static_cast<jstring>(env->CallObjectMethod(ref.get(), method_to_string)));
         if (env->ExceptionCheck()) {
             env->ExceptionClear();
-            return "";
+            return what;
         }
-        if (!jstr) return "";
+        if (!jstr.get()) return what;
 
-        const char* c_str = env->GetStringUTFChars(jstr, nullptr);
+        const char* c_str = env->GetStringUTFChars(jstr.get(), nullptr);
         if (!c_str) {
             if (env->ExceptionCheck()) env->ExceptionClear();
-            env->DeleteLocalRef(jstr);
-            return "";
+            return what;
         }
 
-        std::string result(c_str);
-        env->ReleaseStringUTFChars(jstr, c_str);
-        env->DeleteLocalRef(jstr);
-        return result;
+        what += ": ";
+        what += c_str;
+        env->ReleaseStringUTFChars(jstr.get(), c_str);
+        return what;
     }
 };
 
@@ -77,22 +82,15 @@ class Object {
   public:
     Object() = default;
 
-    explicit Object(JniType obj) : _ref(obj) {
-        if (obj) {
-            JNIEnv* env = VM::env();
-            _cls = RefType<jclass>(env->GetObjectClass(_ref.get()));
-        }
-    }
+    explicit Object(JniType obj) : _ref(obj) {}
 
-    // Constructor with pre-fetched jclass
-    Object(JniType obj, jclass cls) : _ref(obj), _cls(cls) {}
+    Object(AdoptLocalRefTag, JniType obj) : _ref(adopt_local_ref, obj) {}
 
     // Move semantics
-    Object(Object&& other) noexcept : _ref(std::move(other._ref)), _cls(std::move(other._cls)) {}
+    Object(Object&& other) noexcept : _ref(std::move(other._ref)) {}
     Object& operator=(Object&& other) noexcept {
         if (this != &other) {
             _ref = std::move(other._ref);
-            _cls = std::move(other._cls);
         }
         return *this;
     }
@@ -103,13 +101,7 @@ class Object {
 
     // Template constructor for converting between different RefType templates
     template <template <typename> class OtherRefType>
-    Object(const Object<OtherRefType, JniType>& other) {
-        if (other.get()) {
-            JNIEnv* env = VM::env();
-            _ref = RefType<JniType>(other.get());
-            _cls = RefType<jclass>(env->GetObjectClass(_ref.get()));
-        }
-    }
+    Object(const Object<OtherRefType, JniType>& other) : _ref(other.get()) {}
 
     // Template assignment operator for converting between different RefType templates
     template <template <typename> class OtherRefType>
@@ -123,10 +115,8 @@ class Object {
         if (!other.get() || !_ref.get() || !env->IsSameObject(_ref.get(), other.get())) {
             if (other.get()) {
                 _ref = RefType<JniType>(other.get());
-                _cls = RefType<jclass>(env->GetObjectClass(_ref.get()));
             } else {
                 _ref = RefType<JniType>();
-                _cls = RefType<jclass>();
             }
         }
         return *this;
@@ -135,20 +125,17 @@ class Object {
     // Conversion methods
     Object<LocalRef, JniType> to_local() const {
         if (!*this) return Object<LocalRef, JniType>();
-        JNIEnv* env = VM::env();
-        return Object<LocalRef, JniType>(_ref.get(), _cls.get());
+        return Object<LocalRef, JniType>(_ref.get());
     }
 
     Object<GlobalRef, JniType> to_global() const {
         if (!*this) return Object<GlobalRef, JniType>();
-        JNIEnv* env = VM::env();
-        return Object<GlobalRef, JniType>(_ref.get(), _cls.get());
+        return Object<GlobalRef, JniType>(_ref.get());
     }
 
     Object<WeakRef, jweak> to_weak() const {
         if (!*this) return Object<WeakRef, jweak>();
-        JNIEnv* env = VM::env();
-        return Object<WeakRef, jweak>(WeakRef<jweak>(_ref.get()));
+        return Object<WeakRef, jweak>(static_cast<jweak>(_ref.get()));
     }
 
     // Access raw jobject
@@ -161,33 +148,26 @@ class Object {
 
     bool is_valid() const { return _ref.is_valid(); }
 
-    jmethodID get_method(const char* name, const char* signature) const {
-        JNIEnv* env = VM::env();
-        jmethodID method = env->GetMethodID(_cls.get(), name, signature);
-        check_exception(env);
-        return method;
-    }
-
     template <typename... Args>
     Object<LocalRef, JniType> call_object_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         JniType result = env->CallObjectMethod(_ref.get(), method, std::forward<Args>(args)...);
-        check_exception(env);
-        return Object<LocalRef, JniType>(result);
+        Exception::check(env);
+        return Object<LocalRef, JniType>(adopt_local_ref, result);
     }
 
     template <typename... Args>
     void call_void_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         env->CallVoidMethod(_ref.get(), method, std::forward<Args>(args)...);
-        check_exception(env);
+        Exception::check(env);
     }
 
     template <typename... Args>
     bool call_boolean_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         bool result = env->CallBooleanMethod(_ref.get(), method, std::forward<Args>(args)...);
-        check_exception(env);
+        Exception::check(env);
         return result;
     }
 
@@ -195,31 +175,36 @@ class Object {
     int call_int_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
         int result = env->CallIntMethod(_ref.get(), method, std::forward<Args>(args)...);
-        check_exception(env);
+        Exception::check(env);
         return result;
     }
 
     template <typename... Args>
     std::string call_string_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
-        auto jstr = static_cast<jstring>(env->CallObjectMethod(_ref.get(), method, std::forward<Args>(args)...));
-        if (!jstr) return "";
-        const char* c_str = env->GetStringUTFChars(jstr, nullptr);
+        LocalRef<jstring> jstr(adopt_local_ref, static_cast<jstring>(env->CallObjectMethod(
+                                                    _ref.get(), method, std::forward<Args>(args)...)));
+        Exception::check(env);
+        if (!jstr.get()) return "";
+        const char* c_str = env->GetStringUTFChars(jstr.get(), nullptr);
+        Exception::check(env);
         std::string result(c_str);
-        env->ReleaseStringUTFChars(jstr, c_str);
+        env->ReleaseStringUTFChars(jstr.get(), c_str);
         return result;
     }
 
     template <typename... Args>
     kvn::bytearray call_byte_array_method(jmethodID method, Args&&... args) const {
         JNIEnv* env = VM::env();
-        auto jarr = static_cast<jbyteArray>(env->CallObjectMethod(_ref.get(), method, std::forward<Args>(args)...));
-        check_exception(env);
-        if (!jarr) return {};
-        jsize len = env->GetArrayLength(jarr);
-        jbyte* arr = env->GetByteArrayElements(jarr, nullptr);
-        kvn::bytearray result(arr, arr + len);
-        env->ReleaseByteArrayElements(jarr, arr, JNI_ABORT);
+        LocalRef<jbyteArray> jarr(adopt_local_ref, static_cast<jbyteArray>(env->CallObjectMethod(
+                                                       _ref.get(), method, std::forward<Args>(args)...)));
+        Exception::check(env);
+        if (!jarr.get()) return {};
+        jsize len = env->GetArrayLength(jarr.get());
+        Exception::check(env);
+        kvn::bytearray result(static_cast<size_t>(len));
+        env->GetByteArrayRegion(jarr.get(), 0, len, reinterpret_cast<jbyte*>(result.data()));
+        Exception::check(env);
         return result;
     }
 
@@ -227,24 +212,12 @@ class Object {
     static Object<LocalRef, JniType> call_new_object(jclass cls, jmethodID method, Args&&... args) {
         JNIEnv* env = VM::env();
         JniType result = env->NewObject(cls, method, std::forward<Args>(args)...);
-        check_exception(env);
-        return Object<LocalRef, JniType>(result);
-    }
-
-    static void check_exception(JNIEnv* env) {
-        if (env->ExceptionCheck()) {
-            jthrowable throwable = env->ExceptionOccurred();
-            env->ExceptionClear();
-
-            Exception exception(throwable);
-            env->DeleteLocalRef(throwable);
-            throw exception;
-        }
+        Exception::check(env);
+        return Object<LocalRef, JniType>(adopt_local_ref, result);
     }
 
   protected:
-    RefType<JniType> _ref;  // Holds LocalRef<JniType> or GlobalRef<JniType>
-    RefType<jclass> _cls;   // Holds LocalRef<jclass> or GlobalRef<jclass>
+    RefType<JniType> _ref;
 };
 
 template <template <typename> class RefType>
@@ -253,38 +226,25 @@ class ByteArray {
     ByteArray() = default;
 
     // NOTE: The user is responsible for ensuring that the jobject is a jbyteArray
-    explicit ByteArray(jobject obj) : _ref(static_cast<jbyteArray>(obj)) {
-        JNIEnv* env = VM::env();
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
-    }
+    explicit ByteArray(jobject obj) : _ref(static_cast<jbyteArray>(obj)) {}
 
-    explicit ByteArray(jbyteArray obj) : _ref(obj) {
-        JNIEnv* env = VM::env();
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
-    }
+    explicit ByteArray(jbyteArray obj) : _ref(obj) {}
 
     ByteArray(const kvn::bytearray& data) : _ref() {
         JNIEnv* env = VM::env();
         jbyteArray jarr = env->NewByteArray(data.size());
+        Exception::check(env);
         env->SetByteArrayRegion(jarr, 0, data.size(), reinterpret_cast<const jbyte*>(data.data()));
+        Exception::check(env);
 
-        this->_ref = RefType<jbyteArray>(jarr);
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
+        this->_ref = RefType<jbyteArray>(adopt_local_ref, jarr);
     }
 
     template <template <typename> class OtherRefType>
     ByteArray(const Object<OtherRefType, jbyteArray>& obj) : _ref(obj.get()) {}
 
     // Add implicit conversion to Object<RefType, jobject>
-    operator Object<RefType, jobject>() const {
-        return Object<RefType, jobject>(static_cast<jobject>(this->get()), this->_cls.get());
-    }
+    operator Object<RefType, jobject>() const { return Object<RefType, jobject>(static_cast<jobject>(this->get())); }
 
     // Access raw jobject
     jbyteArray get() const { return _ref.get(); }
@@ -315,9 +275,11 @@ class ByteArray {
         }
 
         jsize len = env->GetArrayLength(jarr);
+        Exception::check(env);
         kvn::bytearray result(len);
 
         env->GetByteArrayRegion(jarr, 0, len, reinterpret_cast<jbyte*>(result.data()));
+        Exception::check(env);
 
         return result;
     }
@@ -330,7 +292,6 @@ class ByteArray {
 
   protected:
     RefType<jbyteArray> _ref;
-    RefType<jclass> _cls;
 };
 
 template <template <typename> class RefType>
@@ -338,31 +299,23 @@ class LongArray {
   public:
     LongArray() = default;
 
-    explicit LongArray(jlongArray obj) : _ref(obj) {
-        JNIEnv* env = VM::env();
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
-    }
+    explicit LongArray(jlongArray obj) : _ref(obj) {}
 
     LongArray(const std::vector<int64_t>& data) : _ref() {
         JNIEnv* env = VM::env();
         jlongArray jarr = env->NewLongArray(data.size());
+        Exception::check(env);
         env->SetLongArrayRegion(jarr, 0, data.size(), reinterpret_cast<const jlong*>(data.data()));
+        Exception::check(env);
 
-        this->_ref = RefType<jlongArray>(jarr);
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
+        this->_ref = RefType<jlongArray>(adopt_local_ref, jarr);
     }
 
     template <template <typename> class OtherRefType>
     LongArray(const Object<OtherRefType, jlongArray>& obj) : _ref(obj.get()) {}
 
     // Add implicit conversion to Object<RefType, jobject>
-    operator Object<RefType, jobject>() const {
-        return Object<RefType, jobject>(static_cast<jobject>(this->get()), this->_cls.get());
-    }
+    operator Object<RefType, jobject>() const { return Object<RefType, jobject>(static_cast<jobject>(this->get())); }
 
     // Access raw jobject
     jlongArray get() const { return _ref.get(); }
@@ -393,9 +346,11 @@ class LongArray {
         }
 
         jsize len = env->GetArrayLength(jarr);
+        Exception::check(env);
         std::vector<int64_t> result(len);
 
         env->GetLongArrayRegion(jarr, 0, len, reinterpret_cast<jlong*>(result.data()));
+        Exception::check(env);
 
         return result;
     }
@@ -414,7 +369,6 @@ class LongArray {
 
   protected:
     RefType<jlongArray> _ref;
-    RefType<jclass> _cls;
 };
 
 template <template <typename> class RefType>
@@ -422,30 +376,21 @@ class String {
   public:
     String() = default;
 
-    explicit String(jstring obj) : _ref(obj) {
-        JNIEnv* env = VM::env();
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
-    }
+    explicit String(jstring obj) : _ref(obj) {}
 
     String(const std::string& data) : _ref() {
         JNIEnv* env = VM::env();
         jstring jstr = env->NewStringUTF(data.c_str());
+        Exception::check(env);
 
-        this->_ref = RefType<jstring>(jstr);
-        jclass cls = env->FindClass("java/lang/Object");
-        this->_cls = RefType<jclass>(cls);
-        env->DeleteLocalRef(cls);
+        this->_ref = RefType<jstring>(adopt_local_ref, jstr);
     }
 
     template <template <typename> class OtherRefType>
     String(const Object<OtherRefType, jstring>& obj) : _ref(obj.get()) {}
 
     // Add implicit conversion to Object<RefType, jobject>
-    operator Object<RefType, jobject>() const {
-        return Object<RefType, jobject>(static_cast<jobject>(this->get()), this->_cls.get());
-    }
+    operator Object<RefType, jobject>() const { return Object<RefType, jobject>(static_cast<jobject>(this->get())); }
 
     explicit operator bool() const { return _ref.get() != nullptr; }
 
@@ -476,6 +421,7 @@ class String {
         }
 
         const char* c_str = env->GetStringUTFChars(jstr, nullptr);
+        Exception::check(env);
         std::string result(c_str);
         env->ReleaseStringUTFChars(jstr, c_str);
 
@@ -490,7 +436,6 @@ class String {
 
   protected:
     RefType<jstring> _ref;
-    RefType<jclass> _cls;
 };
 
 class Env {
@@ -503,16 +448,6 @@ class Env {
     JNIEnv* operator->() { return _env; }
 
     operator JNIEnv*() { return _env; }
-
-    // Class find_class(const std::string& name) {
-    //     jclass jcls = _env->FindClass(name.c_str());
-    //     if (jcls == nullptr) {
-    //         throw std::runtime_error("Failed to find class: " + name);
-    //     }
-    //     Class cls(jcls);
-    //     _env->DeleteLocalRef(jcls);
-    //     return cls;
-    // }
 
   private:
     JNIEnv* _env = nullptr;
@@ -579,7 +514,6 @@ class Runner {
 
 template <template <typename> class RefType, typename JniType = jobject>
 struct ObjectComparator {
-
     bool operator()(const Object<RefType, JniType>& lhs, const Object<RefType, JniType>& rhs) const {
         // Handle null object comparisons
         if (!lhs && !rhs) {

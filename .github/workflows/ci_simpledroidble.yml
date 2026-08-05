@@ -36,6 +36,28 @@ jobs:
       - name: Build simplebledroidble AAR
         run: gradle build -p ./simpledroidble --no-daemon
 
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Test SimpleDroidBLE PLAIN backend
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          script: ./simpledroidble/gradlew -p ./simpledroidble :simpledroidble:connectedPlainAndroidTest --no-daemon
+
+      - name: Upload Android test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simpledroidble-test-reports
+          path: |
+            simpledroidble/simpledroidble/build/reports/androidTests
+            simpledroidble/simpledroidble/build/outputs/androidTest-results
+
       - name: Package Artifact
         uses: ./.github/actions/package-native
         with:

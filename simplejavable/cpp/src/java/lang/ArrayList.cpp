@@ -82,8 +82,7 @@ ArrayList<RefType>::ArrayList() : _obj() {
         throw std::runtime_error("Failed to create ArrayList instance");
     }
 
-    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
-    env->DeleteLocalRef(obj);
+    _obj = SimpleJNI::Object<RefType, jobject>(SimpleJNI::adopt_local_ref, obj);
 }
 
 template <template <typename> class RefType>
@@ -98,8 +97,7 @@ ArrayList<RefType>::ArrayList(int initialCapacity) : _obj() {
         throw std::runtime_error("Failed to create ArrayList instance with capacity");
     }
 
-    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
-    env->DeleteLocalRef(obj);
+    _obj = SimpleJNI::Object<RefType, jobject>(SimpleJNI::adopt_local_ref, obj);
 }
 
 template <template <typename> class RefType>
@@ -107,7 +105,7 @@ ArrayList<RefType>::ArrayList(jobject obj) : _obj() {
     if (!_cls.get()) {
         throw std::runtime_error("ArrayList JNI resources not preloaded");
     }
-    _obj = SimpleJNI::Object<RefType, jobject>(obj, _cls.get());
+    _obj = SimpleJNI::Object<RefType, jobject>(obj);
 }
 
 template <template <typename> class RefType>
@@ -153,8 +151,8 @@ Iterator<SimpleJNI::LocalRef> ArrayList<RefType>::iterator() const {
     if (!*this) {
         throw std::runtime_error("ArrayList is not initialized");
     }
-    jobject iter = _obj.call_object_method(_method_iterator).get();
-    return Iterator<SimpleJNI::LocalRef>(iter);
+    auto iterator = _obj.call_object_method(_method_iterator);
+    return Iterator<SimpleJNI::LocalRef>(iterator.get());
 }
 
 template <template <typename> class RefType>

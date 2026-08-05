@@ -19,7 +19,7 @@ const SimpleJNI::JNIDescriptor DataCallback::descriptor{
 // Define the AutoRegister instance
 const SimpleJNI::AutoRegister<DataCallback> DataCallback::registrar{&descriptor};
 
-DataCallback::DataCallback(jobject obj) : _obj(obj, _cls.get()) {
+DataCallback::DataCallback(jobject obj) : _obj(obj) {
     if (!_cls.get()) {
         throw std::runtime_error("DataCallback JNI resources not preloaded");
     }
