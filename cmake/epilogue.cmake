@@ -74,8 +74,3 @@ macro(append_sanitize_options MODIFIER)
     endif()
 
 endmacro()
-
-# Define the list of source files with relative paths
-set(SIMPLEJNI_SOURCES
-    "${CMAKE_CURRENT_LIST_DIR}/../dependencies/internal/src/simplejni/Common.cpp"
-)

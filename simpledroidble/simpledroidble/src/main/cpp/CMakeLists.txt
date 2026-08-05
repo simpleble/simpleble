@@ -16,10 +16,22 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(${PROJECT_ROOT_DIR}/simpleble ${CMAKE_BINARY_DIR}/simpleble)
 set(BUILD_SHARED_LIBS ON)
 
+set(SIMPLEJNI_SOURCES
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/Common.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/lang/Integer.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/util/ArrayList.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/util/HashMap.cpp)
+
 add_library(
     ${CMAKE_PROJECT_NAME} SHARED
-    JniTypes.cpp
     NativeCache.cpp
+    org/simpleble/android/AdapterCallback.cpp
+    org/simpleble/android/Characteristic.cpp
+    org/simpleble/android/DataCallback.cpp
+    org/simpleble/android/Descriptor.cpp
+    org/simpleble/android/PeripheralCallback.cpp
+    org/simpleble/android/Service.cpp
+    org/simpleble/android/SimpleDroidBleException.cpp
     simpleble_android.cpp
     ${SIMPLEJNI_SOURCES}
 )

@@ -11,18 +11,17 @@
 
 #include "core/AdapterWrapper.h"
 #include "core/Cache.h"
-#include "java/lang/ArrayList.h"
-#include "java/lang/HashMap.h"
-#include "java/lang/Integer.h"
-#include "java/lang/Iterator.h"
-#include "simplejni/Common.hpp"
-#include "simplejni/Registry.hpp"
 #include "org/simplejavable/AdapterCallback.h"
 #include "org/simplejavable/Characteristic.h"
 #include "org/simplejavable/DataCallback.h"
 #include "org/simplejavable/Descriptor.h"
 #include "org/simplejavable/PeripheralCallback.h"
 #include "org/simplejavable/Service.h"
+#include "simplejni/Common.hpp"
+#include "simplejni/Registry.hpp"
+#include "simplejni/java/lang/Integer.hpp"
+#include "simplejni/java/util/ArrayList.hpp"
+#include "simplejni/java/util/HashMap.hpp"
 
 using namespace SimpleJNI;
 
@@ -377,22 +376,22 @@ extern "C" JNIEXPORT jobject JNICALL Java_org_simplejavable_Peripheral_nativePer
 
         PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
 
-        Java::Util::ArrayList<ReleasableLocalRef> services_list;
+        SimpleJNI::Java::Util::ArrayList services_list;
         for (auto& service : peripheral_wrapper->get().services()) {
-            Java::Util::ArrayList<ReleasableLocalRef> characteristics_list;
+            SimpleJNI::Java::Util::ArrayList characteristics_list;
             for (auto& characteristic : service.characteristics()) {
-                Java::Util::ArrayList<ReleasableLocalRef> descriptors_list;
+                SimpleJNI::Java::Util::ArrayList descriptors_list;
                 for (auto& descriptor : characteristic.descriptors()) {
                     Org::SimpleJavaBLE::Descriptor descriptor_obj(descriptor.uuid());
                     descriptors_list.add(descriptor_obj);
                 }
                 Org::SimpleJavaBLE::Characteristic characteristic_obj(
-                    characteristic.uuid(), descriptors_list.to_local(), characteristic.can_read(),
+                    characteristic.uuid(), descriptors_list, characteristic.can_read(),
                     characteristic.can_write_request(), characteristic.can_write_command(), characteristic.can_notify(),
                     characteristic.can_indicate());
                 characteristics_list.add(characteristic_obj);
             }
-            Org::SimpleJavaBLE::Service service_obj(service.uuid(), characteristics_list.to_local());
+            Org::SimpleJavaBLE::Service service_obj(service.uuid(), characteristics_list);
             services_list.add(service_obj);
         }
         return services_list.release();
@@ -406,9 +405,11 @@ extern "C" JNIEXPORT jobject JNICALL Java_org_simplejavable_Peripheral_nativePer
         PeripheralWrapper* peripheral_wrapper = Cache::get().getPeripheral(adapter_id, instance_id);
         auto manufacturer_data = peripheral_wrapper->get().manufacturer_data();
 
-        Java::Util::HashMap<ReleasableLocalRef> hash_map;
+        SimpleJNI::Java::Util::HashMap hash_map;
         for (const auto& [key, value] : manufacturer_data) {
-            hash_map.put<LocalRef, LocalRef>(Java::Util::Integer<LocalRef>(key), ByteArray<LocalRef>(value));
+            SimpleJNI::Java::Lang::Integer integer(static_cast<jint>(key));
+            ByteArray<LocalRef> bytes(value);
+            hash_map.put(integer.get(), bytes.get());
         }
         return hash_map.release();
     });

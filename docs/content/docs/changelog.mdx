@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Changed**
 
 - (Python) Delegated runtime log filtering to the standard `logging` module without exposing native logging controls.
+- (SimpleJNI) Shared Java collection wrappers across JNI bindings.
 - (SimpleDroidBLE) Replaced manual JNI plumbing with SimpleJNI.
 - **API CHANGE**: (SimpleDroidBLE) Exposed callbacks as read-only flows and notification streams as cancellation-aware `Flow`s.
 - **API CHANGE**: (SimpleDroidBLE) Made blocking GATT operations main-safe suspending calls.

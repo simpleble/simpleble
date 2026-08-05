@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Characteristic.h"
-#include "java/lang/ArrayList.h"
 #include "simplejni/Common.hpp"
 #include "simplejni/Registry.hpp"
+#include "simplejni/java/util/ArrayList.hpp"
 
 namespace Org {
 namespace SimpleJavaBLE {
@@ -27,7 +27,7 @@ class Service {
      * @param characteristics List of characteristics associated with this service.
      */
     Service(const SimpleJNI::String<SimpleJNI::LocalRef>& uuid,
-            const Java::Util::ArrayList<SimpleJNI::LocalRef>& characteristics);
+            const SimpleJNI::Java::Util::ArrayList& characteristics);
 
     // Implicit conversion to SimpleJNI::Object
     operator SimpleJNI::Object<SimpleJNI::ReleasableLocalRef, jobject>() const;

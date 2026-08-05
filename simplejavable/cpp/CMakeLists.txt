@@ -18,6 +18,12 @@ set(BUILD_SHARED_LIBS ON)
 
 find_package(JNI REQUIRED)
 
+set(SIMPLEJNI_SOURCES
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/Common.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/lang/Integer.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/util/ArrayList.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/util/HashMap.cpp)
+
 add_library(
     ${CMAKE_PROJECT_NAME} SHARED
     src/core/AdapterWrapper.cpp
@@ -29,10 +35,6 @@ add_library(
     src/org/simplejavable/Service.cpp
     src/org/simplejavable/Characteristic.cpp
     src/org/simplejavable/Descriptor.cpp
-    src/java/lang/HashMap.cpp
-    src/java/lang/Integer.cpp
-    src/java/lang/Iterator.cpp
-    src/java/lang/ArrayList.cpp
     src/simplejavable.cpp
     ${SIMPLEJNI_SOURCES}
 )

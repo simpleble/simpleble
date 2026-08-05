@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Descriptor.h"
-#include "java/lang/ArrayList.h"
 #include "simplejni/Common.hpp"
 #include "simplejni/Registry.hpp"
+#include "simplejni/java/util/ArrayList.hpp"
 
 namespace Org {
 namespace SimpleJavaBLE {
@@ -32,7 +32,7 @@ class Characteristic {
      * @param canIndicate Whether the characteristic supports indications.
      */
     Characteristic(const SimpleJNI::String<SimpleJNI::LocalRef>& uuid,
-                   const Java::Util::ArrayList<SimpleJNI::LocalRef>& descriptors, bool canRead, bool canWriteRequest,
+                   const SimpleJNI::Java::Util::ArrayList& descriptors, bool canRead, bool canWriteRequest,
                    bool canWriteCommand, bool canNotify, bool canIndicate);
 
     // Implicit conversion to SimpleJNI::Object

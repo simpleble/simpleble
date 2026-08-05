@@ -13,6 +13,12 @@ find_package(JNI REQUIRED)
 
 enable_testing()
 
+set(SIMPLEJNI_SOURCES
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/Common.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/lang/Integer.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/util/ArrayList.cpp
+    ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/java/util/HashMap.cpp)
+
 set(SIMPLEJNI_TEST_CLASSES_DIR ${CMAKE_CURRENT_BINARY_DIR}/test-classes)
 set(SIMPLEJNI_TEST_JAVA_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/java/org/simplejni/TestTarget.java)

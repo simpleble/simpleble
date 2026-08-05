@@ -343,6 +343,12 @@ elseif(SIMPLEBLE_BACKEND_MACOS OR SIMPLEBLE_BACKEND_IOS)
 elseif(SIMPLEBLE_BACKEND_ANDROID)
     message(STATUS "Configuring for Android")
 
+    set(SIMPLEJNI_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/src/simplejni/Common.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/src/simplejni/java/lang/Integer.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/src/simplejni/java/util/ArrayList.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/src/simplejni/java/util/HashMap.cpp)
+
     include_directories(${ANDROID_NDK}/sysroot/usr/include)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android)
 

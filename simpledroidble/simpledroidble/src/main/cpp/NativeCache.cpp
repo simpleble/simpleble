@@ -50,21 +50,21 @@ SimpleBLE::Peripheral NativeCache::peripheral(int64_t adapter_id, int64_t periph
 }
 
 void NativeCache::set_adapter_callback(int64_t adapter_id, jobject callback) {
-    auto wrapper = std::make_shared<SimpleDroidJNI::AdapterCallback>(callback);
+    auto wrapper = std::make_shared<Org::SimpleBLE::Android::AdapterCallback>(callback);
     std::lock_guard<std::mutex> lock(_mutex);
     auto adapter = _adapters.find(adapter_id);
     if (adapter == _adapters.end()) throw std::runtime_error("Unknown adapter");
     adapter->second.callback = std::move(wrapper);
 }
 
-std::shared_ptr<SimpleDroidJNI::AdapterCallback> NativeCache::adapter_callback(int64_t adapter_id) const {
+std::shared_ptr<Org::SimpleBLE::Android::AdapterCallback> NativeCache::adapter_callback(int64_t adapter_id) const {
     std::lock_guard<std::mutex> lock(_mutex);
     auto adapter = _adapters.find(adapter_id);
     return adapter == _adapters.end() ? nullptr : adapter->second.callback;
 }
 
 void NativeCache::set_peripheral_callback(int64_t adapter_id, int64_t peripheral_id, jobject callback) {
-    auto wrapper = std::make_shared<SimpleDroidJNI::PeripheralCallback>(callback);
+    auto wrapper = std::make_shared<Org::SimpleBLE::Android::PeripheralCallback>(callback);
     std::lock_guard<std::mutex> lock(_mutex);
     auto adapter = _peripherals.find(adapter_id);
     if (adapter == _peripherals.end()) throw std::runtime_error("Unknown adapter");
@@ -73,8 +73,8 @@ void NativeCache::set_peripheral_callback(int64_t adapter_id, int64_t peripheral
     peripheral->second.callback = std::move(wrapper);
 }
 
-std::shared_ptr<SimpleDroidJNI::PeripheralCallback> NativeCache::peripheral_callback(int64_t adapter_id,
-                                                                                     int64_t peripheral_id) const {
+std::shared_ptr<Org::SimpleBLE::Android::PeripheralCallback> NativeCache::peripheral_callback(
+    int64_t adapter_id, int64_t peripheral_id) const {
     std::lock_guard<std::mutex> lock(_mutex);
     auto adapter = _peripherals.find(adapter_id);
     if (adapter == _peripherals.end()) return nullptr;
@@ -87,11 +87,10 @@ bool NativeCache::DataCallbackKey::operator<(const DataCallbackKey& other) const
            std::tie(other.adapter_id, other.peripheral_id, other.service, other.characteristic);
 }
 
-std::shared_ptr<SimpleDroidJNI::DataCallback> NativeCache::add_data_callback(int64_t adapter_id, int64_t peripheral_id,
-                                                                             const std::string& service,
-                                                                             const std::string& characteristic,
-                                                                             jobject callback) {
-    auto wrapper = std::make_shared<SimpleDroidJNI::DataCallback>(callback);
+std::shared_ptr<Org::SimpleBLE::Android::DataCallback> NativeCache::add_data_callback(
+    int64_t adapter_id, int64_t peripheral_id, const std::string& service, const std::string& characteristic,
+    jobject callback) {
+    auto wrapper = std::make_shared<Org::SimpleBLE::Android::DataCallback>(callback);
     std::lock_guard<std::mutex> lock(_mutex);
     auto [entry, inserted] = _data_callbacks.emplace(
         DataCallbackKey{adapter_id, peripheral_id, service, characteristic}, wrapper);
@@ -100,7 +99,7 @@ std::shared_ptr<SimpleDroidJNI::DataCallback> NativeCache::add_data_callback(int
 
 void NativeCache::remove_data_callback(int64_t adapter_id, int64_t peripheral_id, const std::string& service,
                                        const std::string& characteristic,
-                                       const std::shared_ptr<SimpleDroidJNI::DataCallback>& expected) {
+                                       const std::shared_ptr<Org::SimpleBLE::Android::DataCallback>& expected) {
     std::lock_guard<std::mutex> lock(_mutex);
     auto callback = _data_callbacks.find(DataCallbackKey{adapter_id, peripheral_id, service, characteristic});
     if (callback == _data_callbacks.end()) return;

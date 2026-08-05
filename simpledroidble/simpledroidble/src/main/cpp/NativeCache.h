@@ -10,7 +10,9 @@
 #include <mutex>
 #include <string>
 
-#include "JniTypes.h"
+#include "org/simpleble/android/AdapterCallback.h"
+#include "org/simpleble/android/DataCallback.h"
+#include "org/simpleble/android/PeripheralCallback.h"
 
 class NativeCache {
   public:
@@ -23,29 +25,30 @@ class NativeCache {
     SimpleBLE::Peripheral peripheral(int64_t adapter_id, int64_t peripheral_id) const;
 
     void set_adapter_callback(int64_t adapter_id, jobject callback);
-    std::shared_ptr<SimpleDroidJNI::AdapterCallback> adapter_callback(int64_t adapter_id) const;
+    std::shared_ptr<Org::SimpleBLE::Android::AdapterCallback> adapter_callback(int64_t adapter_id) const;
 
     void set_peripheral_callback(int64_t adapter_id, int64_t peripheral_id, jobject callback);
-    std::shared_ptr<SimpleDroidJNI::PeripheralCallback> peripheral_callback(int64_t adapter_id,
-                                                                            int64_t peripheral_id) const;
+    std::shared_ptr<Org::SimpleBLE::Android::PeripheralCallback> peripheral_callback(int64_t adapter_id,
+                                                                                      int64_t peripheral_id) const;
 
-    std::shared_ptr<SimpleDroidJNI::DataCallback> add_data_callback(int64_t adapter_id, int64_t peripheral_id,
-                                                                    const std::string& service,
-                                                                    const std::string& characteristic,
-                                                                    jobject callback);
+    std::shared_ptr<Org::SimpleBLE::Android::DataCallback> add_data_callback(int64_t adapter_id,
+                                                                             int64_t peripheral_id,
+                                                                             const std::string& service,
+                                                                             const std::string& characteristic,
+                                                                             jobject callback);
     void remove_data_callback(int64_t adapter_id, int64_t peripheral_id, const std::string& service,
                               const std::string& characteristic,
-                              const std::shared_ptr<SimpleDroidJNI::DataCallback>& expected = nullptr);
+                              const std::shared_ptr<Org::SimpleBLE::Android::DataCallback>& expected = nullptr);
 
   private:
     struct AdapterEntry {
         SimpleBLE::Adapter adapter;
-        std::shared_ptr<SimpleDroidJNI::AdapterCallback> callback;
+        std::shared_ptr<Org::SimpleBLE::Android::AdapterCallback> callback;
     };
 
     struct PeripheralEntry {
         SimpleBLE::Peripheral peripheral;
-        std::shared_ptr<SimpleDroidJNI::PeripheralCallback> callback;
+        std::shared_ptr<Org::SimpleBLE::Android::PeripheralCallback> callback;
     };
 
     struct DataCallbackKey {
@@ -65,5 +68,5 @@ class NativeCache {
     mutable std::mutex _mutex;
     std::map<int64_t, AdapterEntry> _adapters;
     std::map<int64_t, std::map<int64_t, PeripheralEntry>> _peripherals;
-    std::map<DataCallbackKey, std::shared_ptr<SimpleDroidJNI::DataCallback>> _data_callbacks;
+    std::map<DataCallbackKey, std::shared_ptr<Org::SimpleBLE::Android::DataCallback>> _data_callbacks;
 };

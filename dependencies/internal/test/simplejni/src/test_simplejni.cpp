@@ -10,7 +10,11 @@
 #include <vector>
 
 #include "simplejni/Common.hpp"
+#include "simplejni/Registry.hpp"
 #include "simplejni/VM.hpp"
+#include "simplejni/java/lang/Integer.hpp"
+#include "simplejni/java/util/ArrayList.hpp"
+#include "simplejni/java/util/HashMap.hpp"
 
 namespace {
 
@@ -115,6 +119,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     VM::jvm(vm);
+    SimpleJNI::Registrar::get().preload(env);
 
     int failures = 0;
     {
@@ -183,6 +188,34 @@ int main(int argc, char** argv) {
             const std::vector<int64_t> longs{1, 2, 3};
             LongArray<LocalRef> long_array(longs);
             require(long_array.longs() == longs, "Long array conversion returned the wrong value");
+        });
+
+        harness.run("Java collection wrappers", [&] {
+            LocalFrame frame(env, 16);
+
+            SimpleJNI::Java::Lang::Integer one(1);
+            SimpleJNI::Java::Lang::Integer two(2);
+            SimpleJNI::Java::Util::ArrayList list;
+            list.add(one.get());
+            list.add(two.get());
+
+            LocalRef<jobject> released_list(adopt_local_ref, list.release());
+            LocalRef<jclass> list_class(adopt_local_ref, env->GetObjectClass(released_list.get()));
+            Exception::check(env);
+            auto list_size = get_method(env, list_class.get(), "size", "()I");
+            require(Object<LocalRef>(released_list.get()).call_int_method(list_size) == 2,
+                    "ArrayList wrapper returned the wrong size");
+
+            SimpleJNI::Java::Util::HashMap map;
+            String<LocalRef> value("one");
+            map.put(one.get(), value.get());
+
+            LocalRef<jobject> released_map(adopt_local_ref, map.release());
+            LocalRef<jclass> map_class(adopt_local_ref, env->GetObjectClass(released_map.get()));
+            Exception::check(env);
+            auto map_size = get_method(env, map_class.get(), "size", "()I");
+            require(Object<LocalRef>(released_map.get()).call_int_method(map_size) == 1,
+                    "HashMap wrapper returned the wrong size");
         });
 
         harness.run("exception translation", [&] {

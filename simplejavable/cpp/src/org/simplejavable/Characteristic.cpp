@@ -20,7 +20,7 @@ const SimpleJNI::AutoRegister<Characteristic> Characteristic::registrar{&descrip
 
 // Constructor implementation
 Characteristic::Characteristic(const SimpleJNI::String<SimpleJNI::LocalRef>& uuid,
-                               const Java::Util::ArrayList<SimpleJNI::LocalRef>& descriptors, bool canRead,
+                               const SimpleJNI::Java::Util::ArrayList& descriptors, bool canRead,
                                bool canWriteRequest, bool canWriteCommand, bool canNotify, bool canIndicate) {
     // Use call_new_object to create a new Java Characteristic object
     _obj = SimpleJNI::Object<SimpleJNI::ReleasableLocalRef>::call_new_object(
