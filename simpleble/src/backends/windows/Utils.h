@@ -38,6 +38,8 @@ static auto async_get(async_t const& async) {
     }
     try {
         return async.GetResults();
+    } catch (const winrt::hresult_access_denied& err) {
+        throw SimpleBLE::Exception::WinRTAccessDenied(err.code().value, winrt::to_string(err.message()));
     } catch (const winrt::hresult_error& err) {
         throw SimpleBLE::Exception::WinRTException(err.code().value, winrt::to_string(err.message()));
     } catch (const std::exception& err) {

@@ -515,7 +515,7 @@ bool PeripheralWindows::_attempt_connect() {
             GattCharacteristicsResult characteristics_result{nullptr};
             try {
                 characteristics_result = async_get(service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached));
-            } catch (winrt::hresult_access_denied const&) {
+            } catch (const SimpleBLE::Exception::WinRTAccessDenied&) {
                 SIMPLEBLE_LOG_WARN(fmt::format("Access denied while discovering GATT service {}. Skipping service.",
                                                service_uuid));
                 continue;

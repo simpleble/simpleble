@@ -63,6 +63,11 @@ class SIMPLEBLE_EXPORT WinRTException : public BaseException {
     WinRTException(int32_t err_code, const std::string& err_msg);
 };
 
+class SIMPLEBLE_EXPORT WinRTAccessDenied : public WinRTException {
+  public:
+    WinRTAccessDenied(int32_t err_code, const std::string& err_msg);
+};
+
 class SIMPLEBLE_EXPORT CoreBluetoothException : public BaseException {
   public:
     CoreBluetoothException(const std::string& err_msg);

@@ -30,5 +30,8 @@ OperationFailed::OperationFailed(const std::string& err_msg) : BaseException("Op
 WinRTException::WinRTException(int32_t err_code, const std::string& err_msg)
     : BaseException(fmt::format("WinRT Exception. Error code {}: {}", err_code, err_msg)) {}
 
+WinRTAccessDenied::WinRTAccessDenied(int32_t err_code, const std::string& err_msg)
+    : WinRTException(err_code, err_msg) {}
+
 CoreBluetoothException::CoreBluetoothException(const std::string& err_msg)
     : BaseException(fmt::format("CoreBluetooth Exception: {}", err_msg)) {}
