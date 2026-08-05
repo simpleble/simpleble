@@ -512,8 +512,20 @@ bool PeripheralWindows::_attempt_connect() {
             std::string service_uuid = guid_to_uuid(service.Uuid());
 
             // Fetch the service characteristics
-            auto characteristics_result = async_get(service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached));
-            if (characteristics_result.Status() != GattCommunicationStatus::Success) {
+            GattCharacteristicsResult characteristics_result{nullptr};
+            try {
+                characteristics_result = async_get(service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached));
+            } catch (winrt::hresult_access_denied const&) {
+                SIMPLEBLE_LOG_WARN(fmt::format("Access denied while discovering GATT service {}. Skipping service.",
+                                               service_uuid));
+                continue;
+            }
+
+            if (characteristics_result.Status() == GattCommunicationStatus::AccessDenied) {
+                SIMPLEBLE_LOG_WARN(fmt::format("Access denied while discovering GATT service {}. Skipping service.",
+                                               service_uuid));
+                continue;
+            } else if (characteristics_result.Status() != GattCommunicationStatus::Success) {
                 return false;
             }
 
