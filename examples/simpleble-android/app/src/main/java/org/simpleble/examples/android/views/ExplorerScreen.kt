@@ -1,6 +1,7 @@
 package org.simpleble.examples.android.views
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.simpleble.android.Characteristic
 import org.simpleble.android.Service
+import org.simpleble.examples.android.R
 import org.simpleble.examples.android.viewmodels.BleUiState
 import org.simpleble.examples.android.viewmodels.ExplorerAction
 import org.simpleble.examples.android.viewmodels.PeripheralSummary
@@ -62,15 +65,21 @@ fun ExplorerScreen(
 ) {
     val selected = state.selectedPeripheral
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (selected == null) "SimpleBLE Explorer" else selected.displayName,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        if (selected == null) {
+                            ExplorerTitle()
+                        } else {
+                            Text(
+                                text = selected.displayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         if (state.plainBackend) {
                             Text(
                                 "PLAIN simulation",
@@ -118,6 +127,25 @@ fun ExplorerScreen(
                 PeripheralContent(state = state, onAction = onAction)
             }
         }
+    }
+}
+
+@Composable
+private fun ExplorerTitle() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(R.drawable.simpleble_logo),
+            contentDescription = "SimpleBLE",
+            modifier = Modifier
+                .width(130.dp)
+                .height(44.dp)
+        )
+        Text(
+            "Explorer",
+            modifier = Modifier.padding(start = 6.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
