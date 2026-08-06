@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Python) Released the GIL while disconnecting so concurrent blocking disconnects can overlap.
 - (SimpleBluez) Fixed discovery filters dropping non-string values.
 - (SimpleBluez) Fixed UUID lookups returning invalid service and characteristic proxies.
+- (SimpleDroidBLE) Fixed coroutine dependency exposure and silent notification buffer overflows.
 - (SimpleDroidBLE) Fixed JNI error propagation, byte-array conversion, and callback cleanup.
 - (Linux/Windows) Fixed notification callbacks remaining retained after unsubscribe.
 - (Windows) Fixed restricted GATT services preventing discovery of subsequent services.

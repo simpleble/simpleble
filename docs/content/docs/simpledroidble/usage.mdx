@@ -31,7 +31,7 @@ dependencies {
     implementation(files("libs/simpledroidble-release.aar"))
     implementation(files("libs/simpledroidbridge-release.aar"))
     implementation("androidx.core:core-ktx:1.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }
 ```
 
@@ -155,6 +155,7 @@ Use `writeRequest` for acknowledged writes and `writeCommand` for write-without-
 - Stop active scans from `onPause()` or an equivalent lifecycle callback.
 - Keep notification collection in a lifecycle-aware coroutine. Cancelling the `notify` or `indicate` flow waits for native unsubscribe before collection finishes.
 - Only one `notify` or `indicate` collector may be active for a characteristic. Cancel and join the old collector before starting another.
+- Notification and indication flows use bounded buffers and fail with `SimpleDroidBleException` if a collector cannot keep up. Place `buffer(256)` directly after `notify` or `indicate` to increase capacity, or explicitly opt into dropping with `buffer(256, onBufferOverflow = BufferOverflow.DROP_OLDEST)` or `BufferOverflow.DROP_LATEST`.
 - Flow collectors resume in their own coroutine context. Keep payload parsing short; blocking GATT operations dispatch to `Dispatchers.IO` internally.
 - Android exposes one active Bluetooth adapter through the backend today. `Adapter.getAdapters()` returns a list for API consistency.
 

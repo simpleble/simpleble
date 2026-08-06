@@ -2,6 +2,9 @@ package org.simpleble.android
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -91,6 +94,25 @@ class PlainBackendIntegrationTest {
             ).first()
         }
         assertEquals("Hello from notify", firstPayload.decodeToString())
+
+        var payloadCount = 0
+        val overflow = runCatching {
+            withTimeout(5_000) {
+                activePeripheral.notify(
+                    BluetoothUUID(service.uuid),
+                    BluetoothUUID(characteristic.uuid)
+                ).buffer(0).collect {
+                    payloadCount++
+                    delay(2_000)
+                }
+            }
+        }.exceptionOrNull()
+        assertEquals(1, payloadCount)
+        assertTrue(overflow is SimpleDroidBleException)
+        assertEquals(
+            "Notification buffer overflow for ${service.uuid}/${characteristic.uuid}",
+            overflow?.message
+        )
 
         val secondPayload = withTimeout(3_000) {
             activePeripheral.notify(

@@ -112,7 +112,10 @@ class Peripheral internal constructor(
     ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                trySend(data)
+                val result = trySend(data)
+                if (result.isFailure && !result.isClosed) {
+                    close(SimpleDroidBleException("Notification buffer overflow for $service/$characteristic"))
+                }
             }
         }
 
@@ -138,7 +141,10 @@ class Peripheral internal constructor(
     ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                trySend(data)
+                val result = trySend(data)
+                if (result.isFailure && !result.isClosed) {
+                    close(SimpleDroidBleException("Indication buffer overflow for $service/$characteristic"))
+                }
             }
         }
 

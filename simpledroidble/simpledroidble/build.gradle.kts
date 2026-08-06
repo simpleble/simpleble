@@ -61,7 +61,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-    implementation(libs.kotlinx.coroutines.android)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.simpledroidbridge)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
