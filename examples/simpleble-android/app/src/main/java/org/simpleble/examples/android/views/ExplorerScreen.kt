@@ -533,7 +533,7 @@ private fun ServiceCard(service: Service, state: BleUiState, onAction: (Explorer
         Column(modifier = Modifier.padding(vertical = 8.dp)) {
             Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
                 Text("Service", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Text(service.uuid, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                Text(service.uuid.toString(), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
             }
             service.characteristics.forEachIndexed { index, characteristic ->
                 if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 18.dp))
@@ -551,7 +551,7 @@ private fun ServiceCard(service: Service, state: BleUiState, onAction: (Explorer
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                characteristic.uuid,
+                                characteristic.uuid.toString(),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
@@ -585,7 +585,7 @@ private fun CharacteristicActions(state: BleUiState, onAction: (ExplorerAction) 
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Characteristic tools", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(target.characteristic, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+            Text(target.characteristic.toString(), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)

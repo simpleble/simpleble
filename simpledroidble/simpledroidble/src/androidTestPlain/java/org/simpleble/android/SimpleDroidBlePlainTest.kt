@@ -22,7 +22,8 @@ class SimpleDroidBlePlainTest {
 
         val adapter = Adapter.getAdapters().single()
         assertEquals("Plain Adapter", adapter.identifier)
-        assertEquals("AA:BB:CC:DD:EE:FF", adapter.address.toString())
+        assertEquals(BluetoothAddress("AA:BB:CC:DD:EE:FF"), adapter.address)
+        assertEquals(adapter.address.hashCode(), BluetoothAddress(adapter.address.value).hashCode())
 
         val scanStarted = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(2_000) { adapter.onScanStart.first() }
@@ -50,7 +51,7 @@ class SimpleDroidBlePlainTest {
         assertFalse(adapter.scanIsActive)
 
         assertEquals("Plain Peripheral", peripheral.identifier)
-        assertEquals("11:22:33:44:55:66", peripheral.address.toString())
+        assertEquals(BluetoothAddress("11:22:33:44:55:66"), peripheral.address)
         assertEquals(-60, peripheral.rssi)
         assertEquals(5, peripheral.txPower)
         assertTrue(peripheral.isConnectable)
@@ -67,13 +68,17 @@ class SimpleDroidBlePlainTest {
         val services = peripheral.services()
         assertEquals(2, services.size)
         val battery = services.first()
-        assertEquals(BATTERY_SERVICE, battery.uuid)
+        assertEquals(BluetoothUUID(BATTERY_SERVICE), battery.uuid)
+        assertEquals(battery.uuid.hashCode(), BluetoothUUID(battery.uuid.value).hashCode())
         assertTrue(battery.characteristics.single().canNotify)
-        assertEquals(CLIENT_CONFIGURATION_DESCRIPTOR, battery.characteristics.single().descriptors.single().uuid)
+        assertEquals(
+            BluetoothUUID(CLIENT_CONFIGURATION_DESCRIPTOR),
+            battery.characteristics.single().descriptors.single().uuid
+        )
         assertArrayEquals("test".encodeToByteArray(), peripheral.manufacturerData()[0x004C])
 
         val payload = withTimeout(3_000) {
-            peripheral.notify(BluetoothUUID(BATTERY_SERVICE), BluetoothUUID(BATTERY_CHARACTERISTIC)).first()
+            peripheral.notify(battery.uuid, battery.characteristics.single().uuid).first()
         }
         assertArrayEquals("Hello from notify".encodeToByteArray(), payload)
 

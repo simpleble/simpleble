@@ -1,7 +1,7 @@
 package org.simpleble.android
 
-class BluetoothAddress(private val address: String) {
+data class BluetoothAddress(val value: String) {
     override fun toString(): String {
-        return address
+        return value
     }
 }

@@ -1,7 +1,7 @@
 package org.simpleble.android
 
-class BluetoothUUID(private val uuid: String) {
+data class BluetoothUUID(val value: String) {
     override fun toString(): String {
-        return uuid
+        return value
     }
 }

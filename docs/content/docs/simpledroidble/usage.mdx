@@ -128,6 +128,8 @@ services.forEach { service ->
 }
 ```
 
+Service, characteristic, and descriptor UUIDs are `BluetoothUUID` values and can be passed directly to GATT operations. Bluetooth UUIDs and addresses expose their underlying string through `value` when needed.
+
 Read, write, and subscribe:
 
 ```kotlin

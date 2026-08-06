@@ -1,6 +1,8 @@
 package org.simpleble.android
 
 class Service(
-    val uuid: String,
+    uuid: String,
     val characteristics: List<Characteristic>
-)
+) {
+    val uuid = BluetoothUUID(uuid)
+}

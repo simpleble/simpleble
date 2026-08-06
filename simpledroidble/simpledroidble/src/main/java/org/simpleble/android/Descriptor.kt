@@ -1,3 +1,5 @@
 package org.simpleble.android
 
-class Descriptor(val uuid: String)
+class Descriptor(uuid: String) {
+    val uuid = BluetoothUUID(uuid)
+}

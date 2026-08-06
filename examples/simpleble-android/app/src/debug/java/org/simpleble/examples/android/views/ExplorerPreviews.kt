@@ -3,6 +3,7 @@ package org.simpleble.examples.android.views
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import org.simpleble.android.BluetoothUUID
 import org.simpleble.android.Characteristic
 import org.simpleble.android.Descriptor
 import org.simpleble.android.Service
@@ -64,8 +65,8 @@ internal object ExplorerPreviewFixtures {
         mtu = 247,
         services = nordicServices(),
         selectedCharacteristic = CharacteristicTarget(
-            service = HEART_RATE_SERVICE,
-            characteristic = HEART_RATE_MEASUREMENT,
+            service = BluetoothUUID(HEART_RATE_SERVICE),
+            characteristic = BluetoothUUID(HEART_RATE_MEASUREMENT),
             canRead = false,
             canWriteRequest = false,
             canWriteCommand = false,
@@ -83,8 +84,8 @@ internal object ExplorerPreviewFixtures {
 
     val readWrite = capturedConnection.copy(
         selectedCharacteristic = CharacteristicTarget(
-            service = "00001800-0000-1000-8000-00805f9b34fb",
-            characteristic = "00002a00-0000-1000-8000-00805f9b34fb",
+            service = BluetoothUUID("00001800-0000-1000-8000-00805f9b34fb"),
+            characteristic = BluetoothUUID("00002a00-0000-1000-8000-00805f9b34fb"),
             canRead = true,
             canWriteRequest = true,
             canWriteCommand = false,

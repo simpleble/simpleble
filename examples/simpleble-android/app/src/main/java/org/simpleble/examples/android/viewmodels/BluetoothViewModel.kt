@@ -240,7 +240,7 @@ class BluetoothViewModel : ViewModel() {
         }
     }
 
-    private fun selectCharacteristic(service: String, characteristic: String) {
+    private fun selectCharacteristic(service: BluetoothUUID, characteristic: BluetoothUUID) {
         val characteristicInfo = state.services
             .firstOrNull { it.uuid == service }
             ?.characteristics
@@ -269,7 +269,7 @@ class BluetoothViewModel : ViewModel() {
         val peripheral = selectedPeripheral ?: return
         val target = state.selectedCharacteristic ?: return
         launchOperation("Reading characteristic", "Read complete") {
-            val payload = peripheral.read(BluetoothUUID(target.service), BluetoothUUID(target.characteristic))
+            val payload = peripheral.read(target.service, target.characteristic)
             state = state.copy(readValue = payload.toHexString())
         }
     }
@@ -284,14 +284,14 @@ class BluetoothViewModel : ViewModel() {
             val payload = parseHex(state.writeHex)
             if (useRequest) {
                 peripheral.writeRequest(
-                    BluetoothUUID(target.service),
-                    BluetoothUUID(target.characteristic),
+                    target.service,
+                    target.characteristic,
                     payload
                 )
             } else {
                 peripheral.writeCommand(
-                    BluetoothUUID(target.service),
-                    BluetoothUUID(target.characteristic),
+                    target.service,
+                    target.characteristic,
                     payload
                 )
             }
@@ -315,9 +315,9 @@ class BluetoothViewModel : ViewModel() {
                 notificationJob = viewModelScope.launch {
                     try {
                         val flow = if (target.canNotify) {
-                            peripheral.notify(BluetoothUUID(target.service), BluetoothUUID(target.characteristic))
+                            peripheral.notify(target.service, target.characteristic)
                         } else {
-                            peripheral.indicate(BluetoothUUID(target.service), BluetoothUUID(target.characteristic))
+                            peripheral.indicate(target.service, target.characteristic)
                         }
                         state = state.copy(status = "Listening")
                         flow.collect { payload ->
@@ -446,7 +446,7 @@ sealed interface ExplorerAction {
     data object ClosePeripheral : ExplorerAction
     data object ClearError : ExplorerAction
     data class SelectPeripheral(val address: String) : ExplorerAction
-    data class SelectCharacteristic(val service: String, val characteristic: String) : ExplorerAction
+    data class SelectCharacteristic(val service: BluetoothUUID, val characteristic: BluetoothUUID) : ExplorerAction
     data class SetWriteHex(val value: String) : ExplorerAction
     data class SetSearchQuery(val value: String) : ExplorerAction
 }
@@ -483,8 +483,8 @@ data class PeripheralSummary(
 )
 
 data class CharacteristicTarget(
-    val service: String,
-    val characteristic: String,
+    val service: BluetoothUUID,
+    val characteristic: BluetoothUUID,
     val canRead: Boolean,
     val canWriteRequest: Boolean,
     val canWriteCommand: Boolean,

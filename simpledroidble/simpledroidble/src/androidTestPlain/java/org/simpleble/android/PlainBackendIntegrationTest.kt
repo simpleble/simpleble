@@ -48,49 +48,49 @@ class PlainBackendIntegrationTest {
         assertTrue(activePeripheral.isConnected)
 
         val services = activePeripheral.services()
-        val service = services.first { it.uuid == "0000180f-0000-1000-8000-00805f9b34fb" }
+        val service = services.first { it.uuid == BluetoothUUID("0000180f-0000-1000-8000-00805f9b34fb") }
         val characteristic = service.characteristics.single()
         assertTrue(characteristic.canRead)
         assertTrue(characteristic.canNotify)
         assertArrayEquals(
             byteArrayOf(),
-            activePeripheral.read(BluetoothUUID(service.uuid), BluetoothUUID(characteristic.uuid))
+            activePeripheral.read(service.uuid, characteristic.uuid)
         )
         val descriptor = characteristic.descriptors.single()
         assertArrayEquals(
             byteArrayOf(),
             activePeripheral.read(
-                BluetoothUUID(service.uuid),
-                BluetoothUUID(characteristic.uuid),
-                BluetoothUUID(descriptor.uuid)
+                service.uuid,
+                characteristic.uuid,
+                descriptor.uuid
             )
         )
         activePeripheral.write(
-            BluetoothUUID(service.uuid),
-            BluetoothUUID(characteristic.uuid),
-            BluetoothUUID(descriptor.uuid),
+            service.uuid,
+            characteristic.uuid,
+            descriptor.uuid,
             byteArrayOf(0x01, 0x00)
         )
 
-        val writeService = services.first { it.uuid == "0000fff0-0000-1000-8000-00805f9b34fb" }
+        val writeService = services.first { it.uuid == BluetoothUUID("0000fff0-0000-1000-8000-00805f9b34fb") }
         val writeCharacteristic = writeService.characteristics.single()
         assertTrue(writeCharacteristic.canWriteRequest)
         assertTrue(writeCharacteristic.canWriteCommand)
         activePeripheral.writeRequest(
-            BluetoothUUID(writeService.uuid),
-            BluetoothUUID(writeCharacteristic.uuid),
+            writeService.uuid,
+            writeCharacteristic.uuid,
             byteArrayOf(0x01, 0x02)
         )
         activePeripheral.writeCommand(
-            BluetoothUUID(writeService.uuid),
-            BluetoothUUID(writeCharacteristic.uuid),
+            writeService.uuid,
+            writeCharacteristic.uuid,
             byteArrayOf(0x03, 0x04)
         )
 
         val firstPayload = withTimeout(3_000) {
             activePeripheral.notify(
-                BluetoothUUID(service.uuid),
-                BluetoothUUID(characteristic.uuid)
+                service.uuid,
+                characteristic.uuid
             ).first()
         }
         assertEquals("Hello from notify", firstPayload.decodeToString())
@@ -99,8 +99,8 @@ class PlainBackendIntegrationTest {
         val overflow = runCatching {
             withTimeout(5_000) {
                 activePeripheral.notify(
-                    BluetoothUUID(service.uuid),
-                    BluetoothUUID(characteristic.uuid)
+                    service.uuid,
+                    characteristic.uuid
                 ).buffer(0).collect {
                     payloadCount++
                     delay(2_000)
@@ -116,8 +116,8 @@ class PlainBackendIntegrationTest {
 
         val secondPayload = withTimeout(3_000) {
             activePeripheral.notify(
-                BluetoothUUID(service.uuid),
-                BluetoothUUID(characteristic.uuid)
+                service.uuid,
+                characteristic.uuid
             ).first()
         }
         assertEquals("Hello from notify", secondPayload.decodeToString())
