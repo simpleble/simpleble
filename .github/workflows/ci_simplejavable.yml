@@ -115,7 +115,7 @@ jobs:
 
       - name: Build SimpleJavaBLE Java Library
         run: |
-          gradle -p simplejavable/java -PnativeLibPath=$GITHUB_WORKSPACE/jni -Dorg.gradle.project.buildDir=$GITHUB_WORKSPACE/artifacts --no-daemon build
+          utils/gradle/gradlew -p simplejavable/java -PnativeLibPath=$GITHUB_WORKSPACE/jni -Dorg.gradle.project.buildDir=$GITHUB_WORKSPACE/artifacts --no-daemon build verifyReleasePublication
 
       - name: List JAR contents
         run: unzip -l artifacts/libs/simplejavable*.jar

@@ -73,7 +73,7 @@ jobs:
 
       - name: Build SimpleJavaBLE Java Library
         run: |
-          gradle -p simplejavable/java -PbuildFromCMake --no-daemon build
+          utils/gradle/gradlew -p simplejavable/java -PbuildFromCMake --no-daemon build
 
   build-python:
     runs-on: ubuntu-22.04
