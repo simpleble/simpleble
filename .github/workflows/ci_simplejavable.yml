@@ -118,7 +118,10 @@ jobs:
           utils/gradle/gradlew -p simplejavable/java -PnativeLibPath=$GITHUB_WORKSPACE/jni -Dorg.gradle.project.buildDir=$GITHUB_WORKSPACE/artifacts --no-daemon build verifyReleasePublication
 
       - name: List JAR contents
-        run: unzip -l artifacts/libs/simplejavable*.jar
+        run: |
+          for jar in artifacts/libs/simplejavable*.jar; do
+            unzip -l "$jar"
+          done
 
       - name: Upload SimpleJavaBLE Java Library
         uses: actions/upload-artifact@v4

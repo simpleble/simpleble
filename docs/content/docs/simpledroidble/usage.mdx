@@ -11,28 +11,25 @@ If you are already writing native C++ inside an Android app, use SimpleBLE direc
 
 - Android API 31 or newer.
 - Android Studio.
-- Android NDK. The repository currently builds with NDK r29.
+- Android NDK r29 when building SimpleDroidBLE from source.
 - Bluetooth permissions declared in `AndroidManifest.xml` and requested at runtime.
 
-## Installing Release AARs
+## Install from Maven Central
 
-Download `simpledroidble.zip` and `libsimpleble_android_plugins.zip` from the [releases page](https://github.com/simpleble/simpleble/releases/latest). Extract `simpledroidble-release.aar` and `simpledroidbridge-release.aar`, then copy both files into your app module's `libs` directory.
-
-Make sure AndroidX is enabled in `gradle.properties`:
-
-```properties
-android.useAndroidX=true
-```
-
-Add both AARs to your app module. Local AAR files do not provide transitive Gradle dependency metadata, so keep AndroidX Core and Kotlin coroutines on your app classpath too:
+Add SimpleDroidBLE to your app module:
 
 ```kotlin
 dependencies {
-    implementation(files("libs/simpledroidble-release.aar"))
-    implementation(files("libs/simpledroidbridge-release.aar"))
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.simpleble:simpledroidble:<version>")
 }
+```
+
+The artifact includes the native libraries for `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`. Gradle resolves
+SimpleDroidBridge, AndroidX Core, and Kotlin coroutines transitively. Make sure AndroidX is enabled in
+`gradle.properties`:
+
+```properties
+android.useAndroidX=true
 ```
 
 ## Consuming Locally
@@ -42,7 +39,7 @@ From a local checkout, use a Gradle composite build before `include(":app")`:
 ```kotlin
 includeBuild("path/to/simpleble/simpledroidble") {
     dependencySubstitution {
-        substitute(module("org.simpleble.android:simpledroidble")).using(project(":simpledroidble"))
+        substitute(module("org.simpleble:simpledroidble")).using(project(":simpledroidble"))
     }
 }
 
@@ -53,7 +50,7 @@ Then add the dependency:
 
 ```kotlin
 dependencies {
-    implementation("org.simpleble.android:simpledroidble")
+    implementation("org.simpleble:simpledroidble:<version>")
 }
 ```
 

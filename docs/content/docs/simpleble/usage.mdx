@@ -230,14 +230,20 @@ One key security feature of SimpleBLE is that it allows the user to specify the 
 
 ## Usage alongside native code in Android
 
-When using SimpleBLE alongside native code in Android, you must include a small Android dependency module that includes some necessary bridge classes used by SimpleBLE. This is required because the Android JVM doesn't allow programmatic definition of derived classes, which forces us to bring these definitions in externally.
+When using SimpleBLE alongside native code in Android, add the bridge module that provides the JVM callback classes:
 
-To include this dependency module, add the following to your `settings.gradle` file:
+```kotlin
+dependencies {
+    implementation("org.simpleble:simpledroidbridge:<version>")
+}
+```
+
+For a local checkout, add the following to your `settings.gradle` file:
 
 ```groovy
 includeBuild("path/to/simpleble/simpledroidbridge") {
     dependencySubstitution {
-        substitute module("org.simpleble.android.bridge:simpledroidbridge") with project(":")
+        substitute module("org.simpleble:simpledroidbridge") with project(":")
     }
 }
 ```
@@ -245,12 +251,10 @@ includeBuild("path/to/simpleble/simpledroidbridge") {
 ```kotlin
 includeBuild("path/to/simpleble/simpledroidbridge") {
     dependencySubstitution {
-        substitute(module("org.simpleble.android.bridge:simpledroidbridge")).using(project(":"))
+        substitute(module("org.simpleble:simpledroidbridge")).using(project(":"))
     }
 }
 ```
-
-For prebuilt release artifacts, download `libsimpleble_android_plugins.zip` from the [releases page](https://github.com/simpleble/simpleble/releases/latest), extract `simpledroidbridge-release.aar`, and add it to your Android app's Gradle dependencies.
 
 ## Build Examples
 

@@ -24,7 +24,7 @@ rootProject.name = "SimpleBLE Example"
 // NOTE: This is somewhat of a hack to consume simpledroidble directly from the source code
 includeBuild("../../simpledroidble") {
     dependencySubstitution {
-        substitute(module("org.simpleble.android:simpledroidble")).using(project(":simpledroidble"))
+        substitute(module("org.simpleble:simpledroidble")).using(project(":simpledroidble"))
     }
 }
 include(":app")

@@ -34,7 +34,52 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build simplebledroidble AAR
-        run: gradle build -p ./simpledroidble --no-daemon
+        run: ./simpledroidble/gradlew -p ./simpledroidble build --no-daemon
+
+      - name: Publish Maven artifacts locally
+        env:
+          LOCAL_MAVEN_REPOSITORY: ${{ runner.temp }}/simpledroidble-maven
+        run: |
+          ./simpledroidble/gradlew -p ./simpledroidbridge -Dmaven.repo.local=$LOCAL_MAVEN_REPOSITORY --no-daemon publishToMavenLocal
+          ./simpledroidble/gradlew -p ./simpledroidble -Dmaven.repo.local=$LOCAL_MAVEN_REPOSITORY --no-daemon :simpledroidble:publishToMavenLocal
+
+      - name: Verify Maven artifacts
+        env:
+          LOCAL_MAVEN_REPOSITORY: ${{ runner.temp }}/simpledroidble-maven
+        run: |
+          version=$(tr -d ' \t\n\r' < VERSION)
+          for module in simpledroidbridge simpledroidble; do
+            module_dir="$LOCAL_MAVEN_REPOSITORY/org/simpleble/$module/$version"
+            for artifact in \
+              "$module-$version.aar" \
+              "$module-$version.pom" \
+              "$module-$version-sources.jar" \
+              "$module-$version-javadoc.jar"; do
+              test -s "$module_dir/$artifact"
+              case "$artifact" in
+                *.aar|*.jar) unzip -tq "$module_dir/$artifact" ;;
+              esac
+            done
+          done
+
+          pom="$LOCAL_MAVEN_REPOSITORY/org/simpleble/simpledroidble/$version/simpledroidble-$version.pom"
+          awk -v version="$version" '
+            /<dependency>/ { dependency = "" }
+            { dependency = dependency $0 "\n" }
+            /<\/dependency>/ {
+              if (dependency ~ "<groupId>org.simpleble</groupId>" &&
+                  dependency ~ "<artifactId>simpledroidbridge</artifactId>" &&
+                  dependency ~ "<version>" version "</version>") found = 1
+            }
+            END { exit !found }
+          ' "$pom"
+          grep -F '<artifactId>core-ktx</artifactId>' "$pom"
+          grep -F '<artifactId>kotlinx-coroutines-core</artifactId>' "$pom"
+
+          aar="$LOCAL_MAVEN_REPOSITORY/org/simpleble/simpledroidble/$version/simpledroidble-$version.aar"
+          for abi in arm64-v8a armeabi-v7a x86 x86_64; do
+            unzip -l "$aar" | grep -F "jni/$abi/libsimpleble-jni.so"
+          done
 
       - name: Enable KVM
         run: |

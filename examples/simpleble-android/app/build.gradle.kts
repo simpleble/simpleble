@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
 
     //noinspection UseTomlInstead
-    implementation("org.simpleble.android:simpledroidble")
+    implementation("org.simpleble:simpledroidble:${file("../../../VERSION").readText().trim()}")
 
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
