@@ -27,42 +27,13 @@ C++, C, Python, Java, or Rust, with dedicated APIs for Kotlin on Android and Unr
 Choose Your API
 ---------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 18 22 42 18
-
-   * - Language
-     - API
-     - Install
-     - Guide
-   * - C++
-     - SimpleBLE
-     - CMake
-     - `C++ guide`_
-   * - C
-     - SimpleCBLE
-     - CMake
-     - `C guide`_
-   * - Python
-     - SimplePyBLE
-     - ``pip install simplepyble``
-     - `Python guide`_
-   * - Java
-     - SimpleJavaBLE
-     - ``org.simpleble:simplejavable:<version>``
-     - `Java guide`_
-   * - Rust
-     - SimpleRsBLE
-     - ``cargo add simplersble``
-     - `Rust guide`_
-   * - Kotlin (Android only)
-     - SimpleDroidBLE Beta
-     - ``org.simpleble:simpledroidble:<version>``
-     - `Android guide`_
-   * - Unreal Engine
-     - SimpleBLE for Unreal
-     - Fab plugin
-     - `Unreal guide`_
+* **C++ — SimpleBLE:** Build with CMake. `C++ guide`_
+* **C — SimpleCBLE:** Build with CMake. `C guide`_
+* **Python — SimplePyBLE:** ``pip install simplepyble``. `Python guide`_
+* **Java — SimpleJavaBLE:** ``org.simpleble:simplejavable:<version>``. `Java guide`_
+* **Rust — SimpleRsBLE:** ``cargo add simplersble``. `Rust guide`_
+* **Android — SimpleDroidBLE (Beta):** ``org.simpleble:simpledroidble:<version>``. `Android guide`_
+* **Unreal Engine — SimpleBLE for Unreal:** Install from Fab. `Unreal guide`_
 
 SimplePyBLE has surpassed 3.5 million downloads on `PyPI`_.
 
