@@ -14,7 +14,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleBLE](./simpleble/usage) | C++ | Production-ready | Native desktop, mobile native code, shared libraries | CMake from source |
 | [SimpleCBLE](./simplecble/usage) | C | Production-ready | C applications, FFI, language bridges | CMake from source |
 | [SimplePyBLE](./simplepyble/usage) | Python | Production-ready | Scripts, tools, data pipelines, tests | PyPI or local source |
-| [SimpleJavaBLE](./simplejavable/usage) | Java | Production-ready | JVM desktop apps and integrations | Gradle from source |
+| [SimpleJavaBLE](./simplejavable/usage) | Java | Production-ready | JVM desktop apps and integrations | Maven Central or local source |
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
@@ -113,15 +113,15 @@ pip install .
 </Tab>
 <Tab value="Java">
 
-SimpleJavaBLE is currently consumed from a source checkout. Build the Java package and native library with Gradle:
+Add SimpleJavaBLE to your Gradle dependencies:
 
-```bash
-git clone https://github.com/simpleble/simpleble.git
-cd simpleble/simplejavable/java
-../../utils/gradle/gradlew build -PbuildFromCMake
+```kotlin
+dependencies {
+    implementation("org.simpleble:simplejavable:<version>")
+}
 ```
 
-Use the generated JAR from `simplejavable/java/build/libs` in your JVM application. The JAR must include or be able to find the `simplejavable` native library for your platform.
+The Maven artifact bundles the supported Windows, macOS, and Linux native libraries. See [SimpleJavaBLE Usage](./simplejavable/usage) for source builds and native library loading options.
 
 </Tab>
 <Tab value="Rust">

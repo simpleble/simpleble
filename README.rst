@@ -1,104 +1,135 @@
+.. image:: docs/public/simpleBLE-logo-dark.png#gh-light-mode-only
+   :alt: SimpleBLE
+   :align: center
+   :width: 360px
+
+.. image:: docs/public/simpleBLE-logo.png#gh-dark-mode-only
+   :alt: SimpleBLE
+   :align: center
+   :width: 360px
+
 SimpleBLE
-==========
+=========
 
-The ultimate cross-platform library and bindings for Bluetooth Low Energy (BLE), designed for simplicity and ease of use.
+Build Bluetooth once. Ship it everywhere.
+------------------------------------------
 
-Key Features
-------------
+SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, Linux, iOS, and Android. Use it from
+C++, C, Python, Java, or Rust, with dedicated APIs for Kotlin on Android and Unreal Engine.
 
-* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, iOS, and Android
-* **Device Roles**: Central across platforms, Peripheral starting with Linux/C++
-* **Easy Integration**: Clean, consistent API across all platforms
-* **Multiple Language Bindings**: Production-ready bindings for C, C++, Python, Java and Rust, with more coming soon
-* **Commercial Ready**: Source-available commercial license for proprietary applications
+|CI Main| |Latest Release| |License|
+
+    **New in v1.1**
+
+    Java and Android developers no longer need a source checkout. Install **SimpleJavaBLE** or the Android-only
+    **SimpleDroidBLE** from Maven Central, with the supported native libraries included.
+
+Choose Your API
+---------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 22 42 18
+
+   * - Language
+     - API
+     - Install
+     - Guide
+   * - C++
+     - SimpleBLE
+     - CMake
+     - `C++ guide`_
+   * - C
+     - SimpleCBLE
+     - CMake
+     - `C guide`_
+   * - Python
+     - SimplePyBLE
+     - ``pip install simplepyble``
+     - `Python guide`_
+   * - Java
+     - SimpleJavaBLE
+     - ``org.simpleble:simplejavable:<version>``
+     - `Java guide`_
+   * - Rust
+     - SimpleRsBLE
+     - ``cargo add simplersble``
+     - `Rust guide`_
+   * - Kotlin (Android only)
+     - SimpleDroidBLE Beta
+     - ``org.simpleble:simpledroidble:<version>``
+     - `Android guide`_
+   * - Unreal Engine
+     - SimpleBLE for Unreal
+     - Fab plugin
+     - `Unreal guide`_
+
+SimplePyBLE has surpassed 3.5 million downloads on `PyPI`_.
+
+Why SimpleBLE
+-------------
+
+* **One cross-platform API:** Keep application-facing BLE logic consistent across desktop and mobile.
+* **Native underneath:** Use WinRT, CoreBluetooth, BlueZ, and Android Bluetooth through one maintained stack.
+* **Built for real products:** Central-role support across all five operating systems, with Linux/C++ peripheral support.
+* **Commercially supported:** Ship proprietary applications with licensing and direct technical support available.
 
 Dongl: Official SimpleBLE Hardware
 ----------------------------------
 
-SimpleBLE now has an official Bluetooth hardware companion: `Dongl`_. The Dongl N-Series firmware is
-available now for nRF52840-based boards, with pre-loaded production hardware coming soon.
+`Dongl`_ is the official SimpleBLE hardware companion. Its N-Series firmware is available for nRF52840-based boards,
+with pre-loaded production hardware coming soon.
 
 Use Dongl when you want firmware visibility, customizability, and direct support from the team building SimpleBLE.
 
 * Flash the Dongl N-Series firmware onto existing nRF52840 hardware for prototyping.
-* Join the waitlist for the official pre-loaded Dongl hardware.
+* Join the waitlist for official pre-loaded Dongl hardware.
 
-Language Bindings
------------------
+Documentation and Support
+-------------------------
 
-* **C++ (SimpleBLE)**: Core implementation with full platform support
-* **C (SimpleCBLE)**: C-wrapped version of the library
-* **Python (SimplePyBLE)**: Python bindings. See the `SimplePyBLE`_ PyPI page for more details.
-* **Java (SimpleJavaBLE)**: Java bindings.
-* **Rust (SimpleRsBLE)**: Rust bindings. See the `SimpleRsBLE`_ Crates.io page for more details.
-* **Android (SimpleDroidBLE) - Beta**: Android-only Kotlin bindings.
-* More languages coming soon!
-
-Support & Resources
---------------------
-
-We're here to help you succeed with SimpleBLE:
-
-* **News and Announcements**: Follow our `Announcements`_ section for announcements and updates.
-* **Documentation**: Visit our `Documentation`_ page for comprehensive guides.
-* **Community**: Join our `Discord`_ server for discussions and help.
-* **Commercial Support**: Check out |website|_ or |email|_ about licensing and professional services.
-* **Merch**: Gear for people who ship Bluetooth, in the official `SimpleBLE Store`_. Merch that pairs on the first try.
-* **Extension Libraries**: Learn about `SimpleBluez`_, our BlueZ abstraction layer, and `SimpleDBus`_, our DBus object hierarchy handler.
-
-Explore projects built with SimpleBLE, including `BrainFlow`_, `InsideBlue`_, and `NodeWebBluetooth`_.
-
-**Don't hesitate to reach out if you need assistance - we're happy to help!**
+* Read the `Documentation`_ and `Announcements`_.
+* Join the `Discord`_ community.
+* Review the `security policy`_ or learn how to `contribute`_.
+* Explore the lower-level `SimpleBluez`_ and `SimpleDBus`_ libraries.
+* Visit |website|_ or |email|_ about commercial licensing and professional services.
+* Browse the `SimpleBLE Store`_.
 
 License
-=======
+-------
 
-Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1). Each
-version of SimpleBLE will convert to the GNU General Public License version 3 after four years of its initial release.
-Qualifying non-commercial users may instead continue using and distributing that version under the original
-BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
+SimpleBLE is available under the Business Source License 1.1 (BUSL-1.1). It is free to use for non-commercial purposes
+and requires a commercial license for commercial use. Each version converts to the GNU General Public License version 3
+four years after its initial release. Qualifying non-commercial users may instead continue using and distributing that
+version under the original BUSL-1.1 terms through the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
 
-The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
-also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!
-
-**Why purchase a commercial license?**
-
-- Build and deploy unlimited commercial applications
-- Use across your entire development team
-- Zero revenue sharing or royalty payments
-- Choose features that match your needs and budget
-- Priority technical support included
-- Clear terms for integrating into MIT-licensed projects
-
-**Looking for information on pricing and commercial terms of service?** Visit |website-url|_ for more details.
-
-For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the specifics of your situation.
-
-Partnership Opportunities
-=========================
-
-We're always looking for new partners to help us test and provide feedback on our projects. If you're
-interested in partnering with us, please |email|_ or |leavemessage|_.
-
-🎉 Excited to announce that we've partnered with `Software.com.br`_ to expand SimpleBLE's reach in LATAM!
-
-**Technical Partnerships:** We're seeking design partners to test and provide feedback on our Rust bindings,
-Java bindings, and Linux peripheral functionality. Partners will receive exclusive discounts and perks for
-their contributions!
-
-**Business Partnerships:** We're looking for partners in Asia to support targeted regional sales and support.
-Join us to expand SimpleBLE's reach!
+Free commercial licenses are available for qualifying small projects and early-stage companies. See |website-url|_ for
+pricing and commercial terms, or |leavemessage|_ to discuss your use case.
 
 ----
 
 **SimpleBLE** is a project powered by |caos|_.
+
+.. Badges
+
+.. |CI Main| image:: https://github.com/simpleble/simpleble/actions/workflows/ci_main.yml/badge.svg?branch=main
+   :alt: CI Main
+   :target: https://github.com/simpleble/simpleble/actions/workflows/ci_main.yml?query=branch%3Amain
+
+.. |Latest Release| image:: https://img.shields.io/github/v/release/simpleble/simpleble?sort=semver&display_name=tag
+   :alt: Latest release
+   :target: https://github.com/simpleble/simpleble/releases/latest
+
+.. |License| image:: https://img.shields.io/badge/license-BUSL--1.1-blue
+   :alt: BUSL 1.1 license
+   :target: https://github.com/simpleble/simpleble/blob/main/LICENSE.md
 
 .. Links
 
 .. |email| replace:: email us
 .. _email: mailto:contact@simpleble.org
 
-.. |leavemessage| replace:: leave us a message on our website
+.. |leavemessage| replace:: leave us a message
 .. _leavemessage: https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
 
 .. |website| replace:: our website
@@ -110,30 +141,21 @@ Join us to expand SimpleBLE's reach!
 .. |caos| replace:: **The California Open Source Company**
 .. _caos: https://californiaopensource.com?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
 
-.. |Announcements| replace:: Announcements
 .. _Announcements: https://simpleble.org/blog/news?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
-
-.. _Dongl: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=dongl_launch
-
-.. _SimplePyBLE: https://pypi.org/project/simplepyble/
-
-.. _SimpleRsBLE: https://crates.io/crates/simplersble
-
-.. _SimpleBluez: https://github.com/simpleble/simpleble/tree/main/simplebluez
-
-.. _SimpleDBus: https://github.com/simpleble/simpleble/tree/main/simpledbus
-
-.. _Discord: https://discord.gg/N9HqNEcvP3
-
 .. _Documentation: https://docs.simpleble.org/
-
+.. _Discord: https://discord.gg/N9HqNEcvP3
+.. _Dongl: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=dongl_launch
 .. _SimpleBLE Store: https://simpleble.store?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
+.. _SimpleBluez: https://github.com/simpleble/simpleble/tree/main/simplebluez
+.. _SimpleDBus: https://github.com/simpleble/simpleble/tree/main/simpledbus
+.. _security policy: https://github.com/simpleble/simpleble/blob/main/SECURITY.md
+.. _contribute: https://github.com/simpleble/simpleble/blob/main/CONTRIBUTING.md
 
-.. _Software.com.br: https://software.com.br/
-
-.. Other projects using SimpleBLE
-
-.. _GDSimpleBLE: https://github.com/jferdelyi/GDSimpleBLE
-.. _BrainFlow: https://github.com/brainflow-dev/brainflow
-.. _InsideBlue: https://github.com/eriklins/InsideBlue-BLE-Tool
-.. _NodeWebBluetooth: https://github.com/thegecko/webbluetooth
+.. _C++ guide: https://docs.simpleble.org/simpleble/usage
+.. _C guide: https://docs.simpleble.org/simplecble/usage
+.. _Python guide: https://docs.simpleble.org/simplepyble/usage
+.. _Java guide: https://docs.simpleble.org/simplejavable/usage
+.. _Rust guide: https://docs.simpleble.org/simplersble/usage
+.. _Android guide: https://docs.simpleble.org/simpledroidble/usage
+.. _Unreal guide: https://docs.simpleble.org/simpleunrealble/usage
+.. _PyPI: https://pypi.org/project/simplepyble/

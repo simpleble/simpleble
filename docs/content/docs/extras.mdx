@@ -99,9 +99,9 @@ Before releasing a new version of the project, perform the following steps in or
 
 6. Push the release commit to the remote repository without a tag.
 
-7. Wait for the branch-triggered `CI Main` workflow to finish successfully. A `main` push publishes development packages: `X.Y.Z-devN` to crates.io and `X.Y.Z.devN` to PyPI.
+7. Wait for the branch-triggered `CI Main` workflow to finish successfully. A `main` push publishes development packages: `X.Y.Z-devN` to crates.io and Maven Central, and `X.Y.Z.devN` to PyPI.
 
-   Confirm that SimpleRsBLE, SimplePyBLE, and SimpleAIBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing.
+   Confirm that SimpleRsBLE, SimplePyBLE, SimpleAIBLE, SimpleJavaBLE, SimpleDroidBridge, and SimpleDroidBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing.
 
 ### Tag and publish the release
 
@@ -123,6 +123,8 @@ Before releasing a new version of the project, perform the following steps in or
     - SimplePyBLE `X.Y.Z` is available on PyPI.
     - SimpleAIBLE `X.Y.Z` is available on PyPI.
     - SimpleRsBLE `X.Y.Z` is available and not yanked on crates.io.
+    - SimpleJavaBLE `X.Y.Z` is available on Maven Central.
+    - SimpleDroidBLE and SimpleDroidBridge `X.Y.Z` are available on Maven Central.
 
 ### Start the next development version
 
@@ -143,7 +145,7 @@ Before releasing a new version of the project, perform the following steps in or
 
 15. Commit and push the development-version bump.
 
-16. Wait for the branch-triggered `CI Main` workflow to finish successfully and confirm that the new development packages were published with the expected `-devN`/`.devN` versions.
+16. Wait for the branch-triggered `CI Main` workflow to finish successfully and confirm that the new development packages were published to crates.io, PyPI, and Maven Central with the expected `-devN`/`.devN` versions.
 
 17. From the documentation root, run `minion deploy` to deploy the documentation.
 

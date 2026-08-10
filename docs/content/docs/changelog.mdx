@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Notes**
 
--
+- The deprecated legacy BlueZ backend has been removed. Linux now exclusively uses SimpleBluez; applications should remove any C++ or C backend-selection configuration.
 
 **Added**
 
@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Python) Completed configuration bindings and exposed backend enumeration and advanced cached CoreBluetooth peripheral retrieval.
 - (SimpleDroidBLE) Added permission helpers, paired peripherals, write operations, and descriptor access.
 - (SimpleDroidBLE) Added the SimpleBLE Explorer example and a PLAIN test build for simulation.
+- (SimpleDroidBLE) Published SimpleDroidBLE and SimpleDroidBridge on Maven Central with native libraries for all four supported Android ABIs.
+- (SimpleJavaBLE) Published SimpleJavaBLE on Maven Central with bundled native libraries for Windows, macOS, and Linux.
 - (Windows) Added support for scanning extended advertisements.
 
 **Changed**
