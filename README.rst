@@ -11,31 +11,12 @@
 SimpleBLE
 =========
 
-Build Bluetooth once. Ship it everywhere.
-------------------------------------------
-
-SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, Linux, iOS, and Android. Use it from
-C++, C, Python, Java, or Rust, with dedicated APIs for Kotlin on Android and Unreal Engine.
+**Build Bluetooth once. Ship it everywhere.**
 
 |CI Main| |Latest Release| |License|
 
-    **New in v1.1**
-
-    Java and Android developers no longer need a source checkout. Install **SimpleJavaBLE** or the Android-only
-    **SimpleDroidBLE** from Maven Central, with the supported native libraries included.
-
-Choose Your API
----------------
-
-* **C++ — SimpleBLE:** Build with CMake. `C++ guide`_
-* **C — SimpleCBLE:** Build with CMake. `C guide`_
-* **Python — SimplePyBLE:** ``pip install simplepyble``. `Python guide`_
-* **Java — SimpleJavaBLE:** ``org.simpleble:simplejavable:<version>``. `Java guide`_
-* **Rust — SimpleRsBLE:** ``cargo add simplersble``. `Rust guide`_
-* **Android — SimpleDroidBLE (Beta):** ``org.simpleble:simpledroidble:<version>``. `Android guide`_
-* **Unreal Engine — SimpleBLE for Unreal:** Install from Fab. `Unreal guide`_
-
-SimplePyBLE has surpassed 3.5 million downloads on `PyPI`_.
+SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, Linux, iOS, and Android. Use it from
+C++, C, Python, Java, or Rust, with dedicated APIs for Kotlin on Android and Unreal Engine.
 
 Why SimpleBLE
 -------------
@@ -44,6 +25,12 @@ Why SimpleBLE
 * **Native underneath:** Use WinRT, CoreBluetooth, BlueZ, and Android Bluetooth through one maintained stack.
 * **Built for real products:** Central-role support across all five operating systems, with Linux/C++ peripheral support.
 * **Commercially supported:** Ship proprietary applications with licensing and direct technical support available.
+
+Get Started
+-----------
+
+Choose the API that fits your project in the `Installation`_ guide, then run the `Quickstart`_. For tutorials, recipes,
+platform notes, and API references, visit the `Documentation`_.
 
 Dongl: Official SimpleBLE Hardware
 ----------------------------------
@@ -121,12 +108,5 @@ pricing and commercial terms, or |leavemessage|_ to discuss your use case.
 .. _SimpleDBus: https://github.com/simpleble/simpleble/tree/main/simpledbus
 .. _security policy: https://github.com/simpleble/simpleble/blob/main/SECURITY.md
 .. _contribute: https://github.com/simpleble/simpleble/blob/main/CONTRIBUTING.md
-
-.. _C++ guide: https://docs.simpleble.org/simpleble/usage
-.. _C guide: https://docs.simpleble.org/simplecble/usage
-.. _Python guide: https://docs.simpleble.org/simplepyble/usage
-.. _Java guide: https://docs.simpleble.org/simplejavable/usage
-.. _Rust guide: https://docs.simpleble.org/simplersble/usage
-.. _Android guide: https://docs.simpleble.org/simpledroidble/usage
-.. _Unreal guide: https://docs.simpleble.org/simpleunrealble/usage
-.. _PyPI: https://pypi.org/project/simplepyble/
+.. _Installation: https://docs.simpleble.org/installation
+.. _Quickstart: https://docs.simpleble.org/quickstart
