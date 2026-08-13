@@ -42,6 +42,9 @@ set(SIMPLEBLE_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Service.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Characteristic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Descriptor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/LocalPeripheral.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/LocalService.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/LocalCharacteristic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/base/Backend.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/AdapterBase.cpp

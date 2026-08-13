@@ -8,9 +8,9 @@
 #include <simpleble/export.h>
 
 #include <simpleble/Exceptions.h>
-#include <simpleble/LocalPeripheral.h>
 #include <simpleble/Peripheral.h>
 #include <simpleble/Types.h>
+#include <simpleble/local/Peripheral.h>
 
 namespace SimpleBLE {
 
@@ -90,7 +90,7 @@ class SIMPLEBLE_EXPORT Adapter {
      * configure advertising, and publish characteristic value updates to
      * subscribed clients.
      */
-    LocalPeripheral create_local_peripheral();
+    Local::Peripheral create_local_peripheral();
 
     static bool bluetooth_enabled();
 

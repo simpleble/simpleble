@@ -1,5 +1,7 @@
 #include "AdapterBase.h"
 
+#include "LocalPeripheralBase.h"
+
 namespace SimpleBLE {
 
 void AdapterBase::set_callback_on_power_on(std::function<void()> on_power_on) {
@@ -50,4 +52,8 @@ void AdapterBase::set_callback_on_scan_found(std::function<void(Peripheral)> on_
     }
 }
 
+std::shared_ptr<Local::PeripheralBase> AdapterBase::create_local_peripheral() {
+    throw Exception::OperationNotSupported();
 }
+
+}  // namespace SimpleBLE

@@ -15,6 +15,10 @@ namespace SimpleBLE {
 class Peripheral;
 class PeripheralBase;
 
+namespace Local {
+class PeripheralBase;
+}
+
 /**
  * Abstract base class for Bluetooth adapter implementations.
  *
@@ -57,6 +61,8 @@ class AdapterBase {
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() = 0;
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_connected_peripherals() { return {}; };
+
+    virtual std::shared_ptr<Local::PeripheralBase> create_local_peripheral();
 
     /**
      * Checks if Bluetooth is enabled.
