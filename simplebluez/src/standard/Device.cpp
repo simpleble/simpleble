@@ -14,6 +14,7 @@ Device::Device(std::shared_ptr<SimpleDBus::Connection> conn, const std::string& 
 Device::~Device() {
     _callback_on_connected.unload();
     _callback_on_disconnected.unload();
+    _callback_on_connected_changed.unload();
     device1()->Connected.on_changed.unload();
 }
 
@@ -25,6 +26,7 @@ void Device::on_registration() {
         } else {
             _callback_on_disconnected();
         }
+        _callback_on_connected_changed(connected);
     });
     _interfaces.emplace(std::make_pair("org.bluez.Device1", device1));
 
@@ -122,6 +124,12 @@ void Device::set_on_disconnected(std::function<void()> callback) {
 }
 
 void Device::clear_on_disconnected() { _callback_on_disconnected.unload(); }
+
+void Device::set_on_connected_changed(std::function<void(bool connected)> callback) {
+    _callback_on_connected_changed.load(std::move(callback));
+}
+
+void Device::clear_on_connected_changed() { _callback_on_connected_changed.unload(); }
 
 void Device::set_on_services_resolved(std::function<void()> callback) {
     device1()->ServicesResolved.on_changed.load([callback](bool services_resolved) {
