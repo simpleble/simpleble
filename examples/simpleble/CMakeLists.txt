@@ -62,3 +62,6 @@ configure_simpleble_target(simpleble_indicate)
 
 add_executable(simpleble_notify_multi src/notify_multi.cpp src/utils.cpp)
 configure_simpleble_target(simpleble_notify_multi)
+
+add_executable(simpleble_peripheral src/peripheral.cpp)
+configure_simpleble_target(simpleble_peripheral)

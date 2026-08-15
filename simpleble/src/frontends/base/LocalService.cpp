@@ -24,7 +24,7 @@ const ServiceBase* Service::operator->() const {
 
 BluetoothUUID Service::uuid() { return (*this)->uuid(); }
 
-Characteristic Service::add_characteristic(BluetoothUUID uuid, std::vector<CharacteristicCapability> capabilities) {
+Characteristic Service::add_characteristic(BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities) {
     return Factory::build((*this)->add_characteristic(std::move(uuid), std::move(capabilities)));
 }
 

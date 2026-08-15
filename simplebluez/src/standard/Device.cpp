@@ -24,6 +24,7 @@ void Device::on_registration() {
         if (connected) {
             _callback_on_connected();
         } else {
+            _outgoing = false;
             _callback_on_disconnected();
         }
         _callback_on_connected_changed(connected);
@@ -74,7 +75,10 @@ void Device::pair() { device1()->Pair(); }
 
 void Device::cancel_pairing() { device1()->CancelPairing(); }
 
-void Device::connect() { device1()->Connect(); }
+void Device::connect() {
+    _outgoing = true;
+    device1()->Connect();
+}
 
 void Device::disconnect() {
     if (!valid()) return;
@@ -104,6 +108,8 @@ bool Device::paired() { return valid() && device1()->Paired.refresh(); }
 bool Device::bonded() { return valid() && device1()->Bonded.refresh(); }
 
 bool Device::connected() { return valid() && device1()->Connected.refresh(); }
+
+bool Device::outgoing() { return _outgoing; }
 
 bool Device::services_resolved() {
     if (!valid()) return false;

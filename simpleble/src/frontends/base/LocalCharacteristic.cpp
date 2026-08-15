@@ -23,7 +23,7 @@ const CharacteristicBase* Characteristic::operator->() const {
 
 BluetoothUUID Characteristic::uuid() { return (*this)->uuid(); }
 
-std::vector<CharacteristicCapability> Characteristic::capabilities() { return (*this)->capabilities(); }
+std::set<CharacteristicCapability> Characteristic::capabilities() { return (*this)->capabilities(); }
 
 ByteArray Characteristic::value() { return (*this)->value(); }
 

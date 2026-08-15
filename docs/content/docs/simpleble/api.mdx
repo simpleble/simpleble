@@ -4,6 +4,7 @@ description: Architecture overview and API documentation for SimpleBLE.
 ---
 
 import { ApiClass, ApiMethod, ApiSection } from "@/components/api";
+import { Callout } from "fumadocs-ui/components/callout";
 
 The following notes provide an overview of the architecture of some of the higher-level classes in the library, as to facilitate their understanding.
 
@@ -53,7 +54,7 @@ The following notes provide an overview of the architecture of some of the highe
 
 ## SimpleBLE::Adapter [#simpleble-adapter] [toc]
 
-<ApiClass name="SimpleBLE::Adapter" detailed="Bluetooth [Adapter](#simpleble-adapter).  A default-constructed [Adapter](#simpleble-adapter) object is not initialized. Calling any method other than `initialized()` on an uninitialized [Adapter](#simpleble-adapter) will throw an exception of type `SimpleBLE::NotInitialized`.">
+<ApiClass name="SimpleBLE::Adapter" detailed="Bluetooth [Adapter](#simpleble-adapter).  A default-constructed [Adapter](#simpleble-adapter) object is not initialized. Calling any method other than `initialized()` on an uninitialized [Adapter](#simpleble-adapter) will throw an exception of type `SimpleBLE::Exception::NotInitialized`.">
 
 <Callout type="info" title="Note">
 This class is intended to be used by the user only. Library developers should use shared pointers to `AdapterBase` instead.
@@ -170,6 +171,17 @@ This class is intended to be used by the user only. Library developers should us
   signature="std::vector< Peripheral > get_connected_peripherals()"
   detailed="Retrieve a list of all connected peripherals."
   note="This method is currently only supported by the Windows backend. (More backends coming soon.)"
+/>
+
+<ApiMethod
+  signature="Local::Peripheral create_local_peripheral()"
+  detailed="Create a local BLE peripheral host. The returned object is used to define local GATT services, configure advertising, and publish characteristic value updates to subscribed clients."
+  notes={[
+    {
+      content: "Currently implemented on Linux. Other platforms throw `SimpleBLE::Exception::OperationNotSupported`.",
+      type: "warn"
+    }
+  ]}
 />
 
 ### Public Static Functions [!toc]
@@ -424,6 +436,218 @@ This class is intended to be used by the user only. Library developers should us
 
 <ApiMethod
   signature="BluetoothUUID uuid()"
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Local API" id="local-api">
+
+The Local API is how this host advertises and serves GATT. `SimpleBLE::Peripheral` is a remote device; `SimpleBLE::Local::Peripheral` is this host. Create a local peripheral with [`Adapter::create_local_peripheral()`](#simpleble-adapter).
+
+## SimpleBLE::Local::CharacteristicCapability [#simpleble-local-characteristiccapability] [toc]
+
+Capabilities are passed to `add_characteristic` as a `std::set`. Each characteristic needs at least one.
+
+| Enumerator | Meaning |
+| --- | --- |
+| `READ` | Remote centrals can read |
+| `WRITE_REQUEST` | Remote centrals can write with a response |
+| `WRITE_COMMAND` | Remote centrals can write without a response |
+| `NOTIFY` | Remote centrals can subscribe to notifications |
+| `INDICATE` | Remote centrals can subscribe to indications |
+
+## SimpleBLE::Local::Advertisement [#simpleble-local-advertisement] [toc]
+
+<ApiClass name="SimpleBLE::Local::Advertisement" detailed="Advertising payload for a local peripheral. Set this before calling `start()`. If `service_uuids` is left empty, backends advertise the service UUIDs configured on the local peripheral when the platform supports doing so." />
+
+| Field | Type |
+| --- | --- |
+| `local_name` | `std::optional<std::string>` |
+| `service_uuids` | `std::vector<BluetoothUUID>` |
+
+## SimpleBLE::Local::Peripheral [#simpleble-local-peripheral] [toc]
+
+<ApiClass name="SimpleBLE::Local::Peripheral" detailed="Local BLE peripheral hosted by this process.  A default-constructed [Peripheral](#simpleble-local-peripheral) object is not initialized. Calling any method other than `initialized()` on an uninitialized object will throw `SimpleBLE::Exception::NotInitialized`.">
+
+<Callout type="info" title="Note">
+`SimpleBLE::Peripheral` is a remote device discovered by this host. `SimpleBLE::Local::Peripheral` is this host exposing local GATT services.
+</Callout>
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Peripheral()=default"
+/>
+
+<ApiMethod
+  signature="virtual ~Peripheral()=default"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="void * underlying() const"
+  detailed="Retrieve the underlying OS object/handle."
+/>
+
+<ApiMethod
+  signature="Advertisement advertisement()"
+/>
+
+<ApiMethod
+  signature="void set_advertisement(Advertisement advertisement)"
+  parameters={[{"name":"advertisement","type":"Advertisement"}]}
+  detailed="Set advertising data. Must be called before `start()`."
+  notes={[{ content: "Throws `OperationFailed` if the peripheral is already started.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="Service add_service(BluetoothUUID uuid)"
+  parameters={[{"name":"uuid","type":"BluetoothUUID"}]}
+  detailed="Add a primary GATT service."
+  notes={[{ content: "Throws `OperationFailed` if the peripheral is already started.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="std::vector< Service > services()"
+/>
+
+<ApiMethod
+  signature="void remove_all_services()"
+  notes={[{ content: "Throws `OperationFailed` if the peripheral is already started.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="void start()"
+  detailed="Serve the GATT application and start advertising. Services, characteristics, and advertising data must be configured before calling `start()` and cannot be changed while started."
+/>
+
+<ApiMethod
+  signature="void stop()"
+/>
+
+<ApiMethod
+  signature="bool is_started()"
+/>
+
+<ApiMethod
+  signature="bool is_advertising()"
+/>
+
+<ApiMethod
+  signature="void set_callback_on_client_connected(std::function< void(BluetoothAddress client_address)> on_client_connected)"
+  parameters={[{"name":"on_client_connected","type":"std::function< void(BluetoothAddress)>"}]}
+  detailed="Observe clients connecting to this peripheral. On platforms that do not expose a Bluetooth address, the value is a platform-specific identifier for the remote client."
+/>
+
+<ApiMethod
+  signature="void set_callback_on_client_disconnected(std::function< void(BluetoothAddress client_address)> on_client_disconnected)"
+  parameters={[{"name":"on_client_disconnected","type":"std::function< void(BluetoothAddress)>"}]}
+/>
+
+</ApiClass>
+
+## SimpleBLE::Local::Service [#simpleble-local-service] [toc]
+
+<ApiClass name="SimpleBLE::Local::Service">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Service()=default"
+/>
+
+<ApiMethod
+  signature="virtual ~Service()=default"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="BluetoothUUID uuid()"
+/>
+
+<ApiMethod
+  signature="Characteristic add_characteristic(BluetoothUUID uuid, std::set< CharacteristicCapability > capabilities)"
+  parameters={[
+    {"name":"uuid","type":"BluetoothUUID"},
+    {"name":"capabilities","type":"std::set< CharacteristicCapability >"}
+  ]}
+  detailed="Add a characteristic with a unique set of capabilities. At least one capability is required."
+  notes={[{ content: "Throws `OperationFailed` if the service's peripheral is already started.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="std::vector< Characteristic > characteristics()"
+/>
+
+</ApiClass>
+
+## SimpleBLE::Local::Characteristic [#simpleble-local-characteristic] [toc]
+
+<ApiClass name="SimpleBLE::Local::Characteristic">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Characteristic()=default"
+/>
+
+<ApiMethod
+  signature="virtual ~Characteristic()=default"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="BluetoothUUID uuid()"
+/>
+
+<ApiMethod
+  signature="std::set< CharacteristicCapability > capabilities()"
+/>
+
+<ApiMethod
+  signature="ByteArray value()"
+  detailed="Read the characteristic's current value."
+/>
+
+<ApiMethod
+  signature="void set_value(ByteArray value)"
+  parameters={[{"name":"value","type":"ByteArray"}]}
+  detailed="Update the characteristic's current value. Updating a characteristic with NOTIFY or INDICATE capability publishes the latest value to subscribed clients on a best-effort basis."
+/>
+
+<ApiMethod
+  signature="void set_callback_on_read(std::function< ByteArray()> on_read)"
+  parameters={[{"name":"on_read","type":"std::function< ByteArray()>"}]}
+  detailed="Optional dynamic value callback. Without this callback, reads return `value()`."
+/>
+
+<ApiMethod
+  signature="void set_callback_on_write(std::function< void(ByteArray value)> on_write)"
+  parameters={[{"name":"on_write","type":"std::function< void(ByteArray)>"}]}
+  detailed="Optional write callback invoked after an incoming write updates `value()`. Call `set_value()` from the callback to publish or echo that value to subscribed clients."
+/>
+
+<ApiMethod
+  signature="void set_callback_on_subscribed(std::function< void()> on_subscribed)"
+  parameters={[{"name":"on_subscribed","type":"std::function< void()>"}]}
+  detailed="Invoked when the first client subscribes."
+/>
+
+<ApiMethod
+  signature="void set_callback_on_unsubscribed(std::function< void()> on_unsubscribed)"
+  parameters={[{"name":"on_unsubscribed","type":"std::function< void()>"}]}
+  detailed="Invoked when the last client unsubscribes."
 />
 
 </ApiClass>

@@ -13,6 +13,8 @@ Right now, the best way to have your questions answered is on our [Discord](http
 
 SimpleBLE supports Windows 10+, Linux (Ubuntu 20.04+ and other distros using Bluez), MacOS 13.0+ (Ventura and newer), iOS 15.0+, and Android API 31+.
 
+Central-role APIs (scan, connect, GATT client) are available on all of those platforms. Hosting a local peripheral is currently Linux and C++ only.
+
 Please check the overview page on more information about platform-specific limitations.
 
 </Accordion>
@@ -20,6 +22,14 @@ Please check the overview page on more information about platform-specific limit
 <Accordion title="When should I set configuration values?" id="configuration">
 
 All configuration values must be set prior to any other interaction with a SimpleBLE component. This includes calling `SimpleBLE::Adapter::get_adapters()` or any other function that interacts with the underlying Bluetooth stack. Changes made after initialization may not take effect or could lead to undefined behavior.
+
+</Accordion>
+
+<Accordion title="Can I advertise and act as a BLE peripheral?" id="peripheral-mode">
+
+Yes, on Linux with the C++ API. Call `Adapter::create_local_peripheral()` to get a `SimpleBLE::Local::Peripheral`, configure services and advertising, then `start()`. See [Advertise, Serve, Publish](./peripheral/advertise-serve-publish) and the [Advertise](../recipes/advertise) recipe.
+
+On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
 
 </Accordion>
 
@@ -67,7 +77,7 @@ Coming soon.
 
 <Accordion title="What is the default behavior of functions that are not supported by a specific backend?" id="unsupported-functions">
 
-Successfully calling a function that is not supported by a specific backend will result in a no-op.
+Most unsupported operations are a no-op. Some throw `SimpleBLE::Exception::OperationNotSupported` instead, including `Adapter::create_local_peripheral()` on backends that cannot host a local peripheral.
 
 </Accordion>
 

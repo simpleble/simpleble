@@ -7,32 +7,43 @@ To learn how to use SimpleBLE, please refer to the [examples](https://github.com
 
 The following list briefly describes each example provided:
 
-## List Adapters
+## Central
+
+### List Adapters
 [list_adapters](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/list_adapters.cpp)
 
 This example shows how to list all available Bluetooth adapters on the system. It prints the identifier and MAC address of each adapter.
 
-## Scan
+### Scan
 [scan](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/scan.cpp)
 
 This example demonstrates how to scan for nearby BLE devices. It sets up callbacks to print information about devices as they are found and updated.
 
-## Connect
+### Connect
 [connect](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/connect.cpp) & [connect_safe](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/connect_safe.cpp)
 
 This example connects to a specific BLE device (or the first one found) and lists its services and characteristics. It demonstrates the complete flow of scanning, connecting, and service discovery.
 
-## Read
+### Read
 [read](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/read.cpp)
 
 This example shows how to read the value of a specific characteristic.
 
-## Write
+### Write
 [write](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/write.cpp)
 
 This example shows how to write a value to a specific characteristic.
 
-## Notify
+### Notify
 [notify](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/notify.cpp)
 
 This example demonstrates how to subscribe to notifications on a characteristic and receive updates asynchronously.
+
+## Peripheral
+
+### Peripheral
+[peripheral](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/peripheral.cpp)
+
+This example hosts a local BLE peripheral on Linux: it advertises a custom service, accepts reads and writes, publishes notifications, and prints client connect, disconnect, and subscribe events.
+
+See [Advertise, Serve, Publish](./peripheral/advertise-serve-publish) for the matching walkthrough.

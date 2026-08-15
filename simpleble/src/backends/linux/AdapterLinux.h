@@ -11,14 +11,20 @@
 
 #include <atomic>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <vector>
 
 namespace SimpleBLE {
 
 class PeripheralLinux;
+
+namespace Local {
+class PeripheralLinux;
+}
 
 class AdapterLinux : public SimpleBLE::AdapterBase {
   public:
@@ -42,6 +48,8 @@ class AdapterLinux : public SimpleBLE::AdapterBase {
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
 
+    virtual std::shared_ptr<Local::PeripheralBase> create_local_peripheral() override;
+
     virtual bool bluetooth_enabled() override;
 
   private:
@@ -52,6 +60,12 @@ class AdapterLinux : public SimpleBLE::AdapterBase {
     std::map<BluetoothAddress, std::shared_ptr<PeripheralLinux>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralLinux>> seen_peripherals_;
     std::mutex peripherals_mutex_;
+
+    std::set<BluetoothAddress> _seen_addresses;
+    std::vector<std::weak_ptr<Local::PeripheralLinux>> _local_peripherals;
+    std::mutex _local_peripherals_mutex;
+
+    void _on_device_connected(std::shared_ptr<SimpleBluez::Device> device, bool connected);
 };
 
 }  // namespace SimpleBLE

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <simpleble/export.h>
@@ -22,7 +23,7 @@ class SIMPLEBLE_EXPORT Service {
 
     BluetoothUUID uuid();
 
-    Characteristic add_characteristic(BluetoothUUID uuid, std::vector<CharacteristicCapability> capabilities);
+    Characteristic add_characteristic(BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities);
     std::vector<Characteristic> characteristics();
 
   protected:

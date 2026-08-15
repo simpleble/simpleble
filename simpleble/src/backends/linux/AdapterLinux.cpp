@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <thread>
+#include <utility>
 
 #include <simpleble/Peripheral.h>
 
@@ -6,6 +8,7 @@
 #include "BuildVec.h"
 #include "BuilderBase.h"
 #include "CommonUtils.h"
+#include "LocalPeripheralLinux.h"
 #include "PeripheralLinux.h"
 
 using namespace SimpleBLE;
@@ -18,6 +21,56 @@ AdapterLinux::AdapterLinux(std::shared_ptr<SimpleBluez::Adapter> adapter) : adap
             SAFE_CALLBACK_CALL(this->_callback_on_power_on);
         } else {
             SAFE_CALLBACK_CALL(this->_callback_on_power_off);
+        }
+    });
+    adapter_->set_on_device_updated([this](std::shared_ptr<SimpleBluez::Device> device) {
+        const auto address = device->address();
+        if (_seen_addresses.insert(address).second) {
+            // A device that first appears already connected, without us calling
+            // Connect(), is an external central. Subscribe only then, so later
+            // Connected changes on scan/outgoing devices are not treated as clients.
+            if (device->connected() && !device->outgoing()) {
+                std::weak_ptr<SimpleBluez::Device> weak_device = device;
+                device->set_on_connected_changed([this, weak_device](bool connected) {
+                    if (auto device = weak_device.lock()) {
+                        _on_device_connected(std::move(device), connected);
+                    }
+                });
+                _on_device_connected(device, true);
+            }
+        }
+
+        if (!is_scanning_) {
+            return;
+        }
+
+        std::shared_ptr<PeripheralLinux> peripheral;
+        bool is_new_peripheral = false;
+
+        {
+            std::scoped_lock lock(peripherals_mutex_);
+            if (peripherals_.count(address) == 0) {
+                // If the incoming peripheral has never been seen before, create and save a reference to it.
+                auto base_peripheral = std::make_shared<PeripheralLinux>(device, adapter_);
+                peripherals_.insert(std::make_pair(address, base_peripheral));
+            }
+
+            // Update the received advertising data.
+            peripheral = peripherals_.at(address);
+
+            // Check if the device has been seen before, to forward the correct call to the user.
+            is_new_peripheral = seen_peripherals_.count(address) == 0;
+            if (is_new_peripheral) {
+                // Store it in our table of seen peripherals
+                seen_peripherals_.insert(std::make_pair(address, peripheral));
+            }
+        }
+
+        Peripheral public_peripheral = Factory::build(peripheral);
+        if (is_new_peripheral) {
+            SAFE_CALLBACK_CALL(_callback_on_scan_found, public_peripheral);
+        } else {
+            SAFE_CALLBACK_CALL(_callback_on_scan_updated, public_peripheral);
         }
     });
 }
@@ -44,42 +97,6 @@ void AdapterLinux::scan_start() {
         std::scoped_lock lock(peripherals_mutex_);
         seen_peripherals_.clear();
     }
-
-    adapter_->set_on_device_updated([this](std::shared_ptr<SimpleBluez::Device> device) {
-        if (!this->is_scanning_) {
-            return;
-        }
-
-        auto address = device->address();
-        std::shared_ptr<PeripheralLinux> peripheral;
-        bool is_new_peripheral = false;
-
-        {
-            std::scoped_lock lock(this->peripherals_mutex_);
-            if (this->peripherals_.count(address) == 0) {
-                // If the incoming peripheral has never been seen before, create and save a reference to it.
-                auto base_peripheral = std::make_shared<PeripheralLinux>(device, this->adapter_);
-                this->peripherals_.insert(std::make_pair(address, base_peripheral));
-            }
-
-            // Update the received advertising data.
-            peripheral = this->peripherals_.at(address);
-
-            // Check if the device has been seen before, to forward the correct call to the user.
-            is_new_peripheral = this->seen_peripherals_.count(address) == 0;
-            if (is_new_peripheral) {
-                // Store it in our table of seen peripherals
-                this->seen_peripherals_.insert(std::make_pair(address, peripheral));
-            }
-        }
-
-        Peripheral public_peripheral = Factory::build(peripheral);
-        if (is_new_peripheral) {
-            SAFE_CALLBACK_CALL(this->_callback_on_scan_found, public_peripheral);
-        } else {
-            SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, public_peripheral);
-        }
-    });
 
     // Start scanning and notify the user.
     adapter_->discovery_start();
@@ -133,4 +150,38 @@ SharedPtrVector<PeripheralBase> AdapterLinux::get_paired_peripherals() {
     }
 
     return peripherals;
+}
+
+std::shared_ptr<Local::PeripheralBase> AdapterLinux::create_local_peripheral() {
+    static std::atomic_uint64_t next_id{0};
+    auto peripheral = std::make_shared<Local::PeripheralLinux>(
+        adapter_, adapter_->identifier() + "_" + std::to_string(next_id++));
+    std::scoped_lock lock(_local_peripherals_mutex);
+    _local_peripherals.push_back(peripheral);
+    return peripheral;
+}
+
+void AdapterLinux::_on_device_connected(std::shared_ptr<SimpleBluez::Device> device, bool connected) {
+    const auto address = device->address();
+
+    std::vector<std::shared_ptr<Local::PeripheralLinux>> local_peripherals;
+    {
+        std::scoped_lock lock(_local_peripherals_mutex);
+        // Remove local peripherals that no longer have any owners, so the
+        // registry does not accumulate expired weak references.
+        _local_peripherals.erase(std::remove_if(_local_peripherals.begin(), _local_peripherals.end(),
+                                                [](const auto& peripheral) { return peripheral.expired(); }),
+                                 _local_peripherals.end());
+
+        local_peripherals.reserve(_local_peripherals.size());
+        for (const auto& local : _local_peripherals) {
+            if (auto peripheral = local.lock()) {
+                local_peripherals.push_back(std::move(peripheral));
+            }
+        }
+    }
+
+    for (const auto& peripheral : local_peripherals) {
+        peripheral->handle_connected_changed(address, connected);
+    }
 }

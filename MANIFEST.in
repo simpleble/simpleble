@@ -64,6 +64,10 @@ include simpleble/include/simpleble/Service.h
 include simpleble/include/simpleble/SimpleBLE.h
 include simpleble/include/simpleble/Types.h
 include simpleble/include/simpleble/Utils.h
+include simpleble/include/simpleble/local/Advertisement.h
+include simpleble/include/simpleble/local/Characteristic.h
+include simpleble/include/simpleble/local/Peripheral.h
+include simpleble/include/simpleble/local/Service.h
 include simpleble/src/CommonUtils.h
 include simpleble/src/Config.cpp
 include simpleble/src/Exceptions.cpp
@@ -119,6 +123,9 @@ include simpleble/src/backends/common/CharacteristicBase.cpp
 include simpleble/src/backends/common/CharacteristicBase.h
 include simpleble/src/backends/common/DescriptorBase.cpp
 include simpleble/src/backends/common/DescriptorBase.h
+include simpleble/src/backends/common/LocalCharacteristicBase.h
+include simpleble/src/backends/common/LocalPeripheralBase.h
+include simpleble/src/backends/common/LocalServiceBase.h
 include simpleble/src/backends/common/PeripheralBase.h
 include simpleble/src/backends/common/ServiceBase.cpp
 include simpleble/src/backends/common/ServiceBase.h
@@ -156,6 +163,13 @@ include simpleble/src/backends/dongl/usb/UsbHelperWindows.h
 include simpleble/src/backends/linux/AdapterLinux.cpp
 include simpleble/src/backends/linux/AdapterLinux.h
 include simpleble/src/backends/linux/BackendBluez.cpp
+include simpleble/src/backends/linux/BackendBluez.h
+include simpleble/src/backends/linux/LocalCharacteristicLinux.cpp
+include simpleble/src/backends/linux/LocalCharacteristicLinux.h
+include simpleble/src/backends/linux/LocalPeripheralLinux.cpp
+include simpleble/src/backends/linux/LocalPeripheralLinux.h
+include simpleble/src/backends/linux/LocalServiceLinux.cpp
+include simpleble/src/backends/linux/LocalServiceLinux.h
 include simpleble/src/backends/linux/PeripheralLinux.cpp
 include simpleble/src/backends/linux/PeripheralLinux.h
 include simpleble/src/backends/macos/AdapterBaseMacOS.h
@@ -197,6 +211,9 @@ include simpleble/src/frontends/base/Advanced.cpp
 include simpleble/src/frontends/base/Backend.cpp
 include simpleble/src/frontends/base/Characteristic.cpp
 include simpleble/src/frontends/base/Descriptor.cpp
+include simpleble/src/frontends/base/LocalCharacteristic.cpp
+include simpleble/src/frontends/base/LocalPeripheral.cpp
+include simpleble/src/frontends/base/LocalService.cpp
 include simpleble/src/frontends/base/Peripheral.cpp
 include simpleble/src/frontends/base/Service.cpp
 include simpleble/src/frontends/safe/AdapterSafe.cpp

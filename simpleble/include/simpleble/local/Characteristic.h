@@ -2,7 +2,7 @@
 
 #include <functional>
 #include <memory>
-#include <vector>
+#include <set>
 
 #include <simpleble/export.h>
 
@@ -29,7 +29,7 @@ class SIMPLEBLE_EXPORT Characteristic {
     bool initialized() const;
 
     BluetoothUUID uuid();
-    std::vector<CharacteristicCapability> capabilities();
+    std::set<CharacteristicCapability> capabilities();
 
     /**
      * Read or update the characteristic's current value.
@@ -41,10 +41,12 @@ class SIMPLEBLE_EXPORT Characteristic {
     void set_value(ByteArray value);
 
     /**
-     * Optional dynamic value callbacks.
+     * Optional value callbacks.
      *
-     * Without these callbacks, reads return `value()` and writes update
-     * `value()` automatically.
+     * Reads return `value()` unless the read callback supplies a dynamic value.
+     * Incoming writes update `value()` before the write callback is invoked.
+     * Calling `set_value()` from the write callback can publish that value to
+     * subscribed clients.
      */
     void set_callback_on_read(std::function<ByteArray()> on_read);
     void set_callback_on_write(std::function<void(ByteArray value)> on_write);

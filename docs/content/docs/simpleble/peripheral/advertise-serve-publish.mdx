@@ -1,0 +1,225 @@
+---
+title: Advertise, Serve, Publish
+description: Host a local BLE peripheral, serve GATT characteristics, and publish value updates to connected clients.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+This is the peripheral-mode walkthrough: this host advertises, serves a GATT table, and publishes characteristic updates to connected clients.
+
+`SimpleBLE::Peripheral` is a remote device discovered while acting as a central. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from the same `Adapter` you would use to scan.
+
+<Callout type="info" title="Linux, C++ only">
+Hosting a local peripheral is currently implemented on Linux. On other platforms, `Adapter::create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
+</Callout>
+
+If you still need to install SimpleBLE or create the CMake project, start with [Getting Started](../tutorial). The [Advertise](../../recipes/advertise) recipe is the short form of this flow.
+
+## Lifecycle
+
+Configure first, then start:
+
+1. Create a local peripheral from an adapter.
+2. Set advertisement data and add services and characteristics.
+3. Call `start()` to serve the GATT application and begin advertising.
+4. Update characteristic values and observe clients while started.
+5. Call `stop()` when finished.
+
+Services, characteristics, and advertising data must be configured before `start()` and cannot be changed while the peripheral is started. `set_value()` and the characteristic callbacks are the supported way to change data after that. Starting twice is a no-op; `stop()` while already stopped is also a no-op. Destroying the object stops it.
+
+```cpp
+auto adapters = SimpleBLE::Adapter::get_adapters();
+auto adapter = adapters.front();
+auto peripheral = adapter.create_local_peripheral();
+
+SimpleBLE::Local::Advertisement advertisement;
+advertisement.local_name = "SimpleBLE Peripheral";
+peripheral.set_advertisement(advertisement);
+
+auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");
+auto characteristic = service.add_characteristic(
+    "12345678-1234-5678-1234-56789abcdef1",
+    {SimpleBLE::Local::CharacteristicCapability::READ,
+     SimpleBLE::Local::CharacteristicCapability::WRITE_REQUEST,
+     SimpleBLE::Local::CharacteristicCapability::NOTIFY});
+characteristic.set_value(SimpleBLE::ByteArray("ready"));
+
+peripheral.start();
+```
+
+`is_started()` reports whether the GATT application is registered. `is_advertising()` reports whether the advertisement is currently active.
+
+## Advertisement
+
+`Advertisement` currently carries an optional local name and an optional list of service UUIDs:
+
+```cpp
+SimpleBLE::Local::Advertisement advertisement;
+advertisement.local_name = "SimpleBLE Peripheral";
+// advertisement.service_uuids = {"12345678-1234-5678-1234-56789abcdef0"};
+peripheral.set_advertisement(advertisement);
+```
+
+If `service_uuids` is left empty, SimpleBLE advertises the service UUIDs configured on the local peripheral when the platform supports doing so.
+
+## Services and characteristics
+
+`add_service()` adds a primary GATT service. `add_characteristic()` takes a `std::set` of capabilities, so each flag is unique:
+
+| Capability | Remote centrals can |
+| --- | --- |
+| `READ` | Read the characteristic |
+| `WRITE_REQUEST` | Write with a response |
+| `WRITE_COMMAND` | Write without a response |
+| `NOTIFY` | Subscribe to notifications |
+| `INDICATE` | Subscribe to indications |
+
+A characteristic needs at least one capability. Pass the set as an initializer list:
+
+```cpp
+auto characteristic = service.add_characteristic(
+    CHARACTERISTIC_UUID,
+    {SimpleBLE::Local::CharacteristicCapability::READ,
+     SimpleBLE::Local::CharacteristicCapability::WRITE_REQUEST,
+     SimpleBLE::Local::CharacteristicCapability::WRITE_COMMAND,
+     SimpleBLE::Local::CharacteristicCapability::NOTIFY,
+     SimpleBLE::Local::CharacteristicCapability::INDICATE});
+```
+
+## Values and callbacks
+
+Without a read callback, reads return `value()`. Incoming writes always update `value()` before the write callback runs.
+
+Optional callbacks customize or observe that behavior:
+
+- `set_callback_on_read` — return the bytes to send for this read
+- `set_callback_on_write` — observe the bytes after they have been stored. Call `set_value()` from the callback only when you want to publish or echo that value to subscribed clients.
+
+```cpp
+characteristic.set_callback_on_write([&characteristic](SimpleBLE::ByteArray value) {
+    std::cout << "Write: " << value << std::endl;
+    // Echo the written value to subscribed clients.
+    characteristic.set_value(std::move(value));
+});
+```
+
+## Publish updates
+
+`set_value()` is how this host publishes a new characteristic value. When the characteristic has `NOTIFY` or `INDICATE` capability, SimpleBLE also pushes that value to subscribed clients on a best-effort basis.
+
+```cpp
+characteristic.set_value(SimpleBLE::ByteArray("tick"));
+```
+
+`set_callback_on_subscribed` runs when the first client subscribes. `set_callback_on_unsubscribed` runs when the last client unsubscribes.
+
+```cpp
+characteristic.set_callback_on_subscribed([]() { std::cout << "Client subscribed." << std::endl; });
+characteristic.set_callback_on_unsubscribed([]() { std::cout << "Client unsubscribed." << std::endl; });
+```
+
+Use **publish** for this path. `start()` serves the GATT application and begins advertising; it is not the same as publishing a characteristic value.
+
+## Observe clients
+
+Register callbacks before `start()` if you want the first connection:
+
+```cpp
+peripheral.set_callback_on_client_connected(
+    [](SimpleBLE::BluetoothAddress address) { std::cout << "Client connected: " << address << std::endl; });
+peripheral.set_callback_on_client_disconnected(
+    [](SimpleBLE::BluetoothAddress address) { std::cout << "Client disconnected: " << address << std::endl; });
+```
+
+On platforms that do not expose a Bluetooth address, the value is a platform-specific identifier for the remote client.
+
+Callbacks follow the same threading rules as the rest of SimpleBLE. See [Concurrency](../../fundamentals/concurrency).
+
+## Scan and advertise together
+
+SimpleBLE permits the same adapter to scan while a local peripheral is started when BlueZ and the Bluetooth controller support concurrent scanning and advertising. Incoming clients of the local peripheral are reported through the client callbacks above. They are not devices you should `connect()` to as a central.
+
+## Full application
+
+The repository example [`examples/simpleble/src/peripheral.cpp`](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/peripheral.cpp) is a complete program. A compact version:
+
+```cpp
+#include <simpleble/SimpleBLE.h>
+
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <cstdlib>
+#include <iostream>
+#include <thread>
+#include <utility>
+
+namespace {
+
+constexpr auto SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0";
+constexpr auto CHARACTERISTIC_UUID = "12345678-1234-5678-1234-56789abcdef1";
+
+std::atomic_bool running{true};
+
+void signal_handler(int) { running = false; }
+
+}  // namespace
+
+int main() {
+    std::signal(SIGINT, signal_handler);
+
+    auto adapters = SimpleBLE::Adapter::get_adapters();
+    if (adapters.empty()) {
+        std::cerr << "No Bluetooth adapters found." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto peripheral = adapters.front().create_local_peripheral();
+
+    SimpleBLE::Local::Advertisement advertisement;
+    advertisement.local_name = "SimpleBLE Peripheral";
+    peripheral.set_advertisement(advertisement);
+
+    auto service = peripheral.add_service(SERVICE_UUID);
+    auto characteristic = service.add_characteristic(
+        CHARACTERISTIC_UUID,
+        {SimpleBLE::Local::CharacteristicCapability::READ, SimpleBLE::Local::CharacteristicCapability::WRITE_REQUEST,
+         SimpleBLE::Local::CharacteristicCapability::NOTIFY});
+    characteristic.set_value(SimpleBLE::ByteArray("ready"));
+
+    characteristic.set_callback_on_write([&characteristic](SimpleBLE::ByteArray value) {
+        std::cout << "Write: " << value << std::endl;
+        // Echo the written value to subscribed clients.
+        characteristic.set_value(std::move(value));
+    });
+
+    peripheral.set_callback_on_client_connected(
+        [](SimpleBLE::BluetoothAddress address) { std::cout << "Client connected: " << address << std::endl; });
+
+    peripheral.start();
+    std::cout << "Advertising as SimpleBLE Peripheral. Press Ctrl+C to stop." << std::endl;
+
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    characteristic.set_callback_on_write({});
+    peripheral.stop();
+    return EXIT_SUCCESS;
+}
+```
+
+Build it with the other SimpleBLE examples:
+
+```bash
+cmake -S <path-to-simpleble>/examples/simpleble -B build_simpleble_examples -DSIMPLEBLE_LOCAL=ON
+cmake --build build_simpleble_examples -j7
+```
+
+## Where to next?
+
+- [Advertise](../../recipes/advertise) for a shorter recipe form of this flow
+- [Scan, Connect, Read](../central/scan-connect-read) to use the same adapter as a central
+- [API reference](../api#local-api) for `SimpleBLE::Local` types
+- [Platform notes](../platform_notes) for Linux and BlueZ behavior
+- [Examples](../examples) for the programs in the repository

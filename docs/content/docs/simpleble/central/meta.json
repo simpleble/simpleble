@@ -1,0 +1,5 @@
+{
+  "title": "Central Mode",
+  "defaultOpen": true,
+  "pages": ["scan-connect-read"]
+}

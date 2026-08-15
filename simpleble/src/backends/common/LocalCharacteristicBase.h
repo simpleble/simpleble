@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <vector>
+#include <set>
 
 #include <simpleble/Types.h>
 #include <simpleble/local/Characteristic.h>
@@ -13,7 +13,7 @@ class CharacteristicBase {
     virtual ~CharacteristicBase() = default;
 
     virtual BluetoothUUID uuid() = 0;
-    virtual std::vector<CharacteristicCapability> capabilities() = 0;
+    virtual std::set<CharacteristicCapability> capabilities() = 0;
 
     virtual ByteArray value() = 0;
     virtual void set_value(ByteArray value) = 0;

@@ -2,6 +2,7 @@
   "title": "Recipes",
   "pages": [
     "scan",
+    "advertise",
     "connect",
     "read-write-notify",
     "reconnect-loop",

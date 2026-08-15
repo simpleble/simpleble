@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <simpleble/Types.h>
@@ -17,7 +18,7 @@ class ServiceBase {
     virtual BluetoothUUID uuid() = 0;
 
     virtual std::shared_ptr<CharacteristicBase> add_characteristic(
-        BluetoothUUID uuid, std::vector<CharacteristicCapability> capabilities) = 0;
+        BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities) = 0;
     virtual std::vector<std::shared_ptr<CharacteristicBase>> characteristics() = 0;
 
   protected:

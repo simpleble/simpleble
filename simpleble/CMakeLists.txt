@@ -234,6 +234,9 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
 
     target_sources(simpleble PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/AdapterLinux.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/LocalCharacteristicLinux.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/LocalPeripheralLinux.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/LocalServiceLinux.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/PeripheralLinux.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/linux/BackendBluez.cpp
 

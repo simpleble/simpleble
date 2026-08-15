@@ -53,7 +53,14 @@ If you need to verify the address used over the air, use BlueZ tools such as `bt
 ### Adapter Removal
 On Linux, BlueZ exposes adapters, peripherals, services, and characteristics as D-Bus object paths. If a Bluetooth adapter is disabled, unplugged, or otherwise removed, BlueZ removes the adapter object path and any child device paths below it. SimpleBLE objects retained by the application may still exist as C++ objects, but the underlying BlueZ objects they refer to are no longer present.
 
-Applications that support adapter hot-plug or adapter removal should treat existing adapters and peripherals as stale after the adapter disappears. Stop active work, release retained objects when possible, and call `SimpleBLE::Adapter::get_adapters()` again to discover the current adapter set before scanning or connecting again.
+Applications that support adapter hot-plug or adapter removal should treat existing adapters, remote peripherals, and local peripherals as stale after the adapter disappears. Stop active work, release retained objects when possible, and call `SimpleBLE::Adapter::get_adapters()` again to discover the current adapter set before scanning, connecting, or advertising again.
+
+### Local Peripheral Mode
+Linux is currently the only backend that can host a local peripheral. `Adapter::create_local_peripheral()` registers a BlueZ GATT application and an LE advertisement through D-Bus, so `bluetoothd` must be running and the process must have the same D-Bus access used for scanning.
+
+SimpleBLE permits the same adapter to scan and advertise at the same time, but availability depends on BlueZ and the Bluetooth controller supporting concurrent operation and having sufficient resources. Incoming clients of the local peripheral are reported through `SimpleBLE::Local::Peripheral` client callbacks, not as remote `SimpleBLE::Peripheral` objects to `connect()` to.
+
+On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
 
 ## Android
 

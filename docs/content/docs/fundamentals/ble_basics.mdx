@@ -12,6 +12,8 @@ In BLE, there are two primary roles when two devices are communicating:
 *   **Central:** Typically a smartphone or computer (like the one running SimpleBLE). The Central scans for advertisements and initiates connections.
 *   **Peripheral:** Typically a small, low-power device (like a heart rate monitor or a smart bulb). The Peripheral advertises its presence and waits for a Central to connect.
 
+SimpleBLE can fill either role. Central APIs (`SimpleBLE::Adapter` scan and `SimpleBLE::Peripheral`) are available on every supported platform. Hosting a local peripheral (`SimpleBLE::Local::Peripheral`) is currently Linux and C++ only; see [Advertise, Serve, Publish](../simpleble/peripheral/advertise-serve-publish).
+
 ## Advertising and Scanning
 
 Peripherals send out small packets of data called **Advertisements** to announce their presence. These packets can contain:
