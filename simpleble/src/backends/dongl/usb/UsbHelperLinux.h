@@ -28,7 +28,7 @@ class UsbHelperLinux : public UsbHelperImpl {
 
     std::atomic_bool _running{false};
     std::thread _thread;
-    std::mutex _tx_mutex;
+    std::mutex _serial_mutex;
     int _serial_fd{-1};
 };
 

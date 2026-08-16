@@ -168,6 +168,27 @@ Note that on Linux and MacOS, you will need to run the `cmake --install` command
 sudo cmake --install build_simpleble
 ```
 
+### Dongl permissions on Linux
+
+The Dongl backend opens its USB CDC ACM device directly. If opening the device
+fails with `EACCES`, add your user to the serial-device group and then sign out and
+back in:
+
+```bash
+sudo usermod -aG dialout "$USER"
+```
+
+Some distributions use a different group; check the group assigned to the Dongl's
+`/dev/ttyACM*` device when necessary.
+
+Distributors can instead grant device-specific access with a udev rule:
+
+```udev
+SUBSYSTEM=="tty", ATTRS{idVendor}=="3918", ATTRS{idProduct}=="0001", MODE="0660", GROUP="dialout", TAG+="uaccess"
+```
+
+Install the rule under `/etc/udev/rules.d/`, reload udev, and reconnect the Dongl.
+
 ## Usage with CMake (Installed)
 
 Once SimpleBLE has been installed, it can be consumed from within CMake:

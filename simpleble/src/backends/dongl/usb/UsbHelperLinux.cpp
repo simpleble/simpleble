@@ -12,9 +12,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <stdexcept>
+
+#include "LoggingInternal.h"
 
 namespace SimpleBLE {
 namespace Dongl {
@@ -76,11 +77,17 @@ UsbHelperLinux::~UsbHelperLinux() {
     if (_thread.joinable()) {
         _thread.join();
     }
+
+    std::scoped_lock lock(_serial_mutex);
     _close_serial_port();
 }
 
 void UsbHelperLinux::tx(const kvn::bytearray& data) {
-    std::scoped_lock lock(_tx_mutex);
+    std::scoped_lock lock(_serial_mutex);
+    if (!_running || _serial_fd < 0) {
+        throw std::runtime_error("Serial port is not available: " + _device_path);
+    }
+
     size_t offset = 0;
 
     while (offset < data.size()) {
@@ -101,15 +108,24 @@ void UsbHelperLinux::tx(const kvn::bytearray& data) {
                 poll_result = poll(&descriptor, 1, 1000);
             } while (poll_result < 0 && errno == EINTR);
 
-            if (poll_result > 0) {
+            if (poll_result > 0 && (descriptor.revents & POLLOUT)) {
                 continue;
             }
             if (poll_result == 0) {
+                _running = false;
+                _close_serial_port();
                 throw std::runtime_error("Timed out writing to serial port: " + _device_path);
             }
+
+            _running = false;
+            _close_serial_port();
+            throw std::runtime_error("Serial port became unavailable while writing: " + _device_path);
         }
 
-        throw std::runtime_error("Failed to write to serial port " + _device_path + ": " + std::strerror(errno));
+        const int write_error = bytes_written == 0 ? EIO : errno;
+        _running = false;
+        _close_serial_port();
+        throw std::runtime_error("Failed to write to serial port " + _device_path + ": " + std::strerror(write_error));
     }
 }
 
@@ -185,7 +201,16 @@ void UsbHelperLinux::_run() {
     char buffer[256];
 
     while (_running) {
-        pollfd descriptor{_serial_fd, POLLIN, 0};
+        int serial_fd;
+        {
+            std::scoped_lock lock(_serial_mutex);
+            if (!_running || _serial_fd < 0) {
+                break;
+            }
+            serial_fd = _serial_fd;
+        }
+
+        pollfd descriptor{serial_fd, POLLIN, 0};
         const int poll_result = poll(&descriptor, 1, 100);
         if (poll_result == 0) {
             continue;
@@ -194,22 +219,40 @@ void UsbHelperLinux::_run() {
             if (errno == EINTR) {
                 continue;
             }
-            std::cerr << "Error polling serial port " << _device_path << ": " << std::strerror(errno) << std::endl;
+            const int poll_error = errno;
+            _running = false;
+            SIMPLEBLE_LOG_ERROR(
+                fmt::format("Error polling serial port {}: {}", _device_path, std::strerror(poll_error)));
             break;
         }
         if (descriptor.revents & (POLLERR | POLLHUP | POLLNVAL)) {
-            std::cerr << "Serial port disconnected: " << _device_path << std::endl;
+            _running = false;
+            SIMPLEBLE_LOG_WARN(fmt::format("Serial port disconnected: {}", _device_path));
             break;
         }
         if (!(descriptor.revents & POLLIN)) {
             continue;
         }
 
-        const ssize_t bytes_read = read(_serial_fd, buffer, sizeof(buffer));
+        ssize_t bytes_read;
+        int read_error = 0;
+        {
+            std::scoped_lock lock(_serial_mutex);
+            if (!_running || _serial_fd != serial_fd) {
+                break;
+            }
+            bytes_read = read(_serial_fd, buffer, sizeof(buffer));
+            if (bytes_read < 0) {
+                read_error = errno;
+            }
+        }
+
         if (bytes_read > 0) {
             _rx_callback(kvn::bytearray(buffer, static_cast<size_t>(bytes_read)));
-        } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
-            std::cerr << "Error reading from serial port " << _device_path << ": " << std::strerror(errno) << std::endl;
+        } else if (bytes_read < 0 && read_error != EAGAIN && read_error != EWOULDBLOCK && read_error != EINTR) {
+            _running = false;
+            SIMPLEBLE_LOG_ERROR(
+                fmt::format("Error reading from serial port {}: {}", _device_path, std::strerror(read_error)));
             break;
         }
     }
