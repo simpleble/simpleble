@@ -10,11 +10,13 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cwchar>
 #include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #include "LoggingInternal.h"
@@ -64,20 +66,14 @@ class ScopedRegistryKey {
     HKEY key_;
 };
 
-wchar_t hex_digit(unsigned int value) { return static_cast<wchar_t>(value < 10 ? L'0' + value : L'A' + value - 10); }
-
-std::wstring usb_hardware_id_fragment(uint16_t vendor_id, uint16_t product_id) {
-    std::wstring fragment = L"VID_0000&PID_0000";
-    for (std::size_t index = 0; index < 4; ++index) {
-        const unsigned int shift = static_cast<unsigned int>((3 - index) * 4);
-        fragment[4 + index] = hex_digit((vendor_id >> shift) & 0x0f);
-        fragment[13 + index] = hex_digit((product_id >> shift) & 0x0f);
-    }
-    return fragment;
-}
-
 bool hardware_id_matches_usb_device(std::wstring_view hardware_id, uint16_t vendor_id, uint16_t product_id) {
-    const std::wstring fragment = usb_hardware_id_fragment(vendor_id, product_id);
+    wchar_t fragment_buffer[18];
+    const int fragment_length = swprintf_s(fragment_buffer, L"VID_%04X&PID_%04X", static_cast<unsigned int>(vendor_id),
+                                           static_cast<unsigned int>(product_id));
+    if (fragment_length < 0) {
+        return false;
+    }
+    const std::wstring_view fragment(fragment_buffer, static_cast<std::size_t>(fragment_length));
     if (hardware_id.size() < fragment.size()) {
         return false;
     }
@@ -112,28 +108,6 @@ std::optional<std::string> windows_serial_path(std::wstring_view port_name) {
         path.push_back(static_cast<char>(port_name[index]));
     }
     return path;
-}
-
-std::string windows_error_message(DWORD error) {
-    char* message = nullptr;
-    const DWORD size = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0,
-        reinterpret_cast<char*>(&message), 0, nullptr);
-
-    std::string result;
-    if (size != 0 && message != nullptr) {
-        result.assign(message, size);
-        while (!result.empty() && (result.back() == '\r' || result.back() == '\n')) {
-            result.pop_back();
-        }
-    } else {
-        result = "Windows error " + std::to_string(error);
-    }
-
-    if (message != nullptr) {
-        LocalFree(message);
-    }
-    return result;
 }
 
 bool is_dongl_device(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
@@ -199,7 +173,8 @@ std::wstring get_port_name(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_inf
 UsbHelperWindows::UsbHelperWindows(const std::string& device_path) : UsbHelperImpl(device_path) {
     if (!_open_serial_port()) {
         const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to open serial port " + _device_path + ": " + windows_error_message(error));
+        throw std::system_error(static_cast<int>(error), std::system_category(),
+                                "Failed to open serial port " + _device_path);
     }
 
     try {
@@ -245,8 +220,8 @@ void UsbHelperWindows::tx(const kvn::bytearray& data) {
         DWORD bytes_written = 0;
         if (!WriteFile(serial_handle, data.data() + offset, requested, &bytes_written, nullptr)) {
             const DWORD error = GetLastError();
-            throw std::runtime_error("Failed to write to serial port " + _device_path + ": " +
-                                     windows_error_message(error));
+            throw std::system_error(static_cast<int>(error), std::system_category(),
+                                    "Failed to write to serial port " + _device_path);
         }
         if (bytes_written == 0) {
             throw std::runtime_error("Failed to write to serial port " + _device_path + ": no bytes were written");
@@ -318,8 +293,8 @@ void UsbHelperWindows::_configure_serial_port() {
     config.DCBlength = sizeof(config);
     if (!GetCommState(serial_handle, &config)) {
         const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to get serial port attributes for " + _device_path + ": " +
-                                 windows_error_message(error));
+        throw std::system_error(static_cast<int>(error), std::system_category(),
+                                "Failed to get serial port attributes for " + _device_path);
     }
 
     config.BaudRate = 1000000;
@@ -343,8 +318,8 @@ void UsbHelperWindows::_configure_serial_port() {
 
     if (!SetCommState(serial_handle, &config)) {
         const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to set serial port attributes for " + _device_path + ": " +
-                                 windows_error_message(error));
+        throw std::system_error(static_cast<int>(error), std::system_category(),
+                                "Failed to set serial port attributes for " + _device_path);
     }
 
     COMMTIMEOUTS timeouts{};
@@ -354,13 +329,14 @@ void UsbHelperWindows::_configure_serial_port() {
     timeouts.WriteTotalTimeoutConstant = WRITE_TIMEOUT_MS;
     if (!SetCommTimeouts(serial_handle, &timeouts)) {
         const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to set serial port timeouts for " + _device_path + ": " +
-                                 windows_error_message(error));
+        throw std::system_error(static_cast<int>(error), std::system_category(),
+                                "Failed to set serial port timeouts for " + _device_path);
     }
 
     if (!PurgeComm(serial_handle, PURGE_RXCLEAR | PURGE_TXCLEAR)) {
         const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to flush serial port " + _device_path + ": " + windows_error_message(error));
+        throw std::system_error(static_cast<int>(error), std::system_category(),
+                                "Failed to flush serial port " + _device_path);
     }
 }
 
@@ -381,8 +357,8 @@ void UsbHelperWindows::_run() {
         if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytes_read, nullptr)) {
             const DWORD read_error = GetLastError();
             _running = false;
-            SIMPLEBLE_LOG_ERROR(
-                fmt::format("Error reading from serial port {}: {}", _device_path, windows_error_message(read_error)));
+            const std::error_code error(static_cast<int>(read_error), std::system_category());
+            SIMPLEBLE_LOG_ERROR(fmt::format("Error reading from serial port {}: {}", _device_path, error.message()));
             break;
         }
         if (bytes_read > 0) {
