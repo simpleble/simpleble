@@ -1,5 +1,6 @@
 #pragma once
 
+#include <simpleble/Advanced.h>
 #include <simpleble/Exceptions.h>
 #include <simpleble/Service.h>
 #include <simpleble/Types.h>
@@ -41,6 +42,10 @@ class PeripheralDongl : public PeripheralBase {
     virtual bool is_paired() override;
     virtual void unpair() override;
 
+    void set_passkey_request_callback(const std::function<std::optional<std::string>()>& callback);
+    void set_passkey_display_callback(const std::function<void(const std::string& passkey)>& callback);
+    void set_numeric_comparison_callback(const std::function<bool(const std::string& passkey)>& callback);
+
     virtual std::vector<std::shared_ptr<ServiceBase>> available_services() override;
     virtual std::vector<std::shared_ptr<ServiceBase>> advertised_services() override;
 
@@ -72,6 +77,8 @@ class PeripheralDongl : public PeripheralBase {
     void notify_descriptor_discovered(simpleble_DescriptorDiscoveredEvt const& descriptor_discovered_evt);
     void notify_attribute_discovery_complete();
     void notify_value_changed(simpleble_ValueChangedEvt const& value_changed_evt);
+    void notify_passkey_display(simpleble_PasskeyDisplayEvt const& passkey_display_evt);
+    void notify_auth_key_request(simpleble_AuthKeyRequestEvt const& auth_key_request_evt);
 
     const uint16_t BLE_CONN_HANDLE_INVALID = 0xFFFF;
     const uint16_t BLE_CONN_HANDLE_PENDING = 0xFFFE;
@@ -113,6 +120,7 @@ class PeripheralDongl : public PeripheralBase {
     CharacteristicDefinition& _find_characteristic_from_handle(uint16_t handle);
     CharacteristicDefinition& _find_characteristic_from_uuid(BluetoothUUID const& service,
                                                              BluetoothUUID const& characteristic);
+    void _send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key, bool accept);
 
     uint16_t _conn_handle = BLE_CONN_HANDLE_INVALID;
     std::string _identifier;
@@ -134,6 +142,11 @@ class PeripheralDongl : public PeripheralBase {
     std::mutex disconnection_mutex_;
     std::condition_variable attributes_discovered_cv_;
     std::mutex attributes_discovered_mutex_;
+    std::mutex pairing_callbacks_mutex_;
+    std::function<std::optional<std::string>()> passkey_request_callback_;
+    std::function<void(const std::string& passkey)> passkey_display_callback_;
+    std::function<bool(const std::string& passkey)> numeric_comparison_callback_;
+    TaskRunner pairing_task_runner_;
 
     kvn::safe_callback<void()> _callback_on_connected;
     kvn::safe_callback<void()> _callback_on_disconnected;

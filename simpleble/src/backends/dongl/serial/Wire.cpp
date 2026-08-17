@@ -22,7 +22,11 @@ Wire::Wire(const std::string& device_path)
     });
 }
 
-Wire::~Wire() {}
+Wire::~Wire() {
+    // The USB reader callback captures this object, so stop and join its thread
+    // before the parser state and callbacks are destroyed.
+    _usb_helper.reset();
+}
 
 void Wire::send_packet(const std::vector<uint8_t>& payload) {
     send_packet(payload.data(), payload.size());

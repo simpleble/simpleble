@@ -31,7 +31,7 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
     _serial_protocol->set_event_callback([this](const dongl_Event& event) {
         switch (event.which_evt) {
             case dongl_Event_simpleble_tag:
-            _on_simpleble_event(event.evt.simpleble);
+                _on_simpleble_event(event.evt.simpleble);
                 break;
             default:
                 break;
@@ -58,7 +58,6 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
     //     // TODO: Handle protocol errors
     // });
 
-
     auto response_whoami = _serial_protocol->basic_whoami();
     _identifier = std::string(response_whoami.identifier);
     _address = std::string(response_whoami.mac_address);
@@ -73,7 +72,13 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-AdapterDongl::~AdapterDongl() {}
+AdapterDongl::~AdapterDongl() {
+    // Detach the serial callback before destroying the peripheral maps it uses.
+    _serial_protocol->set_event_callback({});
+    seen_peripherals_.clear();
+    peripherals_.clear();
+    _serial_protocol.reset();
+}
 
 void* AdapterDongl::underlying() const { return nullptr; }
 
@@ -107,7 +112,34 @@ bool AdapterDongl::scan_is_active() { return _serial_protocol->simpleble_scan_is
 
 SharedPtrVector<PeripheralBase> AdapterDongl::scan_get_results() { return Util::values(seen_peripherals_); }
 
-SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() { return {}; }
+SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
+    SharedPtrVector<PeripheralBase> paired_peripherals;
+    constexpr uint16_t kMaxPeerIds = 256;
+    const auto count_response = _serial_protocol->simpleble_get_paired_peripheral_count();
+    const uint16_t paired_count = count_response.count > kMaxPeerIds ? kMaxPeerIds : count_response.count;
+    paired_peripherals.reserve(paired_count);
+
+    for (uint16_t index = 0; index < paired_count; index++) {
+        auto response = _serial_protocol->simpleble_get_paired_peripheral(index);
+        if (!response.found) {
+            break;
+        }
+
+        BluetoothAddress address = std::string(response.address);
+        auto peripheral = peripherals_.find(address);
+        if (peripheral == peripherals_.end()) {
+            advertising_data_t data{};
+            data.identifier = address;
+            data.address_type = static_cast<BluetoothAddressType>(response.address_type);
+            data.mac_address = address;
+            data.connectable = true;
+            peripheral = peripherals_.emplace(address, std::make_shared<PeripheralDongl>(_serial_protocol, data)).first;
+        }
+        paired_peripherals.push_back(peripheral->second);
+    }
+
+    return paired_peripherals;
+}
 
 void AdapterDongl::_scan_received_callback(advertising_data_t data) {
     if (this->peripherals_.count(data.mac_address) == 0) {
@@ -226,6 +258,26 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             for (auto& [address, peripheral] : this->peripherals_) {
                 if (peripheral->conn_handle() == event.evt.value_changed_evt.conn_handle) {
                     peripheral->notify_value_changed(event.evt.value_changed_evt);
+                    break;
+                }
+            }
+            break;
+        }
+
+        case simpleble_Event_passkey_display_evt_tag: {
+            for (auto& [address, peripheral] : this->peripherals_) {
+                if (peripheral->conn_handle() == event.evt.passkey_display_evt.conn_handle) {
+                    peripheral->notify_passkey_display(event.evt.passkey_display_evt);
+                    break;
+                }
+            }
+            break;
+        }
+
+        case simpleble_Event_auth_key_request_evt_tag: {
+            for (auto& [address, peripheral] : this->peripherals_) {
+                if (peripheral->conn_handle() == event.evt.auth_key_request_evt.conn_handle) {
+                    peripheral->notify_auth_key_request(event.evt.auth_key_request_evt);
                     break;
                 }
             }

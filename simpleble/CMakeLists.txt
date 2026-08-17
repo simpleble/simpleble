@@ -165,6 +165,7 @@ target_compile_definitions(simpleble PRIVATE
 set(SIMPLEBLE_DONGL_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/usb/UsbHelper.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/AdvancedDongl.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/BackendDongl.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/AdapterDongl.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl/PeripheralDongl.cpp

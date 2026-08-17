@@ -6,6 +6,7 @@
 
 #include <simpleble/Exceptions.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -98,9 +99,33 @@ bool PeripheralDongl::is_connected() { return _conn_handle != BLE_CONN_HANDLE_IN
 
 bool PeripheralDongl::is_connectable() { return _connectable; }
 
-bool PeripheralDongl::is_paired() { return false; }
+bool PeripheralDongl::is_paired() {
+    return _serial_protocol->simpleble_is_paired(static_cast<simpleble_BluetoothAddressType>(_address_type), _address)
+        .is_paired;
+}
 
-void PeripheralDongl::unpair() {}
+void PeripheralDongl::unpair() {
+    auto response = _serial_protocol->simpleble_unpair(static_cast<simpleble_BluetoothAddressType>(_address_type),
+                                                       _address);
+    if (response.ret_code != 0) {
+        throw Exception::OperationFailed(fmt::format("Failed to unpair: {}", response.ret_code));
+    }
+}
+
+void PeripheralDongl::set_passkey_request_callback(const std::function<std::optional<std::string>()>& callback) {
+    std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
+    passkey_request_callback_ = callback;
+}
+
+void PeripheralDongl::set_passkey_display_callback(const std::function<void(const std::string& passkey)>& callback) {
+    std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
+    passkey_display_callback_ = callback;
+}
+
+void PeripheralDongl::set_numeric_comparison_callback(const std::function<bool(const std::string& passkey)>& callback) {
+    std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
+    numeric_comparison_callback_ = callback;
+}
 
 SharedPtrVector<ServiceBase> PeripheralDongl::available_services() {
     SharedPtrVector<ServiceBase> service_list;
@@ -295,6 +320,7 @@ bool PeripheralDongl::_attempt_connect() {
     }
 
     _conn_handle = BLE_CONN_HANDLE_INVALID;
+    _services.clear();
 
     auto response = _serial_protocol->simpleble_connect(static_cast<simpleble_BluetoothAddressType>(_address_type),
                                                         _address);
@@ -339,7 +365,8 @@ bool PeripheralDongl::_attempt_connect() {
         if (service.uuid.empty()) {
             simpleble_ReadRsp rsp = _serial_protocol->simpleble_read(_conn_handle, service.start_handle);
             if (rsp.ret_code != 0) {
-                SIMPLEBLE_LOG_ERROR(fmt::format("Failed to read UUID for service {} - ret_code: {}", service.start_handle, rsp.ret_code));
+                SIMPLEBLE_LOG_ERROR(fmt::format("Failed to read UUID for service {} - ret_code: {}",
+                                                service.start_handle, rsp.ret_code));
                 continue;
             }
 
@@ -362,8 +389,8 @@ bool PeripheralDongl::_attempt_connect() {
             if (characteristic.uuid.empty()) {
                 simpleble_ReadRsp rsp = _serial_protocol->simpleble_read(_conn_handle, characteristic.handle_decl);
                 if (rsp.ret_code != 0) {
-                    SIMPLEBLE_LOG_ERROR(fmt::format("Failed to read UUID for characteristic {} - ret_code: {}", characteristic.handle_decl,
-                                 rsp.ret_code));
+                    SIMPLEBLE_LOG_ERROR(fmt::format("Failed to read UUID for characteristic {} - ret_code: {}",
+                                                    characteristic.handle_decl, rsp.ret_code));
                     continue;
                 }
 
@@ -455,15 +482,119 @@ void PeripheralDongl::notify_descriptor_discovered(simpleble_DescriptorDiscovere
     }
 }
 
-void PeripheralDongl::notify_attribute_discovery_complete() {
-    attributes_discovered_cv_.notify_all();
-}
+void PeripheralDongl::notify_attribute_discovery_complete() { attributes_discovered_cv_.notify_all(); }
 
 void PeripheralDongl::notify_value_changed(simpleble_ValueChangedEvt const& evt) {
     ByteArray data(evt.data.bytes, evt.data.bytes + evt.data.size);
     std::function<void(ByteArray)> callback = _callbacks_on_value_changed[evt.handle];
     if (callback) {
         callback(data);
+    }
+}
+
+void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& evt) {
+    const std::string passkey = evt.passkey;
+    if (evt.match_request) {
+        std::function<bool(const std::string&)> callback;
+        {
+            std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
+            callback = numeric_comparison_callback_;
+        }
+
+        pairing_task_runner_.dispatch(
+            [this, callback = std::move(callback), conn_handle = evt.conn_handle, request_id = evt.request_id,
+             passkey]() -> std::optional<std::chrono::milliseconds> {
+                bool accept = false;
+                try {
+                    if (callback) {
+                        accept = callback(passkey);
+                    }
+                } catch (const std::exception& e) {
+                    SIMPLEBLE_LOG_ERROR(fmt::format("Numeric comparison callback failed: {}", e.what()));
+                } catch (...) {
+                    SIMPLEBLE_LOG_ERROR("Numeric comparison callback failed with an unknown exception");
+                }
+
+                _send_auth_key_reply(conn_handle, request_id, {}, accept);
+                return std::nullopt;
+            },
+            0ms);
+        return;
+    }
+
+    std::function<void(const std::string&)> callback;
+    {
+        std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
+        callback = passkey_display_callback_;
+    }
+    if (!callback) {
+        return;
+    }
+
+    pairing_task_runner_.dispatch(
+        [callback = std::move(callback), passkey]() -> std::optional<std::chrono::milliseconds> {
+            try {
+                callback(passkey);
+            } catch (const std::exception& e) {
+                SIMPLEBLE_LOG_ERROR(fmt::format("Passkey display callback failed: {}", e.what()));
+            } catch (...) {
+                SIMPLEBLE_LOG_ERROR("Passkey display callback failed with an unknown exception");
+            }
+            return std::nullopt;
+        },
+        0ms);
+}
+
+void PeripheralDongl::notify_auth_key_request(simpleble_AuthKeyRequestEvt const& evt) {
+    std::function<std::optional<std::string>()> callback;
+    if (evt.key_type == simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY) {
+        std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
+        callback = passkey_request_callback_;
+    } else {
+        SIMPLEBLE_LOG_WARN(fmt::format("Unsupported pairing key type: {}", static_cast<int>(evt.key_type)));
+    }
+
+    pairing_task_runner_.dispatch(
+        [this, callback = std::move(callback), conn_handle = evt.conn_handle,
+         request_id = evt.request_id]() -> std::optional<std::chrono::milliseconds> {
+            std::optional<std::string> passkey;
+            try {
+                if (callback) {
+                    passkey = callback();
+                }
+            } catch (const std::exception& e) {
+                SIMPLEBLE_LOG_ERROR(fmt::format("Passkey request callback failed: {}", e.what()));
+            } catch (...) {
+                SIMPLEBLE_LOG_ERROR("Passkey request callback failed with an unknown exception");
+            }
+
+            std::vector<uint8_t> key;
+            const bool accept = passkey && passkey->size() == 6 &&
+                                std::all_of(passkey->begin(), passkey->end(),
+                                            [](char c) { return c >= '0' && c <= '9'; });
+            if (accept) {
+                key.assign(passkey->begin(), passkey->end());
+            } else if (passkey) {
+                SIMPLEBLE_LOG_WARN("Passkey request callback returned an invalid passkey");
+            }
+
+            _send_auth_key_reply(conn_handle, request_id, key, accept);
+            return std::nullopt;
+        },
+        0ms);
+}
+
+void PeripheralDongl::_send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key,
+                                           bool accept) {
+    try {
+        auto response = _serial_protocol->simpleble_auth_key_reply(conn_handle, request_id, key, accept);
+        if (response.ret_code != 0) {
+            SIMPLEBLE_LOG_ERROR(fmt::format("Failed to reply to pairing request: {}", response.ret_code));
+        }
+    } catch (const std::exception& e) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to send pairing reply: {}", e.what()));
+    } catch (...) {
+        SIMPLEBLE_LOG_ERROR("Failed to send pairing reply with an unknown exception");
     }
 }
 

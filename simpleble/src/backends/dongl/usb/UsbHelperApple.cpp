@@ -184,6 +184,11 @@ void UsbHelperApple::_configure_serial_port() {
     tty.c_cc[VMIN] = 0;   // Read doesn't block
     tty.c_cc[VTIME] = 0;  // 0.0 seconds read timeout
 
+    // IOSSIOSPEED can leave a custom rate in the driver that tcsetattr() does
+    // not accept on the next open. Restore a standard termios rate first.
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
     // Apply the settings
     if (tcsetattr(_serial_fd, TCSANOW, &tty) != 0) {
         throw std::runtime_error("Failed to set serial port attributes: " + std::string(strerror(errno)));

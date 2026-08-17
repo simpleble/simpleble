@@ -63,6 +63,21 @@ PB_BIND(simpleble_ReadCmd, simpleble_ReadCmd, AUTO)
 PB_BIND(simpleble_WriteCmd, simpleble_WriteCmd, 2)
 
 
+PB_BIND(simpleble_AuthKeyReplyCmd, simpleble_AuthKeyReplyCmd, AUTO)
+
+
+PB_BIND(simpleble_IsPairedCmd, simpleble_IsPairedCmd, AUTO)
+
+
+PB_BIND(simpleble_UnpairCmd, simpleble_UnpairCmd, AUTO)
+
+
+PB_BIND(simpleble_GetPairedPeripheralCmd, simpleble_GetPairedPeripheralCmd, AUTO)
+
+
+PB_BIND(simpleble_GetPairedPeripheralCountCmd, simpleble_GetPairedPeripheralCountCmd, AUTO)
+
+
 PB_BIND(simpleble_InitRsp, simpleble_InitRsp, AUTO)
 
 
@@ -85,6 +100,21 @@ PB_BIND(simpleble_ReadRsp, simpleble_ReadRsp, 2)
 
 
 PB_BIND(simpleble_WriteRsp, simpleble_WriteRsp, AUTO)
+
+
+PB_BIND(simpleble_AuthKeyReplyRsp, simpleble_AuthKeyReplyRsp, AUTO)
+
+
+PB_BIND(simpleble_IsPairedRsp, simpleble_IsPairedRsp, AUTO)
+
+
+PB_BIND(simpleble_UnpairRsp, simpleble_UnpairRsp, AUTO)
+
+
+PB_BIND(simpleble_GetPairedPeripheralRsp, simpleble_GetPairedPeripheralRsp, AUTO)
+
+
+PB_BIND(simpleble_GetPairedPeripheralCountRsp, simpleble_GetPairedPeripheralCountRsp, AUTO)
 
 
 PB_BIND(simpleble_AdvEvt, simpleble_AdvEvt, 2)
@@ -111,6 +141,12 @@ PB_BIND(simpleble_AttributeDiscoveryCompleteEvt, simpleble_AttributeDiscoveryCom
 PB_BIND(simpleble_ValueChangedEvt, simpleble_ValueChangedEvt, 2)
 
 
+PB_BIND(simpleble_PasskeyDisplayEvt, simpleble_PasskeyDisplayEvt, AUTO)
+
+
+PB_BIND(simpleble_AuthKeyRequestEvt, simpleble_AuthKeyRequestEvt, AUTO)
+
+
 PB_BIND(simpleble_Command, simpleble_Command, 2)
 
 
@@ -118,12 +154,3 @@ PB_BIND(simpleble_Response, simpleble_Response, 2)
 
 
 PB_BIND(simpleble_Event, simpleble_Event, 2)
-
-
-
-
-
-
-
-
-

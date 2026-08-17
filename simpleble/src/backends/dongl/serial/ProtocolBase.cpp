@@ -10,7 +10,7 @@ using namespace SimpleBLE::Dongl::Serial;
 ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_unique<Wire>(device_path)) {
     // Set up the Wire packet callback to handle incoming packets
     _wire->set_packet_callback([this](const std::vector<uint8_t>& packet) {
-        dongl_D2H d2h;
+        dongl_D2H d2h = dongl_D2H_init_zero;
         pb_istream_t stream = pb_istream_from_buffer(packet.data(), packet.size());
         if (!pb_decode(&stream, dongl_D2H_fields, &d2h)) {
             // TODO: Handle decoding failure
@@ -29,6 +29,7 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
             }
 
         } else if (d2h.which_type == dongl_D2H_evt_tag) {
+            std::lock_guard<std::mutex> lock(_event_mutex);
             if (_event_callback) {
                 _event_callback(d2h.type.evt);
             }
@@ -40,16 +41,16 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
     });
 }
 
-ProtocolBase::~ProtocolBase() {}
+ProtocolBase::~ProtocolBase() {
+    // The reader callback captures this object, so stop and join its thread
+    // before the callback state and mutexes are destroyed.
+    _wire.reset();
+}
 
 dongl_Response ProtocolBase::exchange(const dongl_Command& command) {
-    // Check if there's already a pending sync operation
-    {
-        std::lock_guard<std::mutex> lock(_pending_mutex);
-        if (_pending_response.has_value()) {
-            throw std::runtime_error("Another sync command is already pending");
-        }
-    }
+    // The wire protocol has no transaction IDs, so serialize exchanges and
+    // discard any response that arrived after a previous timeout.
+    std::lock_guard<std::mutex> exchange_lock(_exchange_mutex);
 
     // Clear any previous response and send the command
     {
@@ -91,5 +92,6 @@ dongl_Response ProtocolBase::exchange(const dongl_Command& command) {
 }
 
 void ProtocolBase::set_event_callback(std::function<void(const dongl_Event&)> callback) {
+    std::lock_guard<std::mutex> lock(_event_mutex);
     _event_callback = std::move(callback);
 }

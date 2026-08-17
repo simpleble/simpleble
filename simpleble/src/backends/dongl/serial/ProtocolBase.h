@@ -43,10 +43,12 @@ class ProtocolBase {
   private:
     std::unique_ptr<Wire> _wire;
     std::function<void(const dongl_Event&)> _event_callback;
+    std::mutex _event_mutex;
 
     std::optional<dongl_Response> _pending_response;
     std::condition_variable _response_cv;
     std::mutex _pending_mutex;
+    std::mutex _exchange_mutex;
 };
 
 }  // namespace Serial

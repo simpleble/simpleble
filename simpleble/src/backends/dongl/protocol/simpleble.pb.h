@@ -28,6 +28,11 @@ typedef enum _simpleble_ValueChangedType {
     simpleble_ValueChangedType_INDICATION = 2
 } simpleble_ValueChangedType;
 
+typedef enum _simpleble_PairingAuthKeyType {
+    simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_NONE = 0,
+    simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY = 1
+} simpleble_PairingAuthKeyType;
+
 /* Struct definitions */
 typedef struct _simpleble_UUID16Bit {
     uint16_t uuid;
@@ -142,6 +147,32 @@ typedef struct _simpleble_WriteCmd {
     simpleble_WriteCmd_data_t data; /* Variable length */
 } simpleble_WriteCmd;
 
+typedef PB_BYTES_ARRAY_T(16) simpleble_AuthKeyReplyCmd_key_t;
+typedef struct _simpleble_AuthKeyReplyCmd {
+    uint16_t conn_handle;
+    simpleble_AuthKeyReplyCmd_key_t key;
+    bool accept;
+    uint32_t request_id;
+} simpleble_AuthKeyReplyCmd;
+
+typedef struct _simpleble_IsPairedCmd {
+    simpleble_BluetoothAddressType address_type;
+    char address[18]; /* 17 characters + null terminator */
+} simpleble_IsPairedCmd;
+
+typedef struct _simpleble_UnpairCmd {
+    simpleble_BluetoothAddressType address_type;
+    char address[18]; /* 17 characters + null terminator */
+} simpleble_UnpairCmd;
+
+typedef struct _simpleble_GetPairedPeripheralCmd {
+    uint16_t index;
+} simpleble_GetPairedPeripheralCmd;
+
+typedef struct _simpleble_GetPairedPeripheralCountCmd {
+    char dummy_field;
+} simpleble_GetPairedPeripheralCountCmd;
+
 typedef struct _simpleble_InitRsp {
     uint32_t ret_code;
 } simpleble_InitRsp;
@@ -177,6 +208,28 @@ typedef struct _simpleble_WriteRsp {
     uint32_t ret_code;
     uint16_t conn_handle;
 } simpleble_WriteRsp;
+
+typedef struct _simpleble_AuthKeyReplyRsp {
+    uint32_t ret_code;
+} simpleble_AuthKeyReplyRsp;
+
+typedef struct _simpleble_IsPairedRsp {
+    bool is_paired;
+} simpleble_IsPairedRsp;
+
+typedef struct _simpleble_UnpairRsp {
+    uint32_t ret_code;
+} simpleble_UnpairRsp;
+
+typedef struct _simpleble_GetPairedPeripheralRsp {
+    bool found;
+    simpleble_BluetoothAddressType address_type;
+    char address[18];
+} simpleble_GetPairedPeripheralRsp;
+
+typedef struct _simpleble_GetPairedPeripheralCountRsp {
+    uint16_t count;
+} simpleble_GetPairedPeripheralCountRsp;
 
 typedef struct _simpleble_AdvEvt {
     char identifier[32];
@@ -237,6 +290,19 @@ typedef struct _simpleble_ValueChangedEvt {
     simpleble_ValueChangedEvt_data_t data; /* Variable length */
 } simpleble_ValueChangedEvt;
 
+typedef struct _simpleble_PasskeyDisplayEvt {
+    uint16_t conn_handle;
+    char passkey[7];
+    bool match_request;
+    uint32_t request_id;
+} simpleble_PasskeyDisplayEvt;
+
+typedef struct _simpleble_AuthKeyRequestEvt {
+    uint16_t conn_handle;
+    simpleble_PairingAuthKeyType key_type;
+    uint32_t request_id;
+} simpleble_AuthKeyRequestEvt;
+
 typedef struct _simpleble_Command {
     pb_size_t which_cmd;
     union {
@@ -248,6 +314,11 @@ typedef struct _simpleble_Command {
         simpleble_ReadCmd read;
         simpleble_WriteCmd write;
         simpleble_ScanIsActiveCmd scan_is_active;
+        simpleble_IsPairedCmd is_paired;
+        simpleble_UnpairCmd unpair;
+        simpleble_AuthKeyReplyCmd auth_key_reply;
+        simpleble_GetPairedPeripheralCmd get_paired_peripheral;
+        simpleble_GetPairedPeripheralCountCmd get_paired_peripheral_count;
     } cmd;
 } simpleble_Command;
 
@@ -262,6 +333,11 @@ typedef struct _simpleble_Response {
         simpleble_ReadRsp read;
         simpleble_WriteRsp write;
         simpleble_ScanIsActiveRsp scan_is_active;
+        simpleble_IsPairedRsp is_paired;
+        simpleble_UnpairRsp unpair;
+        simpleble_AuthKeyReplyRsp auth_key_reply;
+        simpleble_GetPairedPeripheralRsp get_paired_peripheral;
+        simpleble_GetPairedPeripheralCountRsp get_paired_peripheral_count;
     } rsp;
 } simpleble_Response;
 
@@ -276,6 +352,8 @@ typedef struct _simpleble_Event {
         simpleble_DescriptorDiscoveredEvt descriptor_discovered_evt;
         simpleble_AttributeDiscoveryCompleteEvt attribute_discovery_complete_evt;
         simpleble_ValueChangedEvt value_changed_evt;
+        simpleble_PasskeyDisplayEvt passkey_display_evt;
+        simpleble_AuthKeyRequestEvt auth_key_request_evt;
     } evt;
 } simpleble_Event;
 
@@ -296,6 +374,10 @@ extern "C" {
 #define _simpleble_ValueChangedType_MIN simpleble_ValueChangedType_VALUE_CHANGED_INVALID
 #define _simpleble_ValueChangedType_MAX simpleble_ValueChangedType_INDICATION
 #define _simpleble_ValueChangedType_ARRAYSIZE ((simpleble_ValueChangedType)(simpleble_ValueChangedType_INDICATION+1))
+
+#define _simpleble_PairingAuthKeyType_MIN simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_NONE
+#define _simpleble_PairingAuthKeyType_MAX simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY
+#define _simpleble_PairingAuthKeyType_ARRAYSIZE ((simpleble_PairingAuthKeyType)(simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY+1))
 
 
 
@@ -319,11 +401,24 @@ extern "C" {
 #define simpleble_WriteCmd_op_ENUMTYPE simpleble_WriteOperation
 
 
+#define simpleble_IsPairedCmd_address_type_ENUMTYPE simpleble_BluetoothAddressType
+
+#define simpleble_UnpairCmd_address_type_ENUMTYPE simpleble_BluetoothAddressType
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+#define simpleble_GetPairedPeripheralRsp_address_type_ENUMTYPE simpleble_BluetoothAddressType
 
 
 #define simpleble_AdvEvt_address_type_ENUMTYPE simpleble_BluetoothAddressType
@@ -335,6 +430,9 @@ extern "C" {
 
 
 #define simpleble_ValueChangedEvt_type_ENUMTYPE simpleble_ValueChangedType
+
+
+#define simpleble_AuthKeyRequestEvt_key_type_ENUMTYPE simpleble_PairingAuthKeyType
 
 
 
@@ -360,6 +458,11 @@ extern "C" {
 #define simpleble_DisconnectCmd_init_default     {0}
 #define simpleble_ReadCmd_init_default           {0, 0}
 #define simpleble_WriteCmd_init_default          {0, 0, _simpleble_WriteOperation_MIN, {0, {0}}}
+#define simpleble_AuthKeyReplyCmd_init_default   {0, {0, {0}}, 0, 0}
+#define simpleble_IsPairedCmd_init_default       {_simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_UnpairCmd_init_default         {_simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_GetPairedPeripheralCmd_init_default {0}
+#define simpleble_GetPairedPeripheralCountCmd_init_default {0}
 #define simpleble_InitRsp_init_default           {0}
 #define simpleble_ScanStartRsp_init_default      {0}
 #define simpleble_ScanStopRsp_init_default       {0}
@@ -368,6 +471,11 @@ extern "C" {
 #define simpleble_DisconnectRsp_init_default     {0}
 #define simpleble_ReadRsp_init_default           {0, 0, {0, {0}}}
 #define simpleble_WriteRsp_init_default          {0, 0}
+#define simpleble_AuthKeyReplyRsp_init_default   {0}
+#define simpleble_IsPairedRsp_init_default       {0}
+#define simpleble_UnpairRsp_init_default         {0}
+#define simpleble_GetPairedPeripheralRsp_init_default {0, _simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_GetPairedPeripheralCountRsp_init_default {0}
 #define simpleble_AdvEvt_init_default            {"", _simpleble_BluetoothAddressType_MIN, "", 0, 0, 0, 0, {simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default}, 0, {simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default}}
 #define simpleble_ConnectionEvt_init_default     {"", 0}
 #define simpleble_DisconnectionEvt_init_default  {0}
@@ -376,6 +484,8 @@ extern "C" {
 #define simpleble_DescriptorDiscoveredEvt_init_default {0, 0, false, simpleble_UUID16Bit_init_default}
 #define simpleble_AttributeDiscoveryCompleteEvt_init_default {0}
 #define simpleble_ValueChangedEvt_init_default   {0, 0, _simpleble_ValueChangedType_MIN, {0, {0}}}
+#define simpleble_PasskeyDisplayEvt_init_default {0, "", 0, 0}
+#define simpleble_AuthKeyRequestEvt_init_default {0, _simpleble_PairingAuthKeyType_MIN, 0}
 #define simpleble_Command_init_default           {0, {simpleble_InitCmd_init_default}}
 #define simpleble_Response_init_default          {0, {simpleble_InitRsp_init_default}}
 #define simpleble_Event_init_default             {0, {simpleble_AdvEvt_init_default}}
@@ -398,6 +508,11 @@ extern "C" {
 #define simpleble_DisconnectCmd_init_zero        {0}
 #define simpleble_ReadCmd_init_zero              {0, 0}
 #define simpleble_WriteCmd_init_zero             {0, 0, _simpleble_WriteOperation_MIN, {0, {0}}}
+#define simpleble_AuthKeyReplyCmd_init_zero      {0, {0, {0}}, 0, 0}
+#define simpleble_IsPairedCmd_init_zero          {_simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_UnpairCmd_init_zero            {_simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_GetPairedPeripheralCmd_init_zero {0}
+#define simpleble_GetPairedPeripheralCountCmd_init_zero {0}
 #define simpleble_InitRsp_init_zero              {0}
 #define simpleble_ScanStartRsp_init_zero         {0}
 #define simpleble_ScanStopRsp_init_zero          {0}
@@ -406,6 +521,11 @@ extern "C" {
 #define simpleble_DisconnectRsp_init_zero        {0}
 #define simpleble_ReadRsp_init_zero              {0, 0, {0, {0}}}
 #define simpleble_WriteRsp_init_zero             {0, 0}
+#define simpleble_AuthKeyReplyRsp_init_zero      {0}
+#define simpleble_IsPairedRsp_init_zero          {0}
+#define simpleble_UnpairRsp_init_zero            {0}
+#define simpleble_GetPairedPeripheralRsp_init_zero {0, _simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_GetPairedPeripheralCountRsp_init_zero {0}
 #define simpleble_AdvEvt_init_zero               {"", _simpleble_BluetoothAddressType_MIN, "", 0, 0, 0, 0, {simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero}, 0, {simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero}}
 #define simpleble_ConnectionEvt_init_zero        {"", 0}
 #define simpleble_DisconnectionEvt_init_zero     {0}
@@ -414,6 +534,8 @@ extern "C" {
 #define simpleble_DescriptorDiscoveredEvt_init_zero {0, 0, false, simpleble_UUID16Bit_init_zero}
 #define simpleble_AttributeDiscoveryCompleteEvt_init_zero {0}
 #define simpleble_ValueChangedEvt_init_zero      {0, 0, _simpleble_ValueChangedType_MIN, {0, {0}}}
+#define simpleble_PasskeyDisplayEvt_init_zero    {0, "", 0, 0}
+#define simpleble_AuthKeyRequestEvt_init_zero    {0, _simpleble_PairingAuthKeyType_MIN, 0}
 #define simpleble_Command_init_zero              {0, {simpleble_InitCmd_init_zero}}
 #define simpleble_Response_init_zero             {0, {simpleble_InitRsp_init_zero}}
 #define simpleble_Event_init_zero                {0, {simpleble_AdvEvt_init_zero}}
@@ -457,6 +579,15 @@ extern "C" {
 #define simpleble_WriteCmd_handle_tag            2
 #define simpleble_WriteCmd_op_tag                3
 #define simpleble_WriteCmd_data_tag              4
+#define simpleble_AuthKeyReplyCmd_conn_handle_tag 1
+#define simpleble_AuthKeyReplyCmd_key_tag        2
+#define simpleble_AuthKeyReplyCmd_accept_tag     3
+#define simpleble_AuthKeyReplyCmd_request_id_tag 4
+#define simpleble_IsPairedCmd_address_type_tag   1
+#define simpleble_IsPairedCmd_address_tag        2
+#define simpleble_UnpairCmd_address_type_tag     1
+#define simpleble_UnpairCmd_address_tag          2
+#define simpleble_GetPairedPeripheralCmd_index_tag 1
 #define simpleble_InitRsp_ret_code_tag           1
 #define simpleble_ScanStartRsp_ret_code_tag      1
 #define simpleble_ScanStopRsp_ret_code_tag       1
@@ -468,6 +599,13 @@ extern "C" {
 #define simpleble_ReadRsp_data_tag               3
 #define simpleble_WriteRsp_ret_code_tag          1
 #define simpleble_WriteRsp_conn_handle_tag       2
+#define simpleble_AuthKeyReplyRsp_ret_code_tag   1
+#define simpleble_IsPairedRsp_is_paired_tag      1
+#define simpleble_UnpairRsp_ret_code_tag         1
+#define simpleble_GetPairedPeripheralRsp_found_tag 1
+#define simpleble_GetPairedPeripheralRsp_address_type_tag 2
+#define simpleble_GetPairedPeripheralRsp_address_tag 3
+#define simpleble_GetPairedPeripheralCountRsp_count_tag 1
 #define simpleble_AdvEvt_identifier_tag          1
 #define simpleble_AdvEvt_address_type_tag        2
 #define simpleble_AdvEvt_address_tag             3
@@ -496,6 +634,13 @@ extern "C" {
 #define simpleble_ValueChangedEvt_handle_tag     2
 #define simpleble_ValueChangedEvt_type_tag       3
 #define simpleble_ValueChangedEvt_data_tag       4
+#define simpleble_PasskeyDisplayEvt_conn_handle_tag 1
+#define simpleble_PasskeyDisplayEvt_passkey_tag  2
+#define simpleble_PasskeyDisplayEvt_match_request_tag 3
+#define simpleble_PasskeyDisplayEvt_request_id_tag 4
+#define simpleble_AuthKeyRequestEvt_conn_handle_tag 1
+#define simpleble_AuthKeyRequestEvt_key_type_tag 2
+#define simpleble_AuthKeyRequestEvt_request_id_tag 3
 #define simpleble_Command_init_tag               1
 #define simpleble_Command_scan_start_tag         2
 #define simpleble_Command_scan_stop_tag          3
@@ -504,6 +649,11 @@ extern "C" {
 #define simpleble_Command_read_tag               6
 #define simpleble_Command_write_tag              7
 #define simpleble_Command_scan_is_active_tag     8
+#define simpleble_Command_is_paired_tag          9
+#define simpleble_Command_unpair_tag             10
+#define simpleble_Command_auth_key_reply_tag     11
+#define simpleble_Command_get_paired_peripheral_tag 12
+#define simpleble_Command_get_paired_peripheral_count_tag 13
 #define simpleble_Response_init_tag              1
 #define simpleble_Response_scan_start_tag        2
 #define simpleble_Response_scan_stop_tag         3
@@ -512,6 +662,11 @@ extern "C" {
 #define simpleble_Response_read_tag              6
 #define simpleble_Response_write_tag             7
 #define simpleble_Response_scan_is_active_tag    8
+#define simpleble_Response_is_paired_tag         9
+#define simpleble_Response_unpair_tag            10
+#define simpleble_Response_auth_key_reply_tag    11
+#define simpleble_Response_get_paired_peripheral_tag 12
+#define simpleble_Response_get_paired_peripheral_count_tag 13
 #define simpleble_Event_adv_evt_tag              1
 #define simpleble_Event_connection_evt_tag       2
 #define simpleble_Event_disconnection_evt_tag    3
@@ -520,6 +675,8 @@ extern "C" {
 #define simpleble_Event_descriptor_discovered_evt_tag 6
 #define simpleble_Event_attribute_discovery_complete_evt_tag 7
 #define simpleble_Event_value_changed_evt_tag    8
+#define simpleble_Event_passkey_display_evt_tag  9
+#define simpleble_Event_auth_key_request_evt_tag 10
 
 /* Struct field encoding specification for nanopb */
 #define simpleble_UUID16Bit_FIELDLIST(X, a) \
@@ -651,6 +808,36 @@ X(a, STATIC,   SINGULAR, BYTES,    data,              4)
 #define simpleble_WriteCmd_CALLBACK NULL
 #define simpleble_WriteCmd_DEFAULT NULL
 
+#define simpleble_AuthKeyReplyCmd_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       1) \
+X(a, STATIC,   SINGULAR, BYTES,    key,               2) \
+X(a, STATIC,   SINGULAR, BOOL,     accept,            3) \
+X(a, STATIC,   SINGULAR, UINT32,   request_id,        4)
+#define simpleble_AuthKeyReplyCmd_CALLBACK NULL
+#define simpleble_AuthKeyReplyCmd_DEFAULT NULL
+
+#define simpleble_IsPairedCmd_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UENUM,    address_type,      1) \
+X(a, STATIC,   SINGULAR, STRING,   address,           2)
+#define simpleble_IsPairedCmd_CALLBACK NULL
+#define simpleble_IsPairedCmd_DEFAULT NULL
+
+#define simpleble_UnpairCmd_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UENUM,    address_type,      1) \
+X(a, STATIC,   SINGULAR, STRING,   address,           2)
+#define simpleble_UnpairCmd_CALLBACK NULL
+#define simpleble_UnpairCmd_DEFAULT NULL
+
+#define simpleble_GetPairedPeripheralCmd_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   index,             1)
+#define simpleble_GetPairedPeripheralCmd_CALLBACK NULL
+#define simpleble_GetPairedPeripheralCmd_DEFAULT NULL
+
+#define simpleble_GetPairedPeripheralCountCmd_FIELDLIST(X, a) \
+
+#define simpleble_GetPairedPeripheralCountCmd_CALLBACK NULL
+#define simpleble_GetPairedPeripheralCountCmd_DEFAULT NULL
+
 #define simpleble_InitRsp_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   ret_code,          1)
 #define simpleble_InitRsp_CALLBACK NULL
@@ -693,6 +880,33 @@ X(a, STATIC,   SINGULAR, UINT32,   ret_code,          1) \
 X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       2)
 #define simpleble_WriteRsp_CALLBACK NULL
 #define simpleble_WriteRsp_DEFAULT NULL
+
+#define simpleble_AuthKeyReplyRsp_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   ret_code,          1)
+#define simpleble_AuthKeyReplyRsp_CALLBACK NULL
+#define simpleble_AuthKeyReplyRsp_DEFAULT NULL
+
+#define simpleble_IsPairedRsp_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, BOOL,     is_paired,         1)
+#define simpleble_IsPairedRsp_CALLBACK NULL
+#define simpleble_IsPairedRsp_DEFAULT NULL
+
+#define simpleble_UnpairRsp_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   ret_code,          1)
+#define simpleble_UnpairRsp_CALLBACK NULL
+#define simpleble_UnpairRsp_DEFAULT NULL
+
+#define simpleble_GetPairedPeripheralRsp_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, BOOL,     found,             1) \
+X(a, STATIC,   SINGULAR, UENUM,    address_type,      2) \
+X(a, STATIC,   SINGULAR, STRING,   address,           3)
+#define simpleble_GetPairedPeripheralRsp_CALLBACK NULL
+#define simpleble_GetPairedPeripheralRsp_DEFAULT NULL
+
+#define simpleble_GetPairedPeripheralCountRsp_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   count,             1)
+#define simpleble_GetPairedPeripheralCountRsp_CALLBACK NULL
+#define simpleble_GetPairedPeripheralCountRsp_DEFAULT NULL
 
 #define simpleble_AdvEvt_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, STRING,   identifier,        1) \
@@ -760,6 +974,21 @@ X(a, STATIC,   SINGULAR, BYTES,    data,              4)
 #define simpleble_ValueChangedEvt_CALLBACK NULL
 #define simpleble_ValueChangedEvt_DEFAULT NULL
 
+#define simpleble_PasskeyDisplayEvt_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       1) \
+X(a, STATIC,   SINGULAR, STRING,   passkey,           2) \
+X(a, STATIC,   SINGULAR, BOOL,     match_request,     3) \
+X(a, STATIC,   SINGULAR, UINT32,   request_id,        4)
+#define simpleble_PasskeyDisplayEvt_CALLBACK NULL
+#define simpleble_PasskeyDisplayEvt_DEFAULT NULL
+
+#define simpleble_AuthKeyRequestEvt_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       1) \
+X(a, STATIC,   SINGULAR, UENUM,    key_type,          2) \
+X(a, STATIC,   SINGULAR, UINT32,   request_id,        3)
+#define simpleble_AuthKeyRequestEvt_CALLBACK NULL
+#define simpleble_AuthKeyRequestEvt_DEFAULT NULL
+
 #define simpleble_Command_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,init,cmd.init),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,scan_start,cmd.scan_start),   2) \
@@ -768,7 +997,12 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,connect,cmd.connect),   4) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,disconnect,cmd.disconnect),   5) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,read,cmd.read),   6) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,write,cmd.write),   7) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,scan_is_active,cmd.scan_is_active),   8)
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,scan_is_active,cmd.scan_is_active),   8) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,is_paired,cmd.is_paired),   9) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,unpair,cmd.unpair),  10) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,auth_key_reply,cmd.auth_key_reply),  11) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,get_paired_peripheral,cmd.get_paired_peripheral),  12) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,get_paired_peripheral_count,cmd.get_paired_peripheral_count),  13)
 #define simpleble_Command_CALLBACK NULL
 #define simpleble_Command_DEFAULT NULL
 #define simpleble_Command_cmd_init_MSGTYPE simpleble_InitCmd
@@ -779,6 +1013,11 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,scan_is_active,cmd.scan_is_active),   8)
 #define simpleble_Command_cmd_read_MSGTYPE simpleble_ReadCmd
 #define simpleble_Command_cmd_write_MSGTYPE simpleble_WriteCmd
 #define simpleble_Command_cmd_scan_is_active_MSGTYPE simpleble_ScanIsActiveCmd
+#define simpleble_Command_cmd_is_paired_MSGTYPE simpleble_IsPairedCmd
+#define simpleble_Command_cmd_unpair_MSGTYPE simpleble_UnpairCmd
+#define simpleble_Command_cmd_auth_key_reply_MSGTYPE simpleble_AuthKeyReplyCmd
+#define simpleble_Command_cmd_get_paired_peripheral_MSGTYPE simpleble_GetPairedPeripheralCmd
+#define simpleble_Command_cmd_get_paired_peripheral_count_MSGTYPE simpleble_GetPairedPeripheralCountCmd
 
 #define simpleble_Response_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,init,rsp.init),   1) \
@@ -788,7 +1027,12 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,connect,rsp.connect),   4) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,disconnect,rsp.disconnect),   5) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,read,rsp.read),   6) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,write,rsp.write),   7) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,scan_is_active,rsp.scan_is_active),   8)
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,scan_is_active,rsp.scan_is_active),   8) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,is_paired,rsp.is_paired),   9) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,unpair,rsp.unpair),  10) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,auth_key_reply,rsp.auth_key_reply),  11) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,get_paired_peripheral,rsp.get_paired_peripheral),  12) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,get_paired_peripheral_count,rsp.get_paired_peripheral_count),  13)
 #define simpleble_Response_CALLBACK NULL
 #define simpleble_Response_DEFAULT NULL
 #define simpleble_Response_rsp_init_MSGTYPE simpleble_InitRsp
@@ -799,6 +1043,11 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,scan_is_active,rsp.scan_is_active),   8)
 #define simpleble_Response_rsp_read_MSGTYPE simpleble_ReadRsp
 #define simpleble_Response_rsp_write_MSGTYPE simpleble_WriteRsp
 #define simpleble_Response_rsp_scan_is_active_MSGTYPE simpleble_ScanIsActiveRsp
+#define simpleble_Response_rsp_is_paired_MSGTYPE simpleble_IsPairedRsp
+#define simpleble_Response_rsp_unpair_MSGTYPE simpleble_UnpairRsp
+#define simpleble_Response_rsp_auth_key_reply_MSGTYPE simpleble_AuthKeyReplyRsp
+#define simpleble_Response_rsp_get_paired_peripheral_MSGTYPE simpleble_GetPairedPeripheralRsp
+#define simpleble_Response_rsp_get_paired_peripheral_count_MSGTYPE simpleble_GetPairedPeripheralCountRsp
 
 #define simpleble_Event_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,adv_evt,evt.adv_evt),   1) \
@@ -808,7 +1057,9 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (evt,service_discovered_evt,evt.service_disco
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,characteristic_discovered_evt,evt.characteristic_discovered_evt),   5) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,descriptor_discovered_evt,evt.descriptor_discovered_evt),   6) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,attribute_discovery_complete_evt,evt.attribute_discovery_complete_evt),   7) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (evt,value_changed_evt,evt.value_changed_evt),   8)
+X(a, STATIC,   ONEOF,    MESSAGE,  (evt,value_changed_evt,evt.value_changed_evt),   8) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (evt,passkey_display_evt,evt.passkey_display_evt),   9) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (evt,auth_key_request_evt,evt.auth_key_request_evt),  10)
 #define simpleble_Event_CALLBACK NULL
 #define simpleble_Event_DEFAULT NULL
 #define simpleble_Event_evt_adv_evt_MSGTYPE simpleble_AdvEvt
@@ -819,6 +1070,8 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (evt,value_changed_evt,evt.value_changed_evt)
 #define simpleble_Event_evt_descriptor_discovered_evt_MSGTYPE simpleble_DescriptorDiscoveredEvt
 #define simpleble_Event_evt_attribute_discovery_complete_evt_MSGTYPE simpleble_AttributeDiscoveryCompleteEvt
 #define simpleble_Event_evt_value_changed_evt_MSGTYPE simpleble_ValueChangedEvt
+#define simpleble_Event_evt_passkey_display_evt_MSGTYPE simpleble_PasskeyDisplayEvt
+#define simpleble_Event_evt_auth_key_request_evt_MSGTYPE simpleble_AuthKeyRequestEvt
 
 extern const pb_msgdesc_t simpleble_UUID16Bit_msg;
 extern const pb_msgdesc_t simpleble_UUID32Bit_msg;
@@ -839,6 +1092,11 @@ extern const pb_msgdesc_t simpleble_ConnectCmd_msg;
 extern const pb_msgdesc_t simpleble_DisconnectCmd_msg;
 extern const pb_msgdesc_t simpleble_ReadCmd_msg;
 extern const pb_msgdesc_t simpleble_WriteCmd_msg;
+extern const pb_msgdesc_t simpleble_AuthKeyReplyCmd_msg;
+extern const pb_msgdesc_t simpleble_IsPairedCmd_msg;
+extern const pb_msgdesc_t simpleble_UnpairCmd_msg;
+extern const pb_msgdesc_t simpleble_GetPairedPeripheralCmd_msg;
+extern const pb_msgdesc_t simpleble_GetPairedPeripheralCountCmd_msg;
 extern const pb_msgdesc_t simpleble_InitRsp_msg;
 extern const pb_msgdesc_t simpleble_ScanStartRsp_msg;
 extern const pb_msgdesc_t simpleble_ScanStopRsp_msg;
@@ -847,6 +1105,11 @@ extern const pb_msgdesc_t simpleble_ConnectRsp_msg;
 extern const pb_msgdesc_t simpleble_DisconnectRsp_msg;
 extern const pb_msgdesc_t simpleble_ReadRsp_msg;
 extern const pb_msgdesc_t simpleble_WriteRsp_msg;
+extern const pb_msgdesc_t simpleble_AuthKeyReplyRsp_msg;
+extern const pb_msgdesc_t simpleble_IsPairedRsp_msg;
+extern const pb_msgdesc_t simpleble_UnpairRsp_msg;
+extern const pb_msgdesc_t simpleble_GetPairedPeripheralRsp_msg;
+extern const pb_msgdesc_t simpleble_GetPairedPeripheralCountRsp_msg;
 extern const pb_msgdesc_t simpleble_AdvEvt_msg;
 extern const pb_msgdesc_t simpleble_ConnectionEvt_msg;
 extern const pb_msgdesc_t simpleble_DisconnectionEvt_msg;
@@ -855,6 +1118,8 @@ extern const pb_msgdesc_t simpleble_CharacteristicDiscoveredEvt_msg;
 extern const pb_msgdesc_t simpleble_DescriptorDiscoveredEvt_msg;
 extern const pb_msgdesc_t simpleble_AttributeDiscoveryCompleteEvt_msg;
 extern const pb_msgdesc_t simpleble_ValueChangedEvt_msg;
+extern const pb_msgdesc_t simpleble_PasskeyDisplayEvt_msg;
+extern const pb_msgdesc_t simpleble_AuthKeyRequestEvt_msg;
 extern const pb_msgdesc_t simpleble_Command_msg;
 extern const pb_msgdesc_t simpleble_Response_msg;
 extern const pb_msgdesc_t simpleble_Event_msg;
@@ -879,6 +1144,11 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_DisconnectCmd_fields &simpleble_DisconnectCmd_msg
 #define simpleble_ReadCmd_fields &simpleble_ReadCmd_msg
 #define simpleble_WriteCmd_fields &simpleble_WriteCmd_msg
+#define simpleble_AuthKeyReplyCmd_fields &simpleble_AuthKeyReplyCmd_msg
+#define simpleble_IsPairedCmd_fields &simpleble_IsPairedCmd_msg
+#define simpleble_UnpairCmd_fields &simpleble_UnpairCmd_msg
+#define simpleble_GetPairedPeripheralCmd_fields &simpleble_GetPairedPeripheralCmd_msg
+#define simpleble_GetPairedPeripheralCountCmd_fields &simpleble_GetPairedPeripheralCountCmd_msg
 #define simpleble_InitRsp_fields &simpleble_InitRsp_msg
 #define simpleble_ScanStartRsp_fields &simpleble_ScanStartRsp_msg
 #define simpleble_ScanStopRsp_fields &simpleble_ScanStopRsp_msg
@@ -887,6 +1157,11 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_DisconnectRsp_fields &simpleble_DisconnectRsp_msg
 #define simpleble_ReadRsp_fields &simpleble_ReadRsp_msg
 #define simpleble_WriteRsp_fields &simpleble_WriteRsp_msg
+#define simpleble_AuthKeyReplyRsp_fields &simpleble_AuthKeyReplyRsp_msg
+#define simpleble_IsPairedRsp_fields &simpleble_IsPairedRsp_msg
+#define simpleble_UnpairRsp_fields &simpleble_UnpairRsp_msg
+#define simpleble_GetPairedPeripheralRsp_fields &simpleble_GetPairedPeripheralRsp_msg
+#define simpleble_GetPairedPeripheralCountRsp_fields &simpleble_GetPairedPeripheralCountRsp_msg
 #define simpleble_AdvEvt_fields &simpleble_AdvEvt_msg
 #define simpleble_ConnectionEvt_fields &simpleble_ConnectionEvt_msg
 #define simpleble_DisconnectionEvt_fields &simpleble_DisconnectionEvt_msg
@@ -895,6 +1170,8 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_DescriptorDiscoveredEvt_fields &simpleble_DescriptorDiscoveredEvt_msg
 #define simpleble_AttributeDiscoveryCompleteEvt_fields &simpleble_AttributeDiscoveryCompleteEvt_msg
 #define simpleble_ValueChangedEvt_fields &simpleble_ValueChangedEvt_msg
+#define simpleble_PasskeyDisplayEvt_fields &simpleble_PasskeyDisplayEvt_msg
+#define simpleble_AuthKeyRequestEvt_fields &simpleble_AuthKeyRequestEvt_msg
 #define simpleble_Command_fields &simpleble_Command_msg
 #define simpleble_Response_fields &simpleble_Response_msg
 #define simpleble_Event_fields &simpleble_Event_msg
@@ -904,6 +1181,9 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_AdvEvt_size                    416
 #define simpleble_AttributeDiscoveryCompleteEvt_size 4
 #define simpleble_Attribute_size                 48
+#define simpleble_AuthKeyReplyCmd_size           30
+#define simpleble_AuthKeyReplyRsp_size           6
+#define simpleble_AuthKeyRequestEvt_size         12
 #define simpleble_CharacteristicDiscoveredEvt_size 34
 #define simpleble_CharacteristicProperties_size  14
 #define simpleble_Characteristic_size            46
@@ -917,9 +1197,16 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_DisconnectRsp_size             6
 #define simpleble_DisconnectionEvt_size          4
 #define simpleble_Event_size                     528
+#define simpleble_GetPairedPeripheralCmd_size    4
+#define simpleble_GetPairedPeripheralCountCmd_size 0
+#define simpleble_GetPairedPeripheralCountRsp_size 4
+#define simpleble_GetPairedPeripheralRsp_size    23
 #define simpleble_InitCmd_size                   0
 #define simpleble_InitRsp_size                   6
+#define simpleble_IsPairedCmd_size               21
+#define simpleble_IsPairedRsp_size               2
 #define simpleble_ManufacturerDataEntry_size     33
+#define simpleble_PasskeyDisplayEvt_size         20
 #define simpleble_ReadCmd_size                   8
 #define simpleble_ReadRsp_size                   525
 #define simpleble_Response_size                  528
@@ -936,6 +1223,8 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_UUID16Bit_size                 4
 #define simpleble_UUID32Bit_size                 6
 #define simpleble_UUID_size                      20
+#define simpleble_UnpairCmd_size                 21
+#define simpleble_UnpairRsp_size                 6
 #define simpleble_ValueChangedEvt_size           525
 #define simpleble_WriteCmd_size                  525
 #define simpleble_WriteRsp_size                  10

@@ -34,6 +34,13 @@ class Protocol : public ProtocolBase {
     simpleble_DisconnectRsp simpleble_disconnect(uint16_t conn_handle);
     simpleble_ReadRsp simpleble_read(uint16_t conn_handle, uint16_t handle);
     simpleble_WriteRsp simpleble_write(uint16_t conn_handle, uint16_t handle, simpleble_WriteOperation operation, const std::vector<uint8_t>& data);
+    simpleble_IsPairedRsp simpleble_is_paired(simpleble_BluetoothAddressType address_type,
+                                              const std::string& address);
+    simpleble_UnpairRsp simpleble_unpair(simpleble_BluetoothAddressType address_type, const std::string& address);
+    simpleble_AuthKeyReplyRsp simpleble_auth_key_reply(uint16_t conn_handle, uint32_t request_id,
+                                                       const std::vector<uint8_t>& key, bool accept);
+    simpleble_GetPairedPeripheralRsp simpleble_get_paired_peripheral(uint16_t index);
+    simpleble_GetPairedPeripheralCountRsp simpleble_get_paired_peripheral_count();
 };
 
 }  // namespace Serial

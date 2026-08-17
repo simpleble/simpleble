@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include <simpleble/Adapter.h>
@@ -8,6 +11,53 @@
 #if __APPLE__
 #include "TargetConditionals.h"
 #endif
+
+namespace SimpleBLE::Advanced::Dongl {
+
+/**
+ * Register a callback for entering a passkey requested by the peer.
+ *
+ * The callback must return exactly six decimal digits, including leading zeroes.
+ * Return std::nullopt to reject the pairing request. An absent callback, an
+ * invalid passkey, or an exception from the callback also rejects the request.
+ *
+ * Set this callback before connecting because pairing may begin immediately.
+ * The callback runs on an internal worker thread and may block while obtaining
+ * the passkey from the user. Passing an empty callback unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_passkey_request_callback(Peripheral& peripheral,
+                                                   const std::function<std::optional<std::string>()>& callback);
+
+/**
+ * Register a callback for a passkey that the peer must enter.
+ *
+ * The callback receives the passkey as exactly six decimal digits, including
+ * leading zeroes. Display it to the user without modification. This event does
+ * not require a reply; an absent callback simply ignores the event.
+ *
+ * Set this callback before connecting because pairing may begin immediately.
+ * The callback runs on an internal worker thread. Passing an empty callback
+ * unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_passkey_display_callback(Peripheral& peripheral,
+                                                   const std::function<void(const std::string& passkey)>& callback);
+
+/**
+ * Register a callback for numeric comparison during pairing.
+ *
+ * The callback receives the number as exactly six decimal digits, including
+ * leading zeroes. Return true only after the user confirms that the peer shows
+ * the same number; return false to reject pairing. An absent callback or an
+ * exception from the callback rejects the request.
+ *
+ * Set this callback before connecting because pairing may begin immediately.
+ * The callback runs on an internal worker thread and may block while obtaining
+ * confirmation from the user. Passing an empty callback unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_numeric_comparison_callback(Peripheral& peripheral,
+                                                      const std::function<bool(const std::string& passkey)>& callback);
+
+}  // namespace SimpleBLE::Advanced::Dongl
 
 /**
  * Advanced Features
