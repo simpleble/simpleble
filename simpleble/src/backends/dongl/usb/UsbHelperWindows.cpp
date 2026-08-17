@@ -64,13 +64,6 @@ class ScopedRegistryKey {
     HKEY key_;
 };
 
-wchar_t ascii_upper(wchar_t value) {
-    if (value >= L'a' && value <= L'z') {
-        return static_cast<wchar_t>(value - L'a' + L'A');
-    }
-    return value;
-}
-
 wchar_t hex_digit(unsigned int value) { return static_cast<wchar_t>(value < 10 ? L'0' + value : L'A' + value - 10); }
 
 std::wstring usb_hardware_id_fragment(uint16_t vendor_id, uint16_t product_id) {
@@ -84,29 +77,30 @@ std::wstring usb_hardware_id_fragment(uint16_t vendor_id, uint16_t product_id) {
 }
 
 bool hardware_id_matches_usb_device(std::wstring_view hardware_id, uint16_t vendor_id, uint16_t product_id) {
-    std::wstring normalized(hardware_id);
-    for (wchar_t& value : normalized) {
-        value = ascii_upper(value);
+    const std::wstring fragment = usb_hardware_id_fragment(vendor_id, product_id);
+    if (hardware_id.size() < fragment.size()) {
+        return false;
     }
 
-    const std::wstring fragment = usb_hardware_id_fragment(vendor_id, product_id);
-    std::size_t position = normalized.find(fragment);
-    while (position != std::wstring::npos) {
-        const bool starts_at_token = position == 0 || normalized[position - 1] == L'\\' ||
-                                     normalized[position - 1] == L'&';
+    for (std::size_t position = 0; position <= hardware_id.size() - fragment.size(); ++position) {
+        if (CompareStringOrdinal(hardware_id.data() + position, static_cast<int>(fragment.size()), fragment.data(),
+                                 static_cast<int>(fragment.size()), TRUE) != CSTR_EQUAL) {
+            continue;
+        }
+
+        const bool starts_at_token = position == 0 || hardware_id[position - 1] == L'\\' ||
+                                     hardware_id[position - 1] == L'&';
         const std::size_t end = position + fragment.size();
-        const bool ends_at_token = end == normalized.size() || normalized[end] == L'&';
+        const bool ends_at_token = end == hardware_id.size() || hardware_id[end] == L'&';
         if (starts_at_token && ends_at_token) {
             return true;
         }
-        position = normalized.find(fragment, position + 1);
     }
     return false;
 }
 
 std::optional<std::string> windows_serial_path(std::wstring_view port_name) {
-    if (port_name.size() < 4 || ascii_upper(port_name[0]) != L'C' || ascii_upper(port_name[1]) != L'O' ||
-        ascii_upper(port_name[2]) != L'M') {
+    if (port_name.size() < 4 || CompareStringOrdinal(port_name.data(), 3, L"COM", 3, TRUE) != CSTR_EQUAL) {
         return std::nullopt;
     }
 
