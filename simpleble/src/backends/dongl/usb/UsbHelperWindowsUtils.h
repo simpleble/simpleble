@@ -37,7 +37,20 @@ inline bool hardware_id_matches_usb_device(std::wstring_view hardware_id, uint16
     for (wchar_t& value : normalized) {
         value = ascii_upper(value);
     }
-    return normalized.find(usb_hardware_id_fragment(vendor_id, product_id)) != std::wstring::npos;
+
+    const std::wstring fragment = usb_hardware_id_fragment(vendor_id, product_id);
+    std::size_t position = normalized.find(fragment);
+    while (position != std::wstring::npos) {
+        const bool starts_at_token = position == 0 || normalized[position - 1] == L'\\' ||
+                                     normalized[position - 1] == L'&';
+        const std::size_t end = position + fragment.size();
+        const bool ends_at_token = end == normalized.size() || normalized[end] == L'&';
+        if (starts_at_token && ends_at_token) {
+            return true;
+        }
+        position = normalized.find(fragment, position + 1);
+    }
+    return false;
 }
 
 inline std::optional<std::string> windows_serial_path(std::wstring_view port_name) {
