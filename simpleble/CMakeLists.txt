@@ -295,7 +295,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
 elseif(SIMPLEBLE_BACKEND_WINDOWS)
     message(STATUS "Windows Host Detected")
 
-    target_link_libraries(simpleble PRIVATE setupapi)
+    target_link_libraries(simpleble PUBLIC setupapi)
 
     set(WINVERSION_CODE 0x0A00) # Selected Windows 10 based on https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
 
@@ -466,7 +466,8 @@ if(SIMPLEBLE_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_bytearray.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_usb_helper_windows.cpp)
     set_target_properties(simpleble_test PROPERTIES
         CXX_VISIBILITY_PRESET hidden
         VISIBILITY_INLINES_HIDDEN YES

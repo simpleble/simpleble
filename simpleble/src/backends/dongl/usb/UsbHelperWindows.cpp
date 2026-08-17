@@ -4,16 +4,20 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+
 #include <setupapi.h>
 
 #include <algorithm>
-#include <cwchar>
-#include <cwctype>
-#include <iostream>
+#include <cstring>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include "LoggingInternal.h"
+#include "UsbHelperWindowsUtils.h"
 
 namespace SimpleBLE {
 namespace Dongl {
@@ -21,31 +25,135 @@ namespace USB {
 
 namespace {
 
-constexpr GUID PORTS_DEVICE_CLASS = {0x4d36e978,
-                                     0xe325,
-                                     0x11ce,
-                                     {0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18}};
+// GUID_DEVCLASS_PORTS from the Windows SDK's devguid.h.
+constexpr GUID PORTS_DEVICE_CLASS = {0x4d36e978, 0xe325, 0x11ce, {0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18}};
+constexpr DWORD IO_WAIT_TIMEOUT_MS = 1000;
+constexpr DWORD IO_POLL_INTERVAL_MS = 100;
 
 class ScopedHandle {
   public:
     explicit ScopedHandle(HANDLE handle) : handle_(handle) {}
-    ~ScopedHandle() {
-        if (handle_ != nullptr && handle_ != INVALID_HANDLE_VALUE) {
-            CloseHandle(handle_);
+    ScopedHandle(const ScopedHandle&) = delete;
+    ScopedHandle& operator=(const ScopedHandle&) = delete;
+    ScopedHandle(ScopedHandle&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
+    ScopedHandle& operator=(ScopedHandle&& other) noexcept {
+        if (this != &other) {
+            close();
+            handle_ = std::exchange(other.handle_, nullptr);
         }
+        return *this;
     }
+    ~ScopedHandle() { close(); }
 
     HANDLE get() const { return handle_; }
 
   private:
+    void close() {
+        if (handle_ != nullptr && handle_ != INVALID_HANDLE_VALUE) {
+            CloseHandle(handle_);
+            handle_ = nullptr;
+        }
+    }
+
     HANDLE handle_;
 };
 
+class ScopedDeviceInfoSet {
+  public:
+    explicit ScopedDeviceInfoSet(HDEVINFO handle) : handle_(handle) {}
+    ScopedDeviceInfoSet(const ScopedDeviceInfoSet&) = delete;
+    ScopedDeviceInfoSet& operator=(const ScopedDeviceInfoSet&) = delete;
+    ~ScopedDeviceInfoSet() {
+        if (handle_ != INVALID_HANDLE_VALUE) {
+            SetupDiDestroyDeviceInfoList(handle_);
+        }
+    }
+
+    HDEVINFO get() const { return handle_; }
+
+  private:
+    HDEVINFO handle_;
+};
+
+class ScopedRegistryKey {
+  public:
+    explicit ScopedRegistryKey(HKEY key) : key_(key) {}
+    ScopedRegistryKey(const ScopedRegistryKey&) = delete;
+    ScopedRegistryKey& operator=(const ScopedRegistryKey&) = delete;
+    ~ScopedRegistryKey() {
+        if (key_ != INVALID_HANDLE_VALUE) {
+            RegCloseKey(key_);
+        }
+    }
+
+    HKEY get() const { return key_; }
+
+  private:
+    HKEY key_;
+};
+
+class OverlappedOperation {
+  public:
+    explicit OverlappedOperation(size_t buffer_size)
+        : event_(CreateEventW(nullptr, TRUE, FALSE, nullptr)), buffer_(buffer_size) {
+        reset();
+    }
+
+    bool valid() const { return event_.get() != nullptr; }
+    HANDLE event() const { return event_.get(); }
+    OVERLAPPED* overlapped() { return &overlapped_; }
+    uint8_t* data() { return buffer_.data(); }
+    size_t size() const { return buffer_.size(); }
+
+    void reset() {
+        overlapped_ = {};
+        overlapped_.hEvent = event_.get();
+        if (event_.get() != nullptr) {
+            ResetEvent(event_.get());
+        }
+    }
+
+  private:
+    ScopedHandle event_;
+    OVERLAPPED overlapped_{};
+    std::vector<uint8_t> buffer_;
+};
+
+std::string windows_error_message(DWORD error);
+
+bool cancel_and_wait(HANDLE serial_handle, OverlappedOperation& operation) {
+    if (!CancelIoEx(serial_handle, operation.overlapped())) {
+        const DWORD cancel_error = GetLastError();
+        if (cancel_error != ERROR_NOT_FOUND) {
+            SIMPLEBLE_LOG_WARN(fmt::format("Failed to cancel serial I/O: {}", windows_error_message(cancel_error)));
+        }
+    }
+    return WaitForSingleObject(operation.event(), IO_WAIT_TIMEOUT_MS) == WAIT_OBJECT_0;
+}
+
+void defer_operation_cleanup(std::unique_ptr<OverlappedOperation> operation) noexcept {
+    OverlappedOperation* pending_operation = operation.release();
+    try {
+        std::thread([pending_operation]() {
+            DWORD wait_result;
+            do {
+                wait_result = WaitForSingleObject(pending_operation->event(), IO_WAIT_TIMEOUT_MS);
+            } while (wait_result == WAIT_TIMEOUT);
+            if (wait_result == WAIT_OBJECT_0) {
+                delete pending_operation;
+            }
+        }).detach();
+    } catch (...) {
+        // The kernel can still access the OVERLAPPED structure and buffer. Leaking this
+        // exceptional-path allocation is safer than freeing live I/O state.
+    }
+}
+
 std::string windows_error_message(DWORD error) {
     char* message = nullptr;
-    const DWORD size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                                          FORMAT_MESSAGE_IGNORE_INSERTS,
-                                      nullptr, error, 0, reinterpret_cast<char*>(&message), 0, nullptr);
+    const DWORD size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0,
+        reinterpret_cast<char*>(&message), 0, nullptr);
 
     std::string result;
     if (size != 0 && message != nullptr) {
@@ -79,23 +187,14 @@ bool is_dongl_device(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
         return false;
     }
 
-    wchar_t dongl_id_buffer[18];
-    if (std::swprintf(dongl_id_buffer, sizeof(dongl_id_buffer) / sizeof(dongl_id_buffer[0]),
-                      L"VID_%04X&PID_%04X", static_cast<unsigned int>(UsbHelperImpl::DONGL_VENDOR_ID),
-                      static_cast<unsigned int>(UsbHelperImpl::DONGL_PRODUCT_ID)) < 0) {
-        return false;
-    }
-
     const wchar_t* current = reinterpret_cast<const wchar_t*>(buffer.data());
     const wchar_t* const end = current + buffer.size() / sizeof(wchar_t);
-    const std::wstring dongl_id(dongl_id_buffer);
 
     while (current < end && *current != L'\0') {
         const wchar_t* terminator = std::find(current, end, L'\0');
-        std::wstring hardware_id(current, terminator);
-        std::transform(hardware_id.begin(), hardware_id.end(), hardware_id.begin(),
-                       [](wchar_t value) { return static_cast<wchar_t>(std::towupper(value)); });
-        if (hardware_id.find(dongl_id) != std::wstring::npos) {
+        if (Detail::hardware_id_matches_usb_device(
+                std::wstring_view(current, static_cast<size_t>(terminator - current)), UsbHelperImpl::DONGL_VENDOR_ID,
+                UsbHelperImpl::DONGL_PRODUCT_ID)) {
             return true;
         }
         if (terminator == end) {
@@ -108,23 +207,22 @@ bool is_dongl_device(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
 }
 
 std::wstring get_port_name(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
-    HKEY key = SetupDiOpenDevRegKey(device_info_set, &device_info, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_QUERY_VALUE);
-    if (key == INVALID_HANDLE_VALUE) {
+    ScopedRegistryKey key(
+        SetupDiOpenDevRegKey(device_info_set, &device_info, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_QUERY_VALUE));
+    if (key.get() == INVALID_HANDLE_VALUE) {
         return {};
     }
 
     DWORD property_type = 0;
     DWORD required_size = 0;
-    LSTATUS status = RegQueryValueExW(key, L"PortName", nullptr, &property_type, nullptr, &required_size);
+    LSTATUS status = RegQueryValueExW(key.get(), L"PortName", nullptr, &property_type, nullptr, &required_size);
     if (status != ERROR_SUCCESS || property_type != REG_SZ || required_size < sizeof(wchar_t)) {
-        RegCloseKey(key);
         return {};
     }
 
     std::vector<wchar_t> buffer(required_size / sizeof(wchar_t) + 1, L'\0');
-    status = RegQueryValueExW(key, L"PortName", nullptr, &property_type, reinterpret_cast<BYTE*>(buffer.data()),
+    status = RegQueryValueExW(key.get(), L"PortName", nullptr, &property_type, reinterpret_cast<BYTE*>(buffer.data()),
                               &required_size);
-    RegCloseKey(key);
     if (status != ERROR_SUCCESS || property_type != REG_SZ) {
         return {};
     }
@@ -152,59 +250,87 @@ UsbHelperWindows::UsbHelperWindows(const std::string& device_path) : UsbHelperIm
 
 UsbHelperWindows::~UsbHelperWindows() {
     _running = false;
+    {
+        std::scoped_lock lock(_serial_mutex);
+        if (_serial_handle != nullptr && !CancelIoEx(static_cast<HANDLE>(_serial_handle), nullptr)) {
+            const DWORD cancel_error = GetLastError();
+            if (cancel_error != ERROR_NOT_FOUND) {
+                SIMPLEBLE_LOG_WARN(fmt::format("Failed to cancel serial I/O during shutdown for {}: {}", _device_path,
+                                               windows_error_message(cancel_error)));
+            }
+        }
+    }
     if (_thread.joinable()) {
         _thread.join();
     }
+
+    std::scoped_lock lock(_serial_mutex);
     _close_serial_port();
 }
 
 void UsbHelperWindows::tx(const kvn::bytearray& data) {
-    std::scoped_lock lock(_tx_mutex);
-    HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
-    ScopedHandle write_event(CreateEventW(nullptr, TRUE, FALSE, nullptr));
-    if (write_event.get() == nullptr) {
-        const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to create serial port write event: " + windows_error_message(error));
+    std::scoped_lock lock(_serial_mutex);
+    if (!_running || _serial_handle == nullptr) {
+        throw std::runtime_error("Serial port is not available: " + _device_path);
     }
 
+    HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
     size_t offset = 0;
 
     while (offset < data.size()) {
         const size_t remaining = data.size() - offset;
         const DWORD requested = static_cast<DWORD>(
             std::min(remaining, static_cast<size_t>(std::numeric_limits<DWORD>::max())));
-        OVERLAPPED operation{};
-        operation.hEvent = write_event.get();
-        ResetEvent(write_event.get());
+        auto operation = std::make_unique<OverlappedOperation>(requested);
+        if (!operation->valid()) {
+            const DWORD error = GetLastError();
+            throw std::runtime_error("Failed to create serial port write event: " + windows_error_message(error));
+        }
+        std::memcpy(operation->data(), data.data() + offset, requested);
 
         DWORD bytes_written = 0;
-        if (!WriteFile(serial_handle, data.data() + offset, requested, &bytes_written, &operation)) {
+        if (!WriteFile(serial_handle, operation->data(), requested, &bytes_written, operation->overlapped())) {
             const DWORD error = GetLastError();
             if (error != ERROR_IO_PENDING) {
+                _running = false;
+                CancelIoEx(serial_handle, nullptr);
                 throw std::runtime_error("Failed to write to serial port " + _device_path + ": " +
                                          windows_error_message(error));
             }
 
-            const DWORD wait_result = WaitForSingleObject(write_event.get(), 1000);
+            const DWORD wait_result = WaitForSingleObject(operation->event(), IO_WAIT_TIMEOUT_MS);
             if (wait_result == WAIT_TIMEOUT) {
-                CancelIoEx(serial_handle, &operation);
-                WaitForSingleObject(write_event.get(), INFINITE);
+                _running = false;
+                if (!cancel_and_wait(serial_handle, *operation)) {
+                    SIMPLEBLE_LOG_ERROR(
+                        fmt::format("Cancellation timed out while writing to {}; deferring I/O cleanup", _device_path));
+                    defer_operation_cleanup(std::move(operation));
+                }
                 throw std::runtime_error("Timed out writing to serial port: " + _device_path);
             }
             if (wait_result != WAIT_OBJECT_0) {
-                const DWORD wait_error = GetLastError();
-                CancelIoEx(serial_handle, &operation);
-                WaitForSingleObject(write_event.get(), INFINITE);
+                const DWORD wait_error = wait_result == WAIT_FAILED ? GetLastError() : ERROR_GEN_FAILURE;
+                _running = false;
+                if (!cancel_and_wait(serial_handle, *operation)) {
+                    SIMPLEBLE_LOG_ERROR(
+                        fmt::format("Cancellation timed out after a write wait failure on {}; deferring I/O cleanup",
+                                    _device_path));
+                    defer_operation_cleanup(std::move(operation));
+                }
                 throw std::runtime_error("Failed to write to serial port " + _device_path + ": " +
                                          windows_error_message(wait_error));
             }
-            if (!GetOverlappedResult(serial_handle, &operation, &bytes_written, FALSE)) {
+            if (!GetOverlappedResult(serial_handle, operation->overlapped(), &bytes_written, FALSE)) {
                 const DWORD result_error = GetLastError();
+                _running = false;
+                CancelIoEx(serial_handle, nullptr);
                 throw std::runtime_error("Failed to write to serial port " + _device_path + ": " +
                                          windows_error_message(result_error));
             }
         }
         if (bytes_written == 0) {
+            _running = false;
+            CancelIoEx(serial_handle, nullptr);
             throw std::runtime_error("Failed to write to serial port " + _device_path + ": no bytes were written");
         }
         offset += bytes_written;
@@ -217,37 +343,28 @@ void UsbHelperWindows::set_rx_callback(std::function<void(const kvn::bytearray&)
 
 std::vector<std::string> UsbHelperWindows::get_dongl_devices() {
     std::vector<std::string> dongl_devices;
-    HDEVINFO device_info_set =
-        SetupDiGetClassDevsW(&PORTS_DEVICE_CLASS, nullptr, nullptr, DIGCF_PRESENT);
-    if (device_info_set == INVALID_HANDLE_VALUE) {
+    ScopedDeviceInfoSet device_info_set(SetupDiGetClassDevsW(&PORTS_DEVICE_CLASS, nullptr, nullptr, DIGCF_PRESENT));
+    if (device_info_set.get() == INVALID_HANDLE_VALUE) {
         return dongl_devices;
     }
 
     for (DWORD index = 0;; ++index) {
         SP_DEVINFO_DATA device_info{};
         device_info.cbSize = sizeof(device_info);
-        if (!SetupDiEnumDeviceInfo(device_info_set, index, &device_info)) {
+        if (!SetupDiEnumDeviceInfo(device_info_set.get(), index, &device_info)) {
             break;
         }
-        if (!is_dongl_device(device_info_set, device_info)) {
+        if (!is_dongl_device(device_info_set.get(), device_info)) {
             continue;
         }
 
-        const std::wstring port_name = get_port_name(device_info_set, device_info);
-        if (port_name.size() < 4 || port_name.compare(0, 3, L"COM") != 0 ||
-            !std::all_of(port_name.begin() + 3, port_name.end(),
-                         [](wchar_t value) { return value >= L'0' && value <= L'9'; })) {
+        const auto device_path = Detail::windows_serial_path(get_port_name(device_info_set.get(), device_info));
+        if (!device_path.has_value()) {
             continue;
         }
-
-        std::string port_name_ascii;
-        port_name_ascii.reserve(port_name.size());
-        std::transform(port_name.begin(), port_name.end(), std::back_inserter(port_name_ascii),
-                       [](wchar_t value) { return static_cast<char>(value); });
-        dongl_devices.push_back("\\\\.\\" + port_name_ascii);
+        dongl_devices.push_back(*device_path);
     }
 
-    SetupDiDestroyDeviceInfoList(device_info_set);
     std::sort(dongl_devices.begin(), dongl_devices.end());
     dongl_devices.erase(std::unique(dongl_devices.begin(), dongl_devices.end()), dongl_devices.end());
     return dongl_devices;
@@ -295,6 +412,8 @@ void UsbHelperWindows::_configure_serial_port() {
     config.fParity = FALSE;
     config.fOutxCtsFlow = FALSE;
     config.fOutxDsrFlow = FALSE;
+    // Match the asserted DTR state used when the POSIX helpers open this CDC transport.
+    // Configure it once before I/O starts so it is never pulsed during normal operation.
     config.fDtrControl = DTR_CONTROL_ENABLE;
     config.fDsrSensitivity = FALSE;
     config.fTXContinueOnXoff = TRUE;
@@ -324,60 +443,96 @@ void UsbHelperWindows::_configure_serial_port() {
 
     if (!PurgeComm(serial_handle, PURGE_RXCLEAR | PURGE_TXCLEAR)) {
         const DWORD error = GetLastError();
-        throw std::runtime_error("Failed to flush serial port " + _device_path + ": " +
-                                 windows_error_message(error));
+        throw std::runtime_error("Failed to flush serial port " + _device_path + ": " + windows_error_message(error));
     }
 }
 
 void UsbHelperWindows::_run() {
-    char buffer[256];
-    HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
-    ScopedHandle read_event(CreateEventW(nullptr, TRUE, FALSE, nullptr));
-    if (read_event.get() == nullptr) {
+    auto operation = std::make_unique<OverlappedOperation>(256);
+    if (!operation->valid()) {
         const DWORD error = GetLastError();
-        std::cerr << "Failed to create serial port read event: " << windows_error_message(error) << std::endl;
+        _running = false;
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to create serial port read event: {}", windows_error_message(error)));
         return;
     }
 
     while (_running) {
-        OVERLAPPED operation{};
-        operation.hEvent = read_event.get();
-        ResetEvent(read_event.get());
+        operation->reset();
 
+        HANDLE serial_handle;
         DWORD bytes_read = 0;
-        bool read_complete = ReadFile(serial_handle, buffer, sizeof(buffer), &bytes_read, &operation) != FALSE;
+        bool read_complete;
+        DWORD read_error = ERROR_SUCCESS;
+        {
+            std::scoped_lock lock(_serial_mutex);
+            if (!_running || _serial_handle == nullptr) {
+                break;
+            }
+            serial_handle = static_cast<HANDLE>(_serial_handle);
+            read_complete = ReadFile(serial_handle, operation->data(), static_cast<DWORD>(operation->size()),
+                                     &bytes_read, operation->overlapped()) != FALSE;
+            if (!read_complete) {
+                read_error = GetLastError();
+            }
+        }
+
         if (!read_complete) {
-            const DWORD read_error = GetLastError();
             if (read_error != ERROR_IO_PENDING) {
-                if (_running) {
-                    std::cerr << "Error reading from serial port " << _device_path << ": "
-                              << windows_error_message(read_error) << std::endl;
-                }
+                _running = false;
+                SIMPLEBLE_LOG_ERROR(fmt::format("Error reading from serial port {}: {}", _device_path,
+                                                windows_error_message(read_error)));
                 break;
             }
 
             DWORD wait_result = WAIT_TIMEOUT;
             while (_running && wait_result == WAIT_TIMEOUT) {
-                wait_result = WaitForSingleObject(read_event.get(), 100);
+                wait_result = WaitForSingleObject(operation->event(), IO_POLL_INTERVAL_MS);
             }
 
             if (!_running) {
-                CancelIoEx(serial_handle, &operation);
-                WaitForSingleObject(read_event.get(), INFINITE);
+                bool cancellation_completed = true;
+                {
+                    std::scoped_lock lock(_serial_mutex);
+                    if (_serial_handle != nullptr && static_cast<HANDLE>(_serial_handle) == serial_handle) {
+                        cancellation_completed = cancel_and_wait(serial_handle, *operation);
+                    }
+                }
+                if (!cancellation_completed) {
+                    SIMPLEBLE_LOG_ERROR(fmt::format(
+                        "Cancellation timed out while reading from {}; deferring I/O cleanup", _device_path));
+                    defer_operation_cleanup(std::move(operation));
+                }
                 break;
             }
-            if (wait_result != WAIT_OBJECT_0 ||
-                !GetOverlappedResult(serial_handle, &operation, &bytes_read, FALSE)) {
-                const DWORD result_error = GetLastError();
-                if (_running) {
-                    std::cerr << "Error reading from serial port " << _device_path << ": "
-                              << windows_error_message(result_error) << std::endl;
+
+            if (wait_result != WAIT_OBJECT_0) {
+                const DWORD wait_error = wait_result == WAIT_FAILED ? GetLastError() : ERROR_GEN_FAILURE;
+                _running = false;
+                bool cancellation_completed;
+                {
+                    std::scoped_lock lock(_serial_mutex);
+                    cancellation_completed = cancel_and_wait(serial_handle, *operation);
                 }
+                if (!cancellation_completed) {
+                    SIMPLEBLE_LOG_ERROR(fmt::format(
+                        "Cancellation timed out after a read wait failure on {}; deferring I/O cleanup", _device_path));
+                    defer_operation_cleanup(std::move(operation));
+                }
+                SIMPLEBLE_LOG_ERROR(fmt::format("Failed waiting for serial data on {}: {}", _device_path,
+                                                windows_error_message(wait_error)));
+                break;
+            }
+
+            if (!GetOverlappedResult(serial_handle, operation->overlapped(), &bytes_read, FALSE)) {
+                const DWORD result_error = GetLastError();
+                _running = false;
+                SIMPLEBLE_LOG_ERROR(fmt::format("Error reading from serial port {}: {}", _device_path,
+                                                windows_error_message(result_error)));
                 break;
             }
         }
         if (bytes_read > 0) {
-            _rx_callback(kvn::bytearray(buffer, static_cast<size_t>(bytes_read)));
+            _rx_callback(kvn::bytearray(operation->data(), static_cast<size_t>(bytes_read)));
         }
     }
 }
