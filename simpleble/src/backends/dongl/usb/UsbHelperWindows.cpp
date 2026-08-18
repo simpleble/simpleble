@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cwchar>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <stdexcept>
@@ -68,8 +69,9 @@ class ScopedRegistryKey {
 
 bool hardware_id_matches_usb_device(std::wstring_view hardware_id, uint16_t vendor_id, uint16_t product_id) {
     wchar_t fragment_buffer[18];
-    const int fragment_length = swprintf_s(fragment_buffer, L"VID_%04X&PID_%04X", static_cast<unsigned int>(vendor_id),
-                                           static_cast<unsigned int>(product_id));
+    const int fragment_length = std::swprintf(fragment_buffer, std::size(fragment_buffer), L"VID_%04X&PID_%04X",
+                                              static_cast<unsigned int>(vendor_id),
+                                              static_cast<unsigned int>(product_id));
     if (fragment_length < 0) {
         return false;
     }
@@ -194,21 +196,16 @@ UsbHelperWindows::~UsbHelperWindows() {
     }
 
     std::scoped_lock tx_lock(_tx_mutex);
-    std::scoped_lock serial_lock(_serial_mutex);
     _close_serial_port();
 }
 
 void UsbHelperWindows::tx(const kvn::bytearray& data) {
     std::scoped_lock tx_lock(_tx_mutex);
 
-    HANDLE serial_handle;
-    {
-        std::scoped_lock serial_lock(_serial_mutex);
-        if (!_running || _serial_handle == nullptr) {
-            throw std::runtime_error("Serial port is not available: " + _device_path);
-        }
-        serial_handle = static_cast<HANDLE>(_serial_handle);
+    if (!_running || _serial_handle == nullptr) {
+        throw std::runtime_error("Serial port is not available: " + _device_path);
     }
+    HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
 
     size_t offset = 0;
 
@@ -259,7 +256,6 @@ std::vector<std::string> UsbHelperWindows::get_dongl_devices() {
     }
 
     std::sort(dongl_devices.begin(), dongl_devices.end());
-    dongl_devices.erase(std::unique(dongl_devices.begin(), dongl_devices.end()), dongl_devices.end());
     return dongl_devices;
 }
 
@@ -344,14 +340,10 @@ void UsbHelperWindows::_run() {
     char buffer[256];
 
     while (_running) {
-        HANDLE serial_handle;
-        {
-            std::scoped_lock serial_lock(_serial_mutex);
-            if (!_running || _serial_handle == nullptr) {
-                break;
-            }
-            serial_handle = static_cast<HANDLE>(_serial_handle);
+        if (!_running || _serial_handle == nullptr) {
+            break;
         }
+        HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
 
         DWORD bytes_read = 0;
         if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytes_read, nullptr)) {

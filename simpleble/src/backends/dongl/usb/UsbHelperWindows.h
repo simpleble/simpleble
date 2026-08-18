@@ -29,7 +29,6 @@ class UsbHelperWindows : public UsbHelperImpl {
     std::atomic_bool _running{false};
     std::thread _thread;
     std::mutex _tx_mutex;
-    std::mutex _serial_mutex;
     void* _serial_handle{nullptr};
 };
 

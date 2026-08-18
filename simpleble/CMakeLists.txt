@@ -295,7 +295,7 @@ elseif(SIMPLEBLE_BACKEND_LINUX)
 elseif(SIMPLEBLE_BACKEND_WINDOWS)
     message(STATUS "Windows Host Detected")
 
-    target_link_libraries(simpleble PUBLIC setupapi)
+    target_link_libraries(simpleble PRIVATE setupapi)
 
     set(WINVERSION_CODE 0x0A00) # Selected Windows 10 based on https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt
 
