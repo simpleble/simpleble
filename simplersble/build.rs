@@ -34,7 +34,9 @@ fn compile_simpleble() {
             println!("cargo:rustc-link-lib=framework=Foundation");
             println!("cargo:rustc-link-lib=framework=CoreBluetooth");
         },
-        "windows" => {},
+        "windows" => {
+            println!("cargo:rustc-link-lib=setupapi");
+        },
         "linux" => {
             println!("cargo:rustc-link-lib=dbus-1");
         },
@@ -58,6 +60,6 @@ fn main() {
     // Build the bindings
     cxx_build::bridge("simplersble/src/lib.rs")
         .file("simplersble/src/bindings/Bindings.cpp")
-        .flag_if_supported("-std=c++17")
+        .std("c++17")
         .compile("simpleble_bindings");
 }
