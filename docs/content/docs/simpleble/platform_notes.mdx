@@ -14,7 +14,7 @@ If you are running a 32-bit application on a 64-bit Windows machine, you might e
 The Windows implementation currently has a limitation where `initialized()` might return true if *any* adapter is enabled, not necessarily the specific instance you are inspecting. This is a known issue being tracked.
 
 ### Local Peripheral Mode
-Windows hosts local services with WinRT `GattServiceProvider`. The Bluetooth adapter and driver must report peripheral-role support. Packaged applications must declare the `bluetooth` device capability in `Package.appxmanifest`, as required by WinRT.
+Windows hosts local services with WinRT `GattServiceProvider`. The Bluetooth adapter and driver must report peripheral-role support. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration.
 
 Windows controls the friendly name placed in a discoverable advertisement, so `Advertisement::local_name` cannot override the system Bluetooth name. WinRT requires one provider per primary service; SimpleBLE starts every configured provider as one peripheral operation and prioritizes providers listed in `Advertisement::service_uuids`. Windows owns the shared advertisement payload and may omit UUIDs that do not fit. Explicitly selected UUIDs must belong to configured services, and `start()` throws if the adapter or driver lacks the resources to publish every provider. Windows reports a client session after the client first interacts with or subscribes to a hosted characteristic; a bare link that performs no GATT operation may not produce a client-connected callback.
 

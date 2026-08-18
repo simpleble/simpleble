@@ -64,6 +64,6 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 - Pass capabilities as a `std::set` (an initializer list is enough). Each characteristic needs at least one capability.
 - On Linux, BlueZ must be running and the process must have D-Bus access, as with scanning.
 - On macOS, CoreBluetooth reports client connection and disconnection callbacks when the client first subscribes and finally unsubscribes.
-- On Windows, the adapter and driver must support the peripheral role. Packaged applications must declare the `bluetooth` device capability, and the system Bluetooth name is used instead of `advertisement.local_name`.
+- On Windows, the adapter and driver must support the peripheral role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. Windows uses the system Bluetooth name instead of `advertisement.local_name`.
 
 For the full C++ walkthrough, see [Advertise, Serve, Publish](../simpleble/peripheral/advertise-serve-publish). For scanning from the other side of the link, see [Scan](./scan).
