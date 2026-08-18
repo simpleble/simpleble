@@ -256,6 +256,7 @@ std::vector<std::string> UsbHelperWindows::get_dongl_devices() {
     }
 
     std::sort(dongl_devices.begin(), dongl_devices.end());
+    dongl_devices.erase(std::unique(dongl_devices.begin(), dongl_devices.end()), dongl_devices.end());
     return dongl_devices;
 }
 
