@@ -32,28 +32,44 @@ ServiceWindows::ServiceWindows(BluetoothUUID uuid, SessionObserver session_obser
     _advertisement_status = _provider.AdvertisementStatus();
 }
 
-void ServiceWindows::initialize_handlers() {
+void ServiceWindows::_install_advertisement_handler(uint64_t generation) {
+    _remove_advertisement_handler();
     auto weak_self = weak_from_this();
     _advertisement_status_changed_token = _provider.AdvertisementStatusChanged(
-        [weak_self](const GattServiceProvider&, const GattServiceProviderAdvertisementStatusChangedEventArgs& args) {
+        [weak_self, generation](const GattServiceProvider&,
+                                const GattServiceProviderAdvertisementStatusChangedEventArgs& args) {
             if (auto self = weak_self.lock()) {
                 {
                     std::scoped_lock lock(self->_advertisement_mutex);
+                    if (self->_advertising_generation != generation) {
+                        return;
+                    }
                     self->_advertisement_status = args.Status();
                     self->_advertisement_error = args.Error();
+                    self->_advertisement_status_generation = generation;
                 }
                 self->_advertisement_cv.notify_all();
             }
         });
 }
 
+void ServiceWindows::_remove_advertisement_handler() noexcept {
+    if (!_advertisement_status_changed_token) {
+        return;
+    }
+    try {
+        _provider.AdvertisementStatusChanged(_advertisement_status_changed_token);
+    } catch (...) {
+        // The delegate captures weak ownership, so a failed revocation cannot access destroyed state.
+    }
+    _advertisement_status_changed_token = {};
+}
+
 ServiceWindows::~ServiceWindows() {
     try {
         if (_provider) {
             stop_advertising();
-            if (_advertisement_status_changed_token) {
-                _provider.AdvertisementStatusChanged(_advertisement_status_changed_token);
-            }
+            _remove_advertisement_handler();
         }
     } catch (...) {
     }
@@ -115,7 +131,7 @@ void ServiceWindows::unfreeze() {
     _frozen = false;
 }
 
-void ServiceWindows::start_advertising() {
+void ServiceWindows::start_advertising(uint64_t generation) {
     auto parameters = GattServiceProviderAdvertisingParameters();
     parameters.IsConnectable(true);
     parameters.IsDiscoverable(true);
@@ -123,13 +139,24 @@ void ServiceWindows::start_advertising() {
         std::scoped_lock lock(_advertisement_mutex);
         _advertisement_status = GattServiceProviderAdvertisementStatus::Created;
         _advertisement_error = BluetoothError::Success;
+        _advertising_generation = generation;
+        _advertisement_status_generation = generation;
         _advertising_requested = true;
     }
     try {
+        // Install a per-start delegate so a queued event from an older advertising cycle cannot satisfy this start.
+        _install_advertisement_handler(generation);
         _provider.StartAdvertising(parameters);
     } catch (...) {
-        std::scoped_lock lock(_advertisement_mutex);
-        _advertising_requested = false;
+        {
+            std::scoped_lock lock(_advertisement_mutex);
+            if (_advertising_generation == generation) {
+                _advertising_generation = 0;
+                _advertisement_status_generation = 0;
+                _advertising_requested = false;
+            }
+        }
+        _remove_advertisement_handler();
         throw;
     }
 }
@@ -138,14 +165,19 @@ void ServiceWindows::activate(uint64_t generation) { _active_generation.store(ge
 
 void ServiceWindows::deactivate() noexcept { _active_generation.store(0); }
 
-void ServiceWindows::wait_until_advertising() {
+void ServiceWindows::wait_until_advertising(uint64_t generation) {
     std::unique_lock lock(_advertisement_mutex);
     // WinRT can report a transient Aborted state before recovering to Started. Keep waiting for success and only
     // interpret the last observed state as a failure after the timeout.
-    _advertisement_cv.wait_for(lock, std::chrono::seconds(5), [this]() {
-        return _advertisement_status == GattServiceProviderAdvertisementStatus::Started ||
-               _advertisement_status == GattServiceProviderAdvertisementStatus::StartedWithoutAllAdvertisementData;
+    _advertisement_cv.wait_for(lock, std::chrono::seconds(5), [this, generation]() {
+        return _advertisement_status_generation == generation &&
+               (_advertisement_status == GattServiceProviderAdvertisementStatus::Started ||
+                _advertisement_status == GattServiceProviderAdvertisementStatus::StartedWithoutAllAdvertisementData);
     });
+    if (_advertising_generation != generation || _advertisement_status_generation != generation) {
+        throw Exception::OperationFailed(
+            fmt::format("Advertising local service {} was superseded by another lifecycle operation.", _uuid));
+    }
     if (_advertisement_status == GattServiceProviderAdvertisementStatus::Aborted) {
         const auto error = _advertisement_error;
         throw Exception::OperationFailed(fmt::format("Windows aborted advertising local service {} (WinRT error {}).",
@@ -172,10 +204,15 @@ void ServiceWindows::stop_advertising() {
     _provider.StopAdvertising();
     // StopAdvertising is a synchronous void operation. Some Windows stacks do not emit a follow-up Stopped status
     // event, so a successful return is the completion boundary for the local lifecycle.
-    std::scoped_lock lock(_advertisement_mutex);
-    _advertisement_status = GattServiceProviderAdvertisementStatus::Stopped;
-    _advertisement_error = BluetoothError::Success;
-    _advertising_requested = false;
+    {
+        std::scoped_lock lock(_advertisement_mutex);
+        _advertisement_status = GattServiceProviderAdvertisementStatus::Stopped;
+        _advertisement_error = BluetoothError::Success;
+        _advertisement_status_generation = _advertising_generation;
+        _advertising_generation = 0;
+        _advertising_requested = false;
+    }
+    _remove_advertisement_handler();
 }
 
 void ServiceWindows::reset_subscriptions() {
@@ -199,11 +236,10 @@ void ServiceWindows::reconcile_subscriptions(uint64_t generation) noexcept {
             characteristic->reconcile_subscriptions(generation);
         }
     } catch (const std::exception& ex) {
-        SIMPLEBLE_LOG_WARN(fmt::format("Failed to reconcile subscriptions for Windows local service {}: {}", _uuid,
-                                       ex.what()));
-    } catch (...) {
         SIMPLEBLE_LOG_WARN(
-            fmt::format("Failed to reconcile subscriptions for Windows local service {}", _uuid));
+            fmt::format("Failed to reconcile subscriptions for Windows local service {}: {}", _uuid, ex.what()));
+    } catch (...) {
+        SIMPLEBLE_LOG_WARN(fmt::format("Failed to reconcile subscriptions for Windows local service {}", _uuid));
     }
 }
 

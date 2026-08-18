@@ -82,7 +82,6 @@ std::shared_ptr<ServiceBase> PeripheralWindows::add_service(BluetoothUUID uuid) 
             }
             return false;
         });
-    service->initialize_handlers();
     _services.push_back(service);
     return service;
 }
@@ -161,30 +160,39 @@ void PeripheralWindows::start() {
 
     bool rollback_failed = false;
     try {
-        WinRT::MtaManager::get().execute_sync([&publication_order, &rollback_failed]() {
-            size_t started_count = 0;
-            try {
+        size_t started_count = 0;
+        try {
+            WinRT::MtaManager::get().execute_sync([&publication_order, &started_count, generation]() {
                 for (const auto& service : publication_order) {
                     // WinRT publishes each primary GATT service through its own provider. Starting every provider
                     // keeps the complete GATT table available. Windows owns the shared advertisement payload and may
                     // omit UUIDs that do not fit, reporting StartedWithoutAllAdvertisementData for those providers.
-                    service->start_advertising();
+                    service->start_advertising(generation);
                     ++started_count;
                 }
-                for (size_t index = 0; index < started_count; ++index) {
-                    publication_order[index]->wait_until_advertising();
-                }
-            } catch (...) {
-                for (size_t index = 0; index < started_count; ++index) {
-                    try {
-                        publication_order[index]->stop_advertising();
-                    } catch (...) {
-                        rollback_failed = true;
-                    }
-                }
-                throw;
+            });
+            // Wait on the calling thread so the process-wide MTA executor remains available to scanning, GATT I/O,
+            // notifications, and status events while Windows finishes publishing the providers.
+            for (size_t index = 0; index < started_count; ++index) {
+                publication_order[index]->wait_until_advertising(generation);
             }
-        });
+        } catch (...) {
+            const auto start_error = std::current_exception();
+            try {
+                WinRT::MtaManager::get().execute_sync([&publication_order, &rollback_failed, started_count]() {
+                    for (size_t index = 0; index < started_count; ++index) {
+                        try {
+                            publication_order[index]->stop_advertising();
+                        } catch (...) {
+                            rollback_failed = true;
+                        }
+                    }
+                });
+            } catch (...) {
+                rollback_failed = true;
+            }
+            std::rethrow_exception(start_error);
+        }
         {
             std::scoped_lock clients_lock(_clients_mutex);
             _started.store(true);
@@ -204,7 +212,8 @@ void PeripheralWindows::start() {
         _cleanup_required = rollback_failed;
         if (rollback_failed) {
             SIMPLEBLE_LOG_ERROR(
-                "Failed to roll back every Windows local service; the peripheral remains frozen until stop() succeeds.");
+                "Failed to roll back every Windows local service; the peripheral remains frozen until stop() "
+                "succeeds.");
         }
         SIMPLEBLE_LOG_ERROR(fmt::format("Failed to start Windows local peripheral: {}", ex.what()));
         throw;
@@ -220,7 +229,8 @@ void PeripheralWindows::start() {
         _cleanup_required = rollback_failed;
         if (rollback_failed) {
             SIMPLEBLE_LOG_ERROR(
-                "Failed to roll back every Windows local service; the peripheral remains frozen until stop() succeeds.");
+                "Failed to roll back every Windows local service; the peripheral remains frozen until stop() "
+                "succeeds.");
         }
         SIMPLEBLE_LOG_ERROR("Failed to start Windows local peripheral");
         throw;
@@ -243,12 +253,10 @@ void PeripheralWindows::start() {
         try {
             stop();
         } catch (const std::exception& ex) {
-            SIMPLEBLE_LOG_ERROR(
-                fmt::format("Failed to roll back Windows local peripheral after callback scheduling failed: {}",
-                            ex.what()));
+            SIMPLEBLE_LOG_ERROR(fmt::format(
+                "Failed to roll back Windows local peripheral after callback scheduling failed: {}", ex.what()));
         } catch (...) {
-            SIMPLEBLE_LOG_ERROR(
-                "Failed to roll back Windows local peripheral after callback scheduling failed");
+            SIMPLEBLE_LOG_ERROR("Failed to roll back Windows local peripheral after callback scheduling failed");
         }
         std::rethrow_exception(schedule_error);
     }
@@ -440,8 +448,7 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
 }
 
 void PeripheralWindows::_on_session_status_changed(const std::string& key, uint64_t generation, uint64_t sequence,
-                                                   const GattSession&,
-                                                   const GattSessionStatusChangedEventArgs& args) {
+                                                   const GattSession&, const GattSessionStatusChangedEventArgs& args) {
     BluetoothAddress address;
     GattSession session{nullptr};
     winrt::event_token token{};
@@ -556,9 +563,8 @@ void PeripheralWindows::_deliver_client_connected(const std::string& key, uint64
     {
         std::scoped_lock lock(_clients_mutex);
         const auto it = _client_sessions.find(key);
-        if (!_started.load() || !_accepting_clients || !_client_callbacks_enabled ||
-            _client_generation != generation || it == _client_sessions.end() ||
-            it->second.generation != generation || it->second.sequence != sequence ||
+        if (!_started.load() || !_accepting_clients || !_client_callbacks_enabled || _client_generation != generation ||
+            it == _client_sessions.end() || it->second.generation != generation || it->second.sequence != sequence ||
             !it->second.connect_callback_pending || it->second.connect_callback_in_progress) {
             return;
         }
@@ -600,14 +606,13 @@ void PeripheralWindows::_deliver_client_connected(const std::string& key, uint64
 }
 
 void PeripheralWindows::_deliver_client_disconnected(const std::string& key, uint64_t generation, uint64_t sequence,
-                                                      const BluetoothAddress& address) {
+                                                     const BluetoothAddress& address) {
     {
         std::scoped_lock lock(_clients_mutex);
         const auto state = _client_callback_states.find(key);
-        if (!_started.load() || !_accepting_clients || !_client_callbacks_enabled ||
-            _client_generation != generation || state == _client_callback_states.end() ||
-            state->second.connected_sequence != sequence || state->second.disconnect_sequence != sequence ||
-            state->second.disconnect_callback_in_progress) {
+        if (!_started.load() || !_accepting_clients || !_client_callbacks_enabled || _client_generation != generation ||
+            state == _client_callback_states.end() || state->second.connected_sequence != sequence ||
+            state->second.disconnect_sequence != sequence || state->second.disconnect_callback_in_progress) {
             return;
         }
         state->second.disconnect_callback_in_progress = true;

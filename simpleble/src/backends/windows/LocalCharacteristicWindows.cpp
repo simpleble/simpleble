@@ -226,8 +226,8 @@ void CharacteristicWindows::enable_subscription_callbacks(uint64_t generation) {
     uint64_t sequence = 0;
     {
         std::scoped_lock lock(_subscription_mutex);
-        if (_subscription_generation == generation && _subscribed_clients > 0 &&
-            !_subscription_callback_delivered && _callback_observer && _callback_observer(generation)) {
+        if (_subscription_generation == generation && _subscribed_clients > 0 && !_subscription_callback_delivered &&
+            _callback_observer && _callback_observer(generation)) {
             ++_subscription_transition_sequence;
             if (!_subscription_callback_in_progress) {
                 _subscription_callback_in_progress = true;
@@ -256,8 +256,15 @@ void CharacteristicWindows::_on_read_requested(const GattLocalCharacteristic&, c
             return;
         }
 
+        const uint64_t generation = _activity_observer ? _activity_observer() : 0;
+        if (generation == 0) {
+            request.RespondWithProtocolError(ATT_ERROR_UNLIKELY);
+            deferral.Complete();
+            return;
+        }
+
         ByteArray response;
-        if (_activity_observer && _activity_observer() != 0 && _callback_on_read) {
+        if (_activity_observer && _activity_observer() == generation && _callback_on_read) {
             response = _callback_on_read();
             std::scoped_lock lock(_value_mutex);
             _value = response;
@@ -310,6 +317,14 @@ void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
         }
 
         should_respond = request.Option() == GattWriteOption::WriteWithResponse;
+        const uint64_t generation = _activity_observer ? _activity_observer() : 0;
+        if (generation == 0) {
+            if (should_respond) {
+                request.RespondWithProtocolError(ATT_ERROR_UNLIKELY);
+            }
+            deferral.Complete();
+            return;
+        }
         const ByteArray incoming = ibuffer_to_bytearray(request.Value());
         const size_t offset = request.Offset();
         ByteArray updated;
@@ -333,7 +348,7 @@ void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
             _value = updated;
         }
 
-        if (_activity_observer && _activity_observer() != 0) {
+        if (_activity_observer && _activity_observer() == generation) {
             SAFE_CALLBACK_CALL(_callback_on_write, updated);
         }
         if (should_respond) {
@@ -385,8 +400,7 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharac
                 return;
             }
 
-            const bool previous_state =
-                _subscription_generation == generation ? _subscribed_clients > 0 : false;
+            const bool previous_state = _subscription_generation == generation ? _subscribed_clients > 0 : false;
             _subscribed_clients = clients.Size();
             _subscription_generation = generation;
             const bool current_state = _subscribed_clients > 0;
