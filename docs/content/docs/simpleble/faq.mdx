@@ -29,7 +29,7 @@ All configuration values must be set prior to any other interaction with a Simpl
 
 Yes, on Linux, macOS, and Windows with the C++ API. Call `Adapter::create_local_peripheral()` to get a `SimpleBLE::Local::Peripheral`, configure services and advertising, then `start()`. See [Advertise, Serve, Publish](./peripheral/advertise-serve-publish) and the [Advertise](../recipes/advertise) recipe.
 
-On Windows, peripheral mode requires adapter and driver support; WinRT uses the system Bluetooth name in discoverable advertisements. Packaged applications must also declare the `bluetooth` device capability. On unsupported platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
+On Windows, peripheral mode requires adapter and driver support; WinRT uses the system Bluetooth name in discoverable advertisements. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. On unsupported platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
 
 </Accordion>
 
