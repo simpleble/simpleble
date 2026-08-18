@@ -125,8 +125,8 @@ adapter.scan_for(5000);
 
 ## Act as a peripheral
 
-<Callout type="info" title="Linux/macOS, C++ only">
-Hosting a local peripheral is currently implemented on Linux and macOS. On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
+<Callout type="info" title="Linux, macOS, or Windows; C++ only">
+Hosting a local peripheral is currently implemented on Linux, macOS, and Windows. On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
 </Callout>
 
 `SimpleBLE::Local::Peripheral` is **this host** advertising and serving GATT. Configure the advertisement and at least one characteristic, then call `start()`:
@@ -143,8 +143,10 @@ service.add_characteristic("12345678-1234-5678-1234-56789abcdef1",
                            {SimpleBLE::Local::CharacteristicCapability::READ});
 
 peripheral.start();
-std::cout << "Advertising as SimpleBLE Peripheral." << std::endl;
+std::cout << "Local peripheral is advertising." << std::endl;
 ```
+
+On Windows, WinRT uses the system Bluetooth name instead of `advertisement.local_name`.
 
 Keep the process alive after `start()`, then call `peripheral.stop()` when you are done. Writes, notifications, and client connection callbacks are covered in [Advertise, Serve, Publish](./peripheral/advertise-serve-publish).
 

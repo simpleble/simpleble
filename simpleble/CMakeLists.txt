@@ -323,6 +323,9 @@ elseif(SIMPLEBLE_BACKEND_WINDOWS)
 
     target_sources(simpleble PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/AdapterWindows.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/LocalCharacteristicWindows.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/LocalPeripheralWindows.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/LocalServiceWindows.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/PeripheralWindows.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/BackendWinRT.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/windows/MtaManager.cpp

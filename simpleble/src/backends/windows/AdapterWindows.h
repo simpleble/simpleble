@@ -28,6 +28,9 @@ namespace SimpleBLE {
 
 class PeripheralWindows;
 class PeripheralBase;
+namespace Local {
+class PeripheralBase;
+}
 
 class AdapterWindows : public AdapterBase {
   public:
@@ -51,6 +54,8 @@ class AdapterWindows : public AdapterBase {
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_connected_peripherals() override;
+
+    virtual std::shared_ptr<Local::PeripheralBase> create_local_peripheral() override;
 
     virtual bool bluetooth_enabled() override;
 
