@@ -228,7 +228,7 @@ void CharacteristicWindows::enable_subscription_callbacks(uint64_t generation) {
             notify_subscribed = _subscribed_clients > 0;
         }
     }
-    if (notify_subscribed) {
+    if (notify_subscribed && _callback_observer && _callback_observer(generation)) {
         SAFE_CALLBACK_CALL(_callback_on_subscribed);
     }
 }
@@ -399,7 +399,7 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharac
                      was_subscribed != subscribed;
         }
 
-        if (notify) {
+        if (notify && _callback_observer && _callback_observer(generation)) {
             if (subscribed) {
                 SAFE_CALLBACK_CALL(_callback_on_subscribed);
             } else {

@@ -351,17 +351,36 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
     const auto [key, address] = _session_identity(session);
     uint64_t generation;
     uint64_t sequence;
+    GattSession previous_session{nullptr};
+    winrt::event_token previous_token{};
     {
         std::scoped_lock lock(_clients_mutex);
         if (!_accepting_clients || (expected_generation != 0 && _client_generation != expected_generation)) {
             return;
         }
         generation = _client_generation;
-        if (_client_sessions.count(key) != 0) {
+        const auto existing = _client_sessions.find(key);
+        if (existing != _client_sessions.end() && winrt::get_abi(existing->second.session) == winrt::get_abi(session)) {
             return;
         }
         sequence = ++_next_client_sequence;
-        _client_sessions.emplace(key, ClientSession{session, {}, address, false, generation, sequence});
+        if (existing == _client_sessions.end()) {
+            _client_sessions.emplace(key, ClientSession{session, {}, address, false, generation, sequence});
+        } else {
+            previous_session = existing->second.session;
+            previous_token = existing->second.status_changed_token;
+            existing->second = ClientSession{session, {}, address, existing->second.connected, generation, sequence};
+        }
+    }
+
+    if (previous_session && previous_token) {
+        try {
+            previous_session.SessionStatusChanged(previous_token);
+        } catch (const std::exception& ex) {
+            SIMPLEBLE_LOG_WARN(fmt::format("Failed to replace Windows client session handler: {}", ex.what()));
+        } catch (...) {
+            SIMPLEBLE_LOG_WARN("Failed to replace Windows client session handler");
+        }
     }
 
     auto weak_self = weak_from_this();
@@ -414,7 +433,7 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
         } catch (...) {
         }
     }
-    if (notify_connected) {
+    if (notify_connected && _client_callbacks_are_enabled(generation)) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
     }
 }
@@ -456,9 +475,9 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
         } catch (...) {
         }
     }
-    if (notify_connected) {
+    if (notify_connected && _client_callbacks_are_enabled(generation)) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-    } else if (notify_disconnected) {
+    } else if (notify_disconnected && _client_callbacks_are_enabled(generation)) {
         SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
 }
@@ -513,7 +532,9 @@ void PeripheralWindows::_enable_client_callbacks(uint64_t generation) {
         }
     }
     for (const auto& address : connected_clients) {
-        SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
+        if (_client_callbacks_are_enabled(generation)) {
+            SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
+        }
     }
 }
 
