@@ -5,6 +5,7 @@
 
 #include "BuilderBase.h"
 #include "CommonUtils.h"
+#include "LocalPeripheralWindows.h"
 #include "LoggingInternal.h"
 #include "PeripheralWindows.h"
 #include "Utils.h"
@@ -163,6 +164,17 @@ SharedPtrVector<PeripheralBase> AdapterWindows::get_connected_peripherals() {
     const winrt::hstring aqs_filter =
         BluetoothLEDevice::GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus::Connected);
     return _get_peripherals_from_selector(aqs_filter);
+}
+
+std::shared_ptr<Local::PeripheralBase> AdapterWindows::create_local_peripheral() {
+    return MtaManager::get().execute_sync<std::shared_ptr<Local::PeripheralBase>>([this]() {
+        if (!Foundation::Metadata::ApiInformation::IsPropertyPresent(
+                L"Windows.Devices.Bluetooth.BluetoothAdapter", L"IsPeripheralRoleSupported") ||
+            !adapter_.IsPeripheralRoleSupported()) {
+            throw Exception::OperationNotSupported();
+        }
+        return std::make_shared<Local::PeripheralWindows>(adapter_);
+    });
 }
 
 SharedPtrVector<PeripheralBase> AdapterWindows::_get_peripherals_from_selector(const winrt::hstring& aqs_filter) {

@@ -9,8 +9,8 @@ This is the peripheral-mode walkthrough: this host advertises, serves a GATT tab
 
 `SimpleBLE::Peripheral` is a remote device discovered while acting as a central. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from the same `Adapter` you would use to scan.
 
-<Callout type="info" title="Linux/macOS, C++ only">
-Hosting a local peripheral is currently implemented on Linux and macOS. On other platforms, `Adapter::create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
+<Callout type="info" title="Linux, macOS, or Windows; C++ only">
+Hosting a local peripheral is currently implemented on Linux, macOS, and Windows. On other platforms, `Adapter::create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
 </Callout>
 
 If you still need to install SimpleBLE or create the CMake project, start with [Getting Started](../tutorial). The [Advertise](../../recipes/advertise) recipe is the short form of this flow.
@@ -61,6 +61,8 @@ peripheral.set_advertisement(advertisement);
 ```
 
 If `service_uuids` is left empty, SimpleBLE advertises the service UUIDs configured on the local peripheral when the platform supports doing so.
+
+On Windows, WinRT uses the system Bluetooth name instead of `local_name`.
 
 ## Services and characteristics
 
@@ -135,11 +137,13 @@ On platforms that do not expose a Bluetooth address, the value is a platform-spe
 
 CoreBluetooth does not expose peripheral-role connection events on macOS. SimpleBLE reports a client as connected when it first subscribes to a characteristic and disconnected when its final subscription ends.
 
+On Windows, WinRT exposes the client session after a client first reads, writes, or subscribes to a hosted characteristic. A connection that performs no GATT operation may not produce a client-connected callback.
+
 Callbacks follow the same threading rules as the rest of SimpleBLE. See [Concurrency](../../fundamentals/concurrency).
 
 ## Scan and advertise together
 
-Concurrent scanning and advertising depend on the platform Bluetooth stack and controller. On Linux, BlueZ and the controller must support both operations at the same time. Incoming clients of the local peripheral are reported through the client callbacks above. They are not devices you should `connect()` to as a central.
+SimpleBLE permits the same adapter to scan while a local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time. Incoming clients of the local peripheral are reported through the client callbacks above. They are not devices you should `connect()` to as a central.
 
 ## Full application
 
@@ -199,7 +203,7 @@ int main() {
         [](SimpleBLE::BluetoothAddress address) { std::cout << "Client connected: " << address << std::endl; });
 
     peripheral.start();
-    std::cout << "Advertising as SimpleBLE Peripheral. Press Ctrl+C to stop." << std::endl;
+    std::cout << "Local peripheral is advertising. Press Ctrl+C to stop." << std::endl;
 
     while (running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -223,5 +227,5 @@ cmake --build build_simpleble_examples -j7
 - [Advertise](../../recipes/advertise) for a shorter recipe form of this flow
 - [Scan, Connect, Read](../central/scan-connect-read) to use the same adapter as a central
 - [API reference](../api#local-api) for `SimpleBLE::Local` types
-- [Platform notes](../platform_notes) for Linux and macOS behavior
+- [Platform notes](../platform_notes) for Linux, macOS, and Windows behavior
 - [Examples](../examples) for the programs in the repository

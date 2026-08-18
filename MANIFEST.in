@@ -192,6 +192,12 @@ include simpleble/src/backends/windows/AdapterWindows.cpp
 include simpleble/src/backends/windows/AdapterWindows.h
 include simpleble/src/backends/windows/BackendWinRT.cpp
 include simpleble/src/backends/windows/BackendWinRT.h
+include simpleble/src/backends/windows/LocalCharacteristicWindows.cpp
+include simpleble/src/backends/windows/LocalCharacteristicWindows.h
+include simpleble/src/backends/windows/LocalPeripheralWindows.cpp
+include simpleble/src/backends/windows/LocalPeripheralWindows.h
+include simpleble/src/backends/windows/LocalServiceWindows.cpp
+include simpleble/src/backends/windows/LocalServiceWindows.h
 include simpleble/src/backends/windows/MtaManager.cpp
 include simpleble/src/backends/windows/MtaManager.h
 include simpleble/src/backends/windows/PeripheralWindows.cpp

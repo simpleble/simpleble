@@ -9,8 +9,8 @@ Advertising is how this host is found. A local peripheral serves GATT, sends adv
 
 `SimpleBLE::Peripheral` is a remote device. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from an `Adapter`, the same object used to scan.
 
-<Callout type="info" title="Linux/macOS, C++ only">
-Hosting a local peripheral is currently implemented on Linux and macOS. On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
+<Callout type="info" title="Linux, macOS, or Windows; C++ only">
+Hosting a local peripheral is currently implemented on Linux, macOS, and Windows. On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
 </Callout>
 
 ## Flow
@@ -56,7 +56,7 @@ peripheral.start();
 
 Configure services, characteristics, and advertising before `start()`. While started, update data with `set_value()` rather than rebuilding the GATT table. `set_value()` also publishes the latest value to subscribed clients when the characteristic has `NOTIFY` or `INDICATE` capability.
 
-Concurrent scanning and advertising depend on the platform Bluetooth stack and controller. On Linux, BlueZ and the controller must support both operations at the same time.
+SimpleBLE permits the same adapter to scan while the local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time.
 
 ## Practical notes
 
@@ -64,5 +64,6 @@ Concurrent scanning and advertising depend on the platform Bluetooth stack and c
 - Pass capabilities as a `std::set` (an initializer list is enough). Each characteristic needs at least one capability.
 - On Linux, BlueZ must be running and the process must have D-Bus access, as with scanning.
 - On macOS, CoreBluetooth reports client connection and disconnection callbacks when the client first subscribes and finally unsubscribes.
+- On Windows, the adapter and driver must support the peripheral role. Packaged applications must declare the `bluetooth` device capability, and the system Bluetooth name is used instead of `advertisement.local_name`.
 
 For the full C++ walkthrough, see [Advertise, Serve, Publish](../simpleble/peripheral/advertise-serve-publish). For scanning from the other side of the link, see [Scan](./scan).
