@@ -343,6 +343,10 @@ elseif(SIMPLEBLE_BACKEND_MACOS OR SIMPLEBLE_BACKEND_IOS)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/Utils.mm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/AdapterMac.mm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/AdapterBaseMacOS.mm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/LocalCharacteristicMac.mm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/LocalPeripheralMac.mm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/LocalPeripheralBaseMacOS.mm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/LocalServiceMac.mm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/PeripheralMac.mm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/PeripheralBaseMacOS.mm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/macos/BackendCoreBluetooth.mm)

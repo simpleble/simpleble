@@ -7,3 +7,4 @@
 
 SimpleBLE::BluetoothUUID uuidToSimpleBLE(CBUUID* uuid);
 NSString* uuidToString(CBUUID* uuid);
+CBUUID* uuidFromSimpleBLE(const SimpleBLE::BluetoothUUID& uuid);

@@ -4,6 +4,7 @@
 #import "AdapterMac.h"
 #import "BuilderBase.h"
 #import "CommonUtils.h"
+#import "LocalPeripheralMac.h"
 #import "PeripheralMac.h"
 
 #include <fmt/core.h>
@@ -103,6 +104,8 @@ SharedPtrVector<PeripheralBase> AdapterMac::scan_get_results() {
 }
 
 SharedPtrVector<PeripheralBase> AdapterMac::get_paired_peripherals() { return {}; }
+
+std::shared_ptr<Local::PeripheralBase> AdapterMac::create_local_peripheral() { return std::make_shared<Local::PeripheralMac>(); }
 
 SharedPtrVector<PeripheralBase> AdapterMac::retrieve_cached_peripherals(const std::vector<BluetoothAddress>& identifiers) {
     AdapterBaseMacOS* internal = (__bridge AdapterBaseMacOS*)opaque_internal_;

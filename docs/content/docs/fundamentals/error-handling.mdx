@@ -17,7 +17,7 @@ SimpleBLE reports errors by throwing exceptions. All library-defined exceptions 
 | `ServiceNotFound` | The requested service UUID isn't in the discovered GATT database | Wrong UUID, or the device doesn't expose that service |
 | `CharacteristicNotFound` | The requested characteristic UUID isn't under that service | Wrong UUID pair |
 | `DescriptorNotFound` | The requested descriptor UUID isn't under that characteristic | Wrong UUID triple |
-| `OperationNotSupported` | The characteristic doesn't have the required capability, or the backend doesn't support the operation | e.g. calling `read()` on a write-only characteristic, or `create_local_peripheral()` outside Linux |
+| `OperationNotSupported` | The characteristic doesn't have the required capability, or the backend doesn't support the operation | e.g. calling `read()` on a write-only characteristic, or `create_local_peripheral()` outside Linux and macOS |
 | `OperationFailed` | The operation was attempted but did not complete successfully | Timeouts, stack-level errors, connection failures, mutating a local peripheral while it is started |
 | `WinRTException` | A WinRT API call failed (Windows only) | Carries the WinRT error code and message |
 | `CoreBluetoothException` | A CoreBluetooth operation failed (macOS/iOS only) | Carries the `NSError` description |

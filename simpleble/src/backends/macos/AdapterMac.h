@@ -47,6 +47,8 @@ class AdapterMac : public AdapterBase {
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
 
+    virtual std::shared_ptr<Local::PeripheralBase> create_local_peripheral() override;
+
     std::vector<std::shared_ptr<PeripheralBase>> retrieve_cached_peripherals(
         const std::vector<BluetoothAddress>& identifiers);
 

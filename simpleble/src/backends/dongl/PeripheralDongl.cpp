@@ -321,6 +321,7 @@ bool PeripheralDongl::_attempt_connect() {
 
     _conn_handle = BLE_CONN_HANDLE_INVALID;
     _services.clear();
+    _attributes_discovered.store(false, std::memory_order_relaxed);
 
     auto response = _serial_protocol->simpleble_connect(static_cast<simpleble_BluetoothAddressType>(_address_type),
                                                         _address);
@@ -346,15 +347,22 @@ bool PeripheralDongl::_attempt_connect() {
     // Wait for the attributes to be discovered.
     {
         std::unique_lock<std::mutex> lock(attributes_discovered_mutex_);
-        attributes_discovered_cv_.wait_for(
-            lock, 15000ms, [this]() { return !_services.empty() || _conn_handle == BLE_CONN_HANDLE_INVALID; });
-        if (_services.empty()) {
+        const bool discovery_finished = attributes_discovered_cv_.wait_for(lock, 15000ms, [this]() {
+            return _attributes_discovered.load(std::memory_order_acquire) || _conn_handle == BLE_CONN_HANDLE_INVALID;
+        });
+
+        if (_conn_handle == BLE_CONN_HANDLE_INVALID) {
+            SIMPLEBLE_LOG_ERROR("Connection lost during attribute discovery");
+            return false;
+        }
+
+        if (!discovery_finished || !_attributes_discovered.load(std::memory_order_acquire)) {
             SIMPLEBLE_LOG_ERROR("Timeout while waiting for attributes to be discovered");
             return false;
         }
 
-        if (_conn_handle == BLE_CONN_HANDLE_INVALID) {
-            SIMPLEBLE_LOG_ERROR("Connection lost during attribute discovery");
+        if (_services.empty()) {
+            SIMPLEBLE_LOG_ERROR("No services found during attribute discovery");
             return false;
         }
     }
@@ -482,7 +490,10 @@ void PeripheralDongl::notify_descriptor_discovered(simpleble_DescriptorDiscovere
     }
 }
 
-void PeripheralDongl::notify_attribute_discovery_complete() { attributes_discovered_cv_.notify_all(); }
+void PeripheralDongl::notify_attribute_discovery_complete() {
+    _attributes_discovered.store(true, std::memory_order_release);
+    attributes_discovered_cv_.notify_all();
+}
 
 void PeripheralDongl::notify_value_changed(simpleble_ValueChangedEvt const& evt) {
     ByteArray data(evt.data.bytes, evt.data.bytes + evt.data.size);

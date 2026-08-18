@@ -133,6 +133,7 @@ class PeripheralDongl : public PeripheralBase {
     std::map<BluetoothUUID, ByteArray> _service_data;
 
     std::vector<ServiceDefinition> _services;
+    std::atomic_bool _attributes_discovered{false};
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;
 
