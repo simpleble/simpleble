@@ -65,11 +65,7 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     std::mutex _value_mutex;
     size_t _subscribed_clients{0};
     uint64_t _subscription_generation{0};
-    bool _subscription_callback_delivered{false};
-    bool _subscription_callback_in_progress{false};
-    uint64_t _subscription_transition_sequence{0};
-    uint64_t _subscription_delivery_generation{0};
-    uint64_t _subscription_delivery_sequence{0};
+    bool _subscription_callbacks_enabled{false};
     std::mutex _subscription_mutex;
 
     winrt::event_token _read_requested_token_{};
@@ -86,7 +82,6 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     void _on_subscribed_clients_changed(const GattLocalCharacteristic& sender,
                                         const winrt::Windows::Foundation::IInspectable& args,
                                         uint64_t expected_generation = 0);
-    void _deliver_subscription_callback(uint64_t generation, uint64_t sequence, bool subscribed);
 };
 
 }  // namespace SimpleBLE::Local

@@ -54,23 +54,8 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
         winrt::event_token status_changed_token;
         BluetoothAddress address;
         bool connected{false};
-        bool connect_callback_pending{false};
-        bool connect_callback_in_progress{false};
-        bool connected_notified{false};
-        bool closed{false};
         uint64_t generation;
         uint64_t sequence;
-    };
-
-    struct ClientCallbackState {
-        uint64_t connected_sequence{0};
-        uint64_t disconnect_sequence{0};
-        bool disconnect_callback_in_progress{false};
-    };
-
-    struct PendingClientSession {
-        GattSession session;
-        uint64_t generation;
     };
 
     winrt::Windows::Devices::Bluetooth::BluetoothAdapter _adapter{nullptr};
@@ -81,8 +66,6 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     mutable std::mutex _lifecycle_mutex;
 
     std::map<std::string, ClientSession> _client_sessions;
-    std::map<std::string, ClientCallbackState> _client_callback_states;
-    std::map<std::string, PendingClientSession> _pending_client_sessions;
     std::mutex _clients_mutex;
     uint64_t _client_generation{0};
     uint64_t _next_client_sequence{0};
@@ -99,10 +82,6 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     uint64_t _active_client_generation();
     bool _client_callbacks_are_enabled(uint64_t generation);
     void _enable_client_callbacks(uint64_t generation);
-    void _deliver_client_connected(const std::string& key, uint64_t generation, uint64_t sequence);
-    void _deliver_client_disconnected(const std::string& key, uint64_t generation, uint64_t sequence,
-                                      const BluetoothAddress& address);
-    void _promote_pending_client_session(const std::string& key, uint64_t generation);
     static std::pair<std::string, BluetoothAddress> _session_identity(const GattSession& session);
 };
 

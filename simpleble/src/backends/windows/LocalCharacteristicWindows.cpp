@@ -209,11 +209,7 @@ void CharacteristicWindows::reset_subscriptions() {
     std::scoped_lock lock(_subscription_mutex);
     _subscribed_clients = 0;
     _subscription_generation = 0;
-    _subscription_callback_delivered = false;
-    _subscription_callback_in_progress = false;
-    ++_subscription_transition_sequence;
-    _subscription_delivery_generation = 0;
-    _subscription_delivery_sequence = 0;
+    _subscription_callbacks_enabled = false;
 }
 
 void CharacteristicWindows::reconcile_subscriptions(uint64_t generation) noexcept {
@@ -223,22 +219,17 @@ void CharacteristicWindows::reconcile_subscriptions(uint64_t generation) noexcep
 }
 
 void CharacteristicWindows::enable_subscription_callbacks(uint64_t generation) {
-    uint64_t sequence = 0;
+    bool notify_subscribed = false;
     {
         std::scoped_lock lock(_subscription_mutex);
-        if (_subscription_generation == generation && _subscribed_clients > 0 && !_subscription_callback_delivered &&
-            _callback_observer && _callback_observer(generation)) {
-            ++_subscription_transition_sequence;
-            if (!_subscription_callback_in_progress) {
-                _subscription_callback_in_progress = true;
-                _subscription_delivery_generation = generation;
-                _subscription_delivery_sequence = _subscription_transition_sequence;
-                sequence = _subscription_delivery_sequence;
-            }
+        if (_subscription_generation == generation && !_subscription_callbacks_enabled && _callback_observer &&
+            _callback_observer(generation)) {
+            _subscription_callbacks_enabled = true;
+            notify_subscribed = _subscribed_clients > 0;
         }
     }
-    if (sequence != 0) {
-        _deliver_subscription_callback(generation, sequence, true);
+    if (notify_subscribed) {
+        SAFE_CALLBACK_CALL(_callback_on_subscribed);
     }
 }
 
@@ -391,8 +382,8 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharac
             }
         }
 
-        uint64_t delivery_sequence = 0;
-        bool delivery_state = false;
+        bool notify = false;
+        bool subscribed = false;
         {
             std::scoped_lock lock(_subscription_mutex);
             if (!_activity_observer || _activity_observer() != generation ||
@@ -400,26 +391,20 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharac
                 return;
             }
 
-            const bool previous_state = _subscription_generation == generation ? _subscribed_clients > 0 : false;
+            const bool was_subscribed = _subscription_generation == generation && _subscribed_clients > 0;
             _subscribed_clients = clients.Size();
             _subscription_generation = generation;
-            const bool current_state = _subscribed_clients > 0;
-            const bool callbacks_enabled = _callback_observer && _callback_observer(generation);
-            if (previous_state != current_state) {
-                ++_subscription_transition_sequence;
-            }
-            if (callbacks_enabled && current_state != _subscription_callback_delivered &&
-                !_subscription_callback_in_progress) {
-                _subscription_callback_in_progress = true;
-                _subscription_delivery_generation = generation;
-                _subscription_delivery_sequence = _subscription_transition_sequence;
-                delivery_sequence = _subscription_delivery_sequence;
-                delivery_state = current_state;
-            }
+            subscribed = _subscribed_clients > 0;
+            notify = _subscription_callbacks_enabled && _callback_observer && _callback_observer(generation) &&
+                     was_subscribed != subscribed;
         }
 
-        if (delivery_sequence != 0) {
-            _deliver_subscription_callback(generation, delivery_sequence, delivery_state);
+        if (notify) {
+            if (subscribed) {
+                SAFE_CALLBACK_CALL(_callback_on_subscribed);
+            } else {
+                SAFE_CALLBACK_CALL(_callback_on_unsubscribed);
+            }
         }
     } catch (const std::exception& ex) {
         SIMPLEBLE_LOG_ERROR(
@@ -427,48 +412,6 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharac
     } catch (...) {
         SIMPLEBLE_LOG_ERROR(
             fmt::format("Unknown exception while handling local characteristic {} subscriptions", _uuid));
-    }
-}
-
-void CharacteristicWindows::_deliver_subscription_callback(uint64_t generation, uint64_t sequence, bool subscribed) {
-    while (true) {
-        if (!_callback_observer || !_callback_observer(generation)) {
-            std::scoped_lock lock(_subscription_mutex);
-            if (_subscription_delivery_generation == generation && _subscription_delivery_sequence == sequence) {
-                _subscription_callback_in_progress = false;
-                _subscription_delivery_generation = 0;
-                _subscription_delivery_sequence = 0;
-            }
-            return;
-        }
-
-        if (subscribed) {
-            SAFE_CALLBACK_CALL(_callback_on_subscribed);
-        } else {
-            SAFE_CALLBACK_CALL(_callback_on_unsubscribed);
-        }
-
-        {
-            std::scoped_lock lock(_subscription_mutex);
-            if (_subscription_delivery_generation != generation || _subscription_delivery_sequence != sequence ||
-                _subscription_generation != generation) {
-                return;
-            }
-
-            _subscription_callback_delivered = subscribed;
-            const bool current_state = _subscribed_clients > 0;
-            if (current_state == _subscription_callback_delivered || !_callback_observer ||
-                !_callback_observer(generation)) {
-                _subscription_callback_in_progress = false;
-                _subscription_delivery_generation = 0;
-                _subscription_delivery_sequence = 0;
-                return;
-            }
-
-            sequence = _subscription_transition_sequence;
-            subscribed = current_state;
-            _subscription_delivery_sequence = sequence;
-        }
     }
 }
 

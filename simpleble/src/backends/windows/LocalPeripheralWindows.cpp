@@ -357,23 +357,11 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
             return;
         }
         generation = _client_generation;
-        const auto existing = _client_sessions.find(key);
-        if (existing != _client_sessions.end()) {
-            if (existing->second.closed || winrt::get_abi(existing->second.session) != winrt::get_abi(session)) {
-                _pending_client_sessions.insert_or_assign(key, PendingClientSession{session, generation});
-            }
-            return;
-        }
-        const auto callback_state = _client_callback_states.find(key);
-        if (callback_state != _client_callback_states.end() &&
-            (callback_state->second.disconnect_sequence != 0 ||
-             callback_state->second.disconnect_callback_in_progress)) {
-            _pending_client_sessions.insert_or_assign(key, PendingClientSession{session, generation});
+        if (_client_sessions.count(key) != 0) {
             return;
         }
         sequence = ++_next_client_sequence;
-        _client_sessions.emplace(
-            key, ClientSession{session, {}, address, false, false, false, false, false, generation, sequence});
+        _client_sessions.emplace(key, ClientSession{session, {}, address, false, generation, sequence});
     }
 
     auto weak_self = weak_from_this();
@@ -395,14 +383,11 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
                 _client_sessions.erase(it);
             }
         }
-        _promote_pending_client_session(key, generation);
         throw;
     }
 
     bool keep_token = false;
-    bool deliver_connected = false;
-    bool deliver_disconnected = false;
-    bool promote_pending = false;
+    bool notify_connected = false;
     {
         std::scoped_lock lock(_clients_mutex);
         const auto it = _client_sessions.find(key);
@@ -413,20 +398,11 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
             const auto status = session.SessionStatus();
             if (status == GattSessionStatus::Active && !it->second.connected) {
                 it->second.connected = true;
-                it->second.connect_callback_pending = true;
-                deliver_connected = true;
-            } else if (status == GattSessionStatus::Closed) {
-                if (it->second.connect_callback_pending) {
-                    it->second.closed = true;
-                    it->second.status_changed_token = {};
-                } else {
-                    deliver_disconnected = it->second.connected_notified;
-                    if (deliver_disconnected) {
-                        _client_callback_states[key].disconnect_sequence = sequence;
-                    }
-                    _client_sessions.erase(it);
-                    promote_pending = !deliver_disconnected;
+                if (_started.load() && _client_callbacks_enabled) {
+                    notify_connected = true;
                 }
+            } else if (status == GattSessionStatus::Closed) {
+                _client_sessions.erase(it);
                 keep_token = false;
             }
         }
@@ -438,12 +414,8 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
         } catch (...) {
         }
     }
-    if (deliver_connected) {
-        _deliver_client_connected(key, generation, sequence);
-    } else if (deliver_disconnected) {
-        _deliver_client_disconnected(key, generation, sequence, address);
-    } else if (promote_pending) {
-        _promote_pending_client_session(key, generation);
+    if (notify_connected) {
+        SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
     }
 }
 
@@ -452,9 +424,8 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
     BluetoothAddress address;
     GattSession session{nullptr};
     winrt::event_token token{};
-    bool deliver_connected = false;
-    bool deliver_disconnected = false;
-    bool promote_pending = false;
+    bool notify_connected = false;
+    bool notify_disconnected = false;
     bool revoke_token = false;
     {
         std::scoped_lock lock(_clients_mutex);
@@ -467,23 +438,15 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
         address = it->second.address;
         if (args.Status() == GattSessionStatus::Active && !it->second.connected) {
             it->second.connected = true;
-            it->second.connect_callback_pending = true;
-            deliver_connected = true;
+            if (_started.load() && _client_callbacks_enabled) {
+                notify_connected = true;
+            }
         } else if (args.Status() == GattSessionStatus::Closed) {
             session = it->second.session;
             token = it->second.status_changed_token;
             revoke_token = static_cast<bool>(token);
-            it->second.status_changed_token = {};
-            if (it->second.connect_callback_pending) {
-                it->second.closed = true;
-            } else {
-                deliver_disconnected = it->second.connected_notified;
-                if (deliver_disconnected) {
-                    _client_callback_states[key].disconnect_sequence = sequence;
-                }
-                _client_sessions.erase(it);
-                promote_pending = !deliver_disconnected;
-            }
+            notify_disconnected = it->second.connected && _started.load() && _client_callbacks_enabled;
+            _client_sessions.erase(it);
         }
     }
 
@@ -493,12 +456,10 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
         } catch (...) {
         }
     }
-    if (deliver_connected) {
-        _deliver_client_connected(key, generation, sequence);
-    } else if (deliver_disconnected) {
-        _deliver_client_disconnected(key, generation, sequence, address);
-    } else if (promote_pending) {
-        _promote_pending_client_session(key, generation);
+    if (notify_connected) {
+        SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
+    } else if (notify_disconnected) {
+        SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
 }
 
@@ -510,8 +471,6 @@ void PeripheralWindows::_clear_client_sessions() noexcept {
         _client_callbacks_enabled = false;
         ++_client_generation;
         sessions.swap(_client_sessions);
-        _client_callback_states.clear();
-        _pending_client_sessions.clear();
     }
     for (auto& [key, client] : sessions) {
         try {
@@ -540,7 +499,7 @@ bool PeripheralWindows::_client_callbacks_are_enabled(uint64_t generation) {
 }
 
 void PeripheralWindows::_enable_client_callbacks(uint64_t generation) {
-    std::vector<std::pair<std::string, uint64_t>> pending_connections;
+    std::vector<BluetoothAddress> connected_clients;
     {
         std::scoped_lock lock(_clients_mutex);
         if (!_started.load() || !_accepting_clients || _client_generation != generation) {
@@ -548,112 +507,13 @@ void PeripheralWindows::_enable_client_callbacks(uint64_t generation) {
         }
         _client_callbacks_enabled = true;
         for (const auto& [key, client] : _client_sessions) {
-            if (client.generation == generation && client.connect_callback_pending) {
-                pending_connections.emplace_back(key, client.sequence);
+            if (client.generation == generation && client.connected) {
+                connected_clients.push_back(client.address);
             }
         }
     }
-    for (const auto& [key, sequence] : pending_connections) {
-        _deliver_client_connected(key, generation, sequence);
-    }
-}
-
-void PeripheralWindows::_deliver_client_connected(const std::string& key, uint64_t generation, uint64_t sequence) {
-    BluetoothAddress address;
-    {
-        std::scoped_lock lock(_clients_mutex);
-        const auto it = _client_sessions.find(key);
-        if (!_started.load() || !_accepting_clients || !_client_callbacks_enabled || _client_generation != generation ||
-            it == _client_sessions.end() || it->second.generation != generation || it->second.sequence != sequence ||
-            !it->second.connect_callback_pending || it->second.connect_callback_in_progress) {
-            return;
-        }
-        const auto callback_state = _client_callback_states.find(key);
-        if (callback_state != _client_callback_states.end() &&
-            (callback_state->second.disconnect_sequence != 0 ||
-             callback_state->second.disconnect_callback_in_progress)) {
-            return;
-        }
-        address = it->second.address;
-        it->second.connect_callback_in_progress = true;
-    }
-
-    SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-
-    bool deliver_disconnected = false;
-    {
-        std::scoped_lock lock(_clients_mutex);
-        const auto it = _client_sessions.find(key);
-        if (!_accepting_clients || _client_generation != generation || it == _client_sessions.end() ||
-            it->second.generation != generation || it->second.sequence != sequence ||
-            !it->second.connect_callback_pending || !it->second.connect_callback_in_progress) {
-            return;
-        }
-        it->second.connect_callback_pending = false;
-        it->second.connect_callback_in_progress = false;
-        it->second.connected_notified = true;
-        _client_callback_states[key].connected_sequence = sequence;
-        if (it->second.closed) {
-            _client_sessions.erase(it);
-            _client_callback_states[key].disconnect_sequence = sequence;
-            deliver_disconnected = true;
-        }
-    }
-
-    if (deliver_disconnected) {
-        _deliver_client_disconnected(key, generation, sequence, address);
-    }
-}
-
-void PeripheralWindows::_deliver_client_disconnected(const std::string& key, uint64_t generation, uint64_t sequence,
-                                                     const BluetoothAddress& address) {
-    {
-        std::scoped_lock lock(_clients_mutex);
-        const auto state = _client_callback_states.find(key);
-        if (!_started.load() || !_accepting_clients || !_client_callbacks_enabled || _client_generation != generation ||
-            state == _client_callback_states.end() || state->second.connected_sequence != sequence ||
-            state->second.disconnect_sequence != sequence || state->second.disconnect_callback_in_progress) {
-            return;
-        }
-        state->second.disconnect_callback_in_progress = true;
-    }
-    SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
-
-    {
-        std::scoped_lock lock(_clients_mutex);
-        const auto state = _client_callback_states.find(key);
-        if (!_accepting_clients || _client_generation != generation || state == _client_callback_states.end() ||
-            state->second.disconnect_sequence != sequence) {
-            return;
-        }
-        state->second.connected_sequence = 0;
-        state->second.disconnect_sequence = 0;
-        state->second.disconnect_callback_in_progress = false;
-
-        _client_callback_states.erase(state);
-    }
-    _promote_pending_client_session(key, generation);
-}
-
-void PeripheralWindows::_promote_pending_client_session(const std::string& key, uint64_t generation) {
-    GattSession session{nullptr};
-    {
-        std::scoped_lock lock(_clients_mutex);
-        const auto pending = _pending_client_sessions.find(key);
-        if (!_accepting_clients || _client_generation != generation || _client_sessions.count(key) != 0 ||
-            pending == _pending_client_sessions.end() || pending->second.generation != generation) {
-            return;
-        }
-        session = pending->second.session;
-        _pending_client_sessions.erase(pending);
-    }
-
-    try {
-        _observe_session(session, generation);
-    } catch (const std::exception& ex) {
-        SIMPLEBLE_LOG_WARN(fmt::format("Failed to promote a Windows local peripheral client: {}", ex.what()));
-    } catch (...) {
-        SIMPLEBLE_LOG_WARN("Failed to promote a Windows local peripheral client");
+    for (const auto& address : connected_clients) {
+        SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
     }
 }
 
