@@ -27,8 +27,6 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
                    CallbackObserver callback_observer);
     ~ServiceWindows() override;
 
-    void initialize_handlers();
-
     BluetoothUUID uuid() override;
 
     std::shared_ptr<CharacteristicBase> add_characteristic(BluetoothUUID uuid,
@@ -39,8 +37,8 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
     void unfreeze();
     void activate(uint64_t generation);
     void deactivate() noexcept;
-    void start_advertising();
-    void wait_until_advertising();
+    void start_advertising(uint64_t generation);
+    void wait_until_advertising(uint64_t generation);
     void stop_advertising();
     void reset_subscriptions();
     void reconcile_subscriptions(uint64_t generation) noexcept;
@@ -64,11 +62,15 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
                                   GattServiceProviderAdvertisementStatus::Created};
     winrt::Windows::Devices::Bluetooth::BluetoothError _advertisement_error{
         winrt::Windows::Devices::Bluetooth::BluetoothError::Success};
+    uint64_t _advertising_generation{0};
+    uint64_t _advertisement_status_generation{0};
     bool _advertising_requested{false};
     mutable std::mutex _advertisement_mutex;
     std::condition_variable _advertisement_cv;
 
     uint64_t _current_generation();
+    void _install_advertisement_handler(uint64_t generation);
+    void _remove_advertisement_handler() noexcept;
 };
 
 }  // namespace SimpleBLE::Local
