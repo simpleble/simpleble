@@ -58,12 +58,12 @@ CharacteristicWindows::~CharacteristicWindows() {
     _callback_on_write.unload();
     _callback_on_subscribed.unload();
     _callback_on_unsubscribed.unload();
-    stop_native();
+    destroy_native();
 }
 
-void CharacteristicWindows::start_native(const GattLocalService& service, SessionObserver session_observer,
-                                         ActivityObserver activity_observer) {
-    stop_native();
+void CharacteristicWindows::create_native(const GattLocalService& service, SessionObserver session_observer,
+                                          std::shared_ptr<std::atomic_bool> active) {
+    destroy_native();
 
     auto parameters = GattLocalCharacteristicParameters();
     parameters.CharacteristicProperties(properties_from_capabilities(_capabilities));
@@ -85,7 +85,7 @@ void CharacteristicWindows::start_native(const GattLocalService& service, Sessio
     auto native = std::make_shared<NativeState>();
     native->characteristic = result.Characteristic();
     native->session_observer = std::move(session_observer);
-    native->activity_observer = std::move(activity_observer);
+    native->active = std::move(active);
 
     auto weak_self = weak_from_this();
     std::weak_ptr<NativeState> weak_native = native;
@@ -123,7 +123,7 @@ void CharacteristicWindows::start_native(const GattLocalService& service, Sessio
     _native = std::move(native);
 }
 
-void CharacteristicWindows::stop_native() noexcept {
+void CharacteristicWindows::destroy_native() noexcept {
     std::shared_ptr<NativeState> native;
     {
         std::scoped_lock lock(_native_mutex);
@@ -151,14 +151,14 @@ void CharacteristicWindows::set_value(ByteArray value) {
 
     const bool can_publish = _capabilities.count(CharacteristicCapability::NOTIFY) != 0 ||
                              _capabilities.count(CharacteristicCapability::INDICATE) != 0;
-    const auto native = _native_snapshot();
-    if (!can_publish || !native || !native->subscribed.load() || !native->active()) {
+    const auto native = _native_state();
+    if (!can_publish || !native || !native->subscribed.load() || !native->is_active()) {
         return;
     }
 
     try {
         WinRT::MtaManager::get().execute_sync([native, value_snapshot]() {
-            if (native->active()) {
+            if (native->is_active()) {
                 async_get(native->characteristic.NotifyValueAsync(bytearray_to_ibuffer(value_snapshot)));
             }
         });
@@ -199,7 +199,7 @@ void CharacteristicWindows::set_callback_on_unsubscribed(std::function<void()> o
     }
 }
 
-std::shared_ptr<CharacteristicWindows::NativeState> CharacteristicWindows::_native_snapshot() {
+std::shared_ptr<CharacteristicWindows::NativeState> CharacteristicWindows::_native_state() {
     std::scoped_lock lock(_native_mutex);
     return _native;
 }
@@ -233,7 +233,7 @@ void CharacteristicWindows::_on_read_requested(const std::shared_ptr<NativeState
     auto deferral = args.GetDeferral();
     GattReadRequest request{nullptr};
     try {
-        if (!native->active()) {
+        if (!native->is_active()) {
             deferral.Complete();
             return;
         }
@@ -246,14 +246,14 @@ void CharacteristicWindows::_on_read_requested(const std::shared_ptr<NativeState
             deferral.Complete();
             return;
         }
-        if (!native->active()) {
+        if (!native->is_active()) {
             request.RespondWithProtocolError(ATT_ERROR_UNLIKELY);
             deferral.Complete();
             return;
         }
 
         ByteArray response;
-        if (_callback_on_read && native->active()) {
+        if (_callback_on_read && native->is_active()) {
             response = _callback_on_read();
             std::scoped_lock lock(_value_mutex);
             _value = response;
@@ -295,7 +295,7 @@ void CharacteristicWindows::_on_write_requested(const std::shared_ptr<NativeStat
     GattWriteRequest request{nullptr};
     bool should_respond = false;
     try {
-        if (!native->active()) {
+        if (!native->is_active()) {
             deferral.Complete();
             return;
         }
@@ -310,7 +310,7 @@ void CharacteristicWindows::_on_write_requested(const std::shared_ptr<NativeStat
         }
 
         should_respond = request.Option() == GattWriteOption::WriteWithResponse;
-        if (!native->active()) {
+        if (!native->is_active()) {
             if (should_respond) {
                 request.RespondWithProtocolError(ATT_ERROR_UNLIKELY);
             }
@@ -341,7 +341,7 @@ void CharacteristicWindows::_on_write_requested(const std::shared_ptr<NativeStat
             _value = updated;
         }
 
-        if (native->active()) {
+        if (native->is_active()) {
             SAFE_CALLBACK_CALL(_callback_on_write, updated);
         }
         if (should_respond) {
@@ -370,7 +370,7 @@ void CharacteristicWindows::_on_write_requested(const std::shared_ptr<NativeStat
 
 void CharacteristicWindows::_on_subscribed_clients_changed(const std::shared_ptr<NativeState>& native) {
     try {
-        if (!native->active()) {
+        if (!native->is_active()) {
             return;
         }
 
@@ -380,13 +380,13 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const std::shared_ptr
                 native->session_observer(client.Session());
             }
         }
-        if (!native->active()) {
+        if (!native->is_active()) {
             return;
         }
 
         const bool subscribed = clients.Size() > 0;
         const bool changed = native->subscribed.exchange(subscribed) != subscribed;
-        if (changed && native->active()) {
+        if (changed && native->is_active()) {
             if (subscribed) {
                 SAFE_CALLBACK_CALL(_callback_on_subscribed);
             } else {

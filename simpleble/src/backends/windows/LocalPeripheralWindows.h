@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -49,14 +50,16 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSessionStatusChangedEventArgs;
 
     struct ClientSession {
-        GattSession session;
-        winrt::event_token status_changed_token;
+        GattSession session{nullptr};
+        winrt::event_token status_changed_token{};
         BluetoothAddress address;
         bool connected{false};
+
+        void close() noexcept;
     };
 
     struct RunState {
-        std::atomic_bool active{true};
+        std::shared_ptr<std::atomic_bool> active{std::make_shared<std::atomic_bool>(true)};
         std::map<std::string, ClientSession> client_sessions;
         std::mutex clients_mutex;
     };
@@ -66,7 +69,6 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     std::vector<std::shared_ptr<ServiceWindows>> _services;
     std::shared_ptr<RunState> _run;
     std::atomic_bool _started{false};
-    bool _cleanup_required{false};
     mutable std::mutex _lifecycle_mutex;
 
     kvn::safe_callback<void(BluetoothAddress)> _callback_on_client_connected;
@@ -76,6 +78,7 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     void _observe_session(const std::shared_ptr<RunState>& run, const GattSession& session);
     void _on_session_status_changed(const std::shared_ptr<RunState>& run, const std::string& key,
                                     const GattSession& sender, const GattSessionStatusChangedEventArgs& args);
+    std::exception_ptr _stop_advertising() noexcept;
     void _clear_client_sessions(const std::shared_ptr<RunState>& run) noexcept;
     static std::pair<std::string, BluetoothAddress> _session_identity(const GattSession& session);
 };
