@@ -70,7 +70,6 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     uint64_t _client_generation{0};
     uint64_t _next_client_sequence{0};
     bool _accepting_clients{false};
-    bool _client_callbacks_enabled{false};
     kvn::safe_callback<void(BluetoothAddress)> _callback_on_client_connected;
     kvn::safe_callback<void(BluetoothAddress)> _callback_on_client_disconnected;
 
@@ -80,8 +79,6 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
                                     const GattSession& sender, const GattSessionStatusChangedEventArgs& args);
     void _clear_client_sessions() noexcept;
     uint64_t _active_client_generation();
-    bool _client_callbacks_are_enabled(uint64_t generation);
-    void _enable_client_callbacks(uint64_t generation);
     static std::pair<std::string, BluetoothAddress> _session_identity(const GattSession& session);
 };
 

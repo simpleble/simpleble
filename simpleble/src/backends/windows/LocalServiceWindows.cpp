@@ -16,12 +16,10 @@ namespace SimpleBLE::Local {
 using namespace winrt::Windows::Devices::Bluetooth;
 using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 
-ServiceWindows::ServiceWindows(BluetoothUUID uuid, SessionObserver session_observer, ActivityObserver activity_observer,
-                               CallbackObserver callback_observer)
+ServiceWindows::ServiceWindows(BluetoothUUID uuid, SessionObserver session_observer, ActivityObserver activity_observer)
     : _uuid(std::move(uuid)),
       _session_observer(std::move(session_observer)),
-      _activity_observer(std::move(activity_observer)),
-      _callback_observer(std::move(callback_observer)) {
+      _activity_observer(std::move(activity_observer)) {
     auto result = WinRT::MtaManager::get().execute_sync<GattServiceProviderResult>(
         [this]() { return async_get(GattServiceProvider::CreateAsync(uuid_to_guid(_uuid))); });
     if (result.Error() != BluetoothError::Success || !result.ServiceProvider()) {
@@ -103,13 +101,6 @@ std::shared_ptr<CharacteristicBase> ServiceWindows::add_characteristic(
                 return self->_current_generation();
             }
             return 0;
-        },
-        [weak_self](uint64_t generation) {
-            if (auto self = weak_self.lock()) {
-                return self->_current_generation() == generation && self->_callback_observer &&
-                       self->_callback_observer(generation);
-            }
-            return false;
         });
     characteristic->initialize_handlers();
     _characteristics.push_back(characteristic);
@@ -223,37 +214,6 @@ void ServiceWindows::reset_subscriptions() {
     }
     for (const auto& characteristic : characteristics) {
         characteristic->reset_subscriptions();
-    }
-}
-
-void ServiceWindows::reconcile_subscriptions(uint64_t generation) noexcept {
-    if (_current_generation() != generation) {
-        return;
-    }
-    try {
-        std::scoped_lock lock(_mutex);
-        for (const auto& characteristic : _characteristics) {
-            characteristic->reconcile_subscriptions(generation);
-        }
-    } catch (const std::exception& ex) {
-        SIMPLEBLE_LOG_WARN(
-            fmt::format("Failed to reconcile subscriptions for Windows local service {}: {}", _uuid, ex.what()));
-    } catch (...) {
-        SIMPLEBLE_LOG_WARN(fmt::format("Failed to reconcile subscriptions for Windows local service {}", _uuid));
-    }
-}
-
-void ServiceWindows::enable_subscription_callbacks(uint64_t generation) {
-    if (_current_generation() != generation) {
-        return;
-    }
-    std::vector<std::shared_ptr<CharacteristicWindows>> characteristics;
-    {
-        std::scoped_lock lock(_mutex);
-        characteristics = _characteristics;
-    }
-    for (const auto& characteristic : characteristics) {
-        characteristic->enable_subscription_callbacks(generation);
     }
 }
 

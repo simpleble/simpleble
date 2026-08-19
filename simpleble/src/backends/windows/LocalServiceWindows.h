@@ -21,10 +21,8 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
     using GattSession = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
     using SessionObserver = std::function<void(const GattSession&, uint64_t expected_generation)>;
     using ActivityObserver = std::function<uint64_t()>;
-    using CallbackObserver = std::function<bool(uint64_t)>;
 
-    ServiceWindows(BluetoothUUID uuid, SessionObserver session_observer, ActivityObserver activity_observer,
-                   CallbackObserver callback_observer);
+    ServiceWindows(BluetoothUUID uuid, SessionObserver session_observer, ActivityObserver activity_observer);
     ~ServiceWindows() override;
 
     BluetoothUUID uuid() override;
@@ -41,8 +39,6 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
     void wait_until_advertising(uint64_t generation);
     void stop_advertising();
     void reset_subscriptions();
-    void reconcile_subscriptions(uint64_t generation) noexcept;
-    void enable_subscription_callbacks(uint64_t generation);
     bool is_advertising() const;
 
   private:
@@ -50,7 +46,6 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
     BluetoothUUID _uuid;
     SessionObserver _session_observer;
     ActivityObserver _activity_observer;
-    CallbackObserver _callback_observer;
     std::atomic_uint64_t _active_generation{0};
     std::vector<std::shared_ptr<CharacteristicWindows>> _characteristics;
     mutable std::mutex _mutex;

@@ -48,13 +48,11 @@ GattCharacteristicProperties properties_from_capabilities(const std::set<Charact
 
 CharacteristicWindows::CharacteristicWindows(const GattLocalService& service, BluetoothUUID uuid,
                                              std::set<CharacteristicCapability> capabilities,
-                                             SessionObserver session_observer, ActivityObserver activity_observer,
-                                             CallbackObserver callback_observer)
+                                             SessionObserver session_observer, ActivityObserver activity_observer)
     : _uuid(std::move(uuid)),
       _capabilities(std::move(capabilities)),
       _session_observer(std::move(session_observer)),
-      _activity_observer(std::move(activity_observer)),
-      _callback_observer(std::move(callback_observer)) {
+      _activity_observer(std::move(activity_observer)) {
     if (_capabilities.empty()) {
         throw Exception::OperationFailed("A local characteristic requires at least one capability.");
     }
@@ -152,15 +150,7 @@ void CharacteristicWindows::set_value(ByteArray value) {
         return;
     }
 
-    uint64_t subscription_generation;
-    {
-        std::scoped_lock lock(_subscription_mutex);
-        if (_subscribed_clients == 0) {
-            return;
-        }
-        subscription_generation = _subscription_generation;
-    }
-    if (!_activity_observer || _activity_observer() != subscription_generation) {
+    if (!_subscribed.load() || !_activity_observer || _activity_observer() == 0) {
         return;
     }
 
@@ -205,33 +195,7 @@ void CharacteristicWindows::set_callback_on_unsubscribed(std::function<void()> o
     }
 }
 
-void CharacteristicWindows::reset_subscriptions() {
-    std::scoped_lock lock(_subscription_mutex);
-    _subscribed_clients = 0;
-    _subscription_generation = 0;
-    _subscription_callbacks_enabled = false;
-}
-
-void CharacteristicWindows::reconcile_subscriptions(uint64_t generation) noexcept {
-    // Re-read the native CCCD state after every start. WinRT may retain subscribed clients across
-    // StopAdvertising/StartAdvertising without emitting another change event.
-    _on_subscribed_clients_changed(_characteristic, nullptr, generation);
-}
-
-void CharacteristicWindows::enable_subscription_callbacks(uint64_t generation) {
-    bool notify_subscribed = false;
-    {
-        std::scoped_lock lock(_subscription_mutex);
-        if (_subscription_generation == generation && !_subscription_callbacks_enabled && _callback_observer &&
-            _callback_observer(generation)) {
-            _subscription_callbacks_enabled = true;
-            notify_subscribed = _subscribed_clients > 0;
-        }
-    }
-    if (notify_subscribed && _callback_observer && _callback_observer(generation)) {
-        SAFE_CALLBACK_CALL(_callback_on_subscribed);
-    }
-}
+void CharacteristicWindows::reset_subscriptions() { _subscribed.store(false); }
 
 void CharacteristicWindows::_on_read_requested(const GattLocalCharacteristic&, const GattReadRequestedEventArgs& args) {
     auto deferral = args.GetDeferral();
@@ -367,11 +331,10 @@ void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
 }
 
 void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharacteristic& sender,
-                                                           const winrt::Windows::Foundation::IInspectable&,
-                                                           uint64_t expected_generation) {
+                                                           const winrt::Windows::Foundation::IInspectable&) {
     try {
         const uint64_t generation = _activity_observer ? _activity_observer() : 0;
-        if (generation == 0 || (expected_generation != 0 && generation != expected_generation)) {
+        if (generation == 0) {
             return;
         }
 
@@ -382,24 +345,10 @@ void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharac
             }
         }
 
-        bool notify = false;
-        bool subscribed = false;
-        {
-            std::scoped_lock lock(_subscription_mutex);
-            if (!_activity_observer || _activity_observer() != generation ||
-                (expected_generation != 0 && generation != expected_generation)) {
-                return;
-            }
+        const bool subscribed = clients.Size() > 0;
+        const bool changed = _subscribed.exchange(subscribed) != subscribed;
 
-            const bool was_subscribed = _subscription_generation == generation && _subscribed_clients > 0;
-            _subscribed_clients = clients.Size();
-            _subscription_generation = generation;
-            subscribed = _subscribed_clients > 0;
-            notify = _subscription_callbacks_enabled && _callback_observer && _callback_observer(generation) &&
-                     was_subscribed != subscribed;
-        }
-
-        if (notify && _callback_observer && _callback_observer(generation)) {
+        if (changed && _activity_observer && _activity_observer() == generation) {
             if (subscribed) {
                 SAFE_CALLBACK_CALL(_callback_on_subscribed);
             } else {
