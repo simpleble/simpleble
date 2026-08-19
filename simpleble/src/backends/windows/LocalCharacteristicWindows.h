@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -20,12 +21,10 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     using GattSession = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
     using SessionObserver = std::function<void(const GattSession&, uint64_t expected_generation)>;
     using ActivityObserver = std::function<uint64_t()>;
-    using CallbackObserver = std::function<bool(uint64_t)>;
 
     CharacteristicWindows(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattLocalService& service,
                           BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities,
-                          SessionObserver session_observer, ActivityObserver activity_observer,
-                          CallbackObserver callback_observer);
+                          SessionObserver session_observer, ActivityObserver activity_observer);
     ~CharacteristicWindows() override;
 
     void initialize_handlers();
@@ -43,8 +42,6 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     void set_callback_on_unsubscribed(std::function<void()> on_unsubscribed) override;
 
     void reset_subscriptions();
-    void reconcile_subscriptions(uint64_t generation) noexcept;
-    void enable_subscription_callbacks(uint64_t generation);
 
   private:
     using GattLocalCharacteristic =
@@ -59,14 +56,10 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     std::set<CharacteristicCapability> _capabilities;
     SessionObserver _session_observer;
     ActivityObserver _activity_observer;
-    CallbackObserver _callback_observer;
 
     ByteArray _value;
     std::mutex _value_mutex;
-    size_t _subscribed_clients{0};
-    uint64_t _subscription_generation{0};
-    bool _subscription_callbacks_enabled{false};
-    std::mutex _subscription_mutex;
+    std::atomic_bool _subscribed{false};
 
     winrt::event_token _read_requested_token_{};
     winrt::event_token _write_requested_token_{};
@@ -80,8 +73,7 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     void _on_read_requested(const GattLocalCharacteristic& sender, const GattReadRequestedEventArgs& args);
     void _on_write_requested(const GattLocalCharacteristic& sender, const GattWriteRequestedEventArgs& args);
     void _on_subscribed_clients_changed(const GattLocalCharacteristic& sender,
-                                        const winrt::Windows::Foundation::IInspectable& args,
-                                        uint64_t expected_generation = 0);
+                                        const winrt::Windows::Foundation::IInspectable& args);
 };
 
 }  // namespace SimpleBLE::Local

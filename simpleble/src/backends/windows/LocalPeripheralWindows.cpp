@@ -12,7 +12,6 @@
 #include "MtaManager.h"
 #include "Utils.h"
 #include "winrt/Windows.Foundation.Metadata.h"
-#include "winrt/Windows.System.Threading.h"
 
 namespace SimpleBLE::Local {
 
@@ -75,12 +74,6 @@ std::shared_ptr<ServiceBase> PeripheralWindows::add_service(BluetoothUUID uuid) 
                 return self->_active_client_generation();
             }
             return 0;
-        },
-        [weak_self](uint64_t generation) {
-            if (auto self = weak_self.lock()) {
-                return self->_client_callbacks_are_enabled(generation);
-            }
-            return false;
         });
     _services.push_back(service);
     return service;
@@ -98,7 +91,7 @@ void PeripheralWindows::remove_all_services() {
 }
 
 void PeripheralWindows::start() {
-    std::unique_lock lock(_lifecycle_mutex);
+    std::scoped_lock lock(_lifecycle_mutex);
     if (_cleanup_required) {
         throw Exception::OperationFailed(
             "The previous Windows peripheral operation requires cleanup; call stop() before starting again.");
@@ -152,7 +145,6 @@ void PeripheralWindows::start() {
         std::scoped_lock clients_lock(_clients_mutex);
         generation = ++_client_generation;
         _accepting_clients = true;
-        _client_callbacks_enabled = false;
     }
     for (const auto& service : services_snapshot) {
         service->activate(generation);
@@ -193,13 +185,7 @@ void PeripheralWindows::start() {
             }
             std::rethrow_exception(start_error);
         }
-        {
-            std::scoped_lock clients_lock(_clients_mutex);
-            _started.store(true);
-        }
-        for (const auto& service : services_snapshot) {
-            service->reconcile_subscriptions(generation);
-        }
+        _started.store(true);
     } catch (const std::exception& ex) {
         _clear_client_sessions();
         for (const auto& service : services_snapshot) {
@@ -234,31 +220,6 @@ void PeripheralWindows::start() {
         }
         SIMPLEBLE_LOG_ERROR("Failed to start Windows local peripheral");
         throw;
-    }
-
-    lock.unlock();
-    auto weak_self = weak_from_this();
-    try {
-        winrt::Windows::System::Threading::ThreadPool::RunAsync(
-            [weak_self, generation, services_snapshot](const winrt::Windows::Foundation::IAsyncAction&) {
-                if (auto self = weak_self.lock()) {
-                    self->_enable_client_callbacks(generation);
-                    for (const auto& service : services_snapshot) {
-                        service->enable_subscription_callbacks(generation);
-                    }
-                }
-            });
-    } catch (...) {
-        const auto schedule_error = std::current_exception();
-        try {
-            stop();
-        } catch (const std::exception& ex) {
-            SIMPLEBLE_LOG_ERROR(fmt::format(
-                "Failed to roll back Windows local peripheral after callback scheduling failed: {}", ex.what()));
-        } catch (...) {
-            SIMPLEBLE_LOG_ERROR("Failed to roll back Windows local peripheral after callback scheduling failed");
-        }
-        std::rethrow_exception(schedule_error);
     }
 }
 
@@ -417,9 +378,7 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
             const auto status = session.SessionStatus();
             if (status == GattSessionStatus::Active && !it->second.connected) {
                 it->second.connected = true;
-                if (_started.load() && _client_callbacks_enabled) {
-                    notify_connected = true;
-                }
+                notify_connected = true;
             } else if (status == GattSessionStatus::Closed) {
                 _client_sessions.erase(it);
                 keep_token = false;
@@ -433,7 +392,7 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
         } catch (...) {
         }
     }
-    if (notify_connected && _client_callbacks_are_enabled(generation)) {
+    if (notify_connected && _active_client_generation() == generation) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
     }
 }
@@ -457,14 +416,12 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
         address = it->second.address;
         if (args.Status() == GattSessionStatus::Active && !it->second.connected) {
             it->second.connected = true;
-            if (_started.load() && _client_callbacks_enabled) {
-                notify_connected = true;
-            }
+            notify_connected = true;
         } else if (args.Status() == GattSessionStatus::Closed) {
             session = it->second.session;
             token = it->second.status_changed_token;
             revoke_token = static_cast<bool>(token);
-            notify_disconnected = it->second.connected && _started.load() && _client_callbacks_enabled;
+            notify_disconnected = it->second.connected;
             _client_sessions.erase(it);
         }
     }
@@ -475,9 +432,9 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
         } catch (...) {
         }
     }
-    if (notify_connected && _client_callbacks_are_enabled(generation)) {
+    if (notify_connected && _active_client_generation() == generation) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-    } else if (notify_disconnected && _client_callbacks_are_enabled(generation)) {
+    } else if (notify_disconnected && _active_client_generation() == generation) {
         SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
 }
@@ -487,7 +444,6 @@ void PeripheralWindows::_clear_client_sessions() noexcept {
     {
         std::scoped_lock lock(_clients_mutex);
         _accepting_clients = false;
-        _client_callbacks_enabled = false;
         ++_client_generation;
         sessions.swap(_client_sessions);
     }
@@ -510,32 +466,6 @@ uint64_t PeripheralWindows::_active_client_generation() {
         return 0;
     }
     return _client_generation;
-}
-
-bool PeripheralWindows::_client_callbacks_are_enabled(uint64_t generation) {
-    std::scoped_lock lock(_clients_mutex);
-    return _started.load() && _accepting_clients && _client_callbacks_enabled && _client_generation == generation;
-}
-
-void PeripheralWindows::_enable_client_callbacks(uint64_t generation) {
-    std::vector<BluetoothAddress> connected_clients;
-    {
-        std::scoped_lock lock(_clients_mutex);
-        if (!_started.load() || !_accepting_clients || _client_generation != generation) {
-            return;
-        }
-        _client_callbacks_enabled = true;
-        for (const auto& [key, client] : _client_sessions) {
-            if (client.generation == generation && client.connected) {
-                connected_clients.push_back(client.address);
-            }
-        }
-    }
-    for (const auto& address : connected_clients) {
-        if (_client_callbacks_are_enabled(generation)) {
-            SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-        }
-    }
 }
 
 std::pair<std::string, BluetoothAddress> PeripheralWindows::_session_identity(const GattSession& session) {
