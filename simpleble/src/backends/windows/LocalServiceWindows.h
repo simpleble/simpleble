@@ -19,7 +19,6 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
   public:
     using GattSession = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
     using SessionObserver = std::function<void(const GattSession&)>;
-    using ActivityObserver = std::function<bool()>;
 
     explicit ServiceWindows(BluetoothUUID uuid);
     ~ServiceWindows() override;
@@ -32,7 +31,7 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
 
     void freeze();
     void unfreeze();
-    void create_native(SessionObserver session_observer, ActivityObserver activity_observer);
+    void create_native(SessionObserver session_observer, std::shared_ptr<std::atomic_bool> active);
     void destroy_native() noexcept;
     void start_advertising();
     void wait_until_advertising();
@@ -46,7 +45,6 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
 
     struct NativeState {
         GattServiceProvider provider{nullptr};
-        ActivityObserver activity_observer;
         winrt::event_token advertisement_status_changed_token{};
         AdvertisementStatus advertisement_status{AdvertisementStatus::Created};
         winrt::Windows::Devices::Bluetooth::BluetoothError advertisement_error{
@@ -54,8 +52,6 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
         bool advertising_requested{false};
         mutable std::mutex advertisement_mutex;
         std::condition_variable advertisement_cv;
-
-        bool active() const { return activity_observer && activity_observer(); }
     };
 
     BluetoothUUID _uuid;
@@ -64,7 +60,7 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
     mutable std::mutex _mutex;
     bool _frozen{false};
 
-    std::shared_ptr<NativeState> _native_snapshot() const;
+    std::shared_ptr<NativeState> _native_state() const;
     static void _remove_advertisement_handler(const std::shared_ptr<NativeState>& native) noexcept;
 };
 

@@ -54,7 +54,7 @@ void ServiceWindows::unfreeze() {
     _frozen = false;
 }
 
-void ServiceWindows::create_native(SessionObserver session_observer, ActivityObserver activity_observer) {
+void ServiceWindows::create_native(SessionObserver session_observer, std::shared_ptr<std::atomic_bool> active) {
     std::vector<std::shared_ptr<CharacteristicWindows>> characteristics;
     {
         std::scoped_lock lock(_mutex);
@@ -74,15 +74,14 @@ void ServiceWindows::create_native(SessionObserver session_observer, ActivityObs
     auto native = std::make_shared<NativeState>();
     native->provider = result.ServiceProvider();
     native->advertisement_status = native->provider.AdvertisementStatus();
-    native->activity_observer = activity_observer;
 
     try {
         for (const auto& characteristic : characteristics) {
-            characteristic->start_native(native->provider.Service(), session_observer, activity_observer);
+            characteristic->create_native(native->provider.Service(), session_observer, active);
         }
     } catch (...) {
         for (const auto& characteristic : characteristics) {
-            characteristic->stop_native();
+            characteristic->destroy_native();
         }
         throw;
     }
@@ -97,15 +96,15 @@ void ServiceWindows::destroy_native() noexcept {
         std::scoped_lock lock(_mutex);
         native.swap(_native);
         for (const auto& characteristic : _characteristics) {
-            characteristic->stop_native();
+            characteristic->destroy_native();
         }
     }
     _remove_advertisement_handler(native);
 }
 
 void ServiceWindows::start_advertising() {
-    const auto native = _native_snapshot();
-    if (!native || !native->active()) {
+    const auto native = _native_state();
+    if (!native) {
         throw Exception::OperationFailed(fmt::format("Local service {} is not active.", _uuid));
     }
 
@@ -126,9 +125,6 @@ void ServiceWindows::start_advertising() {
             [weak_native](const GattServiceProvider&,
                           const GattServiceProviderAdvertisementStatusChangedEventArgs& args) {
                 if (auto state = weak_native.lock()) {
-                    if (!state->active()) {
-                        return;
-                    }
                     {
                         std::scoped_lock lock(state->advertisement_mutex);
                         state->advertisement_status = args.Status();
@@ -149,7 +145,7 @@ void ServiceWindows::start_advertising() {
 }
 
 void ServiceWindows::wait_until_advertising() {
-    const auto native = _native_snapshot();
+    const auto native = _native_state();
     if (!native) {
         throw Exception::OperationFailed(fmt::format("Local service {} is not active.", _uuid));
     }
@@ -161,9 +157,6 @@ void ServiceWindows::wait_until_advertising() {
         return native->advertisement_status == AdvertisementStatus::Started ||
                native->advertisement_status == AdvertisementStatus::StartedWithoutAllAdvertisementData;
     });
-    if (!native->active()) {
-        throw Exception::OperationFailed(fmt::format("Advertising local service {} was cancelled.", _uuid));
-    }
     if (native->advertisement_status == AdvertisementStatus::Aborted) {
         const auto error = native->advertisement_error;
         throw Exception::OperationFailed(fmt::format("Windows aborted advertising local service {} (WinRT error {}).",
@@ -180,7 +173,7 @@ void ServiceWindows::wait_until_advertising() {
 }
 
 void ServiceWindows::stop_advertising() {
-    const auto native = _native_snapshot();
+    const auto native = _native_state();
     if (!native) {
         return;
     }
@@ -202,7 +195,7 @@ void ServiceWindows::stop_advertising() {
 }
 
 bool ServiceWindows::is_advertising() const {
-    const auto native = _native_snapshot();
+    const auto native = _native_state();
     if (!native) {
         return false;
     }
@@ -211,7 +204,7 @@ bool ServiceWindows::is_advertising() const {
            native->advertisement_status == AdvertisementStatus::StartedWithoutAllAdvertisementData;
 }
 
-std::shared_ptr<ServiceWindows::NativeState> ServiceWindows::_native_snapshot() const {
+std::shared_ptr<ServiceWindows::NativeState> ServiceWindows::_native_state() const {
     std::scoped_lock lock(_mutex);
     return _native;
 }

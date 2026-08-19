@@ -20,6 +20,31 @@ using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 PeripheralWindows::PeripheralWindows(winrt::Windows::Devices::Bluetooth::BluetoothAdapter adapter)
     : _adapter(std::move(adapter)) {}
 
+void PeripheralWindows::ClientSession::close() noexcept {
+    if (!session) {
+        return;
+    }
+    try {
+        if (status_changed_token) {
+            session.SessionStatusChanged(status_changed_token);
+        }
+    } catch (const std::exception& ex) {
+        SIMPLEBLE_LOG_WARN(fmt::format("Failed to remove Windows client session handler: {}", ex.what()));
+    } catch (...) {
+        SIMPLEBLE_LOG_WARN("Failed to remove Windows client session handler");
+    }
+    status_changed_token = {};
+
+    try {
+        session.Close();
+    } catch (const std::exception& ex) {
+        SIMPLEBLE_LOG_WARN(fmt::format("Failed to close Windows client session: {}", ex.what()));
+    } catch (...) {
+        SIMPLEBLE_LOG_WARN("Failed to close Windows client session");
+    }
+    session = nullptr;
+}
+
 PeripheralWindows::~PeripheralWindows() {
     _callback_on_client_connected.unload();
     _callback_on_client_disconnected.unload();
@@ -72,10 +97,6 @@ void PeripheralWindows::remove_all_services() {
 
 void PeripheralWindows::start() {
     std::scoped_lock lock(_lifecycle_mutex);
-    if (_cleanup_required) {
-        throw Exception::OperationFailed(
-            "The previous Windows peripheral operation requires cleanup; call stop() before starting again.");
-    }
     if (_started.load()) {
         return;
     }
@@ -115,13 +136,12 @@ void PeripheralWindows::start() {
         }
     }
 
-    const auto services_snapshot = _services;
     auto run = std::make_shared<RunState>();
     auto weak_self = weak_from_this();
     std::weak_ptr<RunState> weak_run = run;
     const ServiceWindows::SessionObserver session_observer = [weak_self, weak_run](const GattSession& session) {
         const auto state = weak_run.lock();
-        if (!state || !state->active.load()) {
+        if (!state || !state->active->load()) {
             return;
         }
         if (auto self = weak_self.lock()) {
@@ -134,146 +154,76 @@ void PeripheralWindows::start() {
             }
         }
     };
-    const ServiceWindows::ActivityObserver activity_observer = [weak_run]() {
-        const auto state = weak_run.lock();
-        return state && state->active.load();
-    };
-
-    for (const auto& service : services_snapshot) {
-        service->freeze();
-    }
     _run = run;
 
-    bool rollback_failed = false;
     try {
-        for (const auto& service : services_snapshot) {
-            service->create_native(session_observer, activity_observer);
+        for (const auto& service : _services) {
+            service->freeze();
+            service->create_native(session_observer, run->active);
         }
 
-        try {
-            WinRT::MtaManager::get().execute_sync([&publication_order]() {
-                for (const auto& service : publication_order) {
-                    // WinRT publishes each primary GATT service through its own provider. Starting every provider
-                    // keeps the complete GATT table available. Windows owns the shared advertisement payload and may
-                    // omit UUIDs that do not fit, reporting StartedWithoutAllAdvertisementData for those providers.
-                    service->start_advertising();
-                }
-            });
-            // Wait on the calling thread so the process-wide MTA executor remains available to scanning, GATT I/O,
-            // notifications, and status events while Windows finishes publishing the providers.
+        WinRT::MtaManager::get().execute_sync([&publication_order]() {
             for (const auto& service : publication_order) {
-                service->wait_until_advertising();
+                // WinRT publishes each primary GATT service through its own provider. Starting every provider keeps
+                // the complete GATT table available. Windows owns the shared advertisement payload and may omit UUIDs
+                // that do not fit, reporting StartedWithoutAllAdvertisementData for those providers.
+                service->start_advertising();
             }
-        } catch (...) {
-            const auto start_error = std::current_exception();
-            run->active.store(false);
-            try {
-                WinRT::MtaManager::get().execute_sync([&publication_order, &rollback_failed]() {
-                    for (const auto& service : publication_order) {
-                        try {
-                            service->stop_advertising();
-                        } catch (...) {
-                            rollback_failed = true;
-                        }
-                    }
-                });
-            } catch (...) {
-                rollback_failed = true;
-            }
-            std::rethrow_exception(start_error);
+        });
+        // Wait on the calling thread so the process-wide MTA executor remains available to scanning, GATT I/O,
+        // notifications, and status events while Windows finishes publishing the providers.
+        for (const auto& service : publication_order) {
+            service->wait_until_advertising();
         }
         _started.store(true);
-    } catch (const std::exception& ex) {
-        run->active.store(false);
-        _clear_client_sessions(run);
-        if (!rollback_failed) {
-            for (const auto& service : services_snapshot) {
-                service->destroy_native();
-                service->unfreeze();
-            }
-            _run.reset();
-        }
-        _cleanup_required = rollback_failed;
-        if (rollback_failed) {
-            SIMPLEBLE_LOG_ERROR(
-                "Failed to roll back every Windows local service; the peripheral remains frozen until stop() "
-                "succeeds.");
-        }
-        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to start Windows local peripheral: {}", ex.what()));
-        throw;
     } catch (...) {
-        run->active.store(false);
+        const auto start_error = std::current_exception();
+        run->active->store(false);
         _clear_client_sessions(run);
-        if (!rollback_failed) {
-            for (const auto& service : services_snapshot) {
-                service->destroy_native();
-                service->unfreeze();
-            }
-            _run.reset();
+        if (_stop_advertising()) {
+            SIMPLEBLE_LOG_WARN(
+                "Windows reported an error while rolling back advertising; the native providers were released.");
         }
-        _cleanup_required = rollback_failed;
-        if (rollback_failed) {
-            SIMPLEBLE_LOG_ERROR(
-                "Failed to roll back every Windows local service; the peripheral remains frozen until stop() "
-                "succeeds.");
+        for (const auto& service : _services) {
+            service->destroy_native();
+            service->unfreeze();
         }
+        _run.reset();
+        _started.store(false);
         SIMPLEBLE_LOG_ERROR("Failed to start Windows local peripheral");
-        throw;
+        std::rethrow_exception(start_error);
     }
 }
 
 void PeripheralWindows::stop() {
     std::scoped_lock lock(_lifecycle_mutex);
-    if (!_started.load() && !_cleanup_required) {
+    if (!_started.load()) {
         return;
     }
 
     const auto run = _run;
     if (run) {
-        run->active.store(false);
+        run->active->store(false);
         _clear_client_sessions(run);
     }
 
-    std::exception_ptr first_error;
-    try {
-        WinRT::MtaManager::get().execute_sync([this]() {
-            std::exception_ptr stop_error;
-            for (const auto& service : _services) {
-                try {
-                    service->stop_advertising();
-                } catch (...) {
-                    if (!stop_error) {
-                        stop_error = std::current_exception();
-                    }
-                }
-            }
-            if (stop_error) {
-                std::rethrow_exception(stop_error);
-            }
-        });
-    } catch (...) {
-        first_error = std::current_exception();
-    }
-
-    if (first_error) {
-        _cleanup_required = true;
-        std::rethrow_exception(first_error);
-    }
-
+    const auto stop_error = _stop_advertising();
     for (const auto& service : _services) {
         service->destroy_native();
         service->unfreeze();
     }
     _run.reset();
     _started.store(false);
-    _cleanup_required = false;
+    if (stop_error) {
+        std::rethrow_exception(stop_error);
+    }
 }
 
 bool PeripheralWindows::is_started() { return _started.load(); }
 
 bool PeripheralWindows::is_advertising() {
     std::scoped_lock lock(_lifecycle_mutex);
-    if (!_started.load() && !_cleanup_required) {
+    if (!_started.load()) {
         return false;
     }
     return WinRT::MtaManager::get().execute_sync<bool>([this]() {
@@ -300,22 +250,21 @@ void PeripheralWindows::set_callback_on_client_disconnected(
 }
 
 void PeripheralWindows::_ensure_mutable() const {
-    if (_started.load() || _cleanup_required) {
+    if (_started.load()) {
         throw Exception::OperationFailed("The local peripheral cannot be changed while it is started.");
     }
 }
 
 void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, const GattSession& session) {
-    if (!run || !run->active.load() || !session) {
+    if (!run || !run->active->load() || !session) {
         return;
     }
 
     const auto [key, address] = _session_identity(session);
-    GattSession previous_session{nullptr};
-    winrt::event_token previous_token{};
+    ClientSession previous;
     {
         std::scoped_lock lock(run->clients_mutex);
-        if (!run->active.load()) {
+        if (!run->active->load()) {
             return;
         }
         const auto existing = run->client_sessions.find(key);
@@ -326,24 +275,11 @@ void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, c
         if (existing == run->client_sessions.end()) {
             run->client_sessions.emplace(key, ClientSession{session, {}, address, false});
         } else {
-            previous_session = existing->second.session;
-            previous_token = existing->second.status_changed_token;
-            existing->second = ClientSession{session, {}, address, existing->second.connected};
+            previous = std::move(existing->second);
+            existing->second = ClientSession{session, {}, address, previous.connected};
         }
     }
-
-    if (previous_session) {
-        try {
-            if (previous_token) {
-                previous_session.SessionStatusChanged(previous_token);
-            }
-        } catch (...) {
-        }
-        try {
-            previous_session.Close();
-        } catch (...) {
-        }
-    }
+    previous.close();
 
     auto weak_self = weak_from_this();
     std::weak_ptr<RunState> weak_run = run;
@@ -352,7 +288,7 @@ void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, c
         token = session.SessionStatusChanged([weak_self, weak_run, key](const GattSession& sender,
                                                                         const GattSessionStatusChangedEventArgs& args) {
             const auto state = weak_run.lock();
-            if (!state || !state->active.load()) {
+            if (!state || !state->active->load()) {
                 return;
             }
             if (auto self = weak_self.lock()) {
@@ -373,10 +309,8 @@ void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, c
                 run->client_sessions.erase(it);
             }
         }
-        try {
-            session.Close();
-        } catch (...) {
-        }
+        ClientSession failed{session, {}, address, false};
+        failed.close();
         throw;
     }
 
@@ -391,54 +325,40 @@ void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, c
                 run->client_sessions.erase(it);
             }
         }
-        try {
-            session.SessionStatusChanged(token);
-        } catch (...) {
-        }
-        try {
-            session.Close();
-        } catch (...) {
-        }
+        ClientSession failed{session, token, address, false};
+        failed.close();
         throw;
     }
-    bool keep_token = false;
-    bool close_session = false;
+
+    ClientSession closed;
     bool notify_connected = false;
     bool notify_disconnected = false;
     {
         std::scoped_lock lock(run->clients_mutex);
         const auto it = run->client_sessions.find(key);
-        if (run->active.load() && it != run->client_sessions.end() &&
-            winrt::get_abi(it->second.session) == winrt::get_abi(session)) {
+        if (it == run->client_sessions.end() || winrt::get_abi(it->second.session) != winrt::get_abi(session)) {
+            closed = ClientSession{session, token, address, false};
+        } else if (!run->active->load()) {
             it->second.status_changed_token = token;
-            keep_token = true;
+            closed = std::move(it->second);
+            run->client_sessions.erase(it);
+        } else {
+            it->second.status_changed_token = token;
             if (status == GattSessionStatus::Active && !it->second.connected) {
                 it->second.connected = true;
                 notify_connected = true;
             } else if (status == GattSessionStatus::Closed) {
                 notify_disconnected = it->second.connected;
+                closed = std::move(it->second);
                 run->client_sessions.erase(it);
-                keep_token = false;
-                close_session = true;
             }
         }
     }
 
-    if (!keep_token) {
-        try {
-            session.SessionStatusChanged(token);
-        } catch (...) {
-        }
-    }
-    if (close_session) {
-        try {
-            session.Close();
-        } catch (...) {
-        }
-    }
-    if (notify_connected && run->active.load()) {
+    closed.close();
+    if (notify_connected && run->active->load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-    } else if (notify_disconnected && run->active.load()) {
+    } else if (notify_disconnected && run->active->load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
 }
@@ -447,14 +367,13 @@ void PeripheralWindows::_on_session_status_changed(const std::shared_ptr<RunStat
                                                    const GattSession& sender,
                                                    const GattSessionStatusChangedEventArgs& args) {
     BluetoothAddress address;
-    GattSession session{nullptr};
-    winrt::event_token token{};
+    ClientSession closed;
     bool notify_connected = false;
     bool notify_disconnected = false;
     {
         std::scoped_lock lock(run->clients_mutex);
         const auto it = run->client_sessions.find(key);
-        if (!run->active.load() || it == run->client_sessions.end() ||
+        if (!run->active->load() || it == run->client_sessions.end() ||
             winrt::get_abi(it->second.session) != winrt::get_abi(sender)) {
             return;
         }
@@ -464,60 +383,55 @@ void PeripheralWindows::_on_session_status_changed(const std::shared_ptr<RunStat
             it->second.connected = true;
             notify_connected = true;
         } else if (args.Status() == GattSessionStatus::Closed) {
-            session = it->second.session;
-            token = it->second.status_changed_token;
             notify_disconnected = it->second.connected;
+            closed = std::move(it->second);
             run->client_sessions.erase(it);
         }
     }
 
-    if (session) {
-        try {
-            if (token) {
-                session.SessionStatusChanged(token);
-            }
-        } catch (...) {
-        }
-        try {
-            session.Close();
-        } catch (...) {
-        }
-    }
-    if (notify_connected && run->active.load()) {
+    closed.close();
+    if (notify_connected && run->active->load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-    } else if (notify_disconnected && run->active.load()) {
+    } else if (notify_disconnected && run->active->load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
+}
+
+std::exception_ptr PeripheralWindows::_stop_advertising() noexcept {
+    std::exception_ptr first_error;
+    try {
+        WinRT::MtaManager::get().execute_sync([this, &first_error]() {
+            for (const auto& service : _services) {
+                try {
+                    service->stop_advertising();
+                } catch (...) {
+                    if (!first_error) {
+                        first_error = std::current_exception();
+                    }
+                }
+            }
+        });
+    } catch (...) {
+        if (!first_error) {
+            first_error = std::current_exception();
+        }
+    }
+    return first_error;
 }
 
 void PeripheralWindows::_clear_client_sessions(const std::shared_ptr<RunState>& run) noexcept {
     if (!run) {
         return;
     }
-    run->active.store(false);
+    run->active->store(false);
 
     std::map<std::string, ClientSession> sessions;
     {
         std::scoped_lock lock(run->clients_mutex);
         sessions.swap(run->client_sessions);
     }
-    for (auto& [key, client] : sessions) {
-        try {
-            if (client.status_changed_token) {
-                client.session.SessionStatusChanged(client.status_changed_token);
-            }
-        } catch (const std::exception& ex) {
-            SIMPLEBLE_LOG_WARN(fmt::format("Failed to remove Windows client session handler: {}", ex.what()));
-        } catch (...) {
-            SIMPLEBLE_LOG_WARN("Failed to remove Windows client session handler");
-        }
-        try {
-            client.session.Close();
-        } catch (const std::exception& ex) {
-            SIMPLEBLE_LOG_WARN(fmt::format("Failed to close Windows client session: {}", ex.what()));
-        } catch (...) {
-            SIMPLEBLE_LOG_WARN("Failed to close Windows client session");
-        }
+    for (auto& entry : sessions) {
+        entry.second.close();
     }
 }
 

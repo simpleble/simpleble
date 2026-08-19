@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -19,14 +18,13 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
   public:
     using GattSession = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
     using SessionObserver = std::function<void(const GattSession&)>;
-    using ActivityObserver = std::function<bool()>;
 
     CharacteristicWindows(BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities);
     ~CharacteristicWindows() override;
 
-    void start_native(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattLocalService& service,
-                      SessionObserver session_observer, ActivityObserver activity_observer);
-    void stop_native() noexcept;
+    void create_native(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattLocalService& service,
+                       SessionObserver session_observer, std::shared_ptr<std::atomic_bool> active);
+    void destroy_native() noexcept;
 
     BluetoothUUID uuid() override;
     std::set<CharacteristicCapability> capabilities() override;
@@ -51,13 +49,13 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     struct NativeState {
         GattLocalCharacteristic characteristic{nullptr};
         SessionObserver session_observer;
-        ActivityObserver activity_observer;
+        std::shared_ptr<std::atomic_bool> active;
         std::atomic_bool subscribed{false};
         winrt::event_token read_requested_token{};
         winrt::event_token write_requested_token{};
         winrt::event_token subscribed_clients_changed_token{};
 
-        bool active() const { return activity_observer && activity_observer(); }
+        bool is_active() const { return active && active->load(); }
     };
 
     BluetoothUUID _uuid;
@@ -73,7 +71,7 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     kvn::safe_callback<void()> _callback_on_subscribed;
     kvn::safe_callback<void()> _callback_on_unsubscribed;
 
-    std::shared_ptr<NativeState> _native_snapshot();
+    std::shared_ptr<NativeState> _native_state();
     static void _revoke_handlers(const std::shared_ptr<NativeState>& native) noexcept;
     void _on_read_requested(const std::shared_ptr<NativeState>& native, const GattReadRequestedEventArgs& args);
     void _on_write_requested(const std::shared_ptr<NativeState>& native, const GattWriteRequestedEventArgs& args);
