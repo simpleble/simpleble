@@ -33,6 +33,7 @@ PeripheralWindows::~PeripheralWindows() {
 
     std::scoped_lock lock(_lifecycle_mutex);
     _services.clear();
+    _run.reset();
 }
 
 void* PeripheralWindows::underlying() const {
@@ -53,28 +54,7 @@ void PeripheralWindows::set_advertisement(Advertisement advertisement) {
 std::shared_ptr<ServiceBase> PeripheralWindows::add_service(BluetoothUUID uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
-
-    auto weak_self = weak_from_this();
-    auto service = std::make_shared<ServiceWindows>(
-        std::move(uuid),
-        [weak_self](const GattSession& session, uint64_t expected_generation) {
-            if (auto self = weak_self.lock()) {
-                try {
-                    self->_observe_session(session, expected_generation);
-                } catch (const std::exception& ex) {
-                    SIMPLEBLE_LOG_WARN(
-                        fmt::format("Failed to observe a Windows local peripheral client: {}", ex.what()));
-                } catch (...) {
-                    SIMPLEBLE_LOG_WARN("Failed to observe a Windows local peripheral client");
-                }
-            }
-        },
-        [weak_self]() -> uint64_t {
-            if (auto self = weak_self.lock()) {
-                return self->_active_client_generation();
-            }
-            return 0;
-        });
+    auto service = std::make_shared<ServiceWindows>(std::move(uuid));
     _services.push_back(service);
     return service;
 }
@@ -136,45 +116,62 @@ void PeripheralWindows::start() {
     }
 
     const auto services_snapshot = _services;
+    auto run = std::make_shared<RunState>();
+    auto weak_self = weak_from_this();
+    std::weak_ptr<RunState> weak_run = run;
+    const ServiceWindows::SessionObserver session_observer = [weak_self, weak_run](const GattSession& session) {
+        const auto state = weak_run.lock();
+        if (!state || !state->active.load()) {
+            return;
+        }
+        if (auto self = weak_self.lock()) {
+            try {
+                self->_observe_session(state, session);
+            } catch (const std::exception& ex) {
+                SIMPLEBLE_LOG_WARN(fmt::format("Failed to observe a Windows local peripheral client: {}", ex.what()));
+            } catch (...) {
+                SIMPLEBLE_LOG_WARN("Failed to observe a Windows local peripheral client");
+            }
+        }
+    };
+    const ServiceWindows::ActivityObserver activity_observer = [weak_run]() {
+        const auto state = weak_run.lock();
+        return state && state->active.load();
+    };
+
     for (const auto& service : services_snapshot) {
         service->freeze();
     }
-
-    uint64_t generation;
-    {
-        std::scoped_lock clients_lock(_clients_mutex);
-        generation = ++_client_generation;
-        _accepting_clients = true;
-    }
-    for (const auto& service : services_snapshot) {
-        service->activate(generation);
-    }
+    _run = run;
 
     bool rollback_failed = false;
     try {
-        size_t started_count = 0;
+        for (const auto& service : services_snapshot) {
+            service->create_native(session_observer, activity_observer);
+        }
+
         try {
-            WinRT::MtaManager::get().execute_sync([&publication_order, &started_count, generation]() {
+            WinRT::MtaManager::get().execute_sync([&publication_order]() {
                 for (const auto& service : publication_order) {
                     // WinRT publishes each primary GATT service through its own provider. Starting every provider
                     // keeps the complete GATT table available. Windows owns the shared advertisement payload and may
                     // omit UUIDs that do not fit, reporting StartedWithoutAllAdvertisementData for those providers.
-                    service->start_advertising(generation);
-                    ++started_count;
+                    service->start_advertising();
                 }
             });
             // Wait on the calling thread so the process-wide MTA executor remains available to scanning, GATT I/O,
             // notifications, and status events while Windows finishes publishing the providers.
-            for (size_t index = 0; index < started_count; ++index) {
-                publication_order[index]->wait_until_advertising(generation);
+            for (const auto& service : publication_order) {
+                service->wait_until_advertising();
             }
         } catch (...) {
             const auto start_error = std::current_exception();
+            run->active.store(false);
             try {
-                WinRT::MtaManager::get().execute_sync([&publication_order, &rollback_failed, started_count]() {
-                    for (size_t index = 0; index < started_count; ++index) {
+                WinRT::MtaManager::get().execute_sync([&publication_order, &rollback_failed]() {
+                    for (const auto& service : publication_order) {
                         try {
-                            publication_order[index]->stop_advertising();
+                            service->stop_advertising();
                         } catch (...) {
                             rollback_failed = true;
                         }
@@ -187,13 +184,14 @@ void PeripheralWindows::start() {
         }
         _started.store(true);
     } catch (const std::exception& ex) {
-        _clear_client_sessions();
-        for (const auto& service : services_snapshot) {
-            service->deactivate();
-            service->reset_subscriptions();
-            if (!rollback_failed) {
+        run->active.store(false);
+        _clear_client_sessions(run);
+        if (!rollback_failed) {
+            for (const auto& service : services_snapshot) {
+                service->destroy_native();
                 service->unfreeze();
             }
+            _run.reset();
         }
         _cleanup_required = rollback_failed;
         if (rollback_failed) {
@@ -204,13 +202,14 @@ void PeripheralWindows::start() {
         SIMPLEBLE_LOG_ERROR(fmt::format("Failed to start Windows local peripheral: {}", ex.what()));
         throw;
     } catch (...) {
-        _clear_client_sessions();
-        for (const auto& service : services_snapshot) {
-            service->deactivate();
-            service->reset_subscriptions();
-            if (!rollback_failed) {
+        run->active.store(false);
+        _clear_client_sessions(run);
+        if (!rollback_failed) {
+            for (const auto& service : services_snapshot) {
+                service->destroy_native();
                 service->unfreeze();
             }
+            _run.reset();
         }
         _cleanup_required = rollback_failed;
         if (rollback_failed) {
@@ -229,10 +228,10 @@ void PeripheralWindows::stop() {
         return;
     }
 
-    _clear_client_sessions();
-    for (const auto& service : _services) {
-        service->deactivate();
-        service->reset_subscriptions();
+    const auto run = _run;
+    if (run) {
+        run->active.store(false);
+        _clear_client_sessions(run);
     }
 
     std::exception_ptr first_error;
@@ -262,8 +261,10 @@ void PeripheralWindows::stop() {
     }
 
     for (const auto& service : _services) {
+        service->destroy_native();
         service->unfreeze();
     }
+    _run.reset();
     _started.store(false);
     _cleanup_required = false;
 }
@@ -304,84 +305,121 @@ void PeripheralWindows::_ensure_mutable() const {
     }
 }
 
-void PeripheralWindows::_observe_session(const GattSession& session, uint64_t expected_generation) {
-    if (!session) {
+void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, const GattSession& session) {
+    if (!run || !run->active.load() || !session) {
         return;
     }
 
     const auto [key, address] = _session_identity(session);
-    uint64_t generation;
-    uint64_t sequence;
     GattSession previous_session{nullptr};
     winrt::event_token previous_token{};
     {
-        std::scoped_lock lock(_clients_mutex);
-        if (!_accepting_clients || (expected_generation != 0 && _client_generation != expected_generation)) {
+        std::scoped_lock lock(run->clients_mutex);
+        if (!run->active.load()) {
             return;
         }
-        generation = _client_generation;
-        const auto existing = _client_sessions.find(key);
-        if (existing != _client_sessions.end() && winrt::get_abi(existing->second.session) == winrt::get_abi(session)) {
+        const auto existing = run->client_sessions.find(key);
+        if (existing != run->client_sessions.end() &&
+            winrt::get_abi(existing->second.session) == winrt::get_abi(session)) {
             return;
         }
-        sequence = ++_next_client_sequence;
-        if (existing == _client_sessions.end()) {
-            _client_sessions.emplace(key, ClientSession{session, {}, address, false, generation, sequence});
+        if (existing == run->client_sessions.end()) {
+            run->client_sessions.emplace(key, ClientSession{session, {}, address, false});
         } else {
             previous_session = existing->second.session;
             previous_token = existing->second.status_changed_token;
-            existing->second = ClientSession{session, {}, address, existing->second.connected, generation, sequence};
+            existing->second = ClientSession{session, {}, address, existing->second.connected};
         }
     }
 
-    if (previous_session && previous_token) {
+    if (previous_session) {
         try {
-            previous_session.SessionStatusChanged(previous_token);
-        } catch (const std::exception& ex) {
-            SIMPLEBLE_LOG_WARN(fmt::format("Failed to replace Windows client session handler: {}", ex.what()));
+            if (previous_token) {
+                previous_session.SessionStatusChanged(previous_token);
+            }
         } catch (...) {
-            SIMPLEBLE_LOG_WARN("Failed to replace Windows client session handler");
+        }
+        try {
+            previous_session.Close();
+        } catch (...) {
         }
     }
 
     auto weak_self = weak_from_this();
+    std::weak_ptr<RunState> weak_run = run;
     winrt::event_token token{};
     try {
-        token = session.SessionStatusChanged(
-            [weak_self, key, generation, sequence](const GattSession& sender,
-                                                   const GattSessionStatusChangedEventArgs& args) {
-                if (auto self = weak_self.lock()) {
-                    self->_on_session_status_changed(key, generation, sequence, sender, args);
+        token = session.SessionStatusChanged([weak_self, weak_run, key](const GattSession& sender,
+                                                                        const GattSessionStatusChangedEventArgs& args) {
+            const auto state = weak_run.lock();
+            if (!state || !state->active.load()) {
+                return;
+            }
+            if (auto self = weak_self.lock()) {
+                try {
+                    self->_on_session_status_changed(state, key, sender, args);
+                } catch (const std::exception& ex) {
+                    SIMPLEBLE_LOG_WARN(fmt::format("Failed to handle a Windows client session change: {}", ex.what()));
+                } catch (...) {
+                    SIMPLEBLE_LOG_WARN("Failed to handle a Windows client session change");
                 }
-            });
+            }
+        });
     } catch (...) {
         {
-            std::scoped_lock lock(_clients_mutex);
-            const auto it = _client_sessions.find(key);
-            if (it != _client_sessions.end() && it->second.generation == generation &&
-                it->second.sequence == sequence) {
-                _client_sessions.erase(it);
+            std::scoped_lock lock(run->clients_mutex);
+            const auto it = run->client_sessions.find(key);
+            if (it != run->client_sessions.end() && winrt::get_abi(it->second.session) == winrt::get_abi(session)) {
+                run->client_sessions.erase(it);
             }
+        }
+        try {
+            session.Close();
+        } catch (...) {
         }
         throw;
     }
 
+    GattSessionStatus status;
+    try {
+        status = session.SessionStatus();
+    } catch (...) {
+        {
+            std::scoped_lock lock(run->clients_mutex);
+            const auto it = run->client_sessions.find(key);
+            if (it != run->client_sessions.end() && winrt::get_abi(it->second.session) == winrt::get_abi(session)) {
+                run->client_sessions.erase(it);
+            }
+        }
+        try {
+            session.SessionStatusChanged(token);
+        } catch (...) {
+        }
+        try {
+            session.Close();
+        } catch (...) {
+        }
+        throw;
+    }
     bool keep_token = false;
+    bool close_session = false;
     bool notify_connected = false;
+    bool notify_disconnected = false;
     {
-        std::scoped_lock lock(_clients_mutex);
-        const auto it = _client_sessions.find(key);
-        if (_accepting_clients && _client_generation == generation && it != _client_sessions.end() &&
-            it->second.generation == generation && it->second.sequence == sequence) {
+        std::scoped_lock lock(run->clients_mutex);
+        const auto it = run->client_sessions.find(key);
+        if (run->active.load() && it != run->client_sessions.end() &&
+            winrt::get_abi(it->second.session) == winrt::get_abi(session)) {
             it->second.status_changed_token = token;
             keep_token = true;
-            const auto status = session.SessionStatus();
             if (status == GattSessionStatus::Active && !it->second.connected) {
                 it->second.connected = true;
                 notify_connected = true;
             } else if (status == GattSessionStatus::Closed) {
-                _client_sessions.erase(it);
+                notify_disconnected = it->second.connected;
+                run->client_sessions.erase(it);
                 keep_token = false;
+                close_session = true;
             }
         }
     }
@@ -392,24 +430,32 @@ void PeripheralWindows::_observe_session(const GattSession& session, uint64_t ex
         } catch (...) {
         }
     }
-    if (notify_connected && _active_client_generation() == generation) {
+    if (close_session) {
+        try {
+            session.Close();
+        } catch (...) {
+        }
+    }
+    if (notify_connected && run->active.load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
+    } else if (notify_disconnected && run->active.load()) {
+        SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
 }
 
-void PeripheralWindows::_on_session_status_changed(const std::string& key, uint64_t generation, uint64_t sequence,
-                                                   const GattSession&, const GattSessionStatusChangedEventArgs& args) {
+void PeripheralWindows::_on_session_status_changed(const std::shared_ptr<RunState>& run, const std::string& key,
+                                                   const GattSession& sender,
+                                                   const GattSessionStatusChangedEventArgs& args) {
     BluetoothAddress address;
     GattSession session{nullptr};
     winrt::event_token token{};
     bool notify_connected = false;
     bool notify_disconnected = false;
-    bool revoke_token = false;
     {
-        std::scoped_lock lock(_clients_mutex);
-        const auto it = _client_sessions.find(key);
-        if (!_accepting_clients || _client_generation != generation || it == _client_sessions.end() ||
-            it->second.generation != generation || it->second.sequence != sequence) {
+        std::scoped_lock lock(run->clients_mutex);
+        const auto it = run->client_sessions.find(key);
+        if (!run->active.load() || it == run->client_sessions.end() ||
+            winrt::get_abi(it->second.session) != winrt::get_abi(sender)) {
             return;
         }
 
@@ -420,32 +466,40 @@ void PeripheralWindows::_on_session_status_changed(const std::string& key, uint6
         } else if (args.Status() == GattSessionStatus::Closed) {
             session = it->second.session;
             token = it->second.status_changed_token;
-            revoke_token = static_cast<bool>(token);
             notify_disconnected = it->second.connected;
-            _client_sessions.erase(it);
+            run->client_sessions.erase(it);
         }
     }
 
-    if (revoke_token) {
+    if (session) {
         try {
-            session.SessionStatusChanged(token);
+            if (token) {
+                session.SessionStatusChanged(token);
+            }
+        } catch (...) {
+        }
+        try {
+            session.Close();
         } catch (...) {
         }
     }
-    if (notify_connected && _active_client_generation() == generation) {
+    if (notify_connected && run->active.load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
-    } else if (notify_disconnected && _active_client_generation() == generation) {
+    } else if (notify_disconnected && run->active.load()) {
         SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);
     }
 }
 
-void PeripheralWindows::_clear_client_sessions() noexcept {
+void PeripheralWindows::_clear_client_sessions(const std::shared_ptr<RunState>& run) noexcept {
+    if (!run) {
+        return;
+    }
+    run->active.store(false);
+
     std::map<std::string, ClientSession> sessions;
     {
-        std::scoped_lock lock(_clients_mutex);
-        _accepting_clients = false;
-        ++_client_generation;
-        sessions.swap(_client_sessions);
+        std::scoped_lock lock(run->clients_mutex);
+        sessions.swap(run->client_sessions);
     }
     for (auto& [key, client] : sessions) {
         try {
@@ -457,15 +511,14 @@ void PeripheralWindows::_clear_client_sessions() noexcept {
         } catch (...) {
             SIMPLEBLE_LOG_WARN("Failed to remove Windows client session handler");
         }
+        try {
+            client.session.Close();
+        } catch (const std::exception& ex) {
+            SIMPLEBLE_LOG_WARN(fmt::format("Failed to close Windows client session: {}", ex.what()));
+        } catch (...) {
+            SIMPLEBLE_LOG_WARN("Failed to close Windows client session");
+        }
     }
-}
-
-uint64_t PeripheralWindows::_active_client_generation() {
-    std::scoped_lock lock(_clients_mutex);
-    if (!_accepting_clients) {
-        return 0;
-    }
-    return _client_generation;
 }
 
 std::pair<std::string, BluetoothAddress> PeripheralWindows::_session_identity(const GattSession& session) {

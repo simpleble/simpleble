@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -54,31 +53,30 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
         winrt::event_token status_changed_token;
         BluetoothAddress address;
         bool connected{false};
-        uint64_t generation;
-        uint64_t sequence;
+    };
+
+    struct RunState {
+        std::atomic_bool active{true};
+        std::map<std::string, ClientSession> client_sessions;
+        std::mutex clients_mutex;
     };
 
     winrt::Windows::Devices::Bluetooth::BluetoothAdapter _adapter{nullptr};
     Advertisement _advertisement;
     std::vector<std::shared_ptr<ServiceWindows>> _services;
+    std::shared_ptr<RunState> _run;
     std::atomic_bool _started{false};
     bool _cleanup_required{false};
     mutable std::mutex _lifecycle_mutex;
 
-    std::map<std::string, ClientSession> _client_sessions;
-    std::mutex _clients_mutex;
-    uint64_t _client_generation{0};
-    uint64_t _next_client_sequence{0};
-    bool _accepting_clients{false};
     kvn::safe_callback<void(BluetoothAddress)> _callback_on_client_connected;
     kvn::safe_callback<void(BluetoothAddress)> _callback_on_client_disconnected;
 
     void _ensure_mutable() const;
-    void _observe_session(const GattSession& session, uint64_t expected_generation);
-    void _on_session_status_changed(const std::string& key, uint64_t generation, uint64_t sequence,
+    void _observe_session(const std::shared_ptr<RunState>& run, const GattSession& session);
+    void _on_session_status_changed(const std::shared_ptr<RunState>& run, const std::string& key,
                                     const GattSession& sender, const GattSessionStatusChangedEventArgs& args);
-    void _clear_client_sessions() noexcept;
-    uint64_t _active_client_generation();
+    void _clear_client_sessions(const std::shared_ptr<RunState>& run) noexcept;
     static std::pair<std::string, BluetoothAddress> _session_identity(const GattSession& session);
 };
 
