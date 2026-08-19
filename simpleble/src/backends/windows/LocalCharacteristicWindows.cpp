@@ -46,16 +46,24 @@ GattCharacteristicProperties properties_from_capabilities(const std::set<Charact
 
 }  // namespace
 
-CharacteristicWindows::CharacteristicWindows(const GattLocalService& service, BluetoothUUID uuid,
-                                             std::set<CharacteristicCapability> capabilities,
-                                             SessionObserver session_observer, ActivityObserver activity_observer)
-    : _uuid(std::move(uuid)),
-      _capabilities(std::move(capabilities)),
-      _session_observer(std::move(session_observer)),
-      _activity_observer(std::move(activity_observer)) {
+CharacteristicWindows::CharacteristicWindows(BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities)
+    : _uuid(std::move(uuid)), _capabilities(std::move(capabilities)) {
     if (_capabilities.empty()) {
         throw Exception::OperationFailed("A local characteristic requires at least one capability.");
     }
+}
+
+CharacteristicWindows::~CharacteristicWindows() {
+    _callback_on_read.unload();
+    _callback_on_write.unload();
+    _callback_on_subscribed.unload();
+    _callback_on_unsubscribed.unload();
+    stop_native();
+}
+
+void CharacteristicWindows::start_native(const GattLocalService& service, SessionObserver session_observer,
+                                         ActivityObserver activity_observer) {
+    stop_native();
 
     auto parameters = GattLocalCharacteristicParameters();
     parameters.CharacteristicProperties(properties_from_capabilities(_capabilities));
@@ -74,57 +82,54 @@ CharacteristicWindows::CharacteristicWindows(const GattLocalService& service, Bl
                                                      _uuid, static_cast<int32_t>(result.Error())));
     }
 
-    _characteristic = result.Characteristic();
-}
+    auto native = std::make_shared<NativeState>();
+    native->characteristic = result.Characteristic();
+    native->session_observer = std::move(session_observer);
+    native->activity_observer = std::move(activity_observer);
 
-void CharacteristicWindows::initialize_handlers() {
     auto weak_self = weak_from_this();
-    _read_requested_token_ = _characteristic.ReadRequested(
-        [weak_self](const GattLocalCharacteristic& sender, const GattReadRequestedEventArgs& args) {
-            if (auto self = weak_self.lock()) {
-                self->_on_read_requested(sender, args);
-            }
-        });
-    _write_requested_token_ = _characteristic.WriteRequested(
-        [weak_self](const GattLocalCharacteristic& sender, const GattWriteRequestedEventArgs& args) {
-            if (auto self = weak_self.lock()) {
-                self->_on_write_requested(sender, args);
-            }
-        });
-    _subscribed_clients_changed_token_ = _characteristic.SubscribedClientsChanged(
-        [weak_self](const GattLocalCharacteristic& sender, const winrt::Windows::Foundation::IInspectable& args) {
-            if (auto self = weak_self.lock()) {
-                self->_on_subscribed_clients_changed(sender, args);
-            }
-        });
+    std::weak_ptr<NativeState> weak_native = native;
+    try {
+        native->read_requested_token = native->characteristic.ReadRequested(
+            [weak_self, weak_native](const GattLocalCharacteristic&, const GattReadRequestedEventArgs& args) {
+                if (auto self = weak_self.lock()) {
+                    if (auto state = weak_native.lock()) {
+                        self->_on_read_requested(state, args);
+                    }
+                }
+            });
+        native->write_requested_token = native->characteristic.WriteRequested(
+            [weak_self, weak_native](const GattLocalCharacteristic&, const GattWriteRequestedEventArgs& args) {
+                if (auto self = weak_self.lock()) {
+                    if (auto state = weak_native.lock()) {
+                        self->_on_write_requested(state, args);
+                    }
+                }
+            });
+        native->subscribed_clients_changed_token = native->characteristic.SubscribedClientsChanged(
+            [weak_self, weak_native](const GattLocalCharacteristic&, const winrt::Windows::Foundation::IInspectable&) {
+                if (auto self = weak_self.lock()) {
+                    if (auto state = weak_native.lock()) {
+                        self->_on_subscribed_clients_changed(state);
+                    }
+                }
+            });
+    } catch (...) {
+        _revoke_handlers(native);
+        throw;
+    }
+
+    std::scoped_lock lock(_native_mutex);
+    _native = std::move(native);
 }
 
-CharacteristicWindows::~CharacteristicWindows() {
-    _callback_on_read.unload();
-    _callback_on_write.unload();
-    _callback_on_subscribed.unload();
-    _callback_on_unsubscribed.unload();
-
-    if (_characteristic) {
-        if (_read_requested_token_) {
-            try {
-                _characteristic.ReadRequested(_read_requested_token_);
-            } catch (...) {
-            }
-        }
-        if (_write_requested_token_) {
-            try {
-                _characteristic.WriteRequested(_write_requested_token_);
-            } catch (...) {
-            }
-        }
-        if (_subscribed_clients_changed_token_) {
-            try {
-                _characteristic.SubscribedClientsChanged(_subscribed_clients_changed_token_);
-            } catch (...) {
-            }
-        }
+void CharacteristicWindows::stop_native() noexcept {
+    std::shared_ptr<NativeState> native;
+    {
+        std::scoped_lock lock(_native_mutex);
+        native.swap(_native);
     }
+    _revoke_handlers(native);
 }
 
 BluetoothUUID CharacteristicWindows::uuid() { return _uuid; }
@@ -146,17 +151,16 @@ void CharacteristicWindows::set_value(ByteArray value) {
 
     const bool can_publish = _capabilities.count(CharacteristicCapability::NOTIFY) != 0 ||
                              _capabilities.count(CharacteristicCapability::INDICATE) != 0;
-    if (!can_publish) {
-        return;
-    }
-
-    if (!_subscribed.load() || !_activity_observer || _activity_observer() == 0) {
+    const auto native = _native_snapshot();
+    if (!can_publish || !native || !native->subscribed.load() || !native->active()) {
         return;
     }
 
     try {
-        WinRT::MtaManager::get().execute_sync([this, value_snapshot]() {
-            async_get(_characteristic.NotifyValueAsync(bytearray_to_ibuffer(value_snapshot)));
+        WinRT::MtaManager::get().execute_sync([native, value_snapshot]() {
+            if (native->active()) {
+                async_get(native->characteristic.NotifyValueAsync(bytearray_to_ibuffer(value_snapshot)));
+            }
         });
     } catch (const std::exception& ex) {
         SIMPLEBLE_LOG_WARN(fmt::format("Failed to publish local characteristic {}: {}", _uuid, ex.what()));
@@ -195,14 +199,46 @@ void CharacteristicWindows::set_callback_on_unsubscribed(std::function<void()> o
     }
 }
 
-void CharacteristicWindows::reset_subscriptions() { _subscribed.store(false); }
+std::shared_ptr<CharacteristicWindows::NativeState> CharacteristicWindows::_native_snapshot() {
+    std::scoped_lock lock(_native_mutex);
+    return _native;
+}
 
-void CharacteristicWindows::_on_read_requested(const GattLocalCharacteristic&, const GattReadRequestedEventArgs& args) {
+void CharacteristicWindows::_revoke_handlers(const std::shared_ptr<NativeState>& native) noexcept {
+    if (!native || !native->characteristic) {
+        return;
+    }
+    try {
+        if (native->read_requested_token) {
+            native->characteristic.ReadRequested(native->read_requested_token);
+        }
+    } catch (...) {
+    }
+    try {
+        if (native->write_requested_token) {
+            native->characteristic.WriteRequested(native->write_requested_token);
+        }
+    } catch (...) {
+    }
+    try {
+        if (native->subscribed_clients_changed_token) {
+            native->characteristic.SubscribedClientsChanged(native->subscribed_clients_changed_token);
+        }
+    } catch (...) {
+    }
+}
+
+void CharacteristicWindows::_on_read_requested(const std::shared_ptr<NativeState>& native,
+                                               const GattReadRequestedEventArgs& args) {
     auto deferral = args.GetDeferral();
     GattReadRequest request{nullptr};
     try {
-        if (_session_observer) {
-            _session_observer(args.Session(), 0);
+        if (!native->active()) {
+            deferral.Complete();
+            return;
+        }
+        if (native->session_observer) {
+            native->session_observer(args.Session());
         }
 
         request = async_get(args.GetRequestAsync());
@@ -210,16 +246,14 @@ void CharacteristicWindows::_on_read_requested(const GattLocalCharacteristic&, c
             deferral.Complete();
             return;
         }
-
-        const uint64_t generation = _activity_observer ? _activity_observer() : 0;
-        if (generation == 0) {
+        if (!native->active()) {
             request.RespondWithProtocolError(ATT_ERROR_UNLIKELY);
             deferral.Complete();
             return;
         }
 
         ByteArray response;
-        if (_activity_observer && _activity_observer() == generation && _callback_on_read) {
+        if (_callback_on_read && native->active()) {
             response = _callback_on_read();
             std::scoped_lock lock(_value_mutex);
             _value = response;
@@ -255,14 +289,18 @@ void CharacteristicWindows::_on_read_requested(const GattLocalCharacteristic&, c
     deferral.Complete();
 }
 
-void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
+void CharacteristicWindows::_on_write_requested(const std::shared_ptr<NativeState>& native,
                                                 const GattWriteRequestedEventArgs& args) {
     auto deferral = args.GetDeferral();
     GattWriteRequest request{nullptr};
     bool should_respond = false;
     try {
-        if (_session_observer) {
-            _session_observer(args.Session(), 0);
+        if (!native->active()) {
+            deferral.Complete();
+            return;
+        }
+        if (native->session_observer) {
+            native->session_observer(args.Session());
         }
 
         request = async_get(args.GetRequestAsync());
@@ -272,14 +310,14 @@ void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
         }
 
         should_respond = request.Option() == GattWriteOption::WriteWithResponse;
-        const uint64_t generation = _activity_observer ? _activity_observer() : 0;
-        if (generation == 0) {
+        if (!native->active()) {
             if (should_respond) {
                 request.RespondWithProtocolError(ATT_ERROR_UNLIKELY);
             }
             deferral.Complete();
             return;
         }
+
         const ByteArray incoming = ibuffer_to_bytearray(request.Value());
         const size_t offset = request.Offset();
         ByteArray updated;
@@ -303,7 +341,7 @@ void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
             _value = updated;
         }
 
-        if (_activity_observer && _activity_observer() == generation) {
+        if (native->active()) {
             SAFE_CALLBACK_CALL(_callback_on_write, updated);
         }
         if (should_respond) {
@@ -330,25 +368,25 @@ void CharacteristicWindows::_on_write_requested(const GattLocalCharacteristic&,
     deferral.Complete();
 }
 
-void CharacteristicWindows::_on_subscribed_clients_changed(const GattLocalCharacteristic& sender,
-                                                           const winrt::Windows::Foundation::IInspectable&) {
+void CharacteristicWindows::_on_subscribed_clients_changed(const std::shared_ptr<NativeState>& native) {
     try {
-        const uint64_t generation = _activity_observer ? _activity_observer() : 0;
-        if (generation == 0) {
+        if (!native->active()) {
             return;
         }
 
-        const auto clients = sender.SubscribedClients();
+        const auto clients = native->characteristic.SubscribedClients();
         for (const auto& client : clients) {
-            if (_session_observer) {
-                _session_observer(client.Session(), generation);
+            if (native->session_observer) {
+                native->session_observer(client.Session());
             }
+        }
+        if (!native->active()) {
+            return;
         }
 
         const bool subscribed = clients.Size() > 0;
-        const bool changed = _subscribed.exchange(subscribed) != subscribed;
-
-        if (changed && _activity_observer && _activity_observer() == generation) {
+        const bool changed = native->subscribed.exchange(subscribed) != subscribed;
+        if (changed && native->active()) {
             if (subscribed) {
                 SAFE_CALLBACK_CALL(_callback_on_subscribed);
             } else {

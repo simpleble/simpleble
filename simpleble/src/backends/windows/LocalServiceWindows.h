@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <condition_variable>
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -19,10 +18,10 @@ class CharacteristicWindows;
 class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<ServiceWindows> {
   public:
     using GattSession = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
-    using SessionObserver = std::function<void(const GattSession&, uint64_t expected_generation)>;
-    using ActivityObserver = std::function<uint64_t()>;
+    using SessionObserver = std::function<void(const GattSession&)>;
+    using ActivityObserver = std::function<bool()>;
 
-    ServiceWindows(BluetoothUUID uuid, SessionObserver session_observer, ActivityObserver activity_observer);
+    explicit ServiceWindows(BluetoothUUID uuid);
     ~ServiceWindows() override;
 
     BluetoothUUID uuid() override;
@@ -33,39 +32,40 @@ class ServiceWindows : public ServiceBase, public std::enable_shared_from_this<S
 
     void freeze();
     void unfreeze();
-    void activate(uint64_t generation);
-    void deactivate() noexcept;
-    void start_advertising(uint64_t generation);
-    void wait_until_advertising(uint64_t generation);
+    void create_native(SessionObserver session_observer, ActivityObserver activity_observer);
+    void destroy_native() noexcept;
+    void start_advertising();
+    void wait_until_advertising();
     void stop_advertising();
-    void reset_subscriptions();
     bool is_advertising() const;
 
   private:
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattServiceProvider _provider{nullptr};
+    using GattServiceProvider = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattServiceProvider;
+    using AdvertisementStatus =
+        winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattServiceProviderAdvertisementStatus;
+
+    struct NativeState {
+        GattServiceProvider provider{nullptr};
+        ActivityObserver activity_observer;
+        winrt::event_token advertisement_status_changed_token{};
+        AdvertisementStatus advertisement_status{AdvertisementStatus::Created};
+        winrt::Windows::Devices::Bluetooth::BluetoothError advertisement_error{
+            winrt::Windows::Devices::Bluetooth::BluetoothError::Success};
+        bool advertising_requested{false};
+        mutable std::mutex advertisement_mutex;
+        std::condition_variable advertisement_cv;
+
+        bool active() const { return activity_observer && activity_observer(); }
+    };
+
     BluetoothUUID _uuid;
-    SessionObserver _session_observer;
-    ActivityObserver _activity_observer;
-    std::atomic_uint64_t _active_generation{0};
     std::vector<std::shared_ptr<CharacteristicWindows>> _characteristics;
+    std::shared_ptr<NativeState> _native;
     mutable std::mutex _mutex;
     bool _frozen{false};
 
-    winrt::event_token _advertisement_status_changed_token{};
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattServiceProviderAdvertisementStatus
-        _advertisement_status{winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::
-                                  GattServiceProviderAdvertisementStatus::Created};
-    winrt::Windows::Devices::Bluetooth::BluetoothError _advertisement_error{
-        winrt::Windows::Devices::Bluetooth::BluetoothError::Success};
-    uint64_t _advertising_generation{0};
-    uint64_t _advertisement_status_generation{0};
-    bool _advertising_requested{false};
-    mutable std::mutex _advertisement_mutex;
-    std::condition_variable _advertisement_cv;
-
-    uint64_t _current_generation();
-    void _install_advertisement_handler(uint64_t generation);
-    void _remove_advertisement_handler() noexcept;
+    std::shared_ptr<NativeState> _native_snapshot() const;
+    static void _remove_advertisement_handler(const std::shared_ptr<NativeState>& native) noexcept;
 };
 
 }  // namespace SimpleBLE::Local

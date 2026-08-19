@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -19,15 +18,15 @@ namespace SimpleBLE::Local {
 class CharacteristicWindows : public CharacteristicBase, public std::enable_shared_from_this<CharacteristicWindows> {
   public:
     using GattSession = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession;
-    using SessionObserver = std::function<void(const GattSession&, uint64_t expected_generation)>;
-    using ActivityObserver = std::function<uint64_t()>;
+    using SessionObserver = std::function<void(const GattSession&)>;
+    using ActivityObserver = std::function<bool()>;
 
-    CharacteristicWindows(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattLocalService& service,
-                          BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities,
-                          SessionObserver session_observer, ActivityObserver activity_observer);
+    CharacteristicWindows(BluetoothUUID uuid, std::set<CharacteristicCapability> capabilities);
     ~CharacteristicWindows() override;
 
-    void initialize_handlers();
+    void start_native(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattLocalService& service,
+                      SessionObserver session_observer, ActivityObserver activity_observer);
+    void stop_native() noexcept;
 
     BluetoothUUID uuid() override;
     std::set<CharacteristicCapability> capabilities() override;
@@ -41,8 +40,6 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     void set_callback_on_subscribed(std::function<void()> on_subscribed) override;
     void set_callback_on_unsubscribed(std::function<void()> on_unsubscribed) override;
 
-    void reset_subscriptions();
-
   private:
     using GattLocalCharacteristic =
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattLocalCharacteristic;
@@ -51,29 +48,36 @@ class CharacteristicWindows : public CharacteristicBase, public std::enable_shar
     using GattWriteRequestedEventArgs =
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattWriteRequestedEventArgs;
 
-    GattLocalCharacteristic _characteristic{nullptr};
+    struct NativeState {
+        GattLocalCharacteristic characteristic{nullptr};
+        SessionObserver session_observer;
+        ActivityObserver activity_observer;
+        std::atomic_bool subscribed{false};
+        winrt::event_token read_requested_token{};
+        winrt::event_token write_requested_token{};
+        winrt::event_token subscribed_clients_changed_token{};
+
+        bool active() const { return activity_observer && activity_observer(); }
+    };
+
     BluetoothUUID _uuid;
     std::set<CharacteristicCapability> _capabilities;
-    SessionObserver _session_observer;
-    ActivityObserver _activity_observer;
 
     ByteArray _value;
     std::mutex _value_mutex;
-    std::atomic_bool _subscribed{false};
-
-    winrt::event_token _read_requested_token_{};
-    winrt::event_token _write_requested_token_{};
-    winrt::event_token _subscribed_clients_changed_token_{};
+    std::shared_ptr<NativeState> _native;
+    std::mutex _native_mutex;
 
     kvn::safe_callback<ByteArray()> _callback_on_read;
     kvn::safe_callback<void(ByteArray)> _callback_on_write;
     kvn::safe_callback<void()> _callback_on_subscribed;
     kvn::safe_callback<void()> _callback_on_unsubscribed;
 
-    void _on_read_requested(const GattLocalCharacteristic& sender, const GattReadRequestedEventArgs& args);
-    void _on_write_requested(const GattLocalCharacteristic& sender, const GattWriteRequestedEventArgs& args);
-    void _on_subscribed_clients_changed(const GattLocalCharacteristic& sender,
-                                        const winrt::Windows::Foundation::IInspectable& args);
+    std::shared_ptr<NativeState> _native_snapshot();
+    static void _revoke_handlers(const std::shared_ptr<NativeState>& native) noexcept;
+    void _on_read_requested(const std::shared_ptr<NativeState>& native, const GattReadRequestedEventArgs& args);
+    void _on_write_requested(const std::shared_ptr<NativeState>& native, const GattWriteRequestedEventArgs& args);
+    void _on_subscribed_clients_changed(const std::shared_ptr<NativeState>& native);
 };
 
 }  // namespace SimpleBLE::Local
