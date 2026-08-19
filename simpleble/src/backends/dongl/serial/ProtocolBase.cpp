@@ -7,6 +7,8 @@ using namespace SimpleBLE::Dongl::Serial;
 
 #include <fmt/core.h>
 
+#include "LoggingInternal.h"
+
 ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_unique<Wire>(device_path)) {
     // Set up the Wire packet callback to handle incoming packets
     _wire->set_packet_callback([this](const std::vector<uint8_t>& packet) {
@@ -31,7 +33,13 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
         } else if (d2h.which_type == dongl_D2H_evt_tag) {
             std::lock_guard<std::mutex> lock(_event_mutex);
             if (_event_callback) {
-                _event_callback(d2h.type.evt);
+                try {
+                    _event_callback(d2h.type.evt);
+                } catch (const std::exception& e) {
+                    SIMPLEBLE_LOG_ERROR(fmt::format("Dongl event handler failed: {}", e.what()));
+                } catch (...) {
+                    SIMPLEBLE_LOG_ERROR("Dongl event handler failed with an unknown exception");
+                }
             }
         }
     });

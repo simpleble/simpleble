@@ -131,6 +131,7 @@ simpleble_DisconnectRsp Protocol::simpleble_disconnect(uint16_t conn_handle) {
     command.cmd.simpleble.which_cmd = simpleble_Command_disconnect_tag;
     simpleble_DisconnectCmd disconnect_cmd = simpleble_DisconnectCmd_init_default;
     command.cmd.simpleble.cmd.disconnect = disconnect_cmd;
+    command.cmd.simpleble.cmd.disconnect.conn_handle = conn_handle;
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.disconnect;
