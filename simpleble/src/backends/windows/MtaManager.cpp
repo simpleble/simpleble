@@ -1,5 +1,7 @@
 #include "MtaManager.h"
 
+#include <windows.h>
+
 namespace SimpleBLE {
 namespace WinRT {
 
@@ -8,6 +10,11 @@ MtaManager::MtaManager() {
 }
 
 MtaManager::~MtaManager() {
+    // This destructor runs under the CRT exit lock. If COM unloads rometadata.dll
+    // while the MTA thread exits, that DLL's teardown can wait for the same lock
+    // and deadlock the join below. Keep an already-loaded copy until process exit.
+    HMODULE metadata_module = nullptr;
+    (void)GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"rometadata.dll", &metadata_module);
     stop();
     if (mta_thread_.joinable()) {
         mta_thread_.join();
