@@ -2,6 +2,7 @@
 
 #include "../common/BackendBase.h"
 #include "../common/BackendUtils.h"
+#include "types/android/content/Context.h"
 
 namespace SimpleBLE {
 
@@ -16,6 +17,9 @@ class BackendAndroid : public BackendSingleton<BackendAndroid> {
     virtual bool bluetooth_enabled() override;
     virtual std::string identifier() const noexcept override;
     virtual bool is_active() override { return true; }
+
+    static void set_application_context(jobject context);
+    static Android::Context application_context();
 
   private:
     // Android devices only have a single Bluetooth adapter, so in order to preserve

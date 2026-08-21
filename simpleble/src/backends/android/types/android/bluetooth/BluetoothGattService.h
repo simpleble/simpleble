@@ -12,9 +12,10 @@ namespace Android {
 class BluetoothGattService {
   public:
     BluetoothGattService();
+    explicit BluetoothGattService(const std::string& uuid);
     BluetoothGattService(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
 
-    //    bool addCharacteristic(BluetoothGattCharacteristic characteristic);
+    bool addCharacteristic(const BluetoothGattCharacteristic& characteristic);
     //    bool addService(BluetoothGattService service);
     //    BluetoothGattCharacteristic getCharacteristic(std::string uuid);
     std::vector<BluetoothGattCharacteristic> getCharacteristics();
@@ -37,6 +38,9 @@ class BluetoothGattService {
     static jmethodID _method_getInstanceId;
     static jmethodID _method_getType;
     static jmethodID _method_getUuid;
+    static jmethodID _constructor;
+
+    static constexpr int SERVICE_TYPE_PRIMARY = 0;
 
     // JNI descriptor for auto-registration
     static const SimpleJNI::JNIDescriptor descriptor;

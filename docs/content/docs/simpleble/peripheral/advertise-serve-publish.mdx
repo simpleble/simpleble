@@ -9,8 +9,8 @@ This is the peripheral-mode walkthrough: this host advertises, serves a GATT tab
 
 `SimpleBLE::Peripheral` is a remote device discovered while acting as a central. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from the same `Adapter` you would use to scan.
 
-<Callout type="info" title="Linux, macOS, or Windows; C++ only">
-Hosting a local peripheral is currently implemented on Linux, macOS, and Windows. On other platforms, `Adapter::create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
+<Callout type="info" title="Available on all supported platforms">
+The C++ API can host a local peripheral on every supported platform. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE handles the context automatically and provides a Kotlin API.
 </Callout>
 
 If you still need to install SimpleBLE or create the CMake project, start with [Getting Started](../tutorial). The [Advertise](../../recipes/advertise) recipe is the short form of this flow.
@@ -33,7 +33,7 @@ auto adapter = adapters.front();
 auto peripheral = adapter.create_local_peripheral();
 
 SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = "SimpleBLE Peripheral";
+advertisement.local_name = adapter.identifier();
 peripheral.set_advertisement(advertisement);
 
 auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");
@@ -63,6 +63,7 @@ peripheral.set_advertisement(advertisement);
 If `service_uuids` is left empty, SimpleBLE advertises the service UUIDs configured on the local peripheral when the platform supports doing so.
 
 On Windows, WinRT uses the system Bluetooth name instead of `local_name`.
+Android's public legacy advertising API can include only the system Bluetooth name. On Android, omit `local_name` or set it to `adapter.identifier()`; `start()` rejects an arbitrary name with a clear error instead of silently advertising a different value.
 
 ## Services and characteristics
 
@@ -143,7 +144,7 @@ Callbacks follow the same threading rules as the rest of SimpleBLE. See [Concurr
 
 ## Scan and advertise together
 
-SimpleBLE permits the same adapter to scan while a local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time. Incoming clients of the local peripheral are reported through the client callbacks above. They are not devices you should `connect()` to as a central.
+SimpleBLE permits the same adapter to scan while a local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time. On Android, support depends on the phone's controller and vendor Bluetooth stack. Incoming clients of the local peripheral are reported through the client callbacks above. They are not devices you should `connect()` to as a central.
 
 ## Full application
 
@@ -180,10 +181,11 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    auto peripheral = adapters.front().create_local_peripheral();
+    auto adapter = adapters.front();
+    auto peripheral = adapter.create_local_peripheral();
 
     SimpleBLE::Local::Advertisement advertisement;
-    advertisement.local_name = "SimpleBLE Peripheral";
+    advertisement.local_name = adapter.identifier();
     peripheral.set_advertisement(advertisement);
 
     auto service = peripheral.add_service(SERVICE_UUID);
@@ -227,5 +229,5 @@ cmake --build build_simpleble_examples -j7
 - [Advertise](../../recipes/advertise) for a shorter recipe form of this flow
 - [Scan, Connect, Read](../central/scan-connect-read) to use the same adapter as a central
 - [API reference](../api#local-api) for `SimpleBLE::Local` types
-- [Platform notes](../platform_notes) for Linux, macOS, and Windows behavior
+- [Platform notes](../platform_notes) for platform-specific behavior
 - [Examples](../examples) for the programs in the repository

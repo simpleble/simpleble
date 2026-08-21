@@ -13,7 +13,7 @@ Right now, the best way to have your questions answered is on our [Discord](http
 
 SimpleBLE supports Windows 10+, Linux (Ubuntu 20.04+ and other distros using Bluez), MacOS 13.0+ (Ventura and newer), iOS 15.0+, and Android API 31+.
 
-Central-role APIs (scan, connect, GATT client) are available on all of those platforms. Hosting a local peripheral is currently available through the C++ API on Linux, macOS, and Windows.
+Central-role APIs (scan, connect, GATT client) and the C++ local peripheral API are available on all supported platforms. Android applications can also use SimpleDroidBLE's Kotlin API.
 
 Please check the overview page on more information about platform-specific limitations.
 
@@ -27,9 +27,9 @@ All configuration values must be set prior to any other interaction with a Simpl
 
 <Accordion title="Can I advertise and act as a BLE peripheral?" id="peripheral-mode">
 
-Yes, on Linux, macOS, and Windows with the C++ API. Call `Adapter::create_local_peripheral()` to get a `SimpleBLE::Local::Peripheral`, configure services and advertising, then `start()`. See [Advertise, Serve, Publish](./peripheral/advertise-serve-publish) and the [Advertise](../recipes/advertise) recipe.
+Yes. Call `Adapter::create_local_peripheral()` to get a `SimpleBLE::Local::Peripheral`, configure services and advertising, then `start()`. Android applications can also use the equivalent SimpleDroidBLE Kotlin API. See [Advertise, Serve, Publish](./peripheral/advertise-serve-publish) and the [Advertise](../recipes/advertise) recipe.
 
-On Windows, peripheral mode requires adapter and driver support; WinRT uses the system Bluetooth name in discoverable advertisements. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. On unsupported platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
+Peripheral mode still depends on the host adapter and driver supporting the role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration.
 
 </Accordion>
 

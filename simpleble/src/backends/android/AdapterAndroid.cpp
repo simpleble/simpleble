@@ -3,6 +3,7 @@
 #include "BuilderBase.h"
 #include "CommonUtils.h"
 #include "PeripheralAndroid.h"
+#include "LocalPeripheralAndroid.h"
 #include "simpleble/Peripheral.h"
 
 #include <types/android/bluetooth/BluetoothDevice.h>
@@ -104,4 +105,8 @@ SharedPtrVector<PeripheralBase> AdapterAndroid::get_paired_peripherals() {
     }
 
     return peripherals;
+}
+
+std::shared_ptr<Local::PeripheralBase> AdapterAndroid::create_local_peripheral() {
+    return std::make_shared<Local::PeripheralAndroid>(_btAdapter);
 }

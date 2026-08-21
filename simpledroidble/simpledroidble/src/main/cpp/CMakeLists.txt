@@ -29,6 +29,8 @@ add_library(
     org/simpleble/android/Characteristic.cpp
     org/simpleble/android/DataCallback.cpp
     org/simpleble/android/Descriptor.cpp
+    org/simpleble/android/LocalCharacteristicCallback.cpp
+    org/simpleble/android/LocalPeripheralCallback.cpp
     org/simpleble/android/PeripheralCallback.cpp
     org/simpleble/android/Service.cpp
     org/simpleble/android/SimpleDroidBleException.cpp

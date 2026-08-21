@@ -11,14 +11,22 @@ class SimpleDroidBle private constructor() {
     companion object {
         const val DEFAULT_PERMISSION_REQUEST_CODE = 7101
 
-        private val bluetoothPermissions = arrayOf(
+        private val centralPermissions = arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT
+        )
+        private val peripheralPermissions = arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE
         )
 
         @JvmStatic
         val requiredPermissions: Array<String>
-            get() = bluetoothPermissions.copyOf()
+            get() = centralPermissions.copyOf()
+
+        @JvmStatic
+        val requiredPeripheralPermissions: Array<String>
+            get() = peripheralPermissions.copyOf()
 
         init {
             System.loadLibrary("simpleble-jni")
@@ -28,7 +36,16 @@ class SimpleDroidBle private constructor() {
 
         @JvmStatic
         fun hasPermissions(context: Context): Boolean {
-            return bluetoothPermissions.all { permission ->
+            return hasPermissions(context, centralPermissions)
+        }
+
+        @JvmStatic
+        fun hasPeripheralPermissions(context: Context): Boolean {
+            return hasPermissions(context, peripheralPermissions)
+        }
+
+        private fun hasPermissions(context: Context, permissions: Array<String>): Boolean {
+            return permissions.all { permission ->
                 ContextCompat.checkSelfPermission(
                     context,
                     permission
@@ -41,7 +58,19 @@ class SimpleDroidBle private constructor() {
             activity: Activity,
             requestCode: Int = DEFAULT_PERMISSION_REQUEST_CODE
         ) {
-            val missingPermissions = bluetoothPermissions.filterNot { permission ->
+            requestPermissions(activity, centralPermissions, requestCode)
+        }
+
+        @JvmStatic
+        fun requestPeripheralPermissions(
+            activity: Activity,
+            requestCode: Int = DEFAULT_PERMISSION_REQUEST_CODE
+        ) {
+            requestPermissions(activity, peripheralPermissions, requestCode)
+        }
+
+        private fun requestPermissions(activity: Activity, permissions: Array<String>, requestCode: Int) {
+            val missingPermissions = permissions.filterNot { permission ->
                 ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
             }
 

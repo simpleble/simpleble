@@ -18,12 +18,14 @@ jmethodID BluetoothGattService::_method_getIncludedServices = nullptr;
 jmethodID BluetoothGattService::_method_getInstanceId = nullptr;
 jmethodID BluetoothGattService::_method_getType = nullptr;
 jmethodID BluetoothGattService::_method_getUuid = nullptr;
+jmethodID BluetoothGattService::_constructor = nullptr;
 
 // Define the JNI descriptor
 const SimpleJNI::JNIDescriptor BluetoothGattService::descriptor{
     "android/bluetooth/BluetoothGattService", // Java class name
     &_cls,                                    // Where to store the jclass
     {                                         // Methods to preload
+        {"<init>", "(Ljava/util/UUID;I)V", &_constructor},
         {"addCharacteristic", "(Landroid/bluetooth/BluetoothGattCharacteristic;)Z", &_method_addCharacteristic},
         {"addService", "(Landroid/bluetooth/BluetoothGattService;)Z", &_method_addService},
         {"getCharacteristic", "(Ljava/util/UUID;)Landroid/bluetooth/BluetoothGattCharacteristic;", &_method_getCharacteristic},
@@ -42,11 +44,18 @@ BluetoothGattService::BluetoothGattService() : _obj() {
     }
 }
 
+BluetoothGattService::BluetoothGattService(const std::string& uuid) {
+    auto java_uuid = UUID::fromString(uuid);
+    auto object = SimpleJNI::Object<SimpleJNI::LocalRef, jobject>::call_new_object(
+        _cls.get(), _constructor, java_uuid.get(), SERVICE_TYPE_PRIMARY);
+    _obj = object.to_global();
+}
+
 BluetoothGattService::BluetoothGattService(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj) : _obj(obj) {}
 
-// bool BluetoothGattService::addCharacteristic(BluetoothGattCharacteristic characteristic) {
-//     return _obj.call_boolean_method(_method_addCharacteristic, characteristic.getObject());
-// }
+bool BluetoothGattService::addCharacteristic(const BluetoothGattCharacteristic& characteristic) {
+    return _obj.call_boolean_method(_method_addCharacteristic, characteristic.getObject().get());
+}
 //
 // bool BluetoothGattService::addService(BluetoothGattService service) {
 //     return _obj.call_boolean_method(_method_addService, service.getObject());

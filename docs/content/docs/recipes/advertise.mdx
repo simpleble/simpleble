@@ -9,8 +9,8 @@ Advertising is how this host is found. A local peripheral serves GATT, sends adv
 
 `SimpleBLE::Peripheral` is a remote device. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from an `Adapter`, the same object used to scan.
 
-<Callout type="info" title="Linux, macOS, or Windows; C++ only">
-Hosting a local peripheral is currently implemented on Linux, macOS, and Windows. On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`. Other language bindings do not expose this API yet.
+<Callout type="info" title="Available on all supported platforms">
+The C++ API can host a local peripheral on every supported platform. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE exposes the same flow directly in Kotlin.
 </Callout>
 
 ## Flow
@@ -30,7 +30,7 @@ auto adapter = adapters.front();
 auto peripheral = adapter.create_local_peripheral();
 
 SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = "SimpleBLE Peripheral";
+advertisement.local_name = adapter.identifier();
 peripheral.set_advertisement(advertisement);
 
 auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");
@@ -65,5 +65,6 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 - On Linux, BlueZ must be running and the process must have D-Bus access, as with scanning.
 - On macOS, CoreBluetooth reports client connection and disconnection callbacks when the client first subscribes and finally unsubscribes.
 - On Windows, the adapter and driver must support the peripheral role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. Windows uses the system Bluetooth name instead of `advertisement.local_name`.
+- On Android, the public advertising API can only include the system Bluetooth name. Omit `local_name` or set it to `adapter.identifier()`.
 
 For the full C++ walkthrough, see [Advertise, Serve, Publish](../simpleble/peripheral/advertise-serve-publish). For scanning from the other side of the link, see [Scan](./scan).

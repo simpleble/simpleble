@@ -10,6 +10,7 @@ namespace Android {
 class ParcelUUID {
   public:
     ParcelUUID();
+    explicit ParcelUUID(const UUID& uuid);
     ParcelUUID(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
 
     UUID getUuid();
@@ -21,6 +22,7 @@ class ParcelUUID {
 
     static SimpleJNI::GlobalRef<jclass> _cls;
     static jmethodID _method_getUuid;
+    static jmethodID _constructor;
 
     static const SimpleJNI::JNIDescriptor descriptor;
     static const SimpleJNI::AutoRegister<ParcelUUID> registrar;

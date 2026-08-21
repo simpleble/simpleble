@@ -68,8 +68,6 @@ On Linux, `Adapter::create_local_peripheral()` registers a BlueZ GATT applicatio
 
 SimpleBLE permits the same adapter to scan and advertise at the same time, but availability depends on BlueZ and the Bluetooth controller supporting concurrent operation and having sufficient resources. Incoming clients of the local peripheral are reported through `SimpleBLE::Local::Peripheral` client callbacks, not as remote `SimpleBLE::Peripheral` objects to `connect()` to.
 
-Local peripheral mode is currently available through the C++ API on Linux, macOS, and Windows. Unsupported platforms throw `SimpleBLE::Exception::OperationNotSupported`.
-
 ## Android
 
 ### API Level Limitations
@@ -79,3 +77,15 @@ Android's Bluetooth API has evolved significantly over time, leading to some ver
 
 ### Bond Management
 Similar to iOS, Android (especially newer versions) restricts the ability of applications to remove bonds (unpair) programmatically. While SimpleBLE attempts to use hidden APIs to achieve this where possible, it is not guaranteed to work on all devices or future Android versions.
+
+### Local Peripheral Mode
+
+Android API 31 and newer can host local GATT services and legacy BLE advertisements. Add `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE` to the application manifest and request both at runtime. Hardware support still depends on `BluetoothAdapter.isMultipleAdvertisementSupported()` and the vendor Bluetooth stack.
+
+Native C++ applications must call `SimpleBLE::Advanced::Android::set_context(application_context)` before `Adapter::create_local_peripheral()`. Pass an application context, not an Activity; SimpleBLE retains a global JNI reference while the process is alive. `Adapter.createLocalPeripheral(context)` in SimpleDroidBLE extracts and configures the application context automatically.
+
+Android's public advertising API can include the adapter's system Bluetooth name but cannot set an arbitrary per-advertisement name. Leave `Advertisement::local_name` unset or set it to `Adapter::identifier()`. SimpleBLE rejects other names rather than advertising misleading data.
+
+The backend uses legacy advertising, so the normal 31-byte advertising and scan-response limits apply. Prepared writes are rejected; clients should use regular write requests or write commands within the negotiated GATT payload size.
+
+Android reports real GATT server connection and disconnection events. Client addresses are the addresses exposed by `BluetoothDevice`; privacy-enabled centrals may use a rotating address.

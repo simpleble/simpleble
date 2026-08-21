@@ -14,9 +14,13 @@
 -keep interface org.simpleble.android.Adapter$Callback { *; }
 -keep interface org.simpleble.android.Peripheral$Callback { *; }
 -keep interface org.simpleble.android.Peripheral$DataCallback { *; }
+-keep interface org.simpleble.android.LocalPeripheral$Callback { *; }
+-keep interface org.simpleble.android.LocalCharacteristic$Callback { *; }
 -keep class * implements org.simpleble.android.Adapter$Callback { *; }
 -keep class * implements org.simpleble.android.Peripheral$Callback { *; }
 -keep class * implements org.simpleble.android.Peripheral$DataCallback { *; }
+-keep class * implements org.simpleble.android.LocalPeripheral$Callback { *; }
+-keep class * implements org.simpleble.android.LocalCharacteristic$Callback { *; }
 -keepclasseswithmembernames,includedescriptorclasses class org.simpleble.android.** {
     native <methods>;
 }

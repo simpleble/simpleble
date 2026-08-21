@@ -13,10 +13,11 @@ class BluetoothGattCharacteristic {
     // See: https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic
   public:
     BluetoothGattCharacteristic();
+    BluetoothGattCharacteristic(const std::string& uuid, int properties, int permissions);
     BluetoothGattCharacteristic(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
     virtual ~BluetoothGattCharacteristic() = default;
 
-    //    bool addDescriptor(BluetoothGattDescriptor descriptor);
+    bool addDescriptor(const BluetoothGattDescriptor& descriptor);
     //    BluetoothGattDescriptor getDescriptor(std::string uuid);
     std::vector<BluetoothGattDescriptor> getDescriptors();
 
@@ -28,6 +29,7 @@ class BluetoothGattCharacteristic {
     void setWriteType(int writeType);
 
     bool setValue(const std::vector<uint8_t>& value);
+    std::vector<uint8_t> getValue();
 
     SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> getObject() const { return _obj; }
 
@@ -56,6 +58,12 @@ class BluetoothGattCharacteristic {
     static jmethodID _method_getWriteType;
     static jmethodID _method_setWriteType;
     static jmethodID _method_setValue;
+    static jmethodID _method_getValue;
+    static jmethodID _constructor;
+
+  public:
+    static constexpr int PERMISSION_READ = 0x00000001;
+    static constexpr int PERMISSION_WRITE = 0x00000010;
 
     // JNI descriptor for auto-registration
     static const SimpleJNI::JNIDescriptor descriptor;

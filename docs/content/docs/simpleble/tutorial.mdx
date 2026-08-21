@@ -125,8 +125,8 @@ adapter.scan_for(5000);
 
 ## Act as a peripheral
 
-<Callout type="info" title="Linux, macOS, or Windows; C++ only">
-Hosting a local peripheral is currently implemented on Linux, macOS, and Windows. On other platforms, `create_local_peripheral()` throws `SimpleBLE::Exception::OperationNotSupported`.
+<Callout type="info" title="Available on all supported platforms">
+The C++ API can host a local peripheral on every supported platform. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this automatically.
 </Callout>
 
 `SimpleBLE::Local::Peripheral` is **this host** advertising and serving GATT. Configure the advertisement and at least one characteristic, then call `start()`:
@@ -135,7 +135,7 @@ Hosting a local peripheral is currently implemented on Linux, macOS, and Windows
 auto peripheral = adapter.create_local_peripheral();
 
 SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = "SimpleBLE Peripheral";
+advertisement.local_name = adapter.identifier();
 peripheral.set_advertisement(advertisement);
 
 auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");

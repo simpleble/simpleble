@@ -112,6 +112,13 @@ TEST(ByteArrayTest, StreamOperator) {
     EXPECT_EQ(oss.str(), "48 65 6c 6c 6f ");
 }
 
+TEST(ByteArrayTest, Equality) {
+    EXPECT_EQ(bytearray({0x01, 0x02}), bytearray({0x01, 0x02}));
+    EXPECT_NE(bytearray({0x01, 0x02}), bytearray({0x01, 0x03}));
+    EXPECT_NE(bytearray({0x01, 0x02}), bytearray({0x01}));
+    EXPECT_EQ(bytearray(), bytearray());
+}
+
 TEST(ByteArrayTest, DefaultConstructor_Empty) {
     bytearray byteArray;
     EXPECT_TRUE(byteArray.empty());

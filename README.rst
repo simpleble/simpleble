@@ -23,7 +23,7 @@ Why SimpleBLE
 
 * **One cross-platform API:** Keep application-facing BLE logic consistent across desktop and mobile.
 * **Native underneath:** Use WinRT, CoreBluetooth, BlueZ, and Android Bluetooth through one maintained stack.
-* **Built for real products:** Central-role support across all five operating systems, with Linux/C++ peripheral support.
+* **Built for real products:** Central- and peripheral-role support across all supported platforms.
 * **Commercially supported:** Ship proprietary applications with licensing and direct technical support available.
 
 Get Started

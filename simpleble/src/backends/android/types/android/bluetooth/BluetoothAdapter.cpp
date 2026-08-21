@@ -11,6 +11,8 @@ jmethodID BluetoothAdapter::_method_getAddress = nullptr;
 jmethodID BluetoothAdapter::_method_isEnabled = nullptr;
 jmethodID BluetoothAdapter::_method_getState = nullptr;
 jmethodID BluetoothAdapter::_method_getBluetoothLeScanner = nullptr;
+jmethodID BluetoothAdapter::_method_getBluetoothLeAdvertiser = nullptr;
+jmethodID BluetoothAdapter::_method_isMultipleAdvertisementSupported = nullptr;
 jmethodID BluetoothAdapter::_method_getBondedDevices = nullptr;
 jmethodID BluetoothAdapter::_method_getDefaultAdapter = nullptr;
 
@@ -24,6 +26,8 @@ const SimpleJNI::JNIDescriptor BluetoothAdapter::instance_descriptor{
         {"isEnabled", "()Z", &_method_isEnabled},
         {"getState", "()I", &_method_getState},
         {"getBluetoothLeScanner", "()Landroid/bluetooth/le/BluetoothLeScanner;", &_method_getBluetoothLeScanner},
+        {"getBluetoothLeAdvertiser", "()Landroid/bluetooth/le/BluetoothLeAdvertiser;", &_method_getBluetoothLeAdvertiser},
+        {"isMultipleAdvertisementSupported", "()Z", &_method_isMultipleAdvertisementSupported},
         {"getBondedDevices", "()Ljava/util/Set;", &_method_getBondedDevices}
     }
 };
@@ -51,12 +55,12 @@ BluetoothAdapter BluetoothAdapter::getDefaultAdapter() {
     }
     SimpleJNI::Env env;
     jobject local_obj = env->CallStaticObjectMethod(_cls.get(), _method_getDefaultAdapter);
+    SimpleJNI::Exception::check(env);
     if (local_obj == nullptr) {
         throw std::runtime_error("Failed to get default BluetoothAdapter");
     }
-    SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj(local_obj);
-    env->DeleteLocalRef(local_obj);
-    return BluetoothAdapter(obj);
+    SimpleJNI::Object<SimpleJNI::LocalRef, jobject> obj(SimpleJNI::adopt_local_ref, local_obj);
+    return BluetoothAdapter(obj.to_global());
 }
 
 std::string BluetoothAdapter::getName() {
@@ -83,6 +87,17 @@ BluetoothScanner BluetoothAdapter::getBluetoothLeScanner() {
     if (!_obj) throw std::runtime_error("BluetoothAdapter is not initialized");
     auto scanner_obj = _obj.call_object_method(_method_getBluetoothLeScanner);
     return BluetoothScanner(scanner_obj);
+}
+
+BluetoothLeAdvertiser BluetoothAdapter::getBluetoothLeAdvertiser() {
+    if (!_obj) throw std::runtime_error("BluetoothAdapter is not initialized");
+    auto advertiser = _obj.call_object_method(_method_getBluetoothLeAdvertiser);
+    return BluetoothLeAdvertiser(advertiser.to_global());
+}
+
+bool BluetoothAdapter::isMultipleAdvertisementSupported() {
+    if (!_obj) throw std::runtime_error("BluetoothAdapter is not initialized");
+    return _obj.call_boolean_method(_method_isMultipleAdvertisementSupported);
 }
 
 std::vector<BluetoothDevice> BluetoothAdapter::getBondedDevices() {

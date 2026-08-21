@@ -373,16 +373,27 @@ elseif(SIMPLEBLE_BACKEND_ANDROID)
     target_sources(simpleble PRIVATE
         ${SIMPLEJNI_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/AdapterAndroid.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/LocalCharacteristicAndroid.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/LocalPeripheralAndroid.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/LocalServiceAndroid.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/PeripheralAndroid.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/BackendAndroid.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/bridge/AdvertiseCallback.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/bridge/BluetoothGattCallback.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/bridge/GattServerCallback.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/bridge/ScanCallback.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothAdapter.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothDevice.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothGatt.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothGattServer.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothGattService.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothGattCharacteristic.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothGattDescriptor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/BluetoothManager.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/content/Context.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/AdvertiseData.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/AdvertiseSettings.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/BluetoothLeAdvertiser.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/bluetooth/le/BluetoothScanner.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/java/util/UUID.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/android/types/android/os/ParcelUUID.cpp

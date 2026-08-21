@@ -65,6 +65,7 @@ Declare Android 12+ Bluetooth permissions in your app manifest:
 <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 <uses-permission
     android:name="android.permission.BLUETOOTH_SCAN"
     android:usesPermissionFlags="neverForLocation" />
@@ -89,7 +90,7 @@ class MainActivity : ComponentActivity() {
 }
 ```
 
-In modern Android apps, you can also use `ActivityResultContracts.RequestMultiplePermissions()` with `SimpleDroidBle.requiredPermissions`.
+In modern Android apps, you can also use `ActivityResultContracts.RequestMultiplePermissions()` with `SimpleDroidBle.requiredPermissions`. Peripheral-only applications should use `requiredPeripheralPermissions`, `hasPeripheralPermissions()`, and `requestPeripheralPermissions()` so they do not request scan access. Applications that support both roles can combine the two permission arrays and remove duplicates.
 
 ## Quickstart
 
@@ -148,11 +149,56 @@ peripheral.disconnect()
 
 Use `writeRequest` for acknowledged writes and `writeCommand` for write-without-response characteristics. Descriptor `read` and `write` overloads are also available.
 
+## Host a peripheral
+
+Create the peripheral from an adapter and pass any Android `Context`; SimpleDroidBLE retains only its application context. Configure the complete GATT table before `start()`:
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+val peripheral = adapter.createLocalPeripheral(applicationContext)
+
+peripheral.advertisement = LocalAdvertisement(
+    localName = adapter.identifier,
+    serviceUuids = listOf(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+)
+
+val characteristic = peripheral
+    .addService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+    .addCharacteristic(
+        BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
+        LocalCharacteristicCapability.Read,
+        LocalCharacteristicCapability.WriteRequest,
+        LocalCharacteristicCapability.WriteCommand,
+        LocalCharacteristicCapability.Notify,
+        LocalCharacteristicCapability.Indicate
+    )
+
+characteristic.value = "ready".encodeToByteArray()
+characteristic.setWriteHandler { value ->
+    characteristic.value = value // Store and publish the echo to subscribers.
+}
+
+lifecycleScope.launch {
+    peripheral.start()
+}
+```
+
+`setWriteHandler` receives every accepted write on SimpleDroidBLE's callback thread and is the reliable place for application behavior. Keep it short. `onWrite` is a bounded hot flow intended for UI and telemetry-style observation. `setReadHandler` provides a dynamic value; without it, reads return `value` directly.
+
+Assigning `value` publishes the new bytes to subscribed clients when the characteristic supports notify or indicate. `onSubscribed` and `onUnsubscribed` expose subscription transitions, while `onClientConnected` and `onClientDisconnected` expose Android's GATT server connection events.
+
+Call `stop()` from your lifecycle cleanup. Advertising data, services, and characteristics cannot be changed while started; values and handlers can.
+
+Android can advertise only the phone's system Bluetooth name through this API. Omit `localName` or use `adapter.identifier`; an arbitrary name causes `start()` to fail with a clear error.
+
+Peripheral mode currently uses legacy advertising, including its 31-byte payload limits, and rejects prepared writes. Use regular write requests or write commands within the negotiated GATT payload size.
+
 ## Lifecycle And Threading
 
 - Create adapters only after runtime permissions have been granted.
 - Stop active scans from `onPause()` or an equivalent lifecycle callback.
 - Keep notification collection in a lifecycle-aware coroutine. Cancelling the `notify` or `indicate` flow waits for native unsubscribe before collection finishes.
+- Stop a local peripheral when its owning lifecycle ends. `start()` and `stop()` dispatch blocking Bluetooth setup and teardown to `Dispatchers.IO`.
 - Only one `notify` or `indicate` collector may be active for a characteristic. Cancel and join the old collector before starting another.
 - Notification and indication flows use bounded buffers and fail with `SimpleDroidBleException` if a collector cannot keep up. Place `buffer(256)` directly after `notify` or `indicate` to increase capacity, or explicitly opt into dropping with `buffer(256, onBufferOverflow = BufferOverflow.DROP_OLDEST)` or `BufferOverflow.DROP_LATEST`.
 - Flow collectors resume in their own coroutine context. Keep payload parsing short; blocking GATT operations dispatch to `Dispatchers.IO` internally.

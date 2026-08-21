@@ -59,6 +59,9 @@ class MainActivity : ComponentActivity() {
                     ExplorerScreen(
                         state = bluetoothViewModel.state,
                         onAction = bluetoothViewModel::onAction,
+                        onOpenPeripheralMode = {
+                            startActivity(Intent(this, PeripheralActivity::class.java))
+                        },
                         onRequestBluetooth = {
                             bluetoothEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
                         }

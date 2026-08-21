@@ -12,6 +12,7 @@ class BluetoothGattDescriptor {
     // See: https://developer.android.com/reference/android/bluetooth/BluetoothGattDescriptor
   public:
     BluetoothGattDescriptor();
+    BluetoothGattDescriptor(const std::string& uuid, int permissions);
     BluetoothGattDescriptor(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
     virtual ~BluetoothGattDescriptor() = default;
 
@@ -36,6 +37,11 @@ class BluetoothGattDescriptor {
     static jmethodID _method_getUuid;
     static jmethodID _method_getValue;
     static jmethodID _method_setValue;
+    static jmethodID _constructor;
+
+  public:
+    static constexpr int PERMISSION_READ = 0x00000001;
+    static constexpr int PERMISSION_WRITE = 0x00000010;
 
     // JNI descriptor for auto-registration
     static const SimpleJNI::JNIDescriptor descriptor;

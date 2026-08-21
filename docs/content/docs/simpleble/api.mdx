@@ -178,7 +178,7 @@ This class is intended to be used by the user only. Library developers should us
   detailed="Create a local BLE peripheral host. The returned object is used to define local GATT services, configure advertising, and publish characteristic value updates to subscribed clients."
   notes={[
     {
-      content: "Currently implemented on Linux and macOS. Other platforms throw `SimpleBLE::Exception::OperationNotSupported`.",
+      content: "Available on all supported platforms. Native Android callers must provide an application context with `SimpleBLE::Advanced::Android::set_context()` first.",
       type: "warn"
     }
   ]}

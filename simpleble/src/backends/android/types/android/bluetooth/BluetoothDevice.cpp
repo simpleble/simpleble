@@ -43,17 +43,17 @@ BluetoothDevice::BluetoothDevice(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject
     }
 }
 
-std::string BluetoothDevice::getAddress() {
+std::string BluetoothDevice::getAddress() const {
     if (!_obj) throw std::runtime_error("BluetoothDevice is not initialized");
     return _obj.call_string_method(_method_getAddress);
 }
 
-std::string BluetoothDevice::getName() {
+std::string BluetoothDevice::getName() const {
     if (!_obj) throw std::runtime_error("BluetoothDevice is not initialized");
     return _obj.call_string_method(_method_getName);
 }
 
-int BluetoothDevice::getBondState() {
+int BluetoothDevice::getBondState() const {
     if (!_obj) throw std::runtime_error("BluetoothDevice is not initialized");
     return _obj.call_int_method(_method_getBondState);
 }

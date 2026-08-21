@@ -37,12 +37,14 @@ std::vector<Peripheral> retrieve_cached_peripherals(Adapter& adapter,
 
 #if defined(__ANDROID__)
 
+#include "backends/android/BackendAndroid.h"
 #include "simplejni/VM.hpp"
 
 namespace SimpleBLE::Advanced::Android {
 
 JavaVM* get_jvm() { return SimpleJNI::VM::jvm(); }
 void set_jvm(JavaVM* jvm) { SimpleJNI::VM::jvm(jvm); }
+void set_context(jobject context) { SimpleBLE::BackendAndroid::set_application_context(context); }
 
 }  // namespace SimpleBLE::Advanced::Android
 

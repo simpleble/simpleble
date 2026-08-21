@@ -123,6 +123,16 @@ namespace SimpleBLE::Advanced::Android {
 JavaVM* SIMPLEBLE_EXPORT get_jvm();
 void SIMPLEBLE_EXPORT set_jvm(JavaVM* jvm);
 
+/**
+ * Provide the Android application context used to host local GATT services.
+ *
+ * SimpleBLE retains a global reference to the supplied context. Pass an
+ * application context rather than an Activity to avoid extending an Activity
+ * lifecycle. SimpleDroidBLE configures this automatically when
+ * Adapter.createLocalPeripheral(context) is called.
+ */
+void SIMPLEBLE_EXPORT set_context(jobject context);
+
 }  // namespace SimpleBLE::Advanced::Android
 
 #endif

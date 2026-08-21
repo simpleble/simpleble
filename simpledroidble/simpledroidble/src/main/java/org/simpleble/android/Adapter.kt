@@ -1,5 +1,6 @@
 package org.simpleble.android
 
+import android.content.Context
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -82,6 +83,17 @@ class Adapter private constructor(private val instanceId: Long) {
         return nativeAdapterGetPairedPeripherals(instanceId).map(::peripheral)
     }
 
+    /**
+     * Create a BLE peripheral hosted by this Android application.
+     *
+     * The application context is retained by the native backend; the supplied
+     * Activity is not retained. Configure services and advertising data on the
+     * returned object before starting it.
+     */
+    fun createLocalPeripheral(context: Context): LocalPeripheral {
+        return LocalPeripheral(nativeAdapterCreateLocalPeripheral(instanceId, context.applicationContext))
+    }
+
     companion object {
         init {
             SimpleDroidBle.ensureLoaded()
@@ -126,6 +138,8 @@ class Adapter private constructor(private val instanceId: Long) {
     private external fun nativeAdapterScanGetResults(adapterId: Long) : LongArray
 
     private external fun nativeAdapterGetPairedPeripherals(adapterId: Long): LongArray
+
+    private external fun nativeAdapterCreateLocalPeripheral(adapterId: Long, applicationContext: Context): Long
 
     // ----------------------------------------------------------------------------
 

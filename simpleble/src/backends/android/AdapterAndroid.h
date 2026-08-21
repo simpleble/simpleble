@@ -44,6 +44,8 @@ class AdapterAndroid : public AdapterBase {
 
     virtual std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
 
+    virtual std::shared_ptr<Local::PeripheralBase> create_local_peripheral() override;
+
     virtual bool bluetooth_enabled() override;
 
     // NOTE: The following methods have been made public to allow the JNI layer to call them, but

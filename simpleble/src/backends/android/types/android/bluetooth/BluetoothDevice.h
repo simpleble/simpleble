@@ -13,13 +13,14 @@ class BluetoothDevice {
     BluetoothDevice(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> obj);
     virtual ~BluetoothDevice() = default;
 
-    std::string getAddress();
+    std::string getAddress() const;
     // int getAddressType();
-    std::string getName();
-    int getBondState();
+    std::string getName() const;
+    int getBondState() const;
     // void removeBond();
 
     BluetoothGatt connectGatt(bool autoConnect, Bridge::BluetoothGattCallback& callback);
+    jobject get() const { return _obj.get(); }
 
     static const int BOND_NONE = 10;
     static const int BOND_BONDING = 11;

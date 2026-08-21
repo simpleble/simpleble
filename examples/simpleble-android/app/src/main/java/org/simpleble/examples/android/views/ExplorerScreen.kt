@@ -61,6 +61,7 @@ import org.simpleble.examples.android.viewmodels.capabilitySummary
 fun ExplorerScreen(
     state: BleUiState,
     onAction: (ExplorerAction) -> Unit,
+    onOpenPeripheralMode: () -> Unit = {},
     onRequestBluetooth: () -> Unit
 ) {
     val selected = state.selectedPeripheral
@@ -121,6 +122,7 @@ fun ExplorerScreen(
                 ScanContent(
                     state = state,
                     onAction = onAction,
+                    onOpenPeripheralMode = onOpenPeripheralMode,
                     onRequestBluetooth = onRequestBluetooth
                 )
             } else {
@@ -206,6 +208,7 @@ fun PermissionScreen(
 private fun ScanContent(
     state: BleUiState,
     onAction: (ExplorerAction) -> Unit,
+    onOpenPeripheralMode: () -> Unit,
     onRequestBluetooth: () -> Unit
 ) {
     val query = state.searchQuery.trim()
@@ -222,7 +225,12 @@ private fun ScanContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            AdapterCard(state = state, onAction = onAction, onRequestBluetooth = onRequestBluetooth)
+            AdapterCard(
+                state = state,
+                onAction = onAction,
+                onOpenPeripheralMode = onOpenPeripheralMode,
+                onRequestBluetooth = onRequestBluetooth
+            )
         }
         item {
             Row(
@@ -284,6 +292,7 @@ private fun ScanContent(
 private fun AdapterCard(
     state: BleUiState,
     onAction: (ExplorerAction) -> Unit,
+    onOpenPeripheralMode: () -> Unit,
     onRequestBluetooth: () -> Unit
 ) {
     Card(
@@ -348,6 +357,13 @@ private fun AdapterCard(
                     enabled = !state.busy
                 ) {
                     Text("Refresh")
+                }
+                OutlinedButton(
+                    onClick = onOpenPeripheralMode,
+                    enabled = state.bluetoothEnabled && state.hasAdapter && !state.busy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Peripheral mode")
                 }
             }
         }

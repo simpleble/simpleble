@@ -191,6 +191,9 @@ class bytearray {
      */
     bytearray slice_to(size_t end) const { return slice(0, end); }
 
+    bool operator==(const bytearray& other) const { return data_ == other.data_; }
+    bool operator!=(const bytearray& other) const { return !(*this == other); }
+
     /**
      * @brief Overloaded stream insertion operator for byte array.
      * @param os The output stream.
