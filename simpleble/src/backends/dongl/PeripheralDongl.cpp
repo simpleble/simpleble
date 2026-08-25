@@ -68,6 +68,7 @@ void PeripheralDongl::connect() {
         throw Exception::OperationFailed(fmt::format("Connection failed to be established"));
     }
 
+    _connection_announced = true;
     SAFE_CALLBACK_CALL(this->_callback_on_connected);
 }
 
@@ -441,12 +442,15 @@ void PeripheralDongl::notify_connected(uint16_t conn_handle) {
 }
 
 void PeripheralDongl::notify_disconnected() {
+    const bool notify = _connection_announced.exchange(false);
     _conn_handle = BLE_CONN_HANDLE_INVALID;
     _mtu = 0;
     disconnection_cv_.notify_all();
     attributes_discovered_cv_.notify_all();
 
-    SAFE_CALLBACK_CALL(this->_callback_on_disconnected);
+    if (notify) {
+        SAFE_CALLBACK_CALL(this->_callback_on_disconnected);
+    }
 }
 
 void PeripheralDongl::notify_service_discovered(simpleble_ServiceDiscoveredEvt const& evt) {

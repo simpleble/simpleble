@@ -123,6 +123,7 @@ class PeripheralDongl : public PeripheralBase {
     void _send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key, bool accept);
 
     uint16_t _conn_handle = BLE_CONN_HANDLE_INVALID;
+    std::atomic_bool _connection_announced = false;
     uint16_t _mtu = 0;
     std::string _identifier;
     bool _identifier_complete = false;
