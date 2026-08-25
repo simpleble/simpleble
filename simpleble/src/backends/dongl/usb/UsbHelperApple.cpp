@@ -14,12 +14,13 @@
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <fmt/core.h>
+
+#include "LoggingInternal.h"
 
 namespace SimpleBLE {
 namespace Dongl {
@@ -110,8 +111,6 @@ std::vector<std::string> UsbHelperApple::get_dongl_devices() {
 
         std::string path(raw_path);
 
-        //fmt::print("Checking device path: {}\n", path);
-
         // Search up parents for idVendor and idProduct
         ScopedCFRef vidCF((CFNumberRef)IORegistryEntrySearchCFProperty(
             raw_service, kIOServicePlane, CFSTR(kUSBVendorID), kCFAllocatorDefault,
@@ -128,8 +127,6 @@ std::vector<std::string> UsbHelperApple::get_dongl_devices() {
         CFNumberGetValue((CFNumberRef)vidCF.get(), kCFNumberSInt16Type, &vid);
         CFNumberGetValue((CFNumberRef)pidCF.get(), kCFNumberSInt16Type, &pid);
 
-        //fmt::print("VID/PID: 0x{:x}/0x{:x}\n", vid, pid);
-
         if (vid == UsbHelperImpl::DONGL_VENDOR_ID && pid == UsbHelperImpl::DONGL_PRODUCT_ID) {
             dongle_devices.push_back(path);
         }
@@ -141,14 +138,13 @@ bool UsbHelperApple::_open_serial_port() {
     // Open the serial port in non-blocking mode
     _serial_fd = open(_device_path.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (_serial_fd < 0) {
-        std::cerr << "Failed to open serial port " << _device_path << ": " << strerror(errno) << std::endl;
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to open serial port {}: {}", _device_path, strerror(errno)));
         return false;
     }
 
     // Configure the serial port
     _configure_serial_port();
 
-    //std::cout << "Successfully opened serial port: " << _device_path << std::endl;
     return true;
 }
 
@@ -207,7 +203,6 @@ void UsbHelperApple::_close_serial_port() {
     if (_serial_fd >= 0) {
         close(_serial_fd);
         _serial_fd = -1;
-        //std::cout << "Closed serial port: " << _device_path << std::endl;
     }
 }
 
@@ -217,8 +212,6 @@ void UsbHelperApple::_run() {
 
     fd_set read_fds;
     struct timeval timeout;
-
-    //std::cout << "UsbHelperApple: _run() started with non-blocking reads" << std::endl;
 
     while (_running) {
         // Clear the file descriptor set
@@ -242,12 +235,13 @@ void UsbHelperApple::_run() {
                     _rx_callback(data);
                 } else if (bytes_read == 0) {
                     // End of file (device disconnected)
-                    std::cerr << "Serial port disconnected" << std::endl;
+                    SIMPLEBLE_LOG_WARN(fmt::format("Serial port disconnected: {}", _device_path));
                     break;
                 } else {
                     // Error reading from serial port
                     if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                        std::cerr << "Error reading from serial port: " << strerror(errno) << std::endl;
+                        SIMPLEBLE_LOG_ERROR(
+                            fmt::format("Error reading from serial port {}: {}", _device_path, strerror(errno)));
                         break;
                     }
                 }
@@ -258,7 +252,8 @@ void UsbHelperApple::_run() {
         } else {
             // Error in select
             if (errno != EINTR) {
-                std::cerr << "Error in select: " << strerror(errno) << std::endl;
+                SIMPLEBLE_LOG_ERROR(
+                    fmt::format("Error waiting on serial port {}: {}", _device_path, strerror(errno)));
                 break;
             }
         }

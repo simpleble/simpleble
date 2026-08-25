@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Added**
 
 - (Dongl) Added pairing and bonded-peripheral management with typed passkey callbacks.
+- (Dongl) Added service data, descriptor I/O, and negotiated MTU reporting.
 - (Linux) Added Dongl backend support.
 - (SimpleBluez) Added device connection-state change callbacks.
 - (Linux) Added local peripheral-mode support.
@@ -27,11 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Changed**
 
--
+- (Dongl) Consolidated UUID conversion and routed diagnostics through SimpleBLE logging.
 
 **Fixed**
 
--
+- (Dongl) Fixed scan callbacks, advertising-data merging, and disconnect notifications.
 
 **Removed**
 

@@ -11,6 +11,7 @@
 #include <kvn_safe_map.hpp>
 
 #include <atomic>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -75,7 +76,8 @@ class PeripheralDongl : public PeripheralBase {
     void notify_service_discovered(simpleble_ServiceDiscoveredEvt const& service_discovered_evt);
     void notify_characteristic_discovered(simpleble_CharacteristicDiscoveredEvt const& characteristic_discovered_evt);
     void notify_descriptor_discovered(simpleble_DescriptorDiscoveredEvt const& descriptor_discovered_evt);
-    void notify_attribute_discovery_complete();
+    void notify_attribute_discovery_complete(
+        simpleble_AttributeDiscoveryCompleteEvt const& attribute_discovery_complete_evt);
     void notify_value_changed(simpleble_ValueChangedEvt const& value_changed_evt);
     void notify_passkey_display(simpleble_PasskeyDisplayEvt const& passkey_display_evt);
     void notify_auth_key_request(simpleble_AuthKeyRequestEvt const& auth_key_request_evt);
@@ -111,23 +113,23 @@ class PeripheralDongl : public PeripheralBase {
     };
 
     bool _attempt_connect();
-    BluetoothUUID _uuid_from_uuid16(uint16_t uuid16);
-    BluetoothUUID _uuid_from_uuid32(uint32_t uuid32);
-    BluetoothUUID _uuid_from_uuid128(const uint8_t uuid[16]);
-    BluetoothUUID _uuid_from_proto(simpleble_UUID const& uuid);
 
     ServiceDefinition& _find_service_from_handle(uint16_t handle);
     CharacteristicDefinition& _find_characteristic_from_handle(uint16_t handle);
     CharacteristicDefinition& _find_characteristic_from_uuid(BluetoothUUID const& service,
                                                              BluetoothUUID const& characteristic);
+    DescriptorDefinition& _find_descriptor_from_uuid(BluetoothUUID const& service, BluetoothUUID const& characteristic,
+                                                     BluetoothUUID const& descriptor);
     void _send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key, bool accept);
 
     uint16_t _conn_handle = BLE_CONN_HANDLE_INVALID;
+    uint16_t _mtu = 0;
     std::string _identifier;
+    bool _identifier_complete = false;
     BluetoothAddress _address;
     BluetoothAddressType _address_type;
     int16_t _rssi;
-    int16_t _tx_power;
+    int16_t _tx_power = std::numeric_limits<int16_t>::min();
     bool _connectable;
     std::map<uint16_t, ByteArray> _manufacturer_data;
     std::map<BluetoothUUID, ByteArray> _service_data;

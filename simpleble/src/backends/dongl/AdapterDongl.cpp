@@ -4,7 +4,9 @@
 #include "AdapterDongl.h"
 #include "BuilderBase.h"
 #include "CommonUtils.h"
+#include "LoggingInternal.h"
 #include "PeripheralDongl.h"
+#include "Utils.h"
 #include "protocol/simpleble.pb.h"
 #include "serial/Protocol.h"
 
@@ -26,8 +28,6 @@ bool AdapterDongl::bluetooth_enabled() { return true; }
 
 AdapterDongl::AdapterDongl(const std::string& device_path)
     : _serial_protocol(std::make_shared<Dongl::Serial::Protocol>(device_path)) {
-    fmt::print("Dongl adapter created with device path: {}\n", device_path);
-
     _serial_protocol->set_event_callback([this](const dongl_Event& event) {
         switch (event.which_evt) {
             case dongl_Event_simpleble_tag:
@@ -38,36 +38,16 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
         }
     });
 
-    // _serial_protocol->set_response_callback([this](const dongl_Response& response) {
-    //     fmt::print("Received response: {} bytes\n", response.size());
-
-    //     // TODO: Process the received response
-    //     // auto event = Dongl::CMD::UartEvent::from_bytes(response);
-    //     // fmt::print("Received event: {}\n", event->to_string());
-    // });
-
-    // _serial_protocol->set_event_callback([this](const std::vector<uint8_t>& event) {
-    //     fmt::print("Received event: {} bytes\n", event.size());
-
-    //     // TODO: Process the received event
-    // });
-
-    // _serial_protocol->set_error_callback([this](const std::vector<uint8_t>& error) {
-    //     fmt::print("Protocol error: {} bytes\n", error.size());
-
-    //     // TODO: Handle protocol errors
-    // });
-
     auto response_whoami = _serial_protocol->basic_whoami();
     _identifier = std::string(response_whoami.identifier);
     _address = std::string(response_whoami.mac_address);
-
-    fmt::println("Whoami: version {}", response_whoami.version);
-    fmt::println("Whoami: identifier {}", response_whoami.identifier);
-    fmt::println("Whoami: mac_address {}", response_whoami.mac_address);
+    SIMPLEBLE_LOG_DEBUG(fmt::format("Dongl adapter initialized: {} (firmware {})", _identifier,
+                                    response_whoami.version));
 
     auto response_init = _serial_protocol->simpleble_init();
-    fmt::println("SimpleBLE init: {}", response_init.ret_code);
+    if (response_init.ret_code != 0) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to initialize Dongl adapter: {}", response_init.ret_code));
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -93,13 +73,20 @@ void AdapterDongl::power_off() { _serial_protocol->basic_power_off(); }
 bool AdapterDongl::is_powered() { return _serial_protocol->basic_is_powered().is_powered; }
 
 void AdapterDongl::scan_start() {
+    seen_peripherals_.clear();
     auto response = _serial_protocol->simpleble_scan_start();
-    fmt::print("Scan start: {}\n", response.ret_code);
+    if (response.ret_code != 0) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to start Dongl scan: {}", response.ret_code));
+    }
+    SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
 }
 
 void AdapterDongl::scan_stop() {
     auto response = _serial_protocol->simpleble_scan_stop();
-    fmt::print("Scan stop: {}\n", response.ret_code);
+    if (response.ret_code != 0) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to stop Dongl scan: {}", response.ret_code));
+    }
+    SAFE_CALLBACK_CALL(this->_callback_on_scan_stop);
 }
 
 void AdapterDongl::scan_for(int timeout_ms) {
@@ -172,10 +159,10 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             data.mac_address = std::string(event.evt.adv_evt.address);
             data.address_type = static_cast<SimpleBLE::BluetoothAddressType>(event.evt.adv_evt.address_type);
             data.identifier = std::string(event.evt.adv_evt.identifier);
+            data.identifier_complete = event.evt.adv_evt.identifier_complete;
             data.connectable = event.evt.adv_evt.connectable;
             data.rssi = event.evt.adv_evt.rssi;
             data.tx_power = event.evt.adv_evt.tx_power;
-
             // Extract decoded manufacturer and service data
             for (int i = 0; i < event.evt.adv_evt.manufacturer_data_count; i++) {
                 ByteArray manufacturer_data(event.evt.adv_evt.manufacturer_data[i].data.bytes,
@@ -183,12 +170,14 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
                 data.manufacturer_data[event.evt.adv_evt.manufacturer_data[i].company_id] = manufacturer_data;
             }
 
-            // TODO: Implement service data extraction
-            // for (int i = 0; i < event.evt.adv_evt.service_data_count; i++) {
-            //     ByteArray service_data(event.evt.adv_evt.service_data[i].data.bytes,
-            //     event.evt.adv_evt.service_data[i].data.size);
-            //     data.service_data[BluetoothUUID(event.evt.adv_evt.service_data[i].uuid)] = service_data;
-            // }
+            for (int i = 0; i < event.evt.adv_evt.service_data_count; i++) {
+                if (!event.evt.adv_evt.service_data[i].has_uuid) {
+                    continue;
+                }
+                ByteArray service_data(event.evt.adv_evt.service_data[i].data.bytes,
+                                       event.evt.adv_evt.service_data[i].data.size);
+                data.service_data[Dongl::uuid_from_proto(event.evt.adv_evt.service_data[i].uuid)] = service_data;
+            }
 
             _scan_received_callback(data);
             break;
@@ -247,7 +236,7 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
         case simpleble_Event_attribute_discovery_complete_evt_tag: {
             for (auto& [address, peripheral] : this->peripherals_) {
                 if (peripheral->conn_handle() == event.evt.attribute_discovery_complete_evt.conn_handle) {
-                    peripheral->notify_attribute_discovery_complete();
+                    peripheral->notify_attribute_discovery_complete(event.evt.attribute_discovery_complete_evt);
                     break;
                 }
             }

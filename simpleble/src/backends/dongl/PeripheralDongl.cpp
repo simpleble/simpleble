@@ -14,6 +14,7 @@
 
 #include "CommonUtils.h"
 #include "LoggingInternal.h"
+#include "Utils.h"
 #include "fmt/chrono.h"
 #include "protocol/simpleble.pb.h"
 #include "simpleble/Types.h"
@@ -27,7 +28,6 @@ PeripheralDongl::PeripheralDongl(std::shared_ptr<Dongl::Serial::Protocol> serial
                                  advertising_data_t advertising_data) {
     _serial_protocol = serial_protocol;
     _address_type = advertising_data.address_type;
-    _identifier = advertising_data.identifier;
     _address = advertising_data.mac_address;
     _connectable = advertising_data.connectable;
     update_advertising_data(advertising_data);
@@ -47,7 +47,7 @@ int16_t PeripheralDongl::rssi() { return _rssi; }
 
 int16_t PeripheralDongl::tx_power() { return _tx_power; }
 
-uint16_t PeripheralDongl::mtu() { return 0; }
+uint16_t PeripheralDongl::mtu() { return _mtu; }
 
 void PeripheralDongl::connect() {
     if (is_connected()) {
@@ -56,9 +56,7 @@ void PeripheralDongl::connect() {
 
     bool connection_successful = false;
     for (int i = 0; i < 10; i++) {
-        fmt::print("PeripheralDongl::connect: attempt {}\n", i);
         connection_successful = _attempt_connect();
-        fmt::print("PeripheralDongl::connect: attempt {} - success: {}\n", i, connection_successful);
         if (connection_successful) {
             break;
         } else {
@@ -71,7 +69,6 @@ void PeripheralDongl::connect() {
     }
 
     SAFE_CALLBACK_CALL(this->_callback_on_connected);
-    fmt::print("PeripheralDongl::connect: connected\n");
 }
 
 void PeripheralDongl::disconnect() {
@@ -92,7 +89,6 @@ void PeripheralDongl::disconnect() {
         _conn_handle = BLE_CONN_HANDLE_INVALID;
         throw Exception::OperationFailed(fmt::format("Timeout while waiting for disconnection confirmation"));
     }
-    SAFE_CALLBACK_CALL(this->_callback_on_disconnected);
 }
 
 bool PeripheralDongl::is_connected() { return _conn_handle != BLE_CONN_HANDLE_INVALID; }
@@ -271,11 +267,26 @@ void PeripheralDongl::unsubscribe(BluetoothUUID const& service_uuid, BluetoothUU
 
 ByteArray PeripheralDongl::read(BluetoothUUID const& service_uuid, BluetoothUUID const& characteristic_uuid,
                                 BluetoothUUID const& descriptor_uuid) {
-    return {};
+    auto& descriptor = _find_descriptor_from_uuid(service_uuid, characteristic_uuid, descriptor_uuid);
+    simpleble_ReadRsp rsp = _serial_protocol->simpleble_read(_conn_handle, descriptor.handle);
+    if (rsp.ret_code != 0) {
+        throw Exception::OperationFailed(
+            fmt::format("Failed to read descriptor {} - ret_code: {}", descriptor_uuid, rsp.ret_code));
+    }
+
+    return ByteArray(rsp.data.bytes, rsp.data.size);
 }
 
 void PeripheralDongl::write(BluetoothUUID const& service_uuid, BluetoothUUID const& characteristic_uuid,
-                            BluetoothUUID const& descriptor_uuid, ByteArray const& data) {}
+                            BluetoothUUID const& descriptor_uuid, ByteArray const& data) {
+    auto& descriptor = _find_descriptor_from_uuid(service_uuid, characteristic_uuid, descriptor_uuid);
+    simpleble_WriteRsp rsp = _serial_protocol->simpleble_write(_conn_handle, descriptor.handle,
+                                                               simpleble_WriteOperation_WRITE_REQ, data);
+    if (rsp.ret_code != 0) {
+        throw Exception::OperationFailed(
+            fmt::format("Failed to write descriptor {} - ret_code: {}", descriptor_uuid, rsp.ret_code));
+    }
+}
 
 void PeripheralDongl::set_callback_on_connected(std::function<void()> on_connected) {
     if (on_connected) {
@@ -296,15 +307,21 @@ void PeripheralDongl::set_callback_on_disconnected(std::function<void()> on_disc
 uint16_t PeripheralDongl::conn_handle() const { return _conn_handle; }
 
 void PeripheralDongl::update_advertising_data(advertising_data_t advertising_data) {
-    if (advertising_data.identifier != "") {
+    if (!advertising_data.identifier.empty() && (advertising_data.identifier_complete || !_identifier_complete)) {
         _identifier = advertising_data.identifier;
+        _identifier_complete = advertising_data.identifier_complete;
     }
     _rssi = advertising_data.rssi;
-    _tx_power = advertising_data.tx_power;
-    _manufacturer_data = advertising_data.manufacturer_data;
+    if (advertising_data.tx_power != std::numeric_limits<int16_t>::min()) {
+        _tx_power = advertising_data.tx_power;
+    }
 
-    advertising_data.service_data.merge(_service_data);
-    _service_data = advertising_data.service_data;
+    for (auto& [company_id, data] : advertising_data.manufacturer_data) {
+        _manufacturer_data[company_id] = std::move(data);
+    }
+    for (auto& [uuid, data] : advertising_data.service_data) {
+        _service_data[uuid] = std::move(data);
+    }
 }
 
 bool PeripheralDongl::_attempt_connect() {
@@ -320,6 +337,7 @@ bool PeripheralDongl::_attempt_connect() {
     }
 
     _conn_handle = BLE_CONN_HANDLE_INVALID;
+    _mtu = 0;
     _services.clear();
     _attributes_discovered.store(false, std::memory_order_relaxed);
 
@@ -379,13 +397,13 @@ bool PeripheralDongl::_attempt_connect() {
             }
 
             if (rsp.data.size == 2) {
-                service.uuid = _uuid_from_uuid16(rsp.data.bytes[1] << 8 | rsp.data.bytes[0]);
+                service.uuid = Dongl::uuid_from_uuid16(rsp.data.bytes[1] << 8 | rsp.data.bytes[0]);
             } else if (rsp.data.size == 16) {
                 uint8_t uuid_128[16];
                 for (int i = 0; i < 16; i++) {
                     uuid_128[i] = rsp.data.bytes[15 - i];
                 }
-                service.uuid = _uuid_from_uuid128(uuid_128);
+                service.uuid = Dongl::uuid_from_uuid128(uuid_128);
             } else {
                 SIMPLEBLE_LOG_ERROR(fmt::format("Unexpected UUID size: {}", rsp.data.size));
                 continue;
@@ -403,13 +421,13 @@ bool PeripheralDongl::_attempt_connect() {
                 }
 
                 if (rsp.data.size == 5) {
-                    characteristic.uuid = _uuid_from_uuid16(rsp.data.bytes[4] << 8 | rsp.data.bytes[3]);
+                    characteristic.uuid = Dongl::uuid_from_uuid16(rsp.data.bytes[4] << 8 | rsp.data.bytes[3]);
                 } else if (rsp.data.size == 19) {
                     uint8_t uuid_128[16];
                     for (int i = 0; i < 16; i++) {
                         uuid_128[i] = rsp.data.bytes[15 - i + 3];
                     }
-                    characteristic.uuid = _uuid_from_uuid128(uuid_128);
+                    characteristic.uuid = Dongl::uuid_from_uuid128(uuid_128);
                 }
             }
         }
@@ -424,17 +442,17 @@ void PeripheralDongl::notify_connected(uint16_t conn_handle) {
 
 void PeripheralDongl::notify_disconnected() {
     _conn_handle = BLE_CONN_HANDLE_INVALID;
+    _mtu = 0;
     disconnection_cv_.notify_all();
     attributes_discovered_cv_.notify_all();
 
-    // TODO: Only throw the callback if the disconection was unexpected.
-    // SAFE_CALLBACK_CALL(this->_callback_on_disconnected);
+    SAFE_CALLBACK_CALL(this->_callback_on_disconnected);
 }
 
 void PeripheralDongl::notify_service_discovered(simpleble_ServiceDiscoveredEvt const& evt) {
     BluetoothUUID uuid;
     if (evt.has_uuid16) {
-        uuid = _uuid_from_uuid16(evt.uuid16.uuid);
+        uuid = Dongl::uuid_from_uuid16(evt.uuid16.uuid);
     }
 
     _services.emplace_back(ServiceDefinition{
@@ -449,7 +467,7 @@ void PeripheralDongl::notify_characteristic_discovered(simpleble_CharacteristicD
 
     BluetoothUUID uuid;
     if (evt.has_uuid16) {
-        uuid = _uuid_from_uuid16(evt.uuid16.uuid);
+        uuid = Dongl::uuid_from_uuid16(evt.uuid16.uuid);
     }
 
     service.characteristics.emplace_back(CharacteristicDefinition{
@@ -479,18 +497,19 @@ void PeripheralDongl::notify_descriptor_discovered(simpleble_DescriptorDiscovere
 
     auto& characteristic = _find_characteristic_from_handle(evt.handle);
     characteristic.descriptors.emplace_back(DescriptorDefinition{
-        _uuid_from_uuid16(evt.uuid16.uuid),
+        Dongl::uuid_from_proto(evt.uuid),
         evt.handle,
     });
 
     // If the descriptor is a client characteristic configuration descriptor (CCCD),
     // save that handle number for the characteristic.
-    if (evt.uuid16.uuid == 0x2902) {
+    if (evt.uuid.which_uuid == simpleble_UUID_uuid16_tag && evt.uuid.uuid.uuid16.uuid == 0x2902) {
         characteristic.handle_cccd = evt.handle;
     }
 }
 
-void PeripheralDongl::notify_attribute_discovery_complete() {
+void PeripheralDongl::notify_attribute_discovery_complete(simpleble_AttributeDiscoveryCompleteEvt const& evt) {
+    _mtu = evt.mtu;
     _attributes_discovered.store(true, std::memory_order_release);
     attributes_discovered_cv_.notify_all();
 }
@@ -609,61 +628,6 @@ void PeripheralDongl::_send_auth_key_reply(uint16_t conn_handle, uint32_t reques
     }
 }
 
-BluetoothUUID PeripheralDongl::_uuid_from_uuid16(uint16_t uuid16) {
-    return BluetoothUUID(fmt::format("0000{:04X}-0000-1000-8000-00805F9B34FB", uuid16));
-}
-
-BluetoothUUID PeripheralDongl::_uuid_from_uuid32(uint32_t uuid32) {
-    return BluetoothUUID(fmt::format("{:08X}-0000-1000-8000-00805F9B34FB", uuid32));
-}
-
-BluetoothUUID PeripheralDongl::_uuid_from_uuid128(const uint8_t id[16]) {
-    std::string uuid_str;
-    uuid_str.reserve(36);  // Pre-allocate memory for the UUID string
-
-    uuid_str += fmt::format("{:02X}{:02X}{:02X}{:02X}", id[0], id[1], id[2], id[3]);
-    uuid_str += "-";
-    uuid_str += fmt::format("{:02X}{:02X}", id[4], id[5]);
-    uuid_str += "-";
-    uuid_str += fmt::format("{:02X}{:02X}", id[6], id[7]);
-    uuid_str += "-";
-    uuid_str += fmt::format("{:02X}{:02X}", id[8], id[9]);
-    uuid_str += "-";
-    uuid_str += fmt::format("{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}", id[10], id[11], id[12], id[13], id[14], id[15]);
-
-    return BluetoothUUID(uuid_str);
-}
-
-BluetoothUUID PeripheralDongl::_uuid_from_proto(simpleble_UUID const& uuid) {
-    switch (uuid.which_uuid) {
-        case simpleble_UUID_uuid16_tag:
-            return BluetoothUUID(fmt::format("0000{:04X}-0000-1000-8000-00805F9B34FB", uuid.uuid.uuid16.uuid));
-        case simpleble_UUID_uuid32_tag:
-            return BluetoothUUID(fmt::format("{:08X}-0000-1000-8000-00805F9B34FB", uuid.uuid.uuid32.uuid));
-        case simpleble_UUID_uuid128_tag: {
-            const auto& bytes = uuid.uuid.uuid128.uuid;
-            std::string uuid_str;
-            uuid_str.reserve(36);  // Pre-allocate memory for the UUID string
-
-            uuid_str += fmt::format("{:02X}{:02X}{:02X}{:02X}", bytes[0], bytes[1], bytes[2], bytes[3]);
-            uuid_str += "-";
-            uuid_str += fmt::format("{:02X}{:02X}", bytes[4], bytes[5]);
-            uuid_str += "-";
-            uuid_str += fmt::format("{:02X}{:02X}", bytes[6], bytes[7]);
-            uuid_str += "-";
-            uuid_str += fmt::format("{:02X}{:02X}", bytes[8], bytes[9]);
-            uuid_str += "-";
-            uuid_str += fmt::format("{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}", bytes[10], bytes[11], bytes[12], bytes[13],
-                                    bytes[14], bytes[15]);
-
-            return BluetoothUUID(uuid_str);
-        }
-    }
-
-    // Should not be reached
-    throw std::runtime_error(fmt::format("Unknown UUID type: {}", uuid.which_uuid));
-}
-
 PeripheralDongl::ServiceDefinition& PeripheralDongl::_find_service_from_handle(uint16_t handle) {
     for (auto& service : _services) {
         if (service.start_handle <= handle && service.end_handle >= handle) {
@@ -703,4 +667,16 @@ PeripheralDongl::CharacteristicDefinition& PeripheralDongl::_find_characteristic
     }
 
     throw std::runtime_error(fmt::format("Characteristic {} not found", characteristic_uuid));
+}
+
+PeripheralDongl::DescriptorDefinition& PeripheralDongl::_find_descriptor_from_uuid(
+    BluetoothUUID const& service_uuid, BluetoothUUID const& characteristic_uuid, BluetoothUUID const& descriptor_uuid) {
+    auto& characteristic = _find_characteristic_from_uuid(service_uuid, characteristic_uuid);
+    for (auto& descriptor : characteristic.descriptors) {
+        if (descriptor.uuid == descriptor_uuid) {
+            return descriptor;
+        }
+    }
+
+    throw std::runtime_error(fmt::format("Descriptor {} not found", descriptor_uuid));
 }

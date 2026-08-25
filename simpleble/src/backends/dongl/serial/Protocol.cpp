@@ -1,7 +1,6 @@
 #include "Protocol.h"
 
 #include <cstring>
-#include "fmt/base.h"
 #include "protocol/simpleble.pb.h"
 
 using namespace SimpleBLE::Dongl::Serial;
@@ -146,9 +145,7 @@ simpleble_ReadRsp Protocol::simpleble_read(uint16_t conn_handle, uint16_t handle
     command.cmd.simpleble.cmd.read.conn_handle = conn_handle;
     command.cmd.simpleble.cmd.read.handle = handle;
 
-    fmt::print("simpleble_read: conn_handle: {}, handle: {}\n", conn_handle, handle);
     dongl_Response response = exchange(command);
-    fmt::print("simpleble_read: response: {}\n", response.rsp.simpleble.rsp.read.ret_code);
     return response.rsp.simpleble.rsp.read;
 }
 

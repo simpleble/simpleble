@@ -15,8 +15,7 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
         dongl_D2H d2h = dongl_D2H_init_zero;
         pb_istream_t stream = pb_istream_from_buffer(packet.data(), packet.size());
         if (!pb_decode(&stream, dongl_D2H_fields, &d2h)) {
-            // TODO: Handle decoding failure
-            fmt::print("Failed to decode D2H: {}\n", PB_GET_ERROR(&stream));
+            SIMPLEBLE_LOG_ERROR(fmt::format("Failed to decode Dongl packet: {}", PB_GET_ERROR(&stream)));
             return;
         }
 
@@ -45,7 +44,7 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
     });
 
     _wire->set_error_callback([this](const Wire::Error& error) {
-        fmt::print("Error: {}\n", (int)error);
+        SIMPLEBLE_LOG_WARN(fmt::format("Dongl wire error: {}", static_cast<int>(error)));
     });
 }
 
