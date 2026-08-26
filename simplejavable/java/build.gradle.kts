@@ -1,5 +1,5 @@
 import org.gradle.internal.os.OperatingSystem
-import java.util.zip.ZipFile
+import java.util.jar.JarFile
 
 plugins {
     id("java-library")
@@ -94,6 +94,7 @@ tasks.jar {
     // TODO: Remove this once main class is not needed.
     manifest {
         attributes["Main-Class"] = "org.simplejavable.Main"
+        attributes["Automatic-Module-Name"] = "org.simpleble"
     }
 
     from(file("../../LICENSE.md")) {
@@ -161,12 +162,15 @@ val verifyReleasePublication by tasks.registering {
             "native/aarch64/libsimplejavable.dylib",
             "native/x64/simplejavable.dll",
         )
-        ZipFile(publicationFiles.first()).use { jar ->
+        JarFile(publicationFiles.first()).use { jar ->
             val missingEntries = expectedJarEntries.filter { entryName ->
                 jar.getEntry(entryName)?.size?.let { it > 0 } != true
             }
             check(missingEntries.isEmpty()) {
                 "Publication JAR has missing or empty native libraries or license: ${missingEntries.sorted()}"
+            }
+            check(jar.manifest?.mainAttributes?.getValue("Automatic-Module-Name") == "org.simpleble") {
+                "Publication JAR is missing Automatic-Module-Name: org.simpleble"
             }
         }
 
