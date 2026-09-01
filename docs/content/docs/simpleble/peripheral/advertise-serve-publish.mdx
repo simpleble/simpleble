@@ -32,9 +32,7 @@ auto adapters = SimpleBLE::Adapter::get_adapters();
 auto adapter = adapters.front();
 auto peripheral = adapter.create_local_peripheral();
 
-SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = adapter.identifier();
-peripheral.set_advertisement(advertisement);
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0");
 
 auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");
 auto characteristic = service.add_characteristic(
@@ -49,21 +47,33 @@ peripheral.start();
 
 `is_started()` reports whether the GATT application is registered. `is_advertising()` reports whether the advertisement is currently active.
 
-## Advertisement
+## Advertised services
 
-`Advertisement` currently carries an optional local name and an optional list of service UUIDs:
+Add configured service UUIDs to the advertisement directly on the local peripheral:
 
 ```cpp
-SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = "SimpleBLE Peripheral";
-// advertisement.service_uuids = {"12345678-1234-5678-1234-56789abcdef0"};
-peripheral.set_advertisement(advertisement);
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0");
 ```
 
-If `service_uuids` is left empty, SimpleBLE advertises the service UUIDs configured on the local peripheral when the platform supports doing so.
+If no advertised services are added explicitly, SimpleBLE advertises the service UUIDs configured on the local peripheral when the platform supports doing so. Pass a vector to add several UUIDs in one call.
 
-On Windows, WinRT uses the system Bluetooth name instead of `local_name`.
-Android's public legacy advertising API can include only the system Bluetooth name. On Android, omit `local_name` or set it to `adapter.identifier()`; `start()` rejects an arbitrary name with a clear error instead of silently advertising a different value.
+The portable advertisement does not select a local name. Windows controls the name in its discoverable advertisement, and Android includes the adapter's system Bluetooth name. Neither platform exposes an arbitrary per-advertisement name through its public GATT advertising API.
+
+BlueZ and CoreBluetooth do support an advertisement-specific name. Configure that platform capability before `start()` without changing the adapter alias, system Bluetooth name, or GAP Device Name:
+
+```cpp
+#include <simpleble/Advanced.h>
+
+#if defined(__linux__) && !defined(__ANDROID__)
+SimpleBLE::Advanced::Linux::set_advertisement_local_name(peripheral, "SimpleBLE Peripheral");
+#elif TARGET_OS_OSX
+SimpleBLE::Advanced::MacOS::set_advertisement_local_name(peripheral, "SimpleBLE Peripheral");
+#elif TARGET_OS_IOS
+SimpleBLE::Advanced::iOS::set_advertisement_local_name(peripheral, "SimpleBLE Peripheral");
+#endif
+```
+
+CoreBluetooth advertises data on a best-effort basis, and iOS omits the local name while the app is in the background. BlueZ may shorten a name that does not fit. Pass `std::nullopt` to remove an override.
 
 ## Services and characteristics
 
@@ -184,9 +194,7 @@ int main() {
     auto adapter = adapters.front();
     auto peripheral = adapter.create_local_peripheral();
 
-    SimpleBLE::Local::Advertisement advertisement;
-    advertisement.local_name = adapter.identifier();
-    peripheral.set_advertisement(advertisement);
+    peripheral.add_advertised_service(SERVICE_UUID);
 
     auto service = peripheral.add_service(SERVICE_UUID);
     auto characteristic = service.add_characteristic(

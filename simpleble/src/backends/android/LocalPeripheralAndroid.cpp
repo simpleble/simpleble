@@ -125,15 +125,18 @@ PeripheralAndroid::~PeripheralAndroid() {
 
 void* PeripheralAndroid::underlying() const { return nullptr; }
 
-Advertisement PeripheralAndroid::advertisement() {
-    std::scoped_lock lock(_lifecycle_mutex);
-    return _advertisement;
-}
-
-void PeripheralAndroid::set_advertisement(Advertisement advertisement) {
+void PeripheralAndroid::add_advertised_service(BluetoothUUID service_uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
-    _advertisement = std::move(advertisement);
+    _advertised_service_uuids.push_back(std::move(service_uuid));
+}
+
+void PeripheralAndroid::add_advertised_service(std::vector<BluetoothUUID> service_uuids) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    for (auto& service_uuid : service_uuids) {
+        _advertised_service_uuids.push_back(std::move(service_uuid));
+    }
 }
 
 std::shared_ptr<ServiceBase> PeripheralAndroid::add_service(BluetoothUUID uuid) {
@@ -164,12 +167,6 @@ void PeripheralAndroid::start() {
     if (!_adapter.isEnabled()) throw Exception::OperationFailed("Bluetooth is turned off.");
     if (!_adapter.isMultipleAdvertisementSupported()) {
         throw Exception::OperationFailed("This Android device does not support Bluetooth LE advertising.");
-    }
-
-    const std::string adapter_name = _adapter.getName();
-    if (_advertisement.local_name.has_value() && *_advertisement.local_name != adapter_name) {
-        throw Exception::OperationFailed("Android can only advertise the device Bluetooth name (\"" + adapter_name +
-                                         "\"). Omit local_name or set it to that value.");
     }
 
     Android::Context context = BackendAndroid::application_context();
@@ -203,7 +200,7 @@ void PeripheralAndroid::start() {
             }
         }
 
-        std::vector<BluetoothUUID> service_uuids = _advertisement.service_uuids;
+        std::vector<BluetoothUUID> service_uuids = _advertised_service_uuids;
         if (service_uuids.empty()) {
             service_uuids.reserve(_services.size());
             for (const auto& service : _services) service_uuids.push_back(service->uuid());
@@ -216,7 +213,7 @@ void PeripheralAndroid::start() {
         auto data = data_builder.build();
 
         Android::AdvertiseData::Builder response_builder;
-        response_builder.setIncludeDeviceName(_advertisement.local_name.has_value());
+        response_builder.setIncludeDeviceName(true);
         auto scan_response = response_builder.build();
 
         auto settings = Android::AdvertiseSettings::Builder()

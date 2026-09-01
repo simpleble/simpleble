@@ -17,7 +17,7 @@ The C++ API can host a local peripheral on every supported platform. Native Andr
 
 1. Get an adapter.
 2. Create a local peripheral.
-3. Set advertisement data.
+3. Select the advertised service UUIDs, if needed.
 4. Add services and characteristics.
 5. Register client or write callbacks if you need them.
 6. Call `start()`, keep the process alive, then `stop()`.
@@ -29,9 +29,7 @@ auto adapters = SimpleBLE::Adapter::get_adapters();
 auto adapter = adapters.front();
 auto peripheral = adapter.create_local_peripheral();
 
-SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = adapter.identifier();
-peripheral.set_advertisement(advertisement);
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0");
 
 auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");
 auto characteristic = service.add_characteristic(
@@ -64,7 +62,8 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 - Pass capabilities as a `std::set` (an initializer list is enough). Each characteristic needs at least one capability.
 - On Linux, BlueZ must be running and the process must have D-Bus access, as with scanning.
 - On macOS, CoreBluetooth reports client connection and disconnection callbacks when the client first subscribes and finally unsubscribes.
-- On Windows, the adapter and driver must support the peripheral role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. Windows uses the system Bluetooth name instead of `advertisement.local_name`.
-- On Android, the public advertising API can only include the system Bluetooth name. Omit `local_name` or set it to `adapter.identifier()`.
+- On Windows, the adapter and driver must support the peripheral role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. Windows controls the advertised Bluetooth name.
+- On Android, SimpleBLE includes the adapter's system Bluetooth name. Android's public advertising API cannot set an arbitrary per-advertisement name.
+- Linux, macOS, and iOS callers that need a platform-specific advertised name can use `set_advertisement_local_name()` from the corresponding `SimpleBLE::Advanced` platform namespace before `start()`.
 
 For the full C++ walkthrough, see [Advertise, Serve, Publish](../simpleble/peripheral/advertise-serve-publish). For scanning from the other side of the link, see [Scan](./scan).

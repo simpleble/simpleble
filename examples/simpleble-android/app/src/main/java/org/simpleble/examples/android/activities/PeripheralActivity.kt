@@ -34,7 +34,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.simpleble.android.Adapter
 import org.simpleble.android.BluetoothUUID
-import org.simpleble.android.LocalAdvertisement
 import org.simpleble.android.LocalCharacteristic
 import org.simpleble.android.LocalCharacteristicCapability
 import org.simpleble.android.LocalPeripheral
@@ -84,10 +83,7 @@ class PeripheralActivity : ComponentActivity() {
             val adapter = Adapter.getAdapters().firstOrNull()
                 ?: error("No Bluetooth adapter is available.")
             val localPeripheral = adapter.createLocalPeripheral(this)
-            localPeripheral.advertisement = LocalAdvertisement(
-                localName = adapter.identifier,
-                serviceUuids = listOf(BluetoothUUID(SERVICE_UUID))
-            )
+            localPeripheral.addAdvertisedService(BluetoothUUID(SERVICE_UUID))
             val localCharacteristic = localPeripheral
                 .addService(BluetoothUUID(SERVICE_UUID))
                 .addCharacteristic(

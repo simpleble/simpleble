@@ -78,6 +78,16 @@ namespace SimpleBLE::Advanced::Windows {}
 namespace SimpleBLE::Advanced::MacOS {
 
 /**
+ * Set the local name included in this peripheral's advertisement.
+ *
+ * This changes only the advertisement payload, not the system Bluetooth or GAP
+ * device name. Configure it before starting the local peripheral. Passing
+ * std::nullopt removes the override.
+ */
+void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
+                                                   std::optional<std::string> local_name);
+
+/**
  * Retrieve peripherals that CoreBluetooth can resolve from its system cache.
  *
  * This does not scan or guarantee that a returned peripheral is reachable.
@@ -96,6 +106,17 @@ std::vector<Peripheral> SIMPLEBLE_EXPORT retrieve_cached_peripherals(Adapter& ad
 
 #if TARGET_OS_IOS
 namespace SimpleBLE::Advanced::iOS {
+
+/**
+ * Set the local name included in this peripheral's advertisement.
+ *
+ * This changes only the advertisement payload, not the system Bluetooth or GAP
+ * device name. CoreBluetooth does not advertise the local name while the app is
+ * in the background. Configure it before starting the local peripheral. Passing
+ * std::nullopt removes the override.
+ */
+void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
+                                                   std::optional<std::string> local_name);
 
 /**
  * Retrieve peripherals that CoreBluetooth can resolve from its system cache.
@@ -138,6 +159,18 @@ void SIMPLEBLE_EXPORT set_context(jobject context);
 #endif
 
 #if defined(__linux__) && !defined(__ANDROID__)
-namespace SimpleBLE::Advanced::Linux {}
+namespace SimpleBLE::Advanced::Linux {
+
+/**
+ * Set the local name included in this peripheral's BlueZ advertisement.
+ *
+ * This changes only the advertisement payload, not the adapter alias or GAP
+ * device name. Configure it before starting the local peripheral. Passing
+ * std::nullopt removes the override.
+ */
+void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
+                                                   std::optional<std::string> local_name);
+
+}  // namespace SimpleBLE::Advanced::Linux
 
 #endif

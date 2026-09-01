@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -26,8 +27,9 @@ class PeripheralLinux : public PeripheralBase {
 
     void* underlying() const override;
 
-    Advertisement advertisement() override;
-    void set_advertisement(Advertisement advertisement) override;
+    void add_advertised_service(BluetoothUUID service_uuid) override;
+    void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
+    void set_advertisement_local_name(std::optional<std::string> local_name);
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;
     std::vector<std::shared_ptr<ServiceBase>> services() override;
@@ -53,7 +55,8 @@ class PeripheralLinux : public PeripheralBase {
     std::shared_ptr<SimpleBluez::Advertisement> _bluez_advertisement;
     std::string _name;
 
-    Advertisement _advertisement;
+    std::vector<BluetoothUUID> _advertised_service_uuids;
+    std::optional<std::string> _advertisement_local_name;
     std::vector<std::shared_ptr<ServiceLinux>> _services;
     size_t _next_service_id{0};
     std::atomic_bool _started{false};

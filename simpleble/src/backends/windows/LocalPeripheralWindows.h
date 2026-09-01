@@ -26,8 +26,8 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
 
     void* underlying() const override;
 
-    Advertisement advertisement() override;
-    void set_advertisement(Advertisement advertisement) override;
+    void add_advertised_service(BluetoothUUID service_uuid) override;
+    void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;
     std::vector<std::shared_ptr<ServiceBase>> services() override;
@@ -65,7 +65,7 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     };
 
     winrt::Windows::Devices::Bluetooth::BluetoothAdapter _adapter{nullptr};
-    Advertisement _advertisement;
+    std::vector<BluetoothUUID> _advertised_service_uuids;
     std::vector<std::shared_ptr<ServiceWindows>> _services;
     std::shared_ptr<RunState> _run;
     std::atomic_bool _started{false};

@@ -36,15 +36,24 @@ PeripheralLinux::~PeripheralLinux() {
 
 void* PeripheralLinux::underlying() const { return _service_manager.get(); }
 
-Advertisement PeripheralLinux::advertisement() {
-    std::scoped_lock lock(_lifecycle_mutex);
-    return _advertisement;
-}
-
-void PeripheralLinux::set_advertisement(Advertisement advertisement) {
+void PeripheralLinux::add_advertised_service(BluetoothUUID service_uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
-    _advertisement = std::move(advertisement);
+    _advertised_service_uuids.push_back(std::move(service_uuid));
+}
+
+void PeripheralLinux::add_advertised_service(std::vector<BluetoothUUID> service_uuids) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    for (auto& service_uuid : service_uuids) {
+        _advertised_service_uuids.push_back(std::move(service_uuid));
+    }
+}
+
+void PeripheralLinux::set_advertisement_local_name(std::optional<std::string> local_name) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _advertisement_local_name = std::move(local_name);
 }
 
 std::shared_ptr<ServiceBase> PeripheralLinux::add_service(BluetoothUUID uuid) {
@@ -84,7 +93,7 @@ void PeripheralLinux::start() {
         return;
     }
 
-    std::vector<std::string> service_uuids = _advertisement.service_uuids;
+    std::vector<std::string> service_uuids = _advertised_service_uuids;
     if (service_uuids.empty()) {
         service_uuids.reserve(_services.size());
         for (const auto& service : _services) {
@@ -95,8 +104,8 @@ void PeripheralLinux::start() {
     _bluez_advertisement = _root->advertisement_add(_name);
     _bluez_advertisement->adv_type("peripheral");
     _bluez_advertisement->discoverable(true);
-    if (_advertisement.local_name.has_value()) {
-        _bluez_advertisement->local_name(*_advertisement.local_name);
+    if (_advertisement_local_name.has_value()) {
+        _bluez_advertisement->local_name(*_advertisement_local_name);
     }
     if (!service_uuids.empty()) {
         _bluez_advertisement->service_uuids(service_uuids);

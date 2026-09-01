@@ -31,8 +31,8 @@ class PeripheralAndroid : public PeripheralBase, public std::enable_shared_from_
     ~PeripheralAndroid() override;
 
     void* underlying() const override;
-    Advertisement advertisement() override;
-    void set_advertisement(Advertisement advertisement) override;
+    void add_advertised_service(BluetoothUUID service_uuid) override;
+    void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;
     std::vector<std::shared_ptr<ServiceBase>> services() override;
     void remove_all_services() override;
@@ -65,7 +65,7 @@ class PeripheralAndroid : public PeripheralBase, public std::enable_shared_from_
     Android::Bridge::GattServerCallback _server_callback;
     Android::Bridge::AdvertiseCallback _advertise_callback;
 
-    Advertisement _advertisement;
+    std::vector<BluetoothUUID> _advertised_service_uuids;
     std::vector<std::shared_ptr<ServiceAndroid>> _services;
     std::map<JavaObject, std::weak_ptr<CharacteristicAndroid>, JavaObjectComparator> _characteristics;
     std::map<JavaObject, std::weak_ptr<CharacteristicAndroid>, JavaObjectComparator> _descriptors;

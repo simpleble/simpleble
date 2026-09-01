@@ -16,7 +16,7 @@ The Windows implementation currently has a limitation where `initialized()` migh
 ### Local Peripheral Mode
 Windows hosts local services with WinRT `GattServiceProvider`. The Bluetooth adapter and driver must report peripheral-role support. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration.
 
-Windows controls the friendly name placed in a discoverable advertisement, so `Advertisement::local_name` cannot override the system Bluetooth name. WinRT requires one provider per primary service; SimpleBLE starts every configured provider as one peripheral operation and prioritizes providers listed in `Advertisement::service_uuids`. Windows owns the shared advertisement payload and may omit UUIDs that do not fit. Explicitly selected UUIDs must belong to configured services, and `start()` throws if the adapter or driver lacks the resources to publish every provider. Windows reports a client session after the client first interacts with or subscribes to a hosted characteristic; a bare link that performs no GATT operation may not produce a client-connected callback.
+Windows controls the friendly name placed in a discoverable advertisement. WinRT requires one provider per primary service; SimpleBLE starts every configured provider as one peripheral operation and prioritizes providers added with `add_advertised_service()`. Windows owns the shared advertisement payload and may omit UUIDs that do not fit. Explicitly selected UUIDs must belong to configured services, and `start()` throws if the adapter or driver lacks the resources to publish every provider. Windows reports a client session after the client first interacts with or subscribes to a hosted characteristic; a bare link that performs no GATT operation may not produce a client-connected callback.
 
 ## MacOS / iOS
 
@@ -30,8 +30,10 @@ macOS and iOS manage Bluetooth connections at the OS level.
 *   **Unpairing:** Applications cannot programmatically "unpair" or "forget" a device. This must be done by the user in the system settings.
 *   **Connection State:** The OS might keep a connection alive even if your application disconnects, especially if other apps or the system itself are using the device.
 
-### Local Peripheral Mode (macOS only)
-macOS can host a local peripheral through CoreBluetooth. Because CoreBluetooth does not expose peripheral-role connection events, SimpleBLE reports a client as connected when it first subscribes to a characteristic and disconnected when its final subscription ends. Client addresses are CoreBluetooth identifiers rather than Bluetooth MAC addresses.
+### Local Peripheral Mode
+macOS and iOS can host a local peripheral through CoreBluetooth. Because CoreBluetooth does not expose peripheral-role connection events, SimpleBLE reports a client as connected when it first subscribes to a characteristic and disconnected when its final subscription ends. Client addresses are CoreBluetooth identifiers rather than Bluetooth MAC addresses.
+
+CoreBluetooth supports an advertisement-specific local name distinct from the system Bluetooth and GAP device names. Set it before `start()` with `SimpleBLE::Advanced::MacOS::set_advertisement_local_name()` or `SimpleBLE::Advanced::iOS::set_advertisement_local_name()`. Advertising is best-effort and space-limited; iOS omits the local name while the app is in the background.
 
 ## Linux (BlueZ)
 
@@ -68,6 +70,8 @@ On Linux, `Adapter::create_local_peripheral()` registers a BlueZ GATT applicatio
 
 SimpleBLE permits the same adapter to scan and advertise at the same time, but availability depends on BlueZ and the Bluetooth controller supporting concurrent operation and having sufficient resources. Incoming clients of the local peripheral are reported through `SimpleBLE::Local::Peripheral` client callbacks, not as remote `SimpleBLE::Peripheral` objects to `connect()` to.
 
+BlueZ supports a per-advertisement local name independent of the adapter alias. Set it before `start()` with `SimpleBLE::Advanced::Linux::set_advertisement_local_name()`. BlueZ may shorten the name to fit the advertising data.
+
 ## Android
 
 ### API Level Limitations
@@ -84,7 +88,7 @@ Android API 31 and newer can host local GATT services and legacy BLE advertiseme
 
 Native C++ applications must call `SimpleBLE::Advanced::Android::set_context(application_context)` before `Adapter::create_local_peripheral()`. Pass an application context, not an Activity; SimpleBLE retains a global JNI reference while the process is alive. `Adapter.createLocalPeripheral(context)` in SimpleDroidBLE extracts and configures the application context automatically.
 
-Android's public advertising API can include the adapter's system Bluetooth name but cannot set an arbitrary per-advertisement name. Leave `Advertisement::local_name` unset or set it to `Adapter::identifier()`. SimpleBLE rejects other names rather than advertising misleading data.
+Android's public advertising API can include the adapter's system Bluetooth name but cannot set an arbitrary per-advertisement name. SimpleBLE includes the system name in the scan response.
 
 The backend uses legacy advertising, so the normal 31-byte advertising and scan-response limits apply. Prepared writes are rejected; clients should use regular write requests or write commands within the negotiated GATT payload size.
 

@@ -157,9 +157,8 @@ Create the peripheral from an adapter and pass any Android `Context`; SimpleDroi
 val adapter = Adapter.getAdapters().first()
 val peripheral = adapter.createLocalPeripheral(applicationContext)
 
-peripheral.advertisement = LocalAdvertisement(
-    localName = adapter.identifier,
-    serviceUuids = listOf(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+peripheral.addAdvertisedService(
+    BluetoothUUID("12345678-1234-5678-1234-56789abcdef0")
 )
 
 val characteristic = peripheral
@@ -189,7 +188,7 @@ Assigning `value` publishes the new bytes to subscribed clients when the charact
 
 Call `stop()` from your lifecycle cleanup. Advertising data, services, and characteristics cannot be changed while started; values and handlers can.
 
-Android can advertise only the phone's system Bluetooth name through this API. Omit `localName` or use `adapter.identifier`; an arbitrary name causes `start()` to fail with a clear error.
+SimpleDroidBLE includes the phone's system Bluetooth name. Android's public advertising API cannot set an arbitrary per-advertisement name.
 
 Peripheral mode currently uses legacy advertising, including its 31-byte payload limits, and rejects prepared writes. Use regular write requests or write commands within the negotiated GATT payload size.
 

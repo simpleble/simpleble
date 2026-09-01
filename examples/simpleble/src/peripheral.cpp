@@ -31,9 +31,8 @@ int main() {
 
     auto peripheral = adapters.front().create_local_peripheral();
 
-    SimpleBLE::Local::Advertisement advertisement;
-    advertisement.local_name = "SimpleBLE Peripheral";
-    peripheral.set_advertisement(advertisement);
+    // Add a service UUID to the advertisement.
+    peripheral.add_advertised_service(SERVICE_UUID);
 
     auto service = peripheral.add_service(SERVICE_UUID);
     auto characteristic = service.add_characteristic(
@@ -57,7 +56,7 @@ int main() {
         [](SimpleBLE::BluetoothAddress address) { std::cout << "Client disconnected: " << address << std::endl; });
 
     peripheral.start();
-    std::cout << "Advertising as SimpleBLE Peripheral. Press Ctrl+C to stop." << std::endl;
+    std::cout << "Advertising. Press Ctrl+C to stop." << std::endl;
 
     while (running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

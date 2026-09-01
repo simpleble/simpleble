@@ -8,7 +8,6 @@
 
 #include <simpleble/Exceptions.h>
 #include <simpleble/Types.h>
-#include <simpleble/local/Advertisement.h>
 #include <simpleble/local/Service.h>
 
 namespace SimpleBLE::Local {
@@ -29,8 +28,9 @@ class SIMPLEBLE_EXPORT Peripheral {
     bool initialized() const;
     void* underlying() const;
 
-    Advertisement advertisement();
-    void set_advertisement(Advertisement advertisement);
+    /** Add one or more service UUIDs to the advertisement. */
+    void add_advertised_service(BluetoothUUID service_uuid);
+    void add_advertised_service(std::vector<BluetoothUUID> service_uuids);
 
     /** Add a primary GATT service. */
     Service add_service(BluetoothUUID uuid);

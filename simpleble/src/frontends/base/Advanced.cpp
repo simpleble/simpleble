@@ -1,5 +1,7 @@
 #include "simpleble/Advanced.h"
 
+#include <utility>
+
 #if defined(_WIN32)
 namespace SimpleBLE::Advanced::Windows {}
 
@@ -8,8 +10,13 @@ namespace SimpleBLE::Advanced::Windows {}
 #if TARGET_OS_OSX
 #include "BuildVec.h"
 #include "backends/macos/AdapterMac.h"
+#include "backends/macos/LocalPeripheralMac.h"
 
 namespace SimpleBLE::Advanced::MacOS {
+
+void set_advertisement_local_name(Local::Peripheral& peripheral, std::optional<std::string> local_name) {
+    Factory::get_internal<Local::PeripheralMac>(peripheral).set_advertisement_local_name(std::move(local_name));
+}
 
 std::vector<Peripheral> retrieve_cached_peripherals(Adapter& adapter,
                                                     const std::vector<BluetoothAddress>& identifiers) {
@@ -23,8 +30,13 @@ std::vector<Peripheral> retrieve_cached_peripherals(Adapter& adapter,
 #if TARGET_OS_IOS
 #include "BuildVec.h"
 #include "backends/macos/AdapterMac.h"
+#include "backends/macos/LocalPeripheralMac.h"
 
 namespace SimpleBLE::Advanced::iOS {
+
+void set_advertisement_local_name(Local::Peripheral& peripheral, std::optional<std::string> local_name) {
+    Factory::get_internal<Local::PeripheralMac>(peripheral).set_advertisement_local_name(std::move(local_name));
+}
 
 std::vector<Peripheral> retrieve_cached_peripherals(Adapter& adapter,
                                                     const std::vector<BluetoothAddress>& identifiers) {
@@ -51,6 +63,15 @@ void set_context(jobject context) { SimpleBLE::BackendAndroid::set_application_c
 #endif
 
 #if defined(__linux__) && !defined(__ANDROID__)
-namespace SimpleBLE::Advanced::Linux {}
+#include "BuilderBase.h"
+#include "backends/linux/LocalPeripheralLinux.h"
+
+namespace SimpleBLE::Advanced::Linux {
+
+void set_advertisement_local_name(Local::Peripheral& peripheral, std::optional<std::string> local_name) {
+    Factory::get_internal<Local::PeripheralLinux>(peripheral).set_advertisement_local_name(std::move(local_name));
+}
+
+}  // namespace SimpleBLE::Advanced::Linux
 
 #endif

@@ -47,15 +47,24 @@ void* PeripheralMac::underlying() const {
     return [internal underlying];
 }
 
-Advertisement PeripheralMac::advertisement() {
-    std::scoped_lock lock(_lifecycle_mutex);
-    return _advertisement;
-}
-
-void PeripheralMac::set_advertisement(Advertisement advertisement) {
+void PeripheralMac::add_advertised_service(BluetoothUUID service_uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
-    _advertisement = std::move(advertisement);
+    _advertised_service_uuids.push_back(std::move(service_uuid));
+}
+
+void PeripheralMac::add_advertised_service(std::vector<BluetoothUUID> service_uuids) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    for (auto& service_uuid : service_uuids) {
+        _advertised_service_uuids.push_back(std::move(service_uuid));
+    }
+}
+
+void PeripheralMac::set_advertisement_local_name(std::optional<std::string> local_name) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _advertisement_local_name = std::move(local_name);
 }
 
 std::shared_ptr<ServiceBase> PeripheralMac::add_service(BluetoothUUID uuid) {
@@ -91,7 +100,7 @@ void PeripheralMac::start() {
     }
 
     NSMutableArray<CBUUID*>* serviceUuids = [NSMutableArray array];
-    const auto& advertisedUuids = _advertisement.service_uuids;
+    const auto& advertisedUuids = _advertised_service_uuids;
     if (advertisedUuids.empty()) {
         for (const auto& service : _services) {
             [serviceUuids addObject:uuidFromSimpleBLE(service->uuid())];
@@ -103,8 +112,8 @@ void PeripheralMac::start() {
     }
 
     NSMutableDictionary<NSString*, id>* advertisementData = [NSMutableDictionary dictionary];
-    if (_advertisement.local_name.has_value()) {
-        const auto& localName = *_advertisement.local_name;
+    if (_advertisement_local_name.has_value()) {
+        const auto& localName = *_advertisement_local_name;
         NSString* nativeName = [[NSString alloc] initWithBytes:localName.data() length:localName.size() encoding:NSUTF8StringEncoding];
         if (nativeName == nil) {
             throw Exception::OperationFailed("The local peripheral name is not valid UTF-8.");

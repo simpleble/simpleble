@@ -64,7 +64,6 @@ include simpleble/include/simpleble/Service.h
 include simpleble/include/simpleble/SimpleBLE.h
 include simpleble/include/simpleble/Types.h
 include simpleble/include/simpleble/Utils.h
-include simpleble/include/simpleble/local/Advertisement.h
 include simpleble/include/simpleble/local/Characteristic.h
 include simpleble/include/simpleble/local/Peripheral.h
 include simpleble/include/simpleble/local/Service.h

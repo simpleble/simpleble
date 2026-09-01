@@ -5,6 +5,8 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include <kvn_safe_callback.hpp>
@@ -23,8 +25,9 @@ class PeripheralMac : public PeripheralBase, public std::enable_shared_from_this
 
     void* underlying() const override;
 
-    Advertisement advertisement() override;
-    void set_advertisement(Advertisement advertisement) override;
+    void add_advertised_service(BluetoothUUID service_uuid) override;
+    void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
+    void set_advertisement_local_name(std::optional<std::string> local_name);
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;
     std::vector<std::shared_ptr<ServiceBase>> services() override;
@@ -49,7 +52,8 @@ class PeripheralMac : public PeripheralBase, public std::enable_shared_from_this
 
   private:
     void* _opaque_internal;
-    Advertisement _advertisement;
+    std::vector<BluetoothUUID> _advertised_service_uuids;
+    std::optional<std::string> _advertisement_local_name;
     std::vector<std::shared_ptr<ServiceMac>> _services;
     std::map<void*, std::weak_ptr<CharacteristicMac>> _characteristics;
     std::map<BluetoothAddress, size_t> _client_subscriptions;

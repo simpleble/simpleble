@@ -134,9 +134,7 @@ The C++ API can host a local peripheral on every supported platform. Native Andr
 ```cpp
 auto peripheral = adapter.create_local_peripheral();
 
-SimpleBLE::Local::Advertisement advertisement;
-advertisement.local_name = adapter.identifier();
-peripheral.set_advertisement(advertisement);
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0");
 
 auto service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0");
 service.add_characteristic("12345678-1234-5678-1234-56789abcdef1",
@@ -146,7 +144,7 @@ peripheral.start();
 std::cout << "Local peripheral is advertising." << std::endl;
 ```
 
-On Windows, WinRT uses the system Bluetooth name instead of `advertisement.local_name`.
+The portable advertisement does not select a local name. Windows and Android use their system-owned Bluetooth name. Linux, macOS, and iOS expose an optional advertised-name override through their `SimpleBLE::Advanced` namespaces.
 
 Keep the process alive after `start()`, then call `peripheral.stop()` when you are done. Writes, notifications, and client connection callbacks are covered in [Advertise, Serve, Publish](./peripheral/advertise-serve-publish).
 

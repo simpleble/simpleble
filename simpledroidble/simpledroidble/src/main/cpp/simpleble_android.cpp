@@ -295,23 +295,21 @@ extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_LocalPeripheral_nat
     });
 }
 
-extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_LocalPeripheral_nativeSetAdvertisement(
-    JNIEnv* env, jobject, jlong peripheral_id, jstring local_name, jobjectArray service_uuids) {
-    call(env, [env, peripheral_id, local_name, service_uuids] {
-        SimpleBLE::Local::Advertisement advertisement;
-        if (local_name != nullptr) {
-            advertisement.local_name = SimpleJNI::String<SimpleJNI::LocalRef>(local_name).str();
-        }
+extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_LocalPeripheral_nativeAddAdvertisedService(
+    JNIEnv* env, jobject, jlong peripheral_id, jobjectArray service_uuids) {
+    call(env, [env, peripheral_id, service_uuids] {
+        std::vector<SimpleBLE::BluetoothUUID> advertised_service_uuids;
         if (service_uuids != nullptr) {
             const jsize count = env->GetArrayLength(service_uuids);
+            advertised_service_uuids.reserve(count);
             for (jsize index = 0; index < count; ++index) {
                 auto value = static_cast<jstring>(env->GetObjectArrayElement(service_uuids, index));
                 SimpleJNI::Exception::check(env);
-                advertisement.service_uuids.push_back(SimpleJNI::String<SimpleJNI::LocalRef>(value).str());
+                advertised_service_uuids.push_back(SimpleJNI::String<SimpleJNI::LocalRef>(value).str());
                 env->DeleteLocalRef(value);
             }
         }
-        NativeCache::get().local_peripheral(peripheral_id).set_advertisement(std::move(advertisement));
+        NativeCache::get().local_peripheral(peripheral_id).add_advertised_service(std::move(advertised_service_uuids));
     });
 }
 

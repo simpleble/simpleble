@@ -24,10 +24,12 @@ const PeripheralBase* Peripheral::operator->() const {
 
 void* Peripheral::underlying() const { return (*this)->underlying(); }
 
-Advertisement Peripheral::advertisement() { return (*this)->advertisement(); }
+void Peripheral::add_advertised_service(BluetoothUUID service_uuid) {
+    (*this)->add_advertised_service(std::move(service_uuid));
+}
 
-void Peripheral::set_advertisement(Advertisement advertisement) {
-    (*this)->set_advertisement(std::move(advertisement));
+void Peripheral::add_advertised_service(std::vector<BluetoothUUID> service_uuids) {
+    (*this)->add_advertised_service(std::move(service_uuids));
 }
 
 Service Peripheral::add_service(BluetoothUUID uuid) { return Factory::build((*this)->add_service(std::move(uuid))); }

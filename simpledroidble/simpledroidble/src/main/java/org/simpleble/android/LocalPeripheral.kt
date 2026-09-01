@@ -31,16 +31,16 @@ class LocalPeripheral internal constructor(private val instanceId: Long) {
         nativeRegister(instanceId, callbacks)
     }
 
-    var advertisement: LocalAdvertisement = LocalAdvertisement()
-        set(value) {
-            val snapshot = value.copy(serviceUuids = value.serviceUuids.toList())
-            nativeSetAdvertisement(
-                instanceId,
-                snapshot.localName,
-                snapshot.serviceUuids.map(BluetoothUUID::value).toTypedArray()
-            )
-            field = snapshot
-        }
+    fun addAdvertisedService(serviceUuid: BluetoothUUID) {
+        addAdvertisedService(listOf(serviceUuid))
+    }
+
+    fun addAdvertisedService(serviceUuids: List<BluetoothUUID>) {
+        nativeAddAdvertisedService(
+            instanceId,
+            serviceUuids.map(BluetoothUUID::value).toTypedArray()
+        )
+    }
 
     val services: List<LocalService>
         get() = synchronized(configuredServices) { configuredServices.toList() }
@@ -77,7 +77,7 @@ class LocalPeripheral internal constructor(private val instanceId: Long) {
     }
 
     private external fun nativeRegister(peripheralId: Long, callback: Callback)
-    private external fun nativeSetAdvertisement(peripheralId: Long, localName: String?, serviceUuids: Array<String>)
+    private external fun nativeAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>)
     private external fun nativeAddService(peripheralId: Long, uuid: String): Long
     private external fun nativeRemoveAllServices(peripheralId: Long)
     private external fun nativeStart(peripheralId: Long)

@@ -458,15 +458,6 @@ Capabilities are passed to `add_characteristic` as a `std::set`. Each characteri
 | `NOTIFY` | Remote centrals can subscribe to notifications |
 | `INDICATE` | Remote centrals can subscribe to indications |
 
-## SimpleBLE::Local::Advertisement [#simpleble-local-advertisement] [toc]
-
-<ApiClass name="SimpleBLE::Local::Advertisement" detailed="Advertising payload for a local peripheral. Set this before calling `start()`. If `service_uuids` is left empty, backends advertise the service UUIDs configured on the local peripheral when the platform supports doing so." />
-
-| Field | Type |
-| --- | --- |
-| `local_name` | `std::optional<std::string>` |
-| `service_uuids` | `std::vector<BluetoothUUID>` |
-
 ## SimpleBLE::Local::Peripheral [#simpleble-local-peripheral] [toc]
 
 <ApiClass name="SimpleBLE::Local::Peripheral" detailed="Local BLE peripheral hosted by this process.  A default-constructed [Peripheral](#simpleble-local-peripheral) object is not initialized. Calling any method other than `initialized()` on an uninitialized object will throw `SimpleBLE::Exception::NotInitialized`.">
@@ -495,15 +486,20 @@ Capabilities are passed to `add_characteristic` as a `std::set`. Each characteri
 />
 
 <ApiMethod
-  signature="Advertisement advertisement()"
+  signature="void add_advertised_service(BluetoothUUID service_uuid)"
+  parameters={[{"name":"service_uuid","type":"BluetoothUUID"}]}
+  detailed="Add a service UUID to the advertisement. If none are added explicitly, backends advertise the services configured on the local peripheral when supported. Must be called before `start()`."
+  notes={[{ content: "Throws `OperationFailed` if the peripheral is already started.", type: "warn" }]}
 />
 
 <ApiMethod
-  signature="void set_advertisement(Advertisement advertisement)"
-  parameters={[{"name":"advertisement","type":"Advertisement"}]}
-  detailed="Set advertising data. Must be called before `start()`."
+  signature="void add_advertised_service(std::vector< BluetoothUUID > service_uuids)"
+  parameters={[{"name":"service_uuids","type":"std::vector<BluetoothUUID>"}]}
+  detailed="Add several service UUIDs to the advertisement. Must be called before `start()`."
   notes={[{ content: "Throws `OperationFailed` if the peripheral is already started.", type: "warn" }]}
 />
+
+The portable API does not select a local name. Linux, macOS, and iOS expose their native advertisement-specific name through `SimpleBLE::Advanced::Linux::set_advertisement_local_name()`, `SimpleBLE::Advanced::MacOS::set_advertisement_local_name()`, and `SimpleBLE::Advanced::iOS::set_advertisement_local_name()`. Each function accepts a `Local::Peripheral&` and an `std::optional<std::string>`, must be called before `start()`, and changes only the advertisement payload. Passing `std::nullopt` removes the override.
 
 <ApiMethod
   signature="Service add_service(BluetoothUUID uuid)"

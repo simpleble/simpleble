@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <simpleble/Types.h>
-#include <simpleble/local/Advertisement.h>
 
 namespace SimpleBLE::Local {
 
@@ -17,8 +16,8 @@ class PeripheralBase {
 
     virtual void* underlying() const = 0;
 
-    virtual Advertisement advertisement() = 0;
-    virtual void set_advertisement(Advertisement advertisement) = 0;
+    virtual void add_advertised_service(BluetoothUUID service_uuid) = 0;
+    virtual void add_advertised_service(std::vector<BluetoothUUID> service_uuids) = 0;
 
     virtual std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) = 0;
     virtual std::vector<std::shared_ptr<ServiceBase>> services() = 0;

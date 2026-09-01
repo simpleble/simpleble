@@ -65,15 +65,18 @@ void* PeripheralWindows::underlying() const {
     return reinterpret_cast<void*>(const_cast<winrt::Windows::Devices::Bluetooth::BluetoothAdapter*>(&_adapter));
 }
 
-Advertisement PeripheralWindows::advertisement() {
-    std::scoped_lock lock(_lifecycle_mutex);
-    return _advertisement;
-}
-
-void PeripheralWindows::set_advertisement(Advertisement advertisement) {
+void PeripheralWindows::add_advertised_service(BluetoothUUID service_uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
-    _advertisement = std::move(advertisement);
+    _advertised_service_uuids.push_back(std::move(service_uuid));
+}
+
+void PeripheralWindows::add_advertised_service(std::vector<BluetoothUUID> service_uuids) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    for (auto& service_uuid : service_uuids) {
+        _advertised_service_uuids.push_back(std::move(service_uuid));
+    }
 }
 
 std::shared_ptr<ServiceBase> PeripheralWindows::add_service(BluetoothUUID uuid) {
@@ -109,22 +112,16 @@ void PeripheralWindows::start() {
         throw Exception::OperationNotSupported();
     }
 
-    if (_advertisement.local_name.has_value()) {
-        SIMPLEBLE_LOG_WARN(
-            "Windows peripheral mode uses the system Bluetooth name; the requested local advertisement name cannot be "
-            "applied.");
-    }
-
     std::vector<std::shared_ptr<ServiceWindows>> publication_order;
     publication_order.reserve(_services.size());
-    for (const auto& requested_uuid : _advertisement.service_uuids) {
+    for (const auto& requested_uuid : _advertised_service_uuids) {
         const auto requested_guid = uuid_to_guid(requested_uuid);
         const auto service = std::find_if(_services.begin(), _services.end(), [&](const auto& candidate) {
             return uuid_to_guid(candidate->uuid()) == requested_guid;
         });
         if (service == _services.end()) {
             throw Exception::OperationFailed(
-                fmt::format("Advertisement service UUID {} is not hosted by this local peripheral.", requested_uuid));
+                fmt::format("Advertised service UUID {} is not hosted by this local peripheral.", requested_uuid));
         }
         if (std::find(publication_order.begin(), publication_order.end(), *service) == publication_order.end()) {
             publication_order.push_back(*service);
