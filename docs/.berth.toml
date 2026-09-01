@@ -1,0 +1,11 @@
+version = 1
+
+[app]
+name = "docs-simpleble"
+target = "ocean.main.berth"
+
+[docker]
+port = 3000
+
+[public]
+domains = ["docs.simpleble.org"]

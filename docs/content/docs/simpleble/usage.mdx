@@ -183,7 +183,7 @@ Some distributions use a different group; check the group assigned to the Dongl'
 
 Distributors can instead grant device-specific access with a udev rule:
 
-```udev
+```text
 SUBSYSTEM=="tty", ATTRS{idVendor}=="3918", ATTRS{idProduct}=="0001", MODE="0660", GROUP="dialout", TAG+="uaccess"
 ```
 

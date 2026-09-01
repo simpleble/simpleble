@@ -4,6 +4,8 @@ import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { ReactNode } from 'react';
 import Script from 'next/script';
 
+import { Z2VTracker } from '@/components/z2v-tracker';
+
 import './global.css';
 
 const geistSans = Geist({
@@ -89,6 +91,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${sora.variable} antialiased`}
       >
+        <Z2VTracker />
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
