@@ -1,4 +1,5 @@
 .vscode
+*.code-workspace
 *.binlog
 .DS_Store
 _build
@@ -22,4 +23,3 @@ target
 uv.lock
 
 node_modules/
-
