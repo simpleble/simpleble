@@ -441,41 +441,43 @@ All configuration values must be set before calling adapter functions such as `s
 
 ### GATT Operations [!toc]
 
+The `service` and `characteristic` arguments are fixed-size `simpleble_uuid_t` structures passed by value. FFI bindings must model them as by-value structures, not as `char*` pointers.
+
 <ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_read(simpleble_peripheral_t handle, char* service, char* characteristic, uint8_t** data, size_t* data_length)"
+  signature="simpleble_err_t simpleble_peripheral_read(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, uint8_t** data, size_t* data_length)"
   brief="Read a characteristic."
   detailed="The returned data buffer must be freed with `simpleble_free`."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"char*"},{"name":"characteristic","type":"char*"},{"name":"data","type":"uint8_t**"},{"name":"data_length","type":"size_t*"}]}
+  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"data","type":"uint8_t**"},{"name":"data_length","type":"size_t*"}]}
 />
 
 <ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_write_request(simpleble_peripheral_t handle, char* service, char* characteristic, uint8_t* data, size_t data_length)"
+  signature="simpleble_err_t simpleble_peripheral_write_request(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length)"
   brief="Write request (expecting response)."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"char*"},{"name":"characteristic","type":"char*"},{"name":"data","type":"uint8_t*"},{"name":"data_length","type":"size_t"}]}
+  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"data","type":"const uint8_t*"},{"name":"data_length","type":"size_t"}]}
 />
 
 <ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_write_command(simpleble_peripheral_t handle, char* service, char* characteristic, uint8_t* data, size_t data_length)"
+  signature="simpleble_err_t simpleble_peripheral_write_command(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length)"
   brief="Write command (no response)."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"char*"},{"name":"characteristic","type":"char*"},{"name":"data","type":"uint8_t*"},{"name":"data_length","type":"size_t"}]}
+  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"data","type":"const uint8_t*"},{"name":"data_length","type":"size_t"}]}
 />
 
 <ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_notify(simpleble_peripheral_t handle, char* service, char* characteristic, void (*callback)(simpleble_uuid_t service, simpleble_uuid_t characteristic, uint8_t* data, size_t data_length, void* userdata), void* userdata)"
+  signature="simpleble_err_t simpleble_peripheral_notify(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, void (*callback)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata), void* userdata)"
   brief="Register for notifications."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"char*"},{"name":"characteristic","type":"char*"},{"name":"callback","type":"function"},{"name":"userdata","type":"void*"}]}
+  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"callback","type":"function"},{"name":"userdata","type":"void*"}]}
 />
 
 <ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_indicate(simpleble_peripheral_t handle, char* service, char* characteristic, void (*callback)(simpleble_uuid_t service, simpleble_uuid_t characteristic, uint8_t* data, size_t data_length, void* userdata), void* userdata)"
+  signature="simpleble_err_t simpleble_peripheral_indicate(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, void (*callback)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata), void* userdata)"
   brief="Register for indications."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"char*"},{"name":"characteristic","type":"char*"},{"name":"callback","type":"function"},{"name":"userdata","type":"void*"}]}
+  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"callback","type":"function"},{"name":"userdata","type":"void*"}]}
 />
 
 <ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_unsubscribe(simpleble_peripheral_t handle, char* service, char* characteristic)"
+  signature="simpleble_err_t simpleble_peripheral_unsubscribe(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic)"
   brief="Unsubscribe from notifications/indications."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"char*"},{"name":"characteristic","type":"char*"}]}
+  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"}]}
 />
 
 </ApiClass>
