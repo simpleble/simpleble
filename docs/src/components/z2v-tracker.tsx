@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const Z2V_CLIENT_SRC = 'https://t.z2v.org/client/track.js';
 
 type Z2VTrackApi = Readonly<{
-  init: (options: Readonly<{ consent: boolean; pageView: boolean }>) => void;
+  init: (options: Readonly<{ pageView: boolean }>) => void;
   track: (type: string) => Promise<Response>;
 }>;
 
@@ -25,7 +25,7 @@ export function Z2VTracker() {
   const initialize = useCallback(() => {
     if (initialized.current || !window.Z2VTrack) return;
 
-    window.Z2VTrack.init({ consent: true, pageView: false });
+    window.Z2VTrack.init({ pageView: false });
     initialized.current = true;
     setReady(true);
   }, []);
