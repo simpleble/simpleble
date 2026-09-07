@@ -238,7 +238,7 @@ simpleble_err_t simpleble_peripheral_services_get(simpleble_peripheral_t handle,
 
         SimpleBLE::Service service = peripheral_services[index];
 
-        memcpy(services->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN);
+        strncpy(services->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
 
         const size_t copy_len = std::min(service.data().size(), sizeof(services->data));
         services->data_length = service.data().size();
@@ -258,7 +258,7 @@ simpleble_err_t simpleble_peripheral_services_get(simpleble_peripheral_t handle,
             services->characteristics[i].can_notify = characteristic.can_notify();
             services->characteristics[i].can_indicate = characteristic.can_indicate();
 
-            memcpy(services->characteristics[i].uuid.value, characteristic.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN);
+            strncpy(services->characteristics[i].uuid.value, characteristic.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
             services->characteristics[i].descriptor_count = characteristic.descriptors().size();
 
             if (services->characteristics[i].descriptor_count > SIMPLEBLE_DESCRIPTOR_MAX_COUNT) {
@@ -268,8 +268,8 @@ simpleble_err_t simpleble_peripheral_services_get(simpleble_peripheral_t handle,
             for (size_t j = 0; j < services->characteristics[i].descriptor_count; j++) {
                 SimpleBLE::Descriptor descriptor = characteristic.descriptors()[j];
 
-                memcpy(services->characteristics[i].descriptors[j].uuid.value, descriptor.uuid().c_str(),
-                       SIMPLEBLE_UUID_STR_LEN);
+                strncpy(services->characteristics[i].descriptors[j].uuid.value, descriptor.uuid().c_str(),
+                        SIMPLEBLE_UUID_STR_LEN - 1);
             }
         }
 

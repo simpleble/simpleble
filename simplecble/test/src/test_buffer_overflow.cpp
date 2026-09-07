@@ -2,6 +2,8 @@
 #include <cstring>
 #include <stdexcept>
 #include <vector>
+#include "backends/common/CharacteristicBase.h"
+#include "backends/common/DescriptorBase.h"
 #include "backends/common/PeripheralBase.h"
 #include "backends/common/ServiceBase.h"
 #include "simpleble/Peripheral.h"
@@ -52,8 +54,20 @@ class MockPeripheralBase : public PeripheralBase {
 
 class MockPeripheralBaseService : public MockPeripheralBase {
   public:
+    BluetoothUUID uuid = "1234";
+
     std::vector<std::shared_ptr<ServiceBase>> advertised_services() override {
-        return {std::make_shared<ServiceBase>("1234", ByteArray(std::string(50, 'B')))};
+        return {std::make_shared<ServiceBase>(uuid, ByteArray(std::string(50, 'B')))};
+    }
+
+    bool is_connected() override { return connected; }
+    bool connected = false;
+
+    std::vector<std::shared_ptr<ServiceBase>> available_services() override {
+        std::vector<std::shared_ptr<DescriptorBase>> descriptors = {std::make_shared<DescriptorBase>(uuid)};
+        std::vector<std::shared_ptr<CharacteristicBase>> characteristics = {
+            std::make_shared<CharacteristicBase>(uuid, descriptors, true, false, false, false, false)};
+        return {std::make_shared<ServiceBase>(uuid, characteristics)};
     }
 };
 
@@ -84,4 +98,25 @@ TEST(BufferOverflowTest, ServicesOverflow) {
     simpleble_err_t err = simpleble_peripheral_services_get(handle, 0, &out_data);
     EXPECT_EQ(err, SIMPLEBLE_SUCCESS);
     EXPECT_EQ(out_data.data_length, 50);
+}
+
+TEST(BufferOverflowTest, ServiceCharacteristicAndDescriptorUUIDs) {
+    auto base = std::make_shared<MockPeripheralBaseService>();
+    base->connected = true;
+    MockPeripheral mp(base);
+    simpleble_peripheral_t handle = static_cast<simpleble_peripheral_t>(&mp);
+
+    for (const std::string uuid : {"", "1234", "12345678", "12345678-1234-5678-1234-567812345678"}) {
+        SCOPED_TRACE(uuid);
+        base->uuid = uuid;
+        simpleble_service_t service;
+        memset(&service, 0xFF, sizeof(service));
+
+        ASSERT_EQ(simpleble_peripheral_services_get(handle, 0, &service), SIMPLEBLE_SUCCESS);
+        EXPECT_STREQ(service.uuid.value, uuid.c_str());
+        ASSERT_EQ(service.characteristic_count, 1);
+        EXPECT_STREQ(service.characteristics[0].uuid.value, uuid.c_str());
+        ASSERT_EQ(service.characteristics[0].descriptor_count, 1);
+        EXPECT_STREQ(service.characteristics[0].descriptors[0].uuid.value, uuid.c_str());
+    }
 }
