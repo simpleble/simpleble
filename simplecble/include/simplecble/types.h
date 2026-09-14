@@ -8,6 +8,14 @@
 #define SIMPLEBLE_CHARACTERISTIC_MAX_COUNT 16
 #define SIMPLEBLE_DESCRIPTOR_MAX_COUNT 16
 
+/**
+ * @brief Opaque error details for a failed call.
+ *
+ * Pass NULL for out_error to ignore errors, or provide
+ * a pointer that receives NULL on success and an owned error on failure.
+ */
+typedef struct simpleble_error simpleble_error_t;
+
 // TODO: Add proper error codes.
 typedef enum {
     SIMPLEBLE_SUCCESS = 0,

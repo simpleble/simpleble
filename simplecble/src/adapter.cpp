@@ -7,7 +7,7 @@
 #include <cstring>
 #include <vector>
 
-bool simpleble_adapter_is_bluetooth_enabled(void) {
+bool simpleble_adapter_is_bluetooth_enabled(simpleble_error_t** out_error) {
     try {
         return SimpleBLE::Adapter::bluetooth_enabled();
     } catch (...) {
@@ -15,7 +15,7 @@ bool simpleble_adapter_is_bluetooth_enabled(void) {
     }
 }
 
-size_t simpleble_adapter_get_count(void) {
+size_t simpleble_adapter_get_count(simpleble_error_t** out_error) {
     try {
         return SimpleBLE::Adapter::get_adapters().size();
     } catch (...) {
@@ -23,7 +23,7 @@ size_t simpleble_adapter_get_count(void) {
     }
 }
 
-simpleble_adapter_t simpleble_adapter_get_handle(size_t index) {
+simpleble_adapter_t simpleble_adapter_get_handle(size_t index, simpleble_error_t** out_error) {
     try {
         auto adapter_list = SimpleBLE::Adapter::get_adapters();
 
@@ -47,7 +47,7 @@ void simpleble_adapter_release_handle(simpleble_adapter_t handle) {
     delete adapter;
 }
 
-void* simpleble_adapter_underlying(simpleble_adapter_t handle) {
+void* simpleble_adapter_underlying(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -60,7 +60,7 @@ void* simpleble_adapter_underlying(simpleble_adapter_t handle) {
     }
 }
 
-char* simpleble_adapter_identifier(simpleble_adapter_t handle) {
+char* simpleble_adapter_identifier(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -80,7 +80,7 @@ char* simpleble_adapter_identifier(simpleble_adapter_t handle) {
     }
 }
 
-char* simpleble_adapter_address(simpleble_adapter_t handle) {
+char* simpleble_adapter_address(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -100,137 +100,135 @@ char* simpleble_adapter_address(simpleble_adapter_t handle) {
     }
 }
 
-simpleble_err_t simpleble_adapter_power_on(simpleble_adapter_t handle) {
+void simpleble_adapter_power_on(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->power_on();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_power_off(simpleble_adapter_t handle) {
+void simpleble_adapter_power_off(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->power_off();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_is_powered(simpleble_adapter_t handle, bool* powered) {
-    if (handle == nullptr || powered == nullptr) {
-        return SIMPLEBLE_FAILURE;
+bool simpleble_adapter_is_powered(simpleble_adapter_t handle, simpleble_error_t** out_error) {
+    if (handle == nullptr) {
+        return false;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
-        *powered = adapter->is_powered();
-        return SIMPLEBLE_SUCCESS;
+        return adapter->is_powered();
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return false;
     }
 }
 
-simpleble_err_t simpleble_adapter_set_callback_on_power_on(simpleble_adapter_t handle,
-                                                           void (*callback)(simpleble_adapter_t, void*),
-                                                           void* userdata) {
+void simpleble_adapter_set_callback_on_power_on(simpleble_adapter_t handle,
+                                                void (*callback)(simpleble_adapter_t, void*), void* userdata,
+                                                simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->set_callback_on_power_on([=]() { callback(handle, userdata); });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_set_callback_on_power_off(simpleble_adapter_t handle,
-                                                            void (*callback)(simpleble_adapter_t, void*),
-                                                            void* userdata) {
+void simpleble_adapter_set_callback_on_power_off(simpleble_adapter_t handle,
+                                                 void (*callback)(simpleble_adapter_t, void*), void* userdata,
+                                                 simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->set_callback_on_power_off([=]() { callback(handle, userdata); });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_scan_start(simpleble_adapter_t handle) {
+void simpleble_adapter_scan_start(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->scan_start();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_scan_stop(simpleble_adapter_t handle) {
+void simpleble_adapter_scan_stop(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->scan_stop();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_scan_is_active(simpleble_adapter_t handle, bool* active) {
-    if (handle == nullptr || active == nullptr) {
-        return SIMPLEBLE_FAILURE;
+bool simpleble_adapter_scan_is_active(simpleble_adapter_t handle, simpleble_error_t** out_error) {
+    if (handle == nullptr) {
+        return false;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
-        *active = adapter->scan_is_active();
-        return SIMPLEBLE_SUCCESS;
+        return adapter->scan_is_active();
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return false;
     }
 }
 
-simpleble_err_t simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms) {
+void simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->scan_for(timeout_ms);
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle) {
+size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return 0;
     }
@@ -243,7 +241,8 @@ size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle) {
     }
 }
 
-simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle, size_t index) {
+simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle, size_t index,
+                                                                 simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -263,7 +262,7 @@ simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapt
     }
 }
 
-size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle) {
+size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return 0;
     }
@@ -276,7 +275,8 @@ size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle
     }
 }
 
-simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble_adapter_t handle, size_t index) {
+simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble_adapter_t handle, size_t index,
+                                                                       simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -296,7 +296,7 @@ simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble
     }
 }
 
-size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t handle) {
+size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return 0;
     }
@@ -309,7 +309,8 @@ size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t han
     }
 }
 
-simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle(simpleble_adapter_t handle, size_t index) {
+simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle(simpleble_adapter_t handle, size_t index,
+                                                                          simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -329,42 +330,44 @@ simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle(simple
     }
 }
 
-simpleble_err_t simpleble_adapter_set_callback_on_scan_start(simpleble_adapter_t handle,
-                                                             void (*callback)(simpleble_adapter_t, void*),
-                                                             void* userdata) {
+void simpleble_adapter_set_callback_on_scan_start(simpleble_adapter_t handle,
+                                                  void (*callback)(simpleble_adapter_t, void*), void* userdata,
+                                                  simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->set_callback_on_scan_start([=]() { callback(handle, userdata); });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_set_callback_on_scan_stop(simpleble_adapter_t handle,
-                                                            void (*callback)(simpleble_adapter_t, void*),
-                                                            void* userdata) {
+void simpleble_adapter_set_callback_on_scan_stop(simpleble_adapter_t handle,
+                                                 void (*callback)(simpleble_adapter_t, void*), void* userdata,
+                                                 simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {
         adapter->set_callback_on_scan_stop([=]() { callback(handle, userdata); });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_set_callback_on_scan_updated(
-    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t, simpleble_peripheral_t, void*), void* userdata) {
+void simpleble_adapter_set_callback_on_scan_updated(simpleble_adapter_t handle,
+                                                    void (*callback)(simpleble_adapter_t, simpleble_peripheral_t,
+                                                                     void*),
+                                                    void* userdata, simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
@@ -373,16 +376,17 @@ simpleble_err_t simpleble_adapter_set_callback_on_scan_updated(
             SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(peripheral);
             callback(handle, (simpleble_peripheral_t)peripheral_handle, userdata);
         });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_adapter_set_callback_on_scan_found(
-    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t, simpleble_peripheral_t, void*), void* userdata) {
+void simpleble_adapter_set_callback_on_scan_found(simpleble_adapter_t handle,
+                                                  void (*callback)(simpleble_adapter_t, simpleble_peripheral_t, void*),
+                                                  void* userdata, simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
@@ -391,8 +395,8 @@ simpleble_err_t simpleble_adapter_set_callback_on_scan_found(
             SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(peripheral);
             callback(handle, (simpleble_peripheral_t)peripheral_handle, userdata);
         });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }

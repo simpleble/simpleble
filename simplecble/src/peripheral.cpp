@@ -17,7 +17,7 @@ void simpleble_peripheral_release_handle(simpleble_peripheral_t handle) {
     delete peripheral;
 }
 
-void* simpleble_peripheral_underlying(simpleble_peripheral_t handle) {
+void* simpleble_peripheral_underlying(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -30,7 +30,7 @@ void* simpleble_peripheral_underlying(simpleble_peripheral_t handle) {
     }
 }
 
-char* simpleble_peripheral_identifier(simpleble_peripheral_t handle) {
+char* simpleble_peripheral_identifier(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -50,7 +50,7 @@ char* simpleble_peripheral_identifier(simpleble_peripheral_t handle) {
     }
 }
 
-char* simpleble_peripheral_address(simpleble_peripheral_t handle) {
+char* simpleble_peripheral_address(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return nullptr;
     }
@@ -70,7 +70,8 @@ char* simpleble_peripheral_address(simpleble_peripheral_t handle) {
     }
 }
 
-simpleble_address_type_t simpleble_peripheral_address_type(simpleble_peripheral_t handle) {
+simpleble_address_type_t simpleble_peripheral_address_type(simpleble_peripheral_t handle,
+                                                           simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return SIMPLEBLE_ADDRESS_TYPE_UNSPECIFIED;
     }
@@ -84,7 +85,7 @@ simpleble_address_type_t simpleble_peripheral_address_type(simpleble_peripheral_
     }
 }
 
-int16_t simpleble_peripheral_rssi(simpleble_peripheral_t handle) {
+int16_t simpleble_peripheral_rssi(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return INT16_MIN;
     }
@@ -97,7 +98,7 @@ int16_t simpleble_peripheral_rssi(simpleble_peripheral_t handle) {
     }
 }
 
-int16_t simpleble_peripheral_tx_power(simpleble_peripheral_t handle) {
+int16_t simpleble_peripheral_tx_power(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return INT16_MIN;
     }
@@ -110,7 +111,7 @@ int16_t simpleble_peripheral_tx_power(simpleble_peripheral_t handle) {
     }
 }
 
-uint16_t simpleble_peripheral_mtu(simpleble_peripheral_t handle) {
+uint16_t simpleble_peripheral_mtu(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return 0;
     }
@@ -123,91 +124,88 @@ uint16_t simpleble_peripheral_mtu(simpleble_peripheral_t handle) {
     }
 }
 
-simpleble_err_t simpleble_peripheral_connect(simpleble_peripheral_t handle) {
+void simpleble_peripheral_connect(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         peripheral->connect();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_disconnect(simpleble_peripheral_t handle) {
+void simpleble_peripheral_disconnect(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         peripheral->disconnect();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_is_connected(simpleble_peripheral_t handle, bool* connected) {
-    if (handle == nullptr || connected == nullptr) {
-        return SIMPLEBLE_FAILURE;
-    }
-
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
-        *connected = peripheral->is_connected();
-        return SIMPLEBLE_SUCCESS;
-    } catch (...) {
-        return SIMPLEBLE_FAILURE;
-    }
-}
-
-simpleble_err_t simpleble_peripheral_is_connectable(simpleble_peripheral_t handle, bool* connectable) {
-    if (handle == nullptr || connectable == nullptr) {
-        return SIMPLEBLE_FAILURE;
-    }
-
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
-        *connectable = peripheral->is_connectable();
-        return SIMPLEBLE_SUCCESS;
-    } catch (...) {
-        return SIMPLEBLE_FAILURE;
-    }
-}
-
-simpleble_err_t simpleble_peripheral_is_paired(simpleble_peripheral_t handle, bool* paired) {
-    if (handle == nullptr || paired == nullptr) {
-        return SIMPLEBLE_FAILURE;
-    }
-
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
-        *paired = peripheral->is_paired();
-        return SIMPLEBLE_SUCCESS;
-    } catch (...) {
-        return SIMPLEBLE_FAILURE;
-    }
-}
-
-simpleble_err_t simpleble_peripheral_unpair(simpleble_peripheral_t handle) {
+bool simpleble_peripheral_is_connected(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return false;
+    }
+
+    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
+    try {
+        return peripheral->is_connected();
+    } catch (...) {
+        return false;
+    }
+}
+
+bool simpleble_peripheral_is_connectable(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
+    if (handle == nullptr) {
+        return false;
+    }
+
+    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
+    try {
+        return peripheral->is_connectable();
+    } catch (...) {
+        return false;
+    }
+}
+
+bool simpleble_peripheral_is_paired(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
+    if (handle == nullptr) {
+        return false;
+    }
+
+    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
+    try {
+        return peripheral->is_paired();
+    } catch (...) {
+        return false;
+    }
+}
+
+void simpleble_peripheral_unpair(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
+    if (handle == nullptr) {
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         peripheral->unpair();
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle) {
+size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return 0;
     }
@@ -220,66 +218,66 @@ size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle) {
     }
 }
 
-simpleble_err_t simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index,
-                                                  simpleble_service_t* services) {
-    if (handle == nullptr || services == nullptr) {
-        return SIMPLEBLE_FAILURE;
+void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index,
+                                       simpleble_service_t* out_service, simpleble_error_t** out_error) {
+    if (handle == nullptr || out_service == nullptr) {
+        return;
     }
 
-    memset(services, 0, sizeof(simpleble_service_t));
+    *out_service = {};
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         auto peripheral_services = peripheral->services();
 
         if (index >= peripheral_services.size()) {
-            return SIMPLEBLE_FAILURE;
+            return;
         }
 
         SimpleBLE::Service service = peripheral_services[index];
 
-        strncpy(services->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
+        strncpy(out_service->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
 
-        const size_t copy_len = std::min(service.data().size(), sizeof(services->data));
-        services->data_length = service.data().size();
-        memcpy(services->data, service.data().data(), copy_len);
+        const size_t copy_len = std::min(service.data().size(), sizeof(out_service->data));
+        out_service->data_length = service.data().size();
+        memcpy(out_service->data, service.data().data(), copy_len);
 
-        services->characteristic_count = service.characteristics().size();
-        if (services->characteristic_count > SIMPLEBLE_CHARACTERISTIC_MAX_COUNT) {
-            services->characteristic_count = SIMPLEBLE_CHARACTERISTIC_MAX_COUNT;
+        out_service->characteristic_count = service.characteristics().size();
+        if (out_service->characteristic_count > SIMPLEBLE_CHARACTERISTIC_MAX_COUNT) {
+            out_service->characteristic_count = SIMPLEBLE_CHARACTERISTIC_MAX_COUNT;
         }
 
-        for (size_t i = 0; i < services->characteristic_count; i++) {
+        for (size_t i = 0; i < out_service->characteristic_count; i++) {
             SimpleBLE::Characteristic characteristic = service.characteristics()[i];
 
-            services->characteristics[i].can_read = characteristic.can_read();
-            services->characteristics[i].can_write_request = characteristic.can_write_request();
-            services->characteristics[i].can_write_command = characteristic.can_write_command();
-            services->characteristics[i].can_notify = characteristic.can_notify();
-            services->characteristics[i].can_indicate = characteristic.can_indicate();
+            out_service->characteristics[i].can_read = characteristic.can_read();
+            out_service->characteristics[i].can_write_request = characteristic.can_write_request();
+            out_service->characteristics[i].can_write_command = characteristic.can_write_command();
+            out_service->characteristics[i].can_notify = characteristic.can_notify();
+            out_service->characteristics[i].can_indicate = characteristic.can_indicate();
 
-            strncpy(services->characteristics[i].uuid.value, characteristic.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
-            services->characteristics[i].descriptor_count = characteristic.descriptors().size();
+            strncpy(out_service->characteristics[i].uuid.value, characteristic.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
+            out_service->characteristics[i].descriptor_count = characteristic.descriptors().size();
 
-            if (services->characteristics[i].descriptor_count > SIMPLEBLE_DESCRIPTOR_MAX_COUNT) {
-                services->characteristics[i].descriptor_count = SIMPLEBLE_DESCRIPTOR_MAX_COUNT;
+            if (out_service->characteristics[i].descriptor_count > SIMPLEBLE_DESCRIPTOR_MAX_COUNT) {
+                out_service->characteristics[i].descriptor_count = SIMPLEBLE_DESCRIPTOR_MAX_COUNT;
             }
 
-            for (size_t j = 0; j < services->characteristics[i].descriptor_count; j++) {
+            for (size_t j = 0; j < out_service->characteristics[i].descriptor_count; j++) {
                 SimpleBLE::Descriptor descriptor = characteristic.descriptors()[j];
 
-                strncpy(services->characteristics[i].descriptors[j].uuid.value, descriptor.uuid().c_str(),
+                strncpy(out_service->characteristics[i].descriptors[j].uuid.value, descriptor.uuid().c_str(),
                         SIMPLEBLE_UUID_STR_LEN - 1);
             }
         }
 
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle) {
+size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
     if (handle == nullptr) {
         return 0;
     }
@@ -292,18 +290,20 @@ size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handl
     }
 }
 
-simpleble_err_t simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index,
-                                                           simpleble_manufacturer_data_t* manufacturer_data) {
-    if (handle == nullptr || manufacturer_data == nullptr) {
-        return SIMPLEBLE_FAILURE;
+void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index,
+                                                simpleble_manufacturer_data_t* out_data, simpleble_error_t** out_error) {
+    if (handle == nullptr || out_data == nullptr) {
+        return;
     }
+
+    *out_data = {};
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         auto peripheral_manufacturer_data = peripheral->manufacturer_data();
 
         if (index >= peripheral_manufacturer_data.size()) {
-            return SIMPLEBLE_FAILURE;
+            return;
         }
 
         // Build an iterator and advance to the expected element
@@ -313,25 +313,26 @@ simpleble_err_t simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_
         }
 
         auto& selected_manufacturer_data = *it;
-        manufacturer_data->manufacturer_id = selected_manufacturer_data.first;
-        const size_t copy_len = std::min(selected_manufacturer_data.second.size(), sizeof(manufacturer_data->data));
-        manufacturer_data->data_length = selected_manufacturer_data.second.size();
-        memcpy(manufacturer_data->data, selected_manufacturer_data.second.data(), copy_len);
+        out_data->manufacturer_id = selected_manufacturer_data.first;
+        const size_t copy_len = std::min(selected_manufacturer_data.second.size(), sizeof(out_data->data));
+        out_data->data_length = selected_manufacturer_data.second.size();
+        memcpy(out_data->data, selected_manufacturer_data.second.data(), copy_len);
 
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_read(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                          simpleble_uuid_t characteristic, uint8_t** data, size_t* data_length) {
-    if (handle == nullptr || data == nullptr || data_length == nullptr) {
-        return SIMPLEBLE_FAILURE;
+uint8_t* simpleble_peripheral_read(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                   simpleble_uuid_t characteristic, size_t* data_length,
+                                   simpleble_error_t** out_error) {
+    if (handle == nullptr || data_length == nullptr) {
+        return nullptr;
     }
 
     // Clear the initial values for safety
-    *data = nullptr;
+    uint8_t* data = nullptr;
     *data_length = 0;
 
     // Perform the read operation
@@ -341,20 +342,20 @@ simpleble_err_t simpleble_peripheral_read(simpleble_peripheral_t handle, simpleb
                                                           SimpleBLE::BluetoothUUID(characteristic.value));
 
         *data_length = read_data.size();
-        *data = static_cast<uint8_t*>(malloc(*data_length));
-        memcpy(*data, read_data.data(), *data_length);
+        data = static_cast<uint8_t*>(malloc(*data_length));
+        memcpy(data, read_data.data(), *data_length);
 
-        return SIMPLEBLE_SUCCESS;
+        return data;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return nullptr;
     }
 }
 
-simpleble_err_t simpleble_peripheral_write_request(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                                   simpleble_uuid_t characteristic, const uint8_t* data,
-                                                   size_t data_length) {
+void simpleble_peripheral_write_request(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                        simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length,
+                                        simpleble_error_t** out_error) {
     if (handle == nullptr || data == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
@@ -362,17 +363,17 @@ simpleble_err_t simpleble_peripheral_write_request(simpleble_peripheral_t handle
         peripheral->write_request(SimpleBLE::BluetoothUUID(service.value),
                                   SimpleBLE::BluetoothUUID(characteristic.value),
                                   SimpleBLE::ByteArray((const char*)data, data_length));
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_write_command(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                                   simpleble_uuid_t characteristic, const uint8_t* data,
-                                                   size_t data_length) {
+void simpleble_peripheral_write_command(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                        simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length,
+                                        simpleble_error_t** out_error) {
     if (handle == nullptr || data == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
@@ -380,19 +381,19 @@ simpleble_err_t simpleble_peripheral_write_command(simpleble_peripheral_t handle
         peripheral->write_command(SimpleBLE::BluetoothUUID(service.value),
                                   SimpleBLE::BluetoothUUID(characteristic.value),
                                   SimpleBLE::ByteArray((const char*)data, data_length));
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_notify(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                            simpleble_uuid_t characteristic,
-                                            void (*callback)(simpleble_peripheral_t, simpleble_uuid_t, simpleble_uuid_t,
-                                                             const uint8_t*, size_t, void*),
-                                            void* userdata) {
+void simpleble_peripheral_notify(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                 simpleble_uuid_t characteristic,
+                                 void (*callback)(simpleble_peripheral_t, simpleble_uuid_t, simpleble_uuid_t,
+                                                  const uint8_t*, size_t, void*),
+                                 void* userdata, simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
@@ -402,19 +403,19 @@ simpleble_err_t simpleble_peripheral_notify(simpleble_peripheral_t handle, simpl
                                callback(handle, service, characteristic, (const uint8_t*)data.data(), data.size(),
                                         userdata);
                            });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_indicate(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                              simpleble_uuid_t characteristic,
-                                              void (*callback)(simpleble_peripheral_t, simpleble_uuid_t,
-                                                               simpleble_uuid_t, const uint8_t*, size_t, void*),
-                                              void* userdata) {
+void simpleble_peripheral_indicate(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                   simpleble_uuid_t characteristic,
+                                   void (*callback)(simpleble_peripheral_t, simpleble_uuid_t, simpleble_uuid_t,
+                                                    const uint8_t*, size_t, void*),
+                                   void* userdata, simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
@@ -424,37 +425,37 @@ simpleble_err_t simpleble_peripheral_indicate(simpleble_peripheral_t handle, sim
                                  callback(handle, service, characteristic, (const uint8_t*)data.data(), data.size(),
                                           userdata);
                              });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_unsubscribe(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                                 simpleble_uuid_t characteristic) {
+void simpleble_peripheral_unsubscribe(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                      simpleble_uuid_t characteristic, simpleble_error_t** out_error) {
     if (handle == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         peripheral->unsubscribe(SimpleBLE::BluetoothUUID(service.value),
                                 SimpleBLE::BluetoothUUID(characteristic.value));
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_read_descriptor(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                                     simpleble_uuid_t characteristic, simpleble_uuid_t descriptor,
-                                                     uint8_t** data, size_t* data_length) {
-    if (handle == nullptr || data == nullptr || data_length == nullptr) {
-        return SIMPLEBLE_FAILURE;
+uint8_t* simpleble_peripheral_read_descriptor(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                              simpleble_uuid_t characteristic, simpleble_uuid_t descriptor,
+                                              size_t* data_length, simpleble_error_t** out_error) {
+    if (handle == nullptr || data_length == nullptr) {
+        return nullptr;
     }
 
     // Clear the initial values for safety
-    *data = nullptr;
+    uint8_t* data = nullptr;
     *data_length = 0;
 
     // Perform the read operation
@@ -465,20 +466,20 @@ simpleble_err_t simpleble_peripheral_read_descriptor(simpleble_peripheral_t hand
                              SimpleBLE::BluetoothUUID(descriptor.value));
 
         *data_length = read_data.size();
-        *data = static_cast<uint8_t*>(malloc(*data_length));
-        memcpy(*data, read_data.data(), *data_length);
+        data = static_cast<uint8_t*>(malloc(*data_length));
+        memcpy(data, read_data.data(), *data_length);
 
-        return SIMPLEBLE_SUCCESS;
+        return data;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return nullptr;
     }
 }
 
-simpleble_err_t simpleble_peripheral_write_descriptor(simpleble_peripheral_t handle, simpleble_uuid_t service,
-                                                      simpleble_uuid_t characteristic, simpleble_uuid_t descriptor,
-                                                      const uint8_t* data, size_t data_length) {
+void simpleble_peripheral_write_descriptor(simpleble_peripheral_t handle, simpleble_uuid_t service,
+                                           simpleble_uuid_t characteristic, simpleble_uuid_t descriptor,
+                                           const uint8_t* data, size_t data_length, simpleble_error_t** out_error) {
     if (handle == nullptr || data == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
@@ -486,40 +487,40 @@ simpleble_err_t simpleble_peripheral_write_descriptor(simpleble_peripheral_t han
         peripheral->write(SimpleBLE::BluetoothUUID(service.value), SimpleBLE::BluetoothUUID(characteristic.value),
                           SimpleBLE::BluetoothUUID(descriptor.value),
                           SimpleBLE::ByteArray((const char*)data, data_length));
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_set_callback_on_connected(simpleble_peripheral_t handle,
-                                                               void (*callback)(simpleble_peripheral_t, void*),
-                                                               void* userdata) {
+void simpleble_peripheral_set_callback_on_connected(simpleble_peripheral_t handle,
+                                                    void (*callback)(simpleble_peripheral_t, void*), void* userdata,
+                                                    simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         peripheral->set_callback_on_connected([=]() { callback(handle, userdata); });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
 
-simpleble_err_t simpleble_peripheral_set_callback_on_disconnected(simpleble_peripheral_t handle,
-                                                                  void (*callback)(simpleble_peripheral_t, void*),
-                                                                  void* userdata) {
+void simpleble_peripheral_set_callback_on_disconnected(simpleble_peripheral_t handle,
+                                                       void (*callback)(simpleble_peripheral_t, void*), void* userdata,
+                                                       simpleble_error_t** out_error) {
     if (handle == nullptr || callback == nullptr) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     try {
         peripheral->set_callback_on_disconnected([=]() { callback(handle, userdata); });
-        return SIMPLEBLE_SUCCESS;
+        return;
     } catch (...) {
-        return SIMPLEBLE_FAILURE;
+        return;
     }
 }
