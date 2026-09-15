@@ -70,7 +70,7 @@ int main(void) {
     printf("Successfully connected, listing %zu services.\n", services_count);
 
     for (size_t i = 0; i < services_count; i++) {
-        simpleble_service_t service;
+        simpleble_service_t service = {0};
         simpleble_peripheral_services_get(peripheral, i, &service, &error);
         if (error) continue;
 
@@ -82,6 +82,7 @@ int main(void) {
                 printf("    Descriptor: %s\n", service.characteristics[j].descriptors[k].uuid.value);
             }
         }
+        simpleble_service_release(&service);
     }
 
     simpleble_peripheral_disconnect(peripheral, &error);

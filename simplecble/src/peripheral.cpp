@@ -358,40 +358,42 @@ void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t ind
 
         strncpy(out_service->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
 
-        // TODO: Support advertisement payloads larger than the fixed data buffer.
-        const size_t copy_len = std::min(service.data().size(), sizeof(out_service->data));
-        out_service->data_length = copy_len;
-        memcpy(out_service->data, service.data().data(), copy_len);
-
-        out_service->characteristic_count = service.characteristics().size();
-        if (out_service->characteristic_count > SIMPLEBLE_CHARACTERISTIC_MAX_COUNT) {
-            out_service->characteristic_count = SIMPLEBLE_CHARACTERISTIC_MAX_COUNT;
+        const auto data = service.data();
+        if (!data.empty()) {
+            out_service->data = new uint8_t[data.size()];
+            out_service->data_length = data.size();
+            memcpy(out_service->data, data.data(), data.size());
         }
 
-        for (size_t i = 0; i < out_service->characteristic_count; i++) {
-            SimpleBLE::Characteristic characteristic = service.characteristics()[i];
+        auto characteristics = service.characteristics();
+        if (!characteristics.empty()) {
+            out_service->characteristics = new simpleble_characteristic_t[characteristics.size()]{};
+            out_service->characteristic_count = characteristics.size();
+        }
 
-            out_service->characteristics[i].can_read = characteristic.can_read();
-            out_service->characteristics[i].can_write_request = characteristic.can_write_request();
-            out_service->characteristics[i].can_write_command = characteristic.can_write_command();
-            out_service->characteristics[i].can_notify = characteristic.can_notify();
-            out_service->characteristics[i].can_indicate = characteristic.can_indicate();
+        for (size_t i = 0; i < characteristics.size(); i++) {
+            auto& characteristic = characteristics[i];
+            auto& out_characteristic = out_service->characteristics[i];
 
-            strncpy(out_service->characteristics[i].uuid.value, characteristic.uuid().c_str(),
-                    SIMPLEBLE_UUID_STR_LEN - 1);
-            out_service->characteristics[i].descriptor_count = characteristic.descriptors().size();
+            out_characteristic.can_read = characteristic.can_read();
+            out_characteristic.can_write_request = characteristic.can_write_request();
+            out_characteristic.can_write_command = characteristic.can_write_command();
+            out_characteristic.can_notify = characteristic.can_notify();
+            out_characteristic.can_indicate = characteristic.can_indicate();
+            strncpy(out_characteristic.uuid.value, characteristic.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
 
-            if (out_service->characteristics[i].descriptor_count > SIMPLEBLE_DESCRIPTOR_MAX_COUNT) {
-                out_service->characteristics[i].descriptor_count = SIMPLEBLE_DESCRIPTOR_MAX_COUNT;
+            auto descriptors = characteristic.descriptors();
+            if (!descriptors.empty()) {
+                out_characteristic.descriptors = new simpleble_descriptor_t[descriptors.size()]{};
+                out_characteristic.descriptor_count = descriptors.size();
             }
 
-            for (size_t j = 0; j < out_service->characteristics[i].descriptor_count; j++) {
-                SimpleBLE::Descriptor descriptor = characteristic.descriptors()[j];
-
-                strncpy(out_service->characteristics[i].descriptors[j].uuid.value, descriptor.uuid().c_str(),
+            for (size_t j = 0; j < descriptors.size(); j++) {
+                strncpy(out_characteristic.descriptors[j].uuid.value, descriptors[j].uuid().c_str(),
                         SIMPLEBLE_UUID_STR_LEN - 1);
             }
         }
+        return;
     } catch (const SimpleBLE::Exception::BaseException& e) {
         *out_error = e.make_error().release();
     } catch (const std::exception& e) {
@@ -399,6 +401,18 @@ void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t ind
     } catch (...) {
         *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
+    simpleble_service_release(out_service);
+}
+
+void simpleble_service_release(simpleble_service_t* service) {
+    if (service == nullptr) return;
+
+    for (size_t i = 0; i < service->characteristic_count; i++) {
+        delete[] service->characteristics[i].descriptors;
+    }
+    delete[] service->characteristics;
+    delete[] service->data;
+    *service = {};
 }
 
 size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
@@ -455,10 +469,13 @@ void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, s
 
         auto& selected_manufacturer_data = *it;
         out_data->manufacturer_id = selected_manufacturer_data.first;
-        // TODO: Support advertisement payloads larger than the fixed data buffer.
-        const size_t copy_len = std::min(selected_manufacturer_data.second.size(), sizeof(out_data->data));
-        out_data->data_length = copy_len;
-        memcpy(out_data->data, selected_manufacturer_data.second.data(), copy_len);
+        const auto& data = selected_manufacturer_data.second;
+        if (!data.empty()) {
+            out_data->data = new uint8_t[data.size()];
+            out_data->data_length = data.size();
+            memcpy(out_data->data, data.data(), data.size());
+        }
+        return;
     } catch (const SimpleBLE::Exception::BaseException& e) {
         *out_error = e.make_error().release();
     } catch (const std::exception& e) {
@@ -466,6 +483,14 @@ void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, s
     } catch (...) {
         *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
+    simpleble_manufacturer_data_release(out_data);
+}
+
+void simpleble_manufacturer_data_release(simpleble_manufacturer_data_t* data) {
+    if (data == nullptr) return;
+
+    delete[] data->data;
+    *data = {};
 }
 
 uint8_t* simpleble_peripheral_read(simpleble_peripheral_t handle, simpleble_uuid_t service,

@@ -95,7 +95,7 @@ int main(void) {
     service_characteristic_t characteristic_list[SERVICES_LIST_SIZE] = {0};
     size_t characteristic_count = 0;
     for (size_t i = 0; i < services_count; i++) {
-        simpleble_service_t service;
+        simpleble_service_t service = {0};
         simpleble_peripheral_services_get(peripheral, i, &service, &error);
         if (error) continue;
 
@@ -107,6 +107,7 @@ int main(void) {
             characteristic_list[characteristic_count].characteristic = service.characteristics[j].uuid;
             characteristic_count++;
         }
+        simpleble_service_release(&service);
     }
 
     printf("Please select a characteristic to subscribe to: ");

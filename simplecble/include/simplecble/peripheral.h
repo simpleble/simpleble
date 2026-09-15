@@ -165,15 +165,24 @@ SIMPLECBLE_EXPORT size_t simpleble_peripheral_services_count(simpleble_periphera
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
  * @param[in] index Zero-based index into the current collection.
- * @param[out] out_service Required caller-owned storage for one service and its characteristics and descriptors.
+ * @param[out] out_service Required caller-owned storage for one service. The library allocates its contents.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @note Characteristic and descriptor counts are clamped to their fixed array capacities. Service data is
- *     also truncated to its array capacity, and data_length reports the number of bytes copied.
+ * @note Initialize the output to zero and release its contents before reusing it.
+ *     Empty arrays have a zero length or count and a NULL pointer.
+ * @see simpleble_service_release
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index,
                                                          simpleble_service_t* out_service,
                                                          simpleble_error_t** out_error);
+
+/**
+ * @brief Releases a service's payload, characteristics, and descriptors, then zeroes the struct.
+ *
+ * @param[in,out] service A returned or zero-initialized service, or NULL for no action.
+ * @note The caller owns the struct itself. Its arrays must not be released separately.
+ */
+SIMPLECBLE_EXPORT void simpleble_service_release(simpleble_service_t* service);
 
 /**
  * @brief Counts the manufacturer data entries reported by the peripheral.
@@ -191,14 +200,24 @@ SIMPLECBLE_EXPORT size_t simpleble_peripheral_manufacturer_data_count(simpleble_
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
  * @param[in] index Zero-based index into the current collection.
- * @param[out] out_data Required caller-owned storage for one manufacturer data entry.
+ * @param[out] out_data Required caller-owned storage for one entry. The library allocates its payload.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @note Data is truncated to the fixed array capacity, and data_length reports the number of bytes copied.
+ * @note Initialize the output to zero and release its contents before reusing it.
+ *     An empty payload has a zero length and a NULL pointer.
+ * @see simpleble_manufacturer_data_release
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index,
                                                                   simpleble_manufacturer_data_t* out_data,
                                                                   simpleble_error_t** out_error);
+
+/**
+ * @brief Releases a manufacturer payload, then zeroes the struct.
+ *
+ * @param[in,out] data A returned or zero-initialized entry, or NULL for no action.
+ * @note The caller owns the struct itself. Its payload must not be released separately.
+ */
+SIMPLECBLE_EXPORT void simpleble_manufacturer_data_release(simpleble_manufacturer_data_t* data);
 
 /**
  * @brief Reads a characteristic value.

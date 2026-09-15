@@ -5,8 +5,6 @@
 #include <stdint.h>
 
 #define SIMPLEBLE_UUID_STR_LEN 37  // 36 characters + null terminator
-#define SIMPLEBLE_CHARACTERISTIC_MAX_COUNT 16
-#define SIMPLEBLE_DESCRIPTOR_MAX_COUNT 16
 
 /**
  * @brief Opaque error details for a failed call.
@@ -92,33 +90,23 @@ typedef struct {
     bool can_notify;
     bool can_indicate;
     size_t descriptor_count;
-    simpleble_descriptor_t descriptors[SIMPLEBLE_DESCRIPTOR_MAX_COUNT];
+    simpleble_descriptor_t* descriptors;
 } simpleble_characteristic_t;
 
+/** @brief Owned service data. Release its contents with simpleble_service_release(). */
 typedef struct {
     simpleble_uuid_t uuid;
     size_t data_length;
-    uint8_t data[27];
-    // Note: The maximum length of a BLE 4.x advertisement is 31 bytes.
-    // BLE 5.0 extended advertisements can be larger, so data may be truncated.
-    // The first byte will be the length of the field,
-    // the second byte will be the type of the field,
-    // the next two bytes will be the service UUID,
-    // and the remaining 27 bytes are the manufacturer data.
+    uint8_t* data;
     size_t characteristic_count;
-    simpleble_characteristic_t characteristics[SIMPLEBLE_CHARACTERISTIC_MAX_COUNT];
+    simpleble_characteristic_t* characteristics;
 } simpleble_service_t;
 
+/** @brief Owned manufacturer data. Release its contents with simpleble_manufacturer_data_release(). */
 typedef struct {
     uint16_t manufacturer_id;
     size_t data_length;
-    uint8_t data[27];
-    // Note: The maximum length of a BLE 4.x advertisement is 31 bytes.
-    // BLE 5.0 extended advertisements can be larger, so data may be truncated.
-    // The first byte will be the length of the field,
-    // the second byte will be the type of the field (0xFF for manufacturer data),
-    // the next two bytes will be the manufacturer ID,
-    // and the remaining 27 bytes are the manufacturer data.
+    uint8_t* data;
 } simpleble_manufacturer_data_t;
 
 typedef void* simpleble_backend_t;

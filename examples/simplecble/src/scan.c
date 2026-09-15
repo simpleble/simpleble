@@ -76,24 +76,26 @@ int main(void) {
 
         size_t services_count = simpleble_peripheral_services_count(peripheral, &error);
         for (size_t service_index = 0; service_index < services_count; service_index++) {
-            simpleble_service_t service;
+            simpleble_service_t service = {0};
             simpleble_peripheral_services_get(peripheral, service_index, &service, &error);
             if (error) continue;
 
             printf("    Service UUID: %s\n", service.uuid.value);
             printf("    Service data: ");
             print_buffer_hex(service.data, service.data_length, true);
+            simpleble_service_release(&service);
         }
 
         size_t manufacturer_data_count = simpleble_peripheral_manufacturer_data_count(peripheral, &error);
         for (size_t manuf_data_index = 0; manuf_data_index < manufacturer_data_count; manuf_data_index++) {
-            simpleble_manufacturer_data_t manuf_data;
+            simpleble_manufacturer_data_t manuf_data = {0};
             simpleble_peripheral_manufacturer_data_get(peripheral, manuf_data_index, &manuf_data, &error);
             if (error) continue;
 
             printf("    Manufacturer ID: %04X\n", manuf_data.manufacturer_id);
             printf("    Manufacturer data: ");
             print_buffer_hex(manuf_data.data, manuf_data.data_length, true);
+            simpleble_manufacturer_data_release(&manuf_data);
         }
 
         simpleble_peripheral_release_handle(peripheral);

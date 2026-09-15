@@ -7,6 +7,7 @@
 #include "backends/common/PeripheralBase.h"
 #include "backends/common/ServiceBase.h"
 #include "simpleble/Peripheral.h"
+#include "simplecble/error.h"
 #include "simplecble/peripheral.h"
 #include "simplecble/types.h"
 
@@ -15,6 +16,7 @@ using namespace SimpleBLE;
 class MockPeripheralBase : public PeripheralBase {
   public:
     MockPeripheralBase() = default;
+    ByteArray payload = std::string(257, 'A');
     virtual ~MockPeripheralBase() = default;
 
     void* underlying() const override { return nullptr; }
@@ -34,11 +36,7 @@ class MockPeripheralBase : public PeripheralBase {
     std::vector<std::shared_ptr<ServiceBase>> available_services() override { return {}; }
     std::vector<std::shared_ptr<ServiceBase>> advertised_services() override { return {}; }
 
-    std::map<uint16_t, ByteArray> manufacturer_data() override {
-        // Return > 27 bytes to test buffer overflow
-        ByteArray large_data(std::string(50, 'A'));
-        return {{0x1234, large_data}};
-    }
+    std::map<uint16_t, ByteArray> manufacturer_data() override { return {{0x1234, payload}}; }
 
     ByteArray read(BluetoothUUID const&, BluetoothUUID const&) override { return ""; }
     void write_request(BluetoothUUID const&, BluetoothUUID const&, ByteArray const&) override {}
@@ -57,16 +55,22 @@ class MockPeripheralBaseService : public MockPeripheralBase {
     BluetoothUUID uuid = "1234";
 
     std::vector<std::shared_ptr<ServiceBase>> advertised_services() override {
-        return {std::make_shared<ServiceBase>(uuid, ByteArray(std::string(50, 'B')))};
+        return {std::make_shared<ServiceBase>(uuid, payload)};
     }
 
     bool is_connected() override { return connected; }
     bool connected = false;
+    size_t characteristic_count = 1;
+    size_t descriptor_count = 1;
+    bool invalid_descriptor = false;
 
     std::vector<std::shared_ptr<ServiceBase>> available_services() override {
-        std::vector<std::shared_ptr<DescriptorBase>> descriptors = {std::make_shared<DescriptorBase>(uuid)};
-        std::vector<std::shared_ptr<CharacteristicBase>> characteristics = {
-            std::make_shared<CharacteristicBase>(uuid, descriptors, true, false, false, false, false)};
+        std::vector<std::shared_ptr<DescriptorBase>> descriptors(descriptor_count,
+                                                                 std::make_shared<DescriptorBase>(uuid));
+        if (invalid_descriptor) descriptors.push_back(nullptr);
+        std::vector<std::shared_ptr<CharacteristicBase>> characteristics(
+            characteristic_count,
+            std::make_shared<CharacteristicBase>(uuid, descriptors, true, false, false, false, false));
         return {std::make_shared<ServiceBase>(uuid, characteristics)};
     }
 };
@@ -76,47 +80,119 @@ class MockPeripheral : public SimpleBLE::Peripheral {
     MockPeripheral(std::shared_ptr<SimpleBLE::PeripheralBase> base) { this->internal_ = base; }
 };
 
-TEST(BufferOverflowTest, ManufacturerDataOverflow) {
-    auto base = std::make_shared<MockPeripheralBase>();
-    MockPeripheral mp(base);
-    simpleble_peripheral_t handle = static_cast<simpleble_peripheral_t>(&mp);
-
-    simpleble_manufacturer_data_t out_data;
-    simpleble_err_t err = simpleble_peripheral_manufacturer_data_get(handle, 0, &out_data);
-    EXPECT_EQ(err, SIMPLEBLE_SUCCESS);
-    // Even though size is 50, memory should not be corrupted.
-    // And length should report actual size 50 so user knows it was truncated in the 27 byte array.
-    EXPECT_EQ(out_data.data_length, 50);
-}
-
-TEST(BufferOverflowTest, ServicesOverflow) {
+TEST(PeripheralDataTest, CompletePayloadsAndEmptyResults) {
     auto base = std::make_shared<MockPeripheralBaseService>();
-    MockPeripheral mp(base);
-    simpleble_peripheral_t handle = static_cast<simpleble_peripheral_t>(&mp);
+    MockPeripheral peripheral(base);
+    simpleble_error_t* error = nullptr;
 
-    simpleble_service_t out_data;
-    simpleble_err_t err = simpleble_peripheral_services_get(handle, 0, &out_data);
-    EXPECT_EQ(err, SIMPLEBLE_SUCCESS);
-    EXPECT_EQ(out_data.data_length, 50);
+    for (size_t length : {0, 27, 28, 257}) {
+        SCOPED_TRACE(length);
+        std::string expected(length, '\0');
+        for (size_t i = 0; i < length; i++) expected[i] = static_cast<char>(i);
+        base->payload = expected;
+
+        simpleble_manufacturer_data_t manufacturer = {};
+        simpleble_peripheral_manufacturer_data_get(&peripheral, 0, &manufacturer, &error);
+        ASSERT_EQ(error, nullptr);
+        EXPECT_EQ(manufacturer.manufacturer_id, 0x1234);
+        ASSERT_EQ(manufacturer.data_length, length);
+
+        simpleble_service_t service = {};
+        simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+        ASSERT_EQ(error, nullptr);
+        EXPECT_STREQ(service.uuid.value, "1234");
+        ASSERT_EQ(service.data_length, length);
+        EXPECT_EQ(service.characteristic_count, 0);
+        EXPECT_EQ(service.characteristics, nullptr);
+
+        // Returned buffers are owned copies, independent of later advertisements.
+        base->payload.clear();
+        if (length == 0) {
+            EXPECT_EQ(manufacturer.data, nullptr);
+            EXPECT_EQ(service.data, nullptr);
+        } else {
+            EXPECT_EQ(std::memcmp(manufacturer.data, expected.data(), length), 0);
+            EXPECT_EQ(std::memcmp(service.data, expected.data(), length), 0);
+        }
+
+        simpleble_service_release(&service);
+        EXPECT_EQ(service.data, nullptr);
+        EXPECT_EQ(service.data_length, 0);
+        EXPECT_EQ(service.uuid.value[0], '\0');
+        simpleble_manufacturer_data_release(&manufacturer);
+        EXPECT_EQ(manufacturer.data, nullptr);
+        EXPECT_EQ(manufacturer.data_length, 0);
+        EXPECT_EQ(manufacturer.manufacturer_id, 0);
+        simpleble_service_release(&service);
+        simpleble_manufacturer_data_release(&manufacturer);
+    }
+    simpleble_error_release(&error);
 }
 
-TEST(BufferOverflowTest, ServiceCharacteristicAndDescriptorUUIDs) {
+TEST(PeripheralDataTest, CompleteGattCollectionsAndUUIDs) {
     auto base = std::make_shared<MockPeripheralBaseService>();
     base->connected = true;
-    MockPeripheral mp(base);
-    simpleble_peripheral_t handle = static_cast<simpleble_peripheral_t>(&mp);
+    base->characteristic_count = 19;
+    base->descriptor_count = 21;
+    MockPeripheral peripheral(base);
+    simpleble_error_t* error = nullptr;
+    simpleble_service_t service = {};
 
     for (const std::string uuid : {"", "1234", "12345678", "12345678-1234-5678-1234-567812345678"}) {
         SCOPED_TRACE(uuid);
         base->uuid = uuid;
-        simpleble_service_t service;
-        memset(&service, 0xFF, sizeof(service));
-
-        ASSERT_EQ(simpleble_peripheral_services_get(handle, 0, &service), SIMPLEBLE_SUCCESS);
+        simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+        ASSERT_EQ(error, nullptr);
         EXPECT_STREQ(service.uuid.value, uuid.c_str());
-        ASSERT_EQ(service.characteristic_count, 1);
-        EXPECT_STREQ(service.characteristics[0].uuid.value, uuid.c_str());
-        ASSERT_EQ(service.characteristics[0].descriptor_count, 1);
-        EXPECT_STREQ(service.characteristics[0].descriptors[0].uuid.value, uuid.c_str());
+        EXPECT_EQ(service.data_length, 0);
+        EXPECT_EQ(service.data, nullptr);
+        ASSERT_EQ(service.characteristic_count, 19);
+        for (size_t i = 0; i < service.characteristic_count; i++) {
+            const auto& characteristic = service.characteristics[i];
+            EXPECT_STREQ(characteristic.uuid.value, uuid.c_str());
+            EXPECT_TRUE(characteristic.can_read);
+            EXPECT_FALSE(characteristic.can_write_request);
+            EXPECT_FALSE(characteristic.can_write_command);
+            EXPECT_FALSE(characteristic.can_notify);
+            EXPECT_FALSE(characteristic.can_indicate);
+            ASSERT_EQ(characteristic.descriptor_count, 21);
+            for (size_t j = 0; j < characteristic.descriptor_count; j++) {
+                EXPECT_STREQ(characteristic.descriptors[j].uuid.value, uuid.c_str());
+            }
+        }
+        simpleble_service_release(&service);
+        EXPECT_EQ(service.characteristic_count, 0);
+        EXPECT_EQ(service.characteristics, nullptr);
     }
+
+    base->descriptor_count = 0;
+    simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+    ASSERT_EQ(error, nullptr);
+    for (size_t i = 0; i < service.characteristic_count; i++) {
+        EXPECT_EQ(service.characteristics[i].descriptor_count, 0);
+        EXPECT_EQ(service.characteristics[i].descriptors, nullptr);
+    }
+    simpleble_service_release(&service);
+    simpleble_error_release(&error);
+}
+
+TEST(PeripheralDataTest, FailedConstructionReleasesPartialService) {
+    auto base = std::make_shared<MockPeripheralBaseService>();
+    base->connected = true;
+    base->characteristic_count = 19;
+    base->invalid_descriptor = true;
+    MockPeripheral peripheral(base);
+    simpleble_error_t* error = nullptr;
+    simpleble_service_t service = {};
+
+    simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+    ASSERT_NE(error, nullptr);
+    EXPECT_EQ(simpleble_error_code(error), SIMPLEBLE_ERROR_OBJECT_NOT_INITIALIZED);
+    EXPECT_EQ(service.uuid.value[0], '\0');
+    EXPECT_EQ(service.data_length, 0);
+    EXPECT_EQ(service.data, nullptr);
+    EXPECT_EQ(service.characteristic_count, 0);
+    EXPECT_EQ(service.characteristics, nullptr);
+    simpleble_service_release(&service);
+    simpleble_error_release(&error);
 }
