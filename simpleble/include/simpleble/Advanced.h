@@ -8,7 +8,7 @@
 #include <simpleble/Adapter.h>
 #include <simpleble/export.h>
 
-#if __APPLE__
+#if defined(__APPLE__)
 #include "TargetConditionals.h"
 #endif
 
@@ -74,7 +74,7 @@ namespace SimpleBLE::Advanced::Windows {}
 
 #endif
 
-#if TARGET_OS_OSX
+#if defined(__APPLE__) && TARGET_OS_OSX
 namespace SimpleBLE::Advanced::MacOS {
 
 /**
@@ -104,7 +104,7 @@ std::vector<Peripheral> SIMPLEBLE_EXPORT retrieve_cached_peripherals(Adapter& ad
 
 #endif
 
-#if TARGET_OS_IOS
+#if defined(__APPLE__) && TARGET_OS_IOS
 namespace SimpleBLE::Advanced::iOS {
 
 /**

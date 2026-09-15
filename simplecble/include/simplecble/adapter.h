@@ -288,6 +288,19 @@ SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_found(
     simpleble_adapter_t handle,
     void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata);
 
+/**
+ * @brief Creates a local BLE peripheral host.
+ *
+ * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return An owned local peripheral handle, or NULL on failure. Release with
+ * simpleble_local_peripheral_release_handle().
+ * @note Configure its GATT services and advertised UUIDs before starting it. Stop it before releasing the handle.
+ * @see simpleble_error_t
+ */
+SIMPLECBLE_EXPORT simpleble_local_peripheral_t simpleble_adapter_create_local_peripheral(simpleble_adapter_t handle,
+                                                                                         simpleble_error_t** out_error);
+
 #ifdef __cplusplus
 }
 #endif

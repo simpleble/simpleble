@@ -25,11 +25,16 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../simpleble ${CMAKE_BINARY_DIR}/simp
 set(SIMPLEBLE_C_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simplecble.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/adapter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/advanced.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/advanced_dongl.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backend.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/config.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/error.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/peripheral.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/local_peripheral.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/local_service.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/local_characteristic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cpp)
 
 add_library(simplecble ${SIMPLEBLE_C_SRC})

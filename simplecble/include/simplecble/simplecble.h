@@ -2,10 +2,14 @@
 
 #include <simplecble/export.h>
 #include <simplecble/adapter.h>
+#include <simplecble/advanced.h>
 #include <simplecble/backend.h>
 #include <simplecble/config.h>
 #include <simplecble/error.h>
 #include <simplecble/logging.h>
+#include <simplecble/local/peripheral.h>
+#include <simplecble/local/service.h>
+#include <simplecble/local/characteristic.h>
 #include <simplecble/peripheral.h>
 #include <simplecble/utils.h>
 

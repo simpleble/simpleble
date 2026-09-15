@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Notes**
 
--
+- (SimpleCBLE) The C API is undergoing a major refactor with breaking changes to function signatures, error handling, and callback registration.
 
 **Added**
 
@@ -26,7 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleDroidBLE) Added Kotlin local peripheral, service, characteristic, advertising, permission, and event APIs.
 - (SimpleBLE) Added initial local peripheral-mode API scaffolding.
 - (SimpleBLE) Added error codes and conversion from exceptions to owned error objects.
+- (SimpleBLE) Exposed backend availability definitions to CMake consumers.
 - (SimpleCBLE) Added backend enumeration, identifiers, Bluetooth status, and per-backend adapter access.
+- (SimpleCBLE) Added local peripheral hosting with GATT services, characteristics, and callbacks.
+- (SimpleCBLE) Added Dongl pairing callbacks and platform-specific advanced APIs.
 
 **Changed**
 
@@ -38,6 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Fixed**
 
 - (Dongl) Fixed scan callbacks, advertising-data merging, and disconnect notifications.
+- (Dongl) Fixed queued pairing callbacks running after unregistration.
+- (SimpleBLE/SimpleCBLE) Corrected advanced API build guards for Plain builds and non-Apple platforms.
 - (SimpleJavaBLE) Fixed JPMS compatibility with a stable automatic module name.
 - (SimpleCBLE) Fixed out-of-bounds reads when copying short service, characteristic, and descriptor UUIDs.
 

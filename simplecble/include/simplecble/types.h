@@ -124,6 +124,18 @@ typedef struct {
 typedef void* simpleble_backend_t;
 typedef void* simpleble_adapter_t;
 typedef void* simpleble_peripheral_t;
+typedef void* simpleble_local_peripheral_t;
+typedef void* simpleble_local_service_t;
+typedef void* simpleble_local_characteristic_t;
+
+/** @brief Local characteristic capability flags; combine with bitwise OR. */
+typedef enum {
+    SIMPLEBLE_LOCAL_CHARACTERISTIC_READ = 1u << 0,
+    SIMPLEBLE_LOCAL_CHARACTERISTIC_WRITE_REQUEST = 1u << 1,
+    SIMPLEBLE_LOCAL_CHARACTERISTIC_WRITE_COMMAND = 1u << 2,
+    SIMPLEBLE_LOCAL_CHARACTERISTIC_NOTIFY = 1u << 3,
+    SIMPLEBLE_LOCAL_CHARACTERISTIC_INDICATE = 1u << 4,
+} simpleble_local_characteristic_capability_t;
 
 typedef enum {
     SIMPLEBLE_OS_WINDOWS = 0,

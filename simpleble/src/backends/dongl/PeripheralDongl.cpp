@@ -110,18 +110,27 @@ void PeripheralDongl::unpair() {
 }
 
 void PeripheralDongl::set_passkey_request_callback(const std::function<std::optional<std::string>()>& callback) {
-    std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
-    passkey_request_callback_ = callback;
+    if (callback) {
+        passkey_request_callback_.load(callback);
+    } else {
+        passkey_request_callback_.unload();
+    }
 }
 
 void PeripheralDongl::set_passkey_display_callback(const std::function<void(const std::string& passkey)>& callback) {
-    std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
-    passkey_display_callback_ = callback;
+    if (callback) {
+        passkey_display_callback_.load(callback);
+    } else {
+        passkey_display_callback_.unload();
+    }
 }
 
 void PeripheralDongl::set_numeric_comparison_callback(const std::function<bool(const std::string& passkey)>& callback) {
-    std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
-    numeric_comparison_callback_ = callback;
+    if (callback) {
+        numeric_comparison_callback_.load(callback);
+    } else {
+        numeric_comparison_callback_.unload();
+    }
 }
 
 SharedPtrVector<ServiceBase> PeripheralDongl::available_services() {
@@ -529,20 +538,12 @@ void PeripheralDongl::notify_value_changed(simpleble_ValueChangedEvt const& evt)
 void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& evt) {
     const std::string passkey = evt.passkey;
     if (evt.match_request) {
-        std::function<bool(const std::string&)> callback;
-        {
-            std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
-            callback = numeric_comparison_callback_;
-        }
-
         pairing_task_runner_.dispatch(
-            [this, callback = std::move(callback), conn_handle = evt.conn_handle, request_id = evt.request_id,
+            [this, conn_handle = evt.conn_handle, request_id = evt.request_id,
              passkey]() -> std::optional<std::chrono::milliseconds> {
                 bool accept = false;
                 try {
-                    if (callback) {
-                        accept = callback(passkey);
-                    }
+                    accept = numeric_comparison_callback_(passkey);
                 } catch (const std::exception& e) {
                     SIMPLEBLE_LOG_ERROR(fmt::format("Numeric comparison callback failed: {}", e.what()));
                 } catch (...) {
@@ -556,19 +557,10 @@ void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& 
         return;
     }
 
-    std::function<void(const std::string&)> callback;
-    {
-        std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
-        callback = passkey_display_callback_;
-    }
-    if (!callback) {
-        return;
-    }
-
     pairing_task_runner_.dispatch(
-        [callback = std::move(callback), passkey]() -> std::optional<std::chrono::milliseconds> {
+        [this, passkey]() -> std::optional<std::chrono::milliseconds> {
             try {
-                callback(passkey);
+                passkey_display_callback_(passkey);
             } catch (const std::exception& e) {
                 SIMPLEBLE_LOG_ERROR(fmt::format("Passkey display callback failed: {}", e.what()));
             } catch (...) {
@@ -580,21 +572,18 @@ void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& 
 }
 
 void PeripheralDongl::notify_auth_key_request(simpleble_AuthKeyRequestEvt const& evt) {
-    std::function<std::optional<std::string>()> callback;
-    if (evt.key_type == simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY) {
-        std::lock_guard<std::mutex> lock(pairing_callbacks_mutex_);
-        callback = passkey_request_callback_;
-    } else {
+    const bool request_passkey = evt.key_type == simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY;
+    if (!request_passkey) {
         SIMPLEBLE_LOG_WARN(fmt::format("Unsupported pairing key type: {}", static_cast<int>(evt.key_type)));
     }
 
     pairing_task_runner_.dispatch(
-        [this, callback = std::move(callback), conn_handle = evt.conn_handle,
+        [this, request_passkey, conn_handle = evt.conn_handle,
          request_id = evt.request_id]() -> std::optional<std::chrono::milliseconds> {
             std::optional<std::string> passkey;
             try {
-                if (callback) {
-                    passkey = callback();
+                if (request_passkey) {
+                    passkey = passkey_request_callback_();
                 }
             } catch (const std::exception& e) {
                 SIMPLEBLE_LOG_ERROR(fmt::format("Passkey request callback failed: {}", e.what()));

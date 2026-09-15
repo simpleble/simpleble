@@ -154,7 +154,8 @@ else()
     set(SIMPLEBLE_BACKEND_ANDROID OFF)
 endif()
 
-target_compile_definitions(simpleble PRIVATE
+target_compile_definitions(simpleble PUBLIC
+                        SIMPLEBLE_BACKEND_DONGL=1
                         SIMPLEBLE_BACKEND_PLAIN=$<BOOL:${SIMPLEBLE_PLAIN}>
                         SIMPLEBLE_BACKEND_LINUX=$<BOOL:${SIMPLEBLE_BACKEND_LINUX}>
                         SIMPLEBLE_BACKEND_WINDOWS=$<BOOL:${SIMPLEBLE_BACKEND_WINDOWS}>

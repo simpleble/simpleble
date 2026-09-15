@@ -521,3 +521,26 @@ void simpleble_adapter_set_callback_on_scan_found(simpleble_adapter_t handle,
         });
     }
 }
+
+simpleble_local_peripheral_t simpleble_adapter_create_local_peripheral(simpleble_adapter_t handle,
+                                                                       simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return nullptr;
+    }
+
+    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
+    try {
+        return new SimpleBLE::Local::Peripheral(adapter->create_local_peripheral());
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+
+    return nullptr;
+}

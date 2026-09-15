@@ -146,10 +146,9 @@ class PeripheralDongl : public PeripheralBase {
     std::mutex disconnection_mutex_;
     std::condition_variable attributes_discovered_cv_;
     std::mutex attributes_discovered_mutex_;
-    std::mutex pairing_callbacks_mutex_;
-    std::function<std::optional<std::string>()> passkey_request_callback_;
-    std::function<void(const std::string& passkey)> passkey_display_callback_;
-    std::function<bool(const std::string& passkey)> numeric_comparison_callback_;
+    kvn::safe_callback<std::optional<std::string>()> passkey_request_callback_;
+    kvn::safe_callback<void(const std::string& passkey)> passkey_display_callback_;
+    kvn::safe_callback<bool(const std::string& passkey)> numeric_comparison_callback_;
     TaskRunner pairing_task_runner_;
 
     kvn::safe_callback<void()> _callback_on_connected;
