@@ -26,9 +26,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleDroidBLE) Added Kotlin local peripheral, service, characteristic, advertising, permission, and event APIs.
 - (SimpleBLE) Added initial local peripheral-mode API scaffolding.
 - (SimpleBLE) Added error codes and conversion from exceptions to owned error objects.
+- (SimpleCBLE) Added backend enumeration, identifiers, Bluetooth status, and per-backend adapter access.
 
 **Changed**
 
+- **API CHANGE**: (SimpleCBLE) Replaced status returns with direct results and reusable error objects exposing codes and messages.
 - **API CHANGE**: (SimpleBLE) Replaced `Local::Advertisement` with additive advertised-service APIs on local peripherals.
 - **API CHANGE**: (SimpleDroidBLE) Replaced `LocalAdvertisement` with additive advertised-service APIs on local peripherals.
 - (Dongl) Consolidated UUID conversion and routed diagnostics through SimpleBLE logging.

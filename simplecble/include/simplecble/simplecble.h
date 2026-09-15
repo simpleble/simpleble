@@ -2,6 +2,7 @@
 
 #include <simplecble/export.h>
 #include <simplecble/adapter.h>
+#include <simplecble/backend.h>
 #include <simplecble/config.h>
 #include <simplecble/error.h>
 #include <simplecble/logging.h>
