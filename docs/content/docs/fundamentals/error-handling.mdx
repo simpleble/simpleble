@@ -5,7 +5,7 @@ description: SimpleBLE's exception taxonomy, which errors are recoverable, timeo
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-SimpleBLE reports errors by throwing exceptions. All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. In Python, exceptions surface as `RuntimeError` with the same message text. The C bindings translate exceptions into return codes instead.
+SimpleBLE reports errors by throwing exceptions. All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. In Python, exceptions surface as `RuntimeError` with the same message text. The C bindings translate exceptions into owned error objects containing a code and message. Pass a required error slot to fallible calls and inspect it before reuse; see the [C migration guide](../simplecble/migration#replace-status-returns-with-an-error-object).
 
 ## Exception taxonomy
 

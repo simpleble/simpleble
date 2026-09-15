@@ -43,24 +43,39 @@ for (auto& peripheral : adapter.scan_get_results()) {
 <Tab value="C">
 
 ```c
-simpleble_adapter_t adapter = simpleble_adapter_get_handle(0);
+#include <stdio.h>
+#include <stdlib.h>
+#include <simplecble/simplecble.h>
 
-simpleble_adapter_scan_for(adapter, 5000);
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_t adapter = simpleble_adapter_get_handle(0, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        simpleble_error_release(&error);
+        return EXIT_FAILURE;
+    }
 
-size_t count = simpleble_adapter_scan_get_results_count(adapter);
-for (size_t i = 0; i < count; i++) {
-    simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i);
-    char* identifier = simpleble_peripheral_identifier(peripheral);
-    char* address = simpleble_peripheral_address(peripheral);
+    simpleble_adapter_scan_for(adapter, 5000, &error);
+    if (!error) {
+        size_t count = simpleble_adapter_scan_get_results_count(adapter, &error);
+        for (size_t i = 0; i < count && !error; i++) {
+            simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i, &error);
+            if (error) break;
 
-    printf("%s [%s]\n", identifier, address);
+            char* identifier = simpleble_peripheral_identifier(peripheral, &error);
+            if (!error) printf("Found: %s\n", identifier);
+            simpleble_free(identifier);
+            simpleble_peripheral_release_handle(peripheral);
+        }
+    }
 
-    simpleble_free(identifier);
-    simpleble_free(address);
-    simpleble_peripheral_release_handle(peripheral);
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_adapter_release_handle(adapter);
+    return result;
 }
-
-simpleble_adapter_release_handle(adapter);
 ```
 
 </Tab>

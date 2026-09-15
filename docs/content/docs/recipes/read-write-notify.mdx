@@ -5,6 +5,8 @@ description: Perform GATT operations after connecting to a BLE peripheral.
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
+The C examples include `<stdio.h>` and `<simplecble/simplecble.h>` and borrow the peripheral handle passed to them. See the [C tutorial](../simplecble/tutorial) for acquisition and cleanup.
+
 GATT operations happen after a peripheral is connected and services have been discovered. Most applications use the same shape:
 
 1. Select a service UUID and characteristic UUID.
@@ -28,17 +30,22 @@ std::cout << "Read: " << value << std::endl;
 <Tab value="C">
 
 ```c
-uint8_t* data = NULL;
-size_t data_length = 0;
-
-simpleble_peripheral_read(peripheral, service_uuid, characteristic_uuid, &data, &data_length);
-
-for (size_t i = 0; i < data_length; i++) {
-    printf("%02X ", data[i]);
+bool print_value(simpleble_peripheral_t peripheral,
+                 simpleble_uuid_t service, simpleble_uuid_t characteristic) {
+    simpleble_error_t* error = NULL;
+    size_t length = 0;
+    uint8_t* data = simpleble_peripheral_read(peripheral, service, characteristic, &length, &error);
+    bool success = error == NULL;
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+    } else {
+        for (size_t i = 0; i < length; i++) printf("%02X ", data[i]);
+        printf("\n");
+    }
+    simpleble_free(data);
+    simpleble_error_release(&error);
+    return success;
 }
-printf("\n");
-
-simpleble_free(data);
 ```
 
 </Tab>
@@ -98,21 +105,17 @@ peripheral.write_command(service_uuid, characteristic_uuid, payload);
 <Tab value="C">
 
 ```c
-uint8_t payload[] = {0x01, 0x02, 0x03};
-
-simpleble_peripheral_write_request(
-    peripheral,
-    service_uuid,
-    characteristic_uuid,
-    payload,
-    sizeof(payload));
-
-simpleble_peripheral_write_command(
-    peripheral,
-    service_uuid,
-    characteristic_uuid,
-    payload,
-    sizeof(payload));
+bool write_value(simpleble_peripheral_t peripheral,
+                 simpleble_uuid_t service, simpleble_uuid_t characteristic) {
+    simpleble_error_t* error = NULL;
+    const uint8_t payload[] = {0x01, 0x02, 0x03};
+    simpleble_peripheral_write_request(peripheral, service, characteristic,
+                                      payload, sizeof(payload), &error);
+    bool success = error == NULL;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    return success;
+}
 ```
 
 </Tab>
@@ -181,22 +184,30 @@ peripheral.unsubscribe(service_uuid, characteristic_uuid);
 
 ```c
 static void on_notify(simpleble_peripheral_t peripheral,
-                      simpleble_uuid_t service,
-                      simpleble_uuid_t characteristic,
-                      const uint8_t* data,
-                      size_t data_length,
-                      void* userdata) {
-    for (size_t i = 0; i < data_length; i++) {
-        printf("%02X ", data[i]);
-    }
+                      simpleble_uuid_t service, simpleble_uuid_t characteristic,
+                      const uint8_t* data, size_t length, void* userdata) {
+    for (size_t i = 0; i < length; i++) printf("%02X ", data[i]);
     printf("\n");
 }
 
-simpleble_peripheral_notify(peripheral, service_uuid, characteristic_uuid, on_notify, NULL);
+bool receive_notifications(simpleble_peripheral_t peripheral,
+                           simpleble_uuid_t service, simpleble_uuid_t characteristic) {
+    simpleble_error_t* error = NULL;
+    simpleble_peripheral_notify(peripheral, service, characteristic, on_notify, NULL, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        simpleble_error_release(&error);
+        return false;
+    }
 
-/* Keep the process alive while notifications arrive. */
-
-simpleble_peripheral_unsubscribe(peripheral, service_uuid, characteristic_uuid);
+    printf("Press Enter to unsubscribe.\n");
+    getchar();
+    simpleble_peripheral_unsubscribe(peripheral, service, characteristic, &error);
+    bool success = error == NULL;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    return success;
+}
 ```
 
 </Tab>

@@ -69,5 +69,5 @@ The same flow in C++ is shown step-by-step in the [heart rate monitor recipe](..
 
 If a rewrite is off the table, two architectures keep your Node code intact:
 
-1. **Native addon over SimpleCBLE.** The [C API](../simplecble/api) is a stable, flat surface designed for FFI; wrapping the handful of calls your app uses with N-API is a bounded task.
+1. **Native addon over SimpleCBLE.** The [C API](../simplecble/api) is a flat interface designed for FFI; wrapping the handful of calls your app uses with N-API is a bounded task.
 2. **Sidecar process.** Run BLE in a small SimplePyBLE (or C++) process and talk to it over stdio/IPC/HTTP from Node. This also isolates BLE stack crashes from your main process.

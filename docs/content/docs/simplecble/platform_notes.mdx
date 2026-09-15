@@ -1,13 +1,34 @@
 ---
 title: Platform Notes
-description: Platform-specific behaviors and limitations.
+description: Native backends and advanced functionality available through SimpleCBLE.
 ---
 
-SimpleCBLE wraps the SimpleBLE C++ library. Therefore, all platform-specific notes, limitations, and behaviors documented for SimpleBLE apply to SimpleCBLE as well.
+The [SimpleBLE platform notes](../simpleble/platform_notes) also apply to the C API, including permission requirements, address formats, and connection behavior. Backend enumeration lets you select an implementation explicitly; it does not bypass OS permissions.
 
-Please refer to the [SimpleBLE Platform Notes](../simpleble/platform_notes) for detailed information regarding:
+## Advanced APIs
 
-- **Windows**: Architecture mismatch (32-bit vs 64-bit) and adapter selection issues.
-- **MacOS / iOS**: UUIDs instead of MAC addresses, and connection management limitations.
-- **Linux**: Scanning delays and adapter removal behavior.
-- **Android**: API level limitations and bond management.
+Include `<simplecble/advanced.h>` or the umbrella header. Native advanced functions are declared for their target platform and implemented when that native backend is built. Plain builds do not implement them.
+
+| Backend/platform | C API |
+| --- | --- |
+| Dongl | Passkey-entry, passkey-display, and numeric-comparison callback setters |
+| macOS | `simpleble_advanced_macos_set_advertisement_local_name()` and `simpleble_advanced_macos_retrieve_cached_peripheral()` |
+| iOS | `simpleble_advanced_ios_set_advertisement_local_name()` and `simpleble_advanced_ios_retrieve_cached_peripheral()` |
+| Linux | `simpleble_advanced_linux_set_advertisement_local_name()` |
+| Android | `simpleble_advanced_android_get_jvm()`, `simpleble_advanced_android_set_jvm()`, and `simpleble_advanced_android_set_context()` |
+
+Apple cached-peripheral lookup accepts one CoreBluetooth identifier. It requires a powered-on adapter, does not scan, and does not guarantee reachability. An invalid or unknown identifier returns NULL without an error. Release a returned peripheral handle normally.
+
+The advertised-name setters take a local peripheral handle. Configure the name before starting the host; NULL removes the override. They change the advertisement, not the system Bluetooth name.
+
+## Android local hosting
+
+Provide the application's Java VM and application context before creating a local peripheral. Use the application context rather than an Activity context. The context setter retains a global JNI reference; `get_jvm()` returns a borrowed pointer. Each of these functions takes an error slot.
+
+## Dongl pairing
+
+Register pairing callbacks before connecting. Passkey entry writes six decimal digits plus a NUL terminator into the supplied seven-byte buffer and returns true; return false to reject pairing. Preserve leading zeroes.
+
+Display and comparison callbacks receive a borrowed six-digit string. Numeric comparison returns true only when the user confirms the peer shows the same number. A missing entry or comparison callback rejects that request. These callbacks run on an internal worker thread and can obtain user input there.
+
+The Dongl callback setters accept NULL to unregister and retain an error argument because a non-Dongl peripheral cannot accept these registrations.

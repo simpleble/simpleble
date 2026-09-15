@@ -1,0 +1,204 @@
+---
+title: Migration Guide
+description: Migrate existing C and FFI callers to the refactored SimpleCBLE API.
+---
+
+This guide covers the breaking C API refactor following SimpleCBLE 1.1.0, listed in the [1.1.1 changelog](../changelog). It changes function signatures, error reporting, and the layout and ownership of returned data.
+
+Rebuild C callers against the new headers. For FFI bindings, update function declarations, struct layouts, and cleanup code together before loading the new library. Recompiling an old declaration or keeping the old fixed-array layout is not sufficient.
+
+## Include the public header
+
+```c
+#include <simplecble/simplecble.h>
+```
+
+Individual headers such as `simplecble/error.h`, `simplecble/backend.h`, and `simplecble/local/peripheral.h` are also available. The umbrella header includes them.
+
+## Replace status returns with an error object
+
+Fallible calls now take a final `simpleble_error_t** out_error`. Pass the address of a variable initialized to `NULL`. A NULL error means success; a non-NULL error owns the failure details.
+
+Before:
+
+```c title="Before: status return"
+if (simpleble_peripheral_connect(peripheral) != SIMPLEBLE_SUCCESS) {
+    fprintf(stderr, "Connection failed\n");
+}
+```
+
+After:
+
+```c title="After: error object"
+simpleble_error_t* error = NULL;
+simpleble_peripheral_connect(peripheral, &error);
+if (error) {
+    fprintf(stderr, "%s\n", simpleble_error_message(error));
+}
+simpleble_error_release(&error);
+```
+
+The error argument is required. Do not pass `NULL` for `out_error`, and do not pass an uninitialized error variable. Each call releases the previous error in the supplied slot before reporting its own result. Inspect or copy any details you need before the next call:
+
+```c
+simpleble_error_t* error = NULL;
+simpleble_peripheral_connect(peripheral, &error);
+if (error) {
+    simpleble_err_t code = simpleble_error_code(error);
+    fprintf(stderr, "Error %d: %s\n", (int)code, simpleble_error_message(error));
+} else {
+    simpleble_peripheral_disconnect(peripheral, &error);
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+}
+simpleble_error_release(&error);
+```
+
+`simpleble_error_message()` returns borrowed text valid until that error is released or replaced. Both error accessors require a non-NULL error. `simpleble_error_release(&error)` deletes the error and sets the variable to `NULL`; use it instead of `simpleble_free()`.
+
+`simpleble_err_t` now identifies error codes returned by `simpleble_error_code()`. It is no longer an operation's success/failure status. Remove checks against `SIMPLEBLE_SUCCESS` and `SIMPLEBLE_FAILURE`. The new enum values are not compatible with the old numeric values, and an error code of zero is not success. The C API exposes a code and message, without UUID or native-error-code accessors.
+
+To ignore a failure deliberately, still supply an error slot and release its final contents:
+
+```c
+simpleble_error_t* ignored_error = NULL;
+simpleble_peripheral_disconnect(peripheral, &ignored_error);
+simpleble_error_release(&ignored_error);
+```
+
+Do not share one mutable error slot between concurrent calls. A callback that calls SimpleCBLE should use its own local error variable.
+
+## Use the returned value directly
+
+Boolean queries now return `bool`. Methods that only perform an action return `void`. Existing scalar and pointer getters generally retain their result type and gain `out_error`.
+
+Before:
+
+```c title="Before: output boolean"
+bool connected = false;
+simpleble_err_t status = simpleble_peripheral_is_connected(peripheral, &connected);
+```
+
+After:
+
+```c title="After: returned boolean"
+simpleble_error_t* error = NULL;
+bool connected = simpleble_peripheral_is_connected(peripheral, &error);
+if (error) {
+    fprintf(stderr, "%s\n", simpleble_error_message(error));
+} else if (!connected) {
+    printf("Peripheral is disconnected\n");
+}
+simpleble_error_release(&error);
+```
+
+A false result, zero count, or NULL pointer may be a successful result. Check the error slot to distinguish failure. For example, no scan results is a successful zero count; an empty read can be a successful NULL buffer with length zero.
+
+| Operation | New calling pattern |
+| --- | --- |
+| Adapter count | `size_t count = simpleble_adapter_get_count(&error)` |
+| Adapter handle | `simpleble_adapter_t adapter = simpleble_adapter_get_handle(index, &error)` |
+| Scan | `simpleble_adapter_scan_for(adapter, timeout_ms, &error)` |
+| Connection query | `bool connected = simpleble_peripheral_is_connected(peripheral, &error)` |
+| Connect/disconnect | `simpleble_peripheral_connect(peripheral, &error)` / `simpleble_peripheral_disconnect(peripheral, &error)` |
+| Identifier/address/RSSI/MTU | Existing result type, with `&error` appended |
+| Service or manufacturer entry | Caller-owned output struct, with `&error` appended; release its allocated contents afterward |
+
+## Read buffers are returned by value
+
+Characteristic and descriptor reads return the allocated byte pointer directly. The length remains an output argument.
+
+Before:
+
+```c title="Before: output buffer pointer"
+uint8_t* data = NULL;
+size_t length = 0;
+simpleble_peripheral_read(peripheral, service_uuid, characteristic_uuid, &data, &length);
+simpleble_free(data);
+```
+
+After:
+
+```c title="After: returned buffer pointer"
+simpleble_error_t* error = NULL;
+size_t length = 0;
+uint8_t* data = simpleble_peripheral_read(peripheral, service_uuid, characteristic_uuid, &length, &error);
+if (error) {
+    fprintf(stderr, "%s\n", simpleble_error_message(error));
+} else {
+    for (size_t i = 0; i < length; i++) printf("%02X ", data[i]);
+}
+simpleble_free(data);
+simpleble_error_release(&error);
+```
+
+Use the same pattern for `simpleble_peripheral_read_descriptor()`. The returned buffers still require `simpleble_free()`. Write functions retain their input buffer and length arguments and gain `out_error`.
+
+## Release service and manufacturer snapshots
+
+These four fields are now pointers instead of fixed arrays:
+
+| Struct field | Previous capacity | New representation |
+| --- | --- | --- |
+| `simpleble_service_t.data` | 27 bytes | `uint8_t*` and `data_length` |
+| `simpleble_manufacturer_data_t.data` | 27 bytes | `uint8_t*` and `data_length` |
+| `simpleble_service_t.characteristics` | 16 entries | `simpleble_characteristic_t*` and `characteristic_count` |
+| `simpleble_characteristic_t.descriptors` | 16 entries | `simpleble_descriptor_t*` and `descriptor_count` |
+
+The getters copy the full data available from SimpleBLE. `SIMPLEBLE_CHARACTERISTIC_MAX_COUNT` and `SIMPLEBLE_DESCRIPTOR_MAX_COUNT` have been removed. Iterate using the counts, and use `data_length` instead of `sizeof(data)`. Empty arrays have a NULL pointer and zero length/count. `simpleble_uuid_t` remains an inline value with a 37-byte string array.
+
+```c
+simpleble_error_t* error = NULL;
+simpleble_service_t service = {0};
+simpleble_peripheral_services_get(peripheral, 0, &service, &error);
+if (!error) {
+    for (size_t i = 0; i < service.characteristic_count; i++) {
+        const simpleble_characteristic_t* characteristic = &service.characteristics[i];
+        printf("%s: %zu descriptors\n", characteristic->uuid.value, characteristic->descriptor_count);
+    }
+}
+simpleble_service_release(&service);
+simpleble_error_release(&error);
+```
+
+`simpleble_service_release()` frees the service payload, all descriptor arrays, and the characteristic array, then zeroes the struct. Release the entire service; individual characteristics and descriptors are not independently owned.
+
+```c
+simpleble_error_t* error = NULL;
+simpleble_manufacturer_data_t manufacturer = {0};
+simpleble_peripheral_manufacturer_data_get(peripheral, 0, &manufacturer, &error);
+if (!error) {
+    printf("Manufacturer %04X: %zu bytes\n", manufacturer.manufacturer_id, manufacturer.data_length);
+}
+simpleble_manufacturer_data_release(&manufacturer);
+simpleble_error_release(&error);
+```
+
+These release functions leave the caller's struct in place. Do not pass the struct or its nested allocations to `simpleble_free()`. Initialize outputs to zero and release their contents before reusing the same output storage. Unlike the error slot, these getters do not release an earlier result automatically.
+
+Copying one of these structs copies its pointers, not its data. Keep one owner or make your own deep copy. In an FFI, represent these fields as native pointers and counts as `size_t`, and keep child views alive only while their owning service remains alive.
+
+## Update callback registration
+
+Adapter power/scan setters and peripheral connected/disconnected setters now return `void` and take no error argument. They require a valid handle. Pass a NULL callback to unregister:
+
+```c
+simpleble_adapter_set_callback_on_scan_found(adapter, NULL, NULL);
+simpleble_peripheral_set_callback_on_disconnected(peripheral, NULL, NULL);
+```
+
+`simpleble_peripheral_notify()` and `simpleble_peripheral_indicate()` still perform fallible GATT operations: pass `&error`, and stop them with `simpleble_peripheral_unsubscribe()`. Their callbacks receive the registered peripheral handle, service and characteristic UUIDs, borrowed bytes, length, and userdata. Use the current header's callback declaration when updating an FFI.
+
+The advanced Dongl pairing setters also retain `out_error`, because the selected peripheral may not belong to the Dongl backend. Local-peripheral callback setters follow the ordinary setter convention: valid handle, `void` return, NULL to clear.
+
+Scan-found and scan-updated callbacks continue to transfer a newly allocated peripheral handle on every invocation. Release each handle, even repeated updates for the same device. Other callback handles and callback data are borrowed. Clear registrations before releasing their handles or application state, and keep FFI callback objects rooted while registered.
+
+Logging setters return `void` and have no error argument. Configuration functions also remain direct getters/setters without error objects.
+
+## New features available during migration
+
+- **Backends:** `simpleble_backend_*` enumerates backends, checks their Bluetooth status, and obtains their adapters. Release returned backend handles with `simpleble_backend_release_handle()`. Global adapter enumeration remains available.
+- **Local hosting:** Create a local peripheral from an adapter, add advertised services, GATT services and characteristics, then start and stop it. Local objects have separate owned handles and release functions. See [local hosting](./tutorial#local-peripheral-hosting).
+- **Advanced APIs:** Dongl pairing callbacks, Apple cached-peripheral lookup, platform-specific advertisement names, and Android JVM/context access are declared in `simplecble/advanced.h`. The OS-specific functions require their native backend build; Plain does not implement them.
+- **Build definitions:** Linking the CMake `simpleble` target propagates `SIMPLEBLE_BACKEND_*` availability definitions to its consumers. Dongl is always built and defines `SIMPLEBLE_BACKEND_DONGL=1`. These describe the build, not the presence of hardware at runtime.
+
+The [API reference](./api) contains the complete current signatures. The [examples](./examples) show the updated scan, connect, and notification flows.

@@ -1,33 +1,887 @@
 ---
 title: API Reference
-description: Reference for the SimpleCBLE C API.
+description: SimpleCBLE function signatures, error handling, and ownership rules.
 ---
 
 import { ApiClass, ApiMethod, ApiSection } from "@/components/api";
 
-The SimpleCBLE API provides a C-compatible interface for SimpleBLE. It relies on handles (`simpleble_adapter_t`, `simpleble_peripheral_t`) to manage objects.
+Include `<simplecble/simplecble.h>` for the complete C API. See the [tutorial](./tutorial) for working examples and the [migration guide](./migration) for changes from the previous API.
+
+## Calling convention
+
+Functions with an `out_error` parameter require the address of an error variable initialized to `NULL`. They release its previous error, then leave it `NULL` on success or fill it on failure. Inspect the error before reusing the variable. A zero, `false`, or `NULL` result alone does not identify failure. Release the final error with `simpleble_error_release(&error)`.
+
+Callback setters without `out_error` require valid handles. Pass `NULL` as the callback to unregister it. Notification subscriptions and advanced Dongl pairing setters are fallible and retain `out_error`.
+
+## Data types and ownership
+
+| Result | Release with |
+| --- | --- |
+| Allocated identifiers, addresses, read buffers, and local characteristic values | `simpleble_free(pointer)` |
+| Error object | `simpleble_error_release(&error)` |
+| Backend, adapter, or remote peripheral handle | The matching `simpleble_*_release_handle(handle)` |
+| Local peripheral, service, or characteristic handle | The matching `simpleble_local_*_release_handle(handle)` |
+| Service snapshot, including its payload, characteristics, and descriptors | `simpleble_service_release(&service)` |
+| Manufacturer data snapshot | `simpleble_manufacturer_data_release(&data)` |
+
+Service and manufacturer structs use allocated arrays with lengths/counts. Empty arrays have a zero count and a `NULL` pointer. Their release functions free the contents and zero the caller-owned struct. Release a result before filling the same struct again. Characteristics and descriptors inside a service belong to that service; copying a struct does not duplicate its allocations.
+
+`simpleble_uuid_t` remains a value type containing `char value[37]`: space for a UUID string and its NUL terminator. Remote characteristic capabilities are the five `can_*` boolean fields. Local characteristic capabilities use the `SIMPLEBLE_LOCAL_CHARACTERISTIC_*` bit flags combined with `|`.
+
+Error messages, version strings, native pointers, and callback payloads are borrowed. Scan-found and scan-updated callbacks are the exception for handles: each call transfers an owned peripheral handle that the application must release. Other callback handles refer to the object used for registration.
 
 <ApiSection title="General" id="general">
 
-## Memory Management [#memory-management] [toc]
+## General [#general-functions] [toc]
 
-<ApiClass name="General Functions">
+<ApiClass name="simplecble.h">
 
 <ApiMethod
-  signature="void simpleble_free(void* handle)"
-  brief="Frees memory allocated by the library."
-  detailed="This function must be used to free strings (char*) and other auxiliary memory returned by the library. Do NOT use it to free adapter or peripheral handles."
-  parameters={[{"name":"handle","type":"void*"}]}
+  signature={"void simpleble_free(void* handle)"}
+  brief={"Wrapper around free() to allow memory to be cleared within the library."}
+  parameters={[{"name": "handle", "type": "void*", "description": ""}]}
+/>
+
+</ApiClass>
+
+<ApiClass name="utils.h">
+
+<ApiMethod
+  signature={"simpleble_os_t simpleble_get_operating_system(void)"}
+  detailed={"Returns: A simpleble_os_t value representing the current operating system."}
 />
 
 <ApiMethod
-  signature="simpleble_os_t simpleble_get_operating_system(void)"
-  brief="Returns the operating system SimpleBLE is running on."
+  signature={"const char* simpleble_get_version(void)"}
+  detailed={"Returns: A const char pointer to the version string."}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Errors" id="errors">
+
+## Errors [#errors-functions] [toc]
+
+`simpleble_err_t` classifies failures; test the error pointer for success.
+
+| Code | Meaning |
+| --- | --- |
+| `SIMPLEBLE_ERROR_INVALID_ARGUMENT` | A required argument is NULL or otherwise invalid. |
+| `SIMPLEBLE_ERROR_OUT_OF_MEMORY` | Memory allocation failed during an operation. |
+| `SIMPLEBLE_ERROR_OBJECT_NOT_INITIALIZED` | A SimpleBLE object has not been initialized. |
+| `SIMPLEBLE_ERROR_INVALID_BACKEND_REFERENCE` | An internal object reference cannot be resolved. |
+| `SIMPLEBLE_ERROR_PERIPHERAL_NOT_CONNECTED` | A GATT read, write, subscription, or unsubscription requires a connected peripheral. |
+| `SIMPLEBLE_ERROR_GATT_SERVICE_NOT_FOUND` | The requested service UUID is absent from the discovered GATT services. |
+| `SIMPLEBLE_ERROR_GATT_CHARACTERISTIC_NOT_FOUND` | The requested characteristic UUID is absent from the selected GATT service. |
+| `SIMPLEBLE_ERROR_GATT_DESCRIPTOR_NOT_FOUND` | The requested descriptor UUID is absent from the selected GATT characteristic. |
+| `SIMPLEBLE_ERROR_OPERATION_NOT_SUPPORTED` | The requested operation is not supported by the adapter or characteristic, or is unavailable in the library implementation. |
+| `SIMPLEBLE_ERROR_OPERATION_FAILED` | An operation failed without a more specific exception classification. |
+| `SIMPLEBLE_ERROR_WINRT_ACCESS_DENIED` | Retrieving a WinRT asynchronous result raised hresult_access_denied. |
+| `SIMPLEBLE_ERROR_WINRT_EXCEPTION` | Retrieving a WinRT asynchronous result raised another hresult_error. |
+| `SIMPLEBLE_ERROR_CORE_BLUETOOTH_EXCEPTION` | A CoreBluetoothException containing a diagnostic message. |
+| `SIMPLEBLE_ERROR_UNCLASSIFIED_EXCEPTION` | An exception has no dedicated error classification. |
+
+<ApiClass name="error.h">
+
+<ApiMethod
+  signature={"simpleble_err_t simpleble_error_code(const simpleble_error_t* error)"}
+  brief={"Retrieves the code identifying the stored exception or binding error."}
+  detailed={"Returns: The error code."}
+  parameters={[{"name": "error", "type": "const simpleble_error_t*", "description": "Valid, non-NULL error to inspect."}]}
 />
 
 <ApiMethod
-  signature="const char* simpleble_get_version(void)"
-  brief="Returns the SimpleBLE version string."
+  signature={"const char* simpleble_error_message(const simpleble_error_t* error)"}
+  brief={"Retrieves the error message."}
+  detailed={"Returns: Borrowed, NUL-terminated text."}
+  notes={[{"content": "The text remains valid until the error is released, either explicitly or by the next call using the same error variable.", "type": "info"}]}
+  parameters={[{"name": "error", "type": "const simpleble_error_t*", "description": "Valid, non-NULL error to inspect."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_error_release(simpleble_error_t** error)"}
+  brief={"Releases an error and its diagnostic data, then sets the handle to NULL."}
+  notes={[{"content": "Use this function instead of simpleble_free().", "type": "info"}]}
+  parameters={[{"name": "error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Backends" id="backends">
+
+## Backends [#backends-functions] [toc]
+
+<ApiClass name="backend.h">
+
+<ApiMethod
+  signature={"size_t simpleble_backend_get_count(simpleble_error_t** out_error)"}
+  brief={"Counts the available backends, initializing them as needed."}
+  detailed={"Returns: The number of available backends, or zero on failure."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_backend_t simpleble_backend_get_handle(size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the backend at the specified index."}
+  detailed={"Returns: An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle()."}
+  parameters={[{"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_backend_release_handle(simpleble_backend_t handle)"}
+  brief={"Releases an owned backend handle."}
+  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"char* simpleble_backend_identifier(simpleble_backend_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the backend identifier."}
+  detailed={"Returns: An allocated, NUL-terminated identifier, or NULL on failure. Release with simpleble_free()."}
+  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_backend_is_bluetooth_enabled(simpleble_backend_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether Bluetooth is enabled for the backend."}
+  detailed={"Returns: true if Bluetooth is enabled; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_backend_get_adapters_count(simpleble_backend_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the available adapters belonging to the backend."}
+  detailed={"Returns: The number of available adapters, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_adapter_t simpleble_backend_get_adapters_handle(simpleble_backend_t handle, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned adapter handle from the backend."}
+  detailed={"Returns: An owned adapter handle, or NULL on failure. Release with simpleble_adapter_release_handle()."}
+  notes={[{"content": "The adapter handle remains valid after releasing the backend handle.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the backend's current adapter collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Adapters" id="adapters">
+
+## Adapters [#adapters-functions] [toc]
+
+<ApiClass name="adapter.h">
+
+<ApiMethod
+  signature={"bool simpleble_adapter_is_bluetooth_enabled(simpleble_error_t** out_error)"}
+  brief={"Checks whether Bluetooth is enabled."}
+  detailed={"Returns: true if Bluetooth is enabled; false otherwise or on failure."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_adapter_get_count(simpleble_error_t** out_error)"}
+  brief={"Counts the available Bluetooth adapters."}
+  detailed={"Returns: The number of available adapters, or zero on failure."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_adapter_t simpleble_adapter_get_handle(size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the adapter at the specified index."}
+  detailed={"Returns: An owned adapter handle, or NULL on failure. Release with simpleble_adapter_release_handle()."}
+  parameters={[{"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_release_handle(simpleble_adapter_t handle)"}
+  brief={"Releases an owned adapter handle."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"void* simpleble_adapter_underlying(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the underlying OS object or handle."}
+  detailed={"Returns: The borrowed OS object or handle, or NULL if unavailable or on failure. Do not free it."}
+  notes={[{"content": "The native object type and its availability depend on the backend.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"char* simpleble_adapter_identifier(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the adapter identifier."}
+  detailed={"Returns: An allocated, NUL-terminated identifier, or NULL on failure. Release with simpleble_free()."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"char* simpleble_adapter_address(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the adapter address."}
+  detailed={"Returns: An allocated, NUL-terminated address, or NULL on failure. Release with simpleble_free()."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_power_on(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Requests that the adapter be powered on."}
+  notes={[{"content": "Power control is backend-dependent; unsupported backends may do nothing.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_power_off(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Requests that the adapter be powered off."}
+  notes={[{"content": "Power control is backend-dependent; unsupported backends may do nothing.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_adapter_is_powered(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the adapter is powered on."}
+  detailed={"Returns: true if the adapter is powered on; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_set_callback_on_power_on( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when the adapter powers on."}
+  notes={[{"content": "The callback receives the registered adapter handle and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t adapter, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_set_callback_on_power_off( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when the adapter powers off."}
+  notes={[{"content": "The callback receives the registered adapter handle and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t adapter, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_scan_start(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Starts scanning for peripherals."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_scan_stop(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Stops scanning for peripherals."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_adapter_scan_is_active(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the adapter is scanning."}
+  detailed={"Returns: true if scanning is active; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms, simpleble_error_t** out_error)"}
+  brief={"Scans for peripherals for the specified duration."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "timeout_ms", "type": "int", "description": "Nonnegative scan duration in milliseconds."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the scan results reported by the adapter."}
+  detailed={"Returns: The number of scan results, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned peripheral handle from the scan results."}
+  detailed={"Returns: An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the paired peripherals reported by the adapter."}
+  detailed={"Returns: The number of paired peripherals, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned peripheral handle from the paired peripherals."}
+  detailed={"Returns: An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the connected peripherals reported by the adapter."}
+  detailed={"Returns: The number of connected peripherals, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle( simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned peripheral handle from the connected peripherals."}
+  detailed={"Returns: An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_set_callback_on_scan_start( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when scanning starts."}
+  notes={[{"content": "The callback receives the registered adapter handle and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t adapter, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_set_callback_on_scan_stop( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when scanning stops."}
+  notes={[{"content": "The callback receives the registered adapter handle and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t adapter, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_set_callback_on_scan_updated( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when a previously discovered peripheral is updated."}
+  notes={[{"content": "Each callback transfers a newly allocated peripheral handle to the caller. Release it with simpleble_peripheral_release_handle(). The adapter handle is borrowed.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_set_callback_on_scan_found( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when a peripheral is discovered."}
+  notes={[{"content": "Each callback transfers a newly allocated peripheral handle to the caller. Release it with simpleble_peripheral_release_handle(). The adapter handle is borrowed.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_local_peripheral_t simpleble_adapter_create_local_peripheral(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
+  brief={"Creates a local BLE peripheral host."}
+  detailed={"Returns: An owned local peripheral handle, or NULL on failure. Release with simpleble_local_peripheral_release_handle()."}
+  notes={[{"content": "Configure its GATT services and advertised UUIDs before starting it. Stop it before releasing the handle.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Peripherals and returned data" id="peripherals">
+
+## Peripherals and returned data [#peripherals-functions] [toc]
+
+<ApiClass name="peripheral.h">
+
+<ApiMethod
+  signature={"void simpleble_peripheral_release_handle(simpleble_peripheral_t handle)"}
+  brief={"Releases an owned peripheral handle."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"void* simpleble_peripheral_underlying(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the underlying OS object or handle."}
+  detailed={"Returns: The borrowed OS object or handle, or NULL if unavailable or on failure. Do not free it."}
+  notes={[{"content": "The native object type and its availability depend on the backend.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"char* simpleble_peripheral_identifier(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the peripheral identifier."}
+  detailed={"Returns: An allocated, NUL-terminated identifier, or NULL on failure. Release with simpleble_free()."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"char* simpleble_peripheral_address(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the peripheral address."}
+  detailed={"Returns: An allocated, NUL-terminated address, or NULL on failure. Release with simpleble_free()."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_address_type_t simpleble_peripheral_address_type(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the peripheral address type."}
+  detailed={"Returns: The address type, or SIMPLEBLE_ADDRESS_TYPE_UNSPECIFIED if unknown or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"int16_t simpleble_peripheral_rssi(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the received signal strength."}
+  detailed={"Returns: The RSSI in dBm, or INT16_MIN if unavailable or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"int16_t simpleble_peripheral_tx_power(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the advertised transmit power."}
+  detailed={"Returns: The advertised transmit power in dBm, or INT16_MIN if unavailable or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"uint16_t simpleble_peripheral_mtu(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the MTU reported by the backend."}
+  detailed={"Returns: The MTU in bytes reported by the backend, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_connect(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Connects to the peripheral."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_disconnect(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Disconnects from the peripheral."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_peripheral_is_connected(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the peripheral is connected."}
+  detailed={"Returns: true if the peripheral is connected; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_peripheral_is_connectable(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the peripheral is connectable."}
+  detailed={"Returns: true if the peripheral is connectable; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_peripheral_is_paired(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the peripheral is paired."}
+  detailed={"Returns: true if the peripheral is paired; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_unpair(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Removes the pairing with the peripheral."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the services reported by the peripheral."}
+  detailed={"Returns: The number of services, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index, simpleble_service_t* out_service, simpleble_error_t** out_error)"}
+  brief={"Retrieves the service at the specified index."}
+  notes={[{"content": "Initialize the output to zero and release its contents before reusing it. Empty arrays have a zero length or count and a NULL pointer.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_service", "type": "simpleble_service_t*", "description": "Required caller-owned storage for one service. The library allocates its contents."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_service_release(simpleble_service_t* service)"}
+  brief={"Releases a service's payload, characteristics, and descriptors, then zeroes the struct."}
+  notes={[{"content": "The caller owns the struct itself. Its arrays must not be released separately.", "type": "info"}]}
+  parameters={[{"name": "service", "type": "simpleble_service_t*", "description": "A returned or zero-initialized service, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the manufacturer data entries reported by the peripheral."}
+  detailed={"Returns: The number of manufacturer data entries, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index, simpleble_manufacturer_data_t* out_data, simpleble_error_t** out_error)"}
+  brief={"Retrieves the manufacturer data entry at the specified index."}
+  notes={[{"content": "Initialize the output to zero and release its contents before reusing it. An empty payload has a zero length and a NULL pointer.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_data", "type": "simpleble_manufacturer_data_t*", "description": "Required caller-owned storage for one entry. The library allocates its payload."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_manufacturer_data_release(simpleble_manufacturer_data_t* data)"}
+  brief={"Releases a manufacturer payload, then zeroes the struct."}
+  notes={[{"content": "The caller owns the struct itself. Its payload must not be released separately.", "type": "info"}]}
+  parameters={[{"name": "data", "type": "simpleble_manufacturer_data_t*", "description": "A returned or zero-initialized entry, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"uint8_t* simpleble_peripheral_read(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, size_t* data_length, simpleble_error_t** out_error)"}
+  brief={"Reads a characteristic value."}
+  detailed={"Returns: An allocated byte buffer, or NULL. Release the returned buffer with simpleble_free()."}
+  notes={[{"content": "For an empty value, *data_length is zero and the returned pointer may be NULL.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "data_length", "type": "size_t*", "description": "Required output for the number of bytes read."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_write_request(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, simpleble_error_t** out_error)"}
+  brief={"Writes a characteristic value with a response."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "data", "type": "const uint8_t*", "description": "Bytes to write; must be non-NULL, even when data_length is zero."}, {"name": "data_length", "type": "size_t", "description": "Number of readable bytes in data to write."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_write_command(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, simpleble_error_t** out_error)"}
+  brief={"Writes a characteristic value without a response."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "data", "type": "const uint8_t*", "description": "Bytes to write; must be non-NULL, even when data_length is zero."}, {"name": "data_length", "type": "size_t", "description": "Number of readable bytes in data to write."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_notify( simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, void (*callback)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Subscribes to characteristic notifications."}
+  notes={[{"content": "The callback data buffer is borrowed and valid only during the callback. The callback receives the registered peripheral handle, UUIDs, and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "callback", "type": "void (*)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata)", "description": "Non-NULL callback to register."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_indicate( simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, void (*callback)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Subscribes to characteristic indications."}
+  notes={[{"content": "The callback data buffer is borrowed and valid only during the callback. The callback receives the registered peripheral handle, UUIDs, and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "callback", "type": "void (*)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata)", "description": "Non-NULL callback to register."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_unsubscribe(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, simpleble_error_t** out_error)"}
+  brief={"Unsubscribes from characteristic notifications or indications."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"uint8_t* simpleble_peripheral_read_descriptor(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, simpleble_uuid_t descriptor, size_t* data_length, simpleble_error_t** out_error)"}
+  brief={"Reads a descriptor value."}
+  detailed={"Returns: An allocated byte buffer, or NULL. Release the returned buffer with simpleble_free()."}
+  notes={[{"content": "For an empty value, *data_length is zero and the returned pointer may be NULL.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "descriptor", "type": "simpleble_uuid_t", "description": "Descriptor UUID, NUL-terminated within its value array."}, {"name": "data_length", "type": "size_t*", "description": "Required output for the number of bytes read."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_write_descriptor(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, simpleble_uuid_t descriptor, const uint8_t* data, size_t data_length, simpleble_error_t** out_error)"}
+  brief={"Writes a descriptor value."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "Service UUID, NUL-terminated within its value array."}, {"name": "characteristic", "type": "simpleble_uuid_t", "description": "Characteristic UUID, NUL-terminated within its value array."}, {"name": "descriptor", "type": "simpleble_uuid_t", "description": "Descriptor UUID, NUL-terminated within its value array."}, {"name": "data", "type": "const uint8_t*", "description": "Bytes to write; must be non-NULL, even when data_length is zero."}, {"name": "data_length", "type": "size_t", "description": "Number of readable bytes in data to write."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_set_callback_on_connected( simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t peripheral, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when the peripheral connects."}
+  notes={[{"content": "The callback receives the registered peripheral handle and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "callback", "type": "void (*)(simpleble_peripheral_t peripheral, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_set_callback_on_disconnected( simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t peripheral, void* userdata), void* userdata)"}
+  brief={"Registers a callback invoked when the peripheral disconnects."}
+  notes={[{"content": "The callback receives the registered peripheral handle and userdata.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "callback", "type": "void (*)(simpleble_peripheral_t peripheral, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Local peripheral hosting" id="local-peripheral">
+
+## Local peripheral hosting [#local-peripheral-functions] [toc]
+
+<ApiClass name="local/peripheral.h">
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_release_handle(simpleble_local_peripheral_t handle)"}
+  brief={"Releases an owned local peripheral handle."}
+  notes={[{"content": "Clear callbacks registered with this handle before releasing it.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"void* simpleble_local_peripheral_underlying(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the underlying OS object or handle."}
+  detailed={"Returns: A borrowed native handle, or NULL if unavailable or on failure. Do not free it."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_add_advertised_service(simpleble_local_peripheral_t handle, simpleble_uuid_t service, simpleble_error_t** out_error)"}
+  brief={"Adds a service UUID to the advertisement."}
+  notes={[{"content": "Configure advertised services before starting the peripheral.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "service", "type": "simpleble_uuid_t", "description": "NUL-terminated service UUID."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_local_service_t simpleble_local_peripheral_add_service(simpleble_local_peripheral_t handle, simpleble_uuid_t uuid, simpleble_error_t** out_error)"}
+  brief={"Adds a primary local GATT service."}
+  detailed={"Returns: An owned service handle, or NULL on failure. Release with simpleble_local_service_release_handle()."}
+  notes={[{"content": "Configure services before starting the peripheral.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "uuid", "type": "simpleble_uuid_t", "description": "NUL-terminated service UUID."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_local_peripheral_services_count(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the local services."}
+  detailed={"Returns: The number of entries, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_local_service_t simpleble_local_peripheral_services_get(simpleble_local_peripheral_t handle, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains a local service handle at the specified index."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_service_release_handle()."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_remove_all_services(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Removes all local GATT services before starting the peripheral."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_start(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Publishes the configured services and starts advertising."}
+  notes={[{"content": "Configure services, characteristics, and advertised UUIDs before calling start().", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_stop(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Stops the local peripheral."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_local_peripheral_is_started(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the local peripheral is started."}
+  detailed={"Returns: true if active; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_local_peripheral_is_advertising(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
+  brief={"Checks whether the local peripheral is advertising."}
+  detailed={"Returns: true if active; false otherwise or on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_set_callback_on_client_connected( simpleble_local_peripheral_t handle, void (*callback)(simpleble_local_peripheral_t handle, const char* client_address, void* userdata), void* userdata)"}
+  brief={"Sets or clears the client connected callback."}
+  notes={[{"content": "The client address is borrowed for the callback duration and may be a platform-specific identifier.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "callback", "type": "void (*)(simpleble_local_peripheral_t handle, const char* client_address, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_set_callback_on_client_disconnected( simpleble_local_peripheral_t handle, void (*callback)(simpleble_local_peripheral_t handle, const char* client_address, void* userdata), void* userdata)"}
+  brief={"Sets or clears the client disconnected callback."}
+  notes={[{"content": "The client address is borrowed for the callback duration and may be a platform-specific identifier.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "callback", "type": "void (*)(simpleble_local_peripheral_t handle, const char* client_address, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Local services" id="local-service">
+
+## Local services [#local-service-functions] [toc]
+
+<ApiClass name="local/service.h">
+
+<ApiMethod
+  signature={"void simpleble_local_service_release_handle(simpleble_local_service_t handle)"}
+  brief={"Releases an owned local service handle."}
+  notes={[{"content": "Clear callbacks registered with this handle before releasing it.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_local_service_characteristics_count(simpleble_local_service_t handle, simpleble_error_t** out_error)"}
+  brief={"Counts the local characteristics."}
+  detailed={"Returns: The number of entries, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_local_characteristic_t simpleble_local_service_characteristics_get( simpleble_local_service_t handle, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains a local characteristic handle at the specified index."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_characteristic_release_handle()."}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_service_uuid(simpleble_local_service_t handle, simpleble_uuid_t* out_uuid, simpleble_error_t** out_error)"}
+  brief={"Retrieves the local service UUID."}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "out_uuid", "type": "simpleble_uuid_t*", "description": "Required storage for the NUL-terminated UUID."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_local_characteristic_t simpleble_local_service_add_characteristic( simpleble_local_service_t handle, simpleble_uuid_t uuid, uint32_t capabilities, simpleble_error_t** out_error)"}
+  brief={"Adds a characteristic to the local service."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_characteristic_release_handle()."}
+  notes={[{"content": "Add characteristics before starting the local peripheral.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "uuid", "type": "simpleble_uuid_t", "description": "NUL-terminated characteristic UUID."}, {"name": "capabilities", "type": "uint32_t", "description": "Bitwise OR of simpleble_local_characteristic_capability_t values."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Local characteristics" id="local-characteristic">
+
+## Local characteristics [#local-characteristic-functions] [toc]
+
+<ApiClass name="local/characteristic.h">
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_release_handle(simpleble_local_characteristic_t handle)"}
+  brief={"Releases an owned local characteristic handle."}
+  notes={[{"content": "Clear callbacks registered with this handle before releasing it.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_uuid(simpleble_local_characteristic_t handle, simpleble_uuid_t* out_uuid, simpleble_error_t** out_error)"}
+  brief={"Retrieves the local characteristic UUID."}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "out_uuid", "type": "simpleble_uuid_t*", "description": "Required storage for the NUL-terminated UUID."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"uint32_t simpleble_local_characteristic_capabilities(simpleble_local_characteristic_t handle, simpleble_error_t** out_error)"}
+  brief={"Retrieves the local characteristic capabilities."}
+  detailed={"Returns: A bitwise OR of simpleble_local_characteristic_capability_t values, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"uint8_t* simpleble_local_characteristic_value(simpleble_local_characteristic_t handle, size_t* data_length, simpleble_error_t** out_error)"}
+  brief={"Copies the current local characteristic value."}
+  detailed={"Returns: An allocated buffer, or NULL for an empty value or on failure. Release with simpleble_free()."}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "data_length", "type": "size_t*", "description": "Required output for the number of bytes returned."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_set_value(simpleble_local_characteristic_t handle, const uint8_t* data, size_t data_length, simpleble_error_t** out_error)"}
+  brief={"Updates the current local characteristic value."}
+  notes={[{"content": "For NOTIFY or INDICATE characteristics, publishes the value to subscribers on a best-effort basis.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "data", "type": "const uint8_t*", "description": "Bytes to copy; may be NULL when data_length is zero."}, {"name": "data_length", "type": "size_t", "description": "Number of bytes to copy."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_set_callback_on_read( simpleble_local_characteristic_t handle, const uint8_t* (*callback)(simpleble_local_characteristic_t handle, size_t* data_length, void* userdata), void* userdata)"}
+  brief={"Sets or clears the callback that supplies a dynamic read value."}
+  notes={[{"content": "Set *data_length and return a borrowed buffer, or return NULL for an empty value. The buffer is copied after the callback returns; keep it valid and unchanged until the next read callback or until the callback is cleared. Do not return a pointer to stack storage.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "callback", "type": "const uint8_t* (*)(simpleble_local_characteristic_t handle, size_t* data_length, void* userdata)", "description": "Callback to register, or NULL to use the stored value."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_set_callback_on_write( simpleble_local_characteristic_t handle, void (*callback)(simpleble_local_characteristic_t handle, const uint8_t* data, size_t data_length, void* userdata), void* userdata)"}
+  brief={"Sets or clears the callback invoked after a client writes a value."}
+  notes={[{"content": "Data is borrowed for the callback duration. The stored value is updated before the callback runs.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "callback", "type": "void (*)(simpleble_local_characteristic_t handle, const uint8_t* data, size_t data_length, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_set_callback_on_subscribed( simpleble_local_characteristic_t handle, void (*callback)(simpleble_local_characteristic_t handle, void* userdata), void* userdata)"}
+  brief={"Sets or clears the callback invoked when the first client subscribes."}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "callback", "type": "void (*)(simpleble_local_characteristic_t handle, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_set_callback_on_unsubscribed( simpleble_local_characteristic_t handle, void (*callback)(simpleble_local_characteristic_t handle, void* userdata), void* userdata)"}
+  brief={"Sets or clears the callback invoked when the last client unsubscribes."}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Valid, non-NULL local characteristic handle."}, {"name": "callback", "type": "void (*)(simpleble_local_characteristic_t handle, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}]}
+/>
+
+</ApiClass>
+
+</ApiSection>
+
+<ApiSection title="Advanced APIs" id="advanced">
+
+## Advanced APIs [#advanced-functions] [toc]
+
+Dongl functions require a Dongl peripheral. The macOS, iOS, Linux, and Android functions are provided by their corresponding native backend builds; Plain has no native advanced implementations. Apple cached-peripheral lookup accepts one identifier and returns an owned handle, or `NULL` without an error when no match is found.
+
+<ApiClass name="advanced.h">
+
+<ApiMethod
+  signature={"void simpleble_advanced_dongl_set_passkey_request_callback( simpleble_peripheral_t handle, bool (*callback)(simpleble_peripheral_t handle, char passkey[7], void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Dongl passkey-entry callback."}
+  notes={[{"content": "Before connecting, register a callback that writes six decimal digits plus a NUL terminator into passkey and returns true. Return false to reject pairing. Leading zeroes must be preserved.", "type": "info"}, {"content": "Callbacks run on an internal worker thread. Entry and comparison callbacks may block for user input. A missing callback rejects entry/comparison requests. A non-Dongl handle reports OPERATION_NOT_SUPPORTED.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "callback", "type": "bool (*)(simpleble_peripheral_t handle, char passkey[7], void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_dongl_set_passkey_display_callback( simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t handle, const char* passkey, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Dongl passkey-display callback."}
+  notes={[{"content": "Register before connecting. The passkey is a borrowed, NUL-terminated string of six decimal digits, valid during the callback. Display it without removing leading zeroes.", "type": "info"}, {"content": "Callbacks run on an internal worker thread. Entry and comparison callbacks may block for user input. A missing callback rejects entry/comparison requests. A non-Dongl handle reports OPERATION_NOT_SUPPORTED.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "callback", "type": "void (*)(simpleble_peripheral_t handle, const char* passkey, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_dongl_set_numeric_comparison_callback( simpleble_peripheral_t handle, bool (*callback)(simpleble_peripheral_t handle, const char* passkey, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Dongl numeric-comparison callback."}
+  notes={[{"content": "Register before connecting. The passkey is a borrowed, NUL-terminated string of six decimal digits, valid during the callback. Return true only after the user confirms the same number on the peer.", "type": "info"}, {"content": "Callbacks run on an internal worker thread. Entry and comparison callbacks may block for user input. A missing callback rejects entry/comparison requests. A non-Dongl handle reports OPERATION_NOT_SUPPORTED.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "callback", "type": "bool (*)(simpleble_peripheral_t handle, const char* passkey, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_macos_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the advertised local name."}
+  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "local_name", "type": "const char*", "description": "NUL-terminated name, or NULL to remove the override."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_peripheral_t simpleble_advanced_macos_retrieve_cached_peripheral( simpleble_adapter_t handle, const char* identifier, simpleble_error_t** out_error)"}
+  brief={"Retrieves one peripheral from the CoreBluetooth system cache."}
+  detailed={"Returns: An owned peripheral handle, or NULL if not found or on failure. Release with simpleble_peripheral_release_handle()."}
+  notes={[{"content": "Requires a powered-on adapter. Does not scan or establish reachability. Invalid or unknown identifiers return NULL without an error.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "identifier", "type": "const char*", "description": "NUL-terminated CoreBluetooth peripheral identifier."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_ios_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the advertised local name."}
+  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "local_name", "type": "const char*", "description": "NUL-terminated name, or NULL to remove the override."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_peripheral_t simpleble_advanced_ios_retrieve_cached_peripheral( simpleble_adapter_t handle, const char* identifier, simpleble_error_t** out_error)"}
+  brief={"Retrieves one peripheral from the CoreBluetooth system cache."}
+  detailed={"Returns: An owned peripheral handle, or NULL if not found or on failure. Release with simpleble_peripheral_release_handle()."}
+  notes={[{"content": "Requires a powered-on adapter. Does not scan or establish reachability. Invalid or unknown identifiers return NULL without an error.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "identifier", "type": "const char*", "description": "NUL-terminated CoreBluetooth peripheral identifier."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_linux_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the advertised local name."}
+  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "local_name", "type": "const char*", "description": "NUL-terminated name, or NULL to remove the override."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"JavaVM* simpleble_advanced_android_get_jvm(simpleble_error_t** out_error)"}
+  brief={"Retrieves the configured Android Java VM."}
+  detailed={"Returns: The borrowed Java VM pointer, or NULL on failure, including when no VM is configured."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_android_set_jvm(JavaVM* jvm, simpleble_error_t** out_error)"}
+  brief={"Sets the Java VM used by the Android backend."}
+  notes={[{"content": "Setting a different VM after one has already been configured reports an error.", "type": "info"}]}
+  parameters={[{"name": "jvm", "type": "JavaVM*", "description": "Non-NULL Java VM pointer to use."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_android_set_context(jobject context, simpleble_error_t** out_error)"}
+  brief={"Sets the application context used to host Android GATT services."}
+  notes={[{"content": "Configure before creating a local peripheral. Use an application context, not an Activity.", "type": "info"}]}
+  parameters={[{"name": "context", "type": "jobject", "description": "Non-NULL application context; SimpleBLE retains a global reference."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 </ApiClass>
@@ -36,158 +890,133 @@ The SimpleCBLE API provides a C-compatible interface for SimpleBLE. It relies on
 
 <ApiSection title="Configuration" id="configuration">
 
-## Configuration [#configuration] [toc]
+## Configuration [#configuration-functions] [toc]
 
-All configuration values must be set before calling adapter functions such as `simpleble_adapter_get_count` or `simpleble_adapter_get_handle`.
+Set configuration before the first backend or adapter enumeration. These settings and logging functions do not use error objects.
 
-<ApiClass name="Configuration Functions">
+<ApiClass name="config.h">
 
 <ApiMethod
-  signature="void simpleble_config_reset_all(void)"
-  brief="Reset every SimpleBLE configuration value to its default."
+  signature={"void simpleble_config_reset_all(void)"}
+  brief={"Reset all SimpleBLE configuration values to their defaults."}
+  notes={[{"content": "Configuration values must be set before any adapter handles are retrieved.", "type": "info"}]}
 />
 
 <ApiMethod
-  signature="void simpleble_config_simplebluez_reset(void)"
-  brief="Reset Linux BlueZ configuration values to their defaults."
+  signature={"void simpleble_config_simplebluez_reset(void)"}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_simplebluez_get_use_system_bus(void)"
-  brief="Get whether the Linux BlueZ backend uses the system bus."
+  signature={"bool simpleble_config_simplebluez_get_use_system_bus(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_simplebluez_set_use_system_bus(bool enabled)"
-  brief="Set whether the Linux BlueZ backend uses the system bus."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_simplebluez_set_use_system_bus(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod
-  signature="int64_t simpleble_config_simplebluez_get_connection_timeout_ms(void)"
-  brief="Get the Linux connection timeout in milliseconds."
+  signature={"int64_t simpleble_config_simplebluez_get_connection_timeout_ms(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_simplebluez_set_connection_timeout_ms(int64_t timeout_ms)"
-  brief="Set the Linux connection timeout in milliseconds."
-  parameters={[{"name":"timeout_ms","type":"int64_t"}]}
+  signature={"void simpleble_config_simplebluez_set_connection_timeout_ms(int64_t timeout_ms)"}
+  parameters={[{"name": "timeout_ms", "type": "int64_t", "description": ""}]}
 />
 
 <ApiMethod
-  signature="int64_t simpleble_config_simplebluez_get_disconnection_timeout_ms(void)"
-  brief="Get the Linux disconnection timeout in milliseconds."
+  signature={"int64_t simpleble_config_simplebluez_get_disconnection_timeout_ms(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_ms)"
-  brief="Set the Linux disconnection timeout in milliseconds."
-  parameters={[{"name":"timeout_ms","type":"int64_t"}]}
+  signature={"void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_ms)"}
+  parameters={[{"name": "timeout_ms", "type": "int64_t", "description": ""}]}
 />
 
 <ApiMethod
-  signature="void simpleble_config_winrt_reset(void)"
-  brief="Reset WinRT configuration values to their defaults."
+  signature={"void simpleble_config_winrt_reset(void)"}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_winrt_get_experimental_use_own_mta_apartment(void)"
-  brief="Deprecated. Get whether SimpleBLE uses its own WinRT MTA apartment; this is now the default behavior."
+  signature={"bool simpleble_config_winrt_get_experimental_use_own_mta_apartment(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_winrt_set_experimental_use_own_mta_apartment(bool enabled)"
-  brief="Deprecated. Set whether SimpleBLE uses its own WinRT MTA apartment; this is now the default behavior."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_winrt_set_experimental_use_own_mta_apartment(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread(void)"
-  brief="Get whether SimpleBLE reinitializes the WinRT apartment on the main thread."
+  signature={"bool simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread(bool enabled)"
-  brief="Set whether SimpleBLE reinitializes the WinRT apartment on the main thread."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread( bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_winrt_get_use_deferred_disconnect(void)"
-  brief="Get whether WinRT deferred disconnect is enabled."
+  signature={"bool simpleble_config_winrt_get_use_deferred_disconnect(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_winrt_set_use_deferred_disconnect(bool enabled)"
-  brief="Enable or disable WinRT deferred disconnect."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_winrt_set_use_deferred_disconnect(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod
-  signature="void simpleble_config_corebluetooth_reset(void)"
-  brief="Reset CoreBluetooth configuration values to their defaults."
+  signature={"void simpleble_config_corebluetooth_reset(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_android_reset(void)"
-  brief="Reset Android configuration values to their defaults."
+  signature={"void simpleble_config_android_reset(void)"}
 />
 
 <ApiMethod
-  signature="simpleble_config_android_connection_priority_t simpleble_config_android_get_connection_priority(void)"
-  brief="Get the Android connection priority request value."
+  signature={"simpleble_config_android_connection_priority_t simpleble_config_android_get_connection_priority(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_android_set_connection_priority(simpleble_config_android_connection_priority_t priority)"
-  brief="Set the Android connection priority request value."
-  detailed="Known values are disabled (-1), balanced (0), high (1), low power (2), and DCK (3)."
-  parameters={[{"name":"priority","type":"simpleble_config_android_connection_priority_t"}]}
+  signature={"void simpleble_config_android_set_connection_priority( simpleble_config_android_connection_priority_t priority)"}
+  parameters={[{"name": "priority", "type": "simpleble_config_android_connection_priority_t", "description": ""}]}
 />
 
 <ApiMethod
-  signature="void simpleble_config_set_android_connection_priority(int priority)"
-  brief="Set the Android connection priority request from a raw integer."
-  detailed="This helper is useful from FFI layers such as Unity P/Invoke. Use 1 for high priority."
-  parameters={[{"name":"priority","type":"int"}]}
+  signature={"void simpleble_config_set_android_connection_priority(int priority)"}
+  brief={"Set the Android connection priority request using the raw Android value."}
+  notes={[{"content": "This compatibility helper is intended for FFI users that marshal enums as integers. Known values are -1 (disabled), 0 (balanced), 1 (high), 2 (low power), and 3 (DCK).", "type": "info"}]}
+  parameters={[{"name": "priority", "type": "int", "description": ""}]}
 />
 
 <ApiMethod
-  signature="void simpleble_config_dongl_reset(void)"
-  brief="Reset SimpleBLE Dongl configuration values to their defaults."
+  signature={"void simpleble_config_dongl_reset(void)"}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_dongl_get_use_dongl_backend(void)"
-  brief="Get whether the Dongl backend is enabled."
+  signature={"bool simpleble_config_dongl_get_use_dongl_backend(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_dongl_set_use_dongl_backend(bool enabled)"
-  brief="Enable or disable the Dongl backend."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_dongl_set_use_dongl_backend(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_dongl_get_auto_update(void)"
-  brief="Get whether Dongl auto-update is enabled."
+  signature={"bool simpleble_config_dongl_get_auto_update(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_dongl_set_auto_update(bool enabled)"
-  brief="Enable or disable Dongl auto-update."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_dongl_set_auto_update(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod
-  signature="bool simpleble_config_dongl_get_force_update(void)"
-  brief="Get whether Dongl forced update is enabled."
+  signature={"bool simpleble_config_dongl_get_force_update(void)"}
 />
 
 <ApiMethod
-  signature="void simpleble_config_dongl_set_force_update(bool enabled)"
-  brief="Enable or disable Dongl forced update."
-  parameters={[{"name":"enabled","type":"bool"}]}
+  signature={"void simpleble_config_dongl_set_force_update(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 </ApiClass>
@@ -196,288 +1025,49 @@ All configuration values must be set before calling adapter functions such as `s
 
 <ApiSection title="Logging" id="logging">
 
-## Logging [#logging] [toc]
+## Logging [#logging-functions] [toc]
 
-<ApiClass name="Logging Functions">
+<ApiClass name="logging.h">
 
 <ApiMethod
-  signature="void simpleble_logging_set_level(simpleble_log_level_t level)"
-  brief="Set the SimpleBLE logging level."
-  parameters={[{"name":"level","type":"simpleble_log_level_t"}]}
+  signature={"void simpleble_logging_set_level(simpleble_log_level_t level)"}
+  brief={"Sets the logging verbosity level."}
+  parameters={[{"name": "level", "type": "simpleble_log_level_t", "description": "Logging level, from SIMPLEBLE_LOG_LEVEL_NONE through SIMPLEBLE_LOG_LEVEL_VERBOSE."}]}
 />
 
 <ApiMethod
-  signature="simpleble_log_level_t simpleble_logging_get_level(void)"
-  brief="Get the SimpleBLE logging level."
+  signature={"simpleble_log_level_t simpleble_logging_get_level(void)"}
+  brief={"Retrieves the logging verbosity level."}
+  detailed={"Returns: The current logging level."}
 />
 
 <ApiMethod
-  signature="void simpleble_logging_set_callback(simpleble_log_callback_t callback)"
-  brief="Set or clear the logging callback."
-  detailed="Pass NULL to clear the callback."
-  parameters={[{"name":"callback","type":"simpleble_log_callback_t"}]}
+  signature={"void simpleble_logging_set_callback(simpleble_log_callback_t callback)"}
+  brief={"Sets or clears the logging callback."}
+  notes={[{"content": "Callback strings are borrowed and valid only during the callback.", "type": "info"}]}
+  parameters={[{"name": "callback", "type": "simpleble_log_callback_t", "description": "Callback to install, or NULL to clear it."}]}
 />
 
 <ApiMethod
-  signature="bool simpleble_logging_has_callback(void)"
-  brief="Returns whether a logging callback is set."
+  signature={"bool simpleble_logging_has_callback(void)"}
+  brief={"Checks whether a logging callback is installed."}
+  detailed={"Returns: true if a logging callback is installed, otherwise false."}
 />
 
 <ApiMethod
-  signature="void simpleble_logging_log_default_stdout(void)"
-  brief="Use the default stdout logger."
+  signature={"void simpleble_logging_log_default_stdout(void)"}
+  brief={"Installs the default logging callback that writes to standard output."}
 />
 
 <ApiMethod
-  signature="void simpleble_logging_log_default_file(void)"
-  brief="Use the default file logger."
+  signature={"void simpleble_logging_log_default_file(void)"}
+  brief={"Installs the default logging callback that appends to a timestamp-named file."}
 />
 
 <ApiMethod
-  signature="void simpleble_logging_log_default_file_path(const char* path)"
-  brief="Use the default file logger with a custom path."
-  parameters={[{"name":"path","type":"const char*"}]}
-/>
-
-</ApiClass>
-
-</ApiSection>
-
-<ApiSection title="Adapter" id="adapter">
-
-## simpleble_adapter_t [#simpleble_adapter_t] [toc]
-
-<ApiClass name="simpleble_adapter_t" detailed="Handle representing a physical Bluetooth adapter. You must release this handle using `simpleble_adapter_release_handle` when done.">
-
-### Lifecycle and Info [!toc]
-
-<ApiMethod
-  signature="size_t simpleble_adapter_get_count(void)"
-  brief="Get the number of available adapters."
-/>
-
-<ApiMethod
-  signature="simpleble_adapter_t simpleble_adapter_get_handle(size_t index)"
-  brief="Get a handle to an adapter."
-  detailed="The returned handle must be released with `simpleble_adapter_release_handle`."
-  parameters={[{"name":"index","type":"size_t"}]}
-/>
-
-<ApiMethod
-  signature="void simpleble_adapter_release_handle(simpleble_adapter_t handle)"
-  brief="Release an adapter handle."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"}]}
-/>
-
-<ApiMethod
-  signature="bool simpleble_adapter_is_bluetooth_enabled(void)"
-  brief="Check if Bluetooth is enabled on the system."
-/>
-
-<ApiMethod
-  signature="char* simpleble_adapter_identifier(simpleble_adapter_t handle)"
-  brief="Get the adapter identifier."
-  detailed="The returned string must be freed with `simpleble_free`."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"}]}
-/>
-
-<ApiMethod
-  signature="char* simpleble_adapter_address(simpleble_adapter_t handle)"
-  brief="Get the adapter MAC address."
-  detailed="The returned string must be freed with `simpleble_free`."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"}]}
-/>
-
-### Scanning [!toc]
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_scan_start(simpleble_adapter_t handle)"
-  brief="Start scanning asynchronously."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_scan_stop(simpleble_adapter_t handle)"
-  brief="Stop scanning."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms)"
-  brief="Scan for a specific duration (blocking)."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"},{"name":"timeout_ms","type":"int"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_scan_is_active(simpleble_adapter_t handle, bool* active)"
-  brief="Check if scanning is active."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"},{"name":"active","type":"bool*"}]}
-/>
-
-<ApiMethod
-  signature="size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle)"
-  brief="Get the number of scan results."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle, size_t index)"
-  brief="Get a handle to a found peripheral."
-  detailed="The returned handle must be released with `simpleble_peripheral_release_handle`."
-  parameters={[{"name":"handle","type":"simpleble_adapter_t"},{"name":"index","type":"size_t"}]}
-/>
-
-### Callbacks [!toc]
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_set_callback_on_scan_start(simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata)"
-  brief="Set callback for scan start."
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_set_callback_on_scan_stop(simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata)"
-  brief="Set callback for scan stop."
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_set_callback_on_scan_found(simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata)"
-  brief="Set callback for peripheral found."
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_adapter_set_callback_on_scan_updated(simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata)"
-  brief="Set callback for peripheral updated."
-/>
-
-</ApiClass>
-
-</ApiSection>
-
-<ApiSection title="Peripheral" id="peripheral">
-
-## simpleble_peripheral_t [#simpleble_peripheral_t] [toc]
-
-<ApiClass name="simpleble_peripheral_t" detailed="Handle representing a remote Bluetooth device. You must release this handle using `simpleble_peripheral_release_handle` when done.">
-
-### Lifecycle and Info [!toc]
-
-<ApiMethod
-  signature="void simpleble_peripheral_release_handle(simpleble_peripheral_t handle)"
-  brief="Release a peripheral handle."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="char* simpleble_peripheral_identifier(simpleble_peripheral_t handle)"
-  brief="Get the peripheral identifier."
-  detailed="The returned string must be freed with `simpleble_free`."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="char* simpleble_peripheral_address(simpleble_peripheral_t handle)"
-  brief="Get the peripheral MAC address."
-  detailed="The returned string must be freed with `simpleble_free`."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="int16_t simpleble_peripheral_rssi(simpleble_peripheral_t handle)"
-  brief="Get the RSSI value."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-### Connection [!toc]
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_connect(simpleble_peripheral_t handle)"
-  brief="Connect to the peripheral."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_disconnect(simpleble_peripheral_t handle)"
-  brief="Disconnect from the peripheral."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_is_connected(simpleble_peripheral_t handle, bool* connected)"
-  brief="Check if connected."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"connected","type":"bool*"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_is_connectable(simpleble_peripheral_t handle, bool* connectable)"
-  brief="Check if connectable."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"connectable","type":"bool*"}]}
-/>
-
-### Services and Data [!toc]
-
-<ApiMethod
-  signature="size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle)"
-  brief="Get the number of services."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index, simpleble_service_t* service)"
-  brief="Get a service structure."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"index","type":"size_t"},{"name":"service","type":"simpleble_service_t*"}]}
-/>
-
-<ApiMethod
-  signature="size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle)"
-  brief="Get the count of manufacturer data fields."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index, simpleble_manufacturer_data_t* manufacturer_data)"
-  brief="Get manufacturer data."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"index","type":"size_t"},{"name":"manufacturer_data","type":"simpleble_manufacturer_data_t*"}]}
-/>
-
-### GATT Operations [!toc]
-
-The `service` and `characteristic` arguments are fixed-size `simpleble_uuid_t` structures passed by value. FFI bindings must model them as by-value structures, not as `char*` pointers.
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_read(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, uint8_t** data, size_t* data_length)"
-  brief="Read a characteristic."
-  detailed="The returned data buffer must be freed with `simpleble_free`."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"data","type":"uint8_t**"},{"name":"data_length","type":"size_t*"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_write_request(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length)"
-  brief="Write request (expecting response)."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"data","type":"const uint8_t*"},{"name":"data_length","type":"size_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_write_command(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length)"
-  brief="Write command (no response)."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"data","type":"const uint8_t*"},{"name":"data_length","type":"size_t"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_notify(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, void (*callback)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata), void* userdata)"
-  brief="Register for notifications."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"callback","type":"function"},{"name":"userdata","type":"void*"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_indicate(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, void (*callback)(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length, void* userdata), void* userdata)"
-  brief="Register for indications."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"},{"name":"callback","type":"function"},{"name":"userdata","type":"void*"}]}
-/>
-
-<ApiMethod
-  signature="simpleble_err_t simpleble_peripheral_unsubscribe(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic)"
-  brief="Unsubscribe from notifications/indications."
-  parameters={[{"name":"handle","type":"simpleble_peripheral_t"},{"name":"service","type":"simpleble_uuid_t"},{"name":"characteristic","type":"simpleble_uuid_t"}]}
+  signature={"void simpleble_logging_log_default_file_path(const char* path)"}
+  brief={"Installs the default logging callback that appends to the specified file."}
+  parameters={[{"name": "path", "type": "const char*", "description": "NUL-terminated file path, or NULL to use a timestamp-named file."}]}
 />
 
 </ApiClass>

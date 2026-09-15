@@ -1,95 +1,76 @@
 ---
 title: Usage
-description: Build and include SimpleCBLE in your C project.
+description: Build and include SimpleCBLE in your C or FFI project.
 ---
 
-SimpleCBLE is the C interface for SimpleBLE, allowing you to use the library in pure C environments or bind it to other languages.
+SimpleCBLE is the C interface to SimpleBLE. It supports pure C applications and bindings for other languages. Include `<simplecble/simplecble.h>` for the public API. Existing users should read the [migration guide](./migration) before updating their declarations and data layouts.
 
-## System Requirements
+## System requirements
 
-Since SimpleCBLE is a wrapper around SimpleBLE, it shares the same system requirements. Please refer to the [SimpleBLE Usage](../simpleble/usage#system-requirements) page for a detailed list of requirements for your operating system.
+SimpleCBLE shares the [SimpleBLE system requirements](../simpleble/usage#system-requirements). Building the library requires a C++ compiler, even when your application uses only C.
 
-## Building SimpleCBLE
+## Build SimpleCBLE
 
-SimpleCBLE is built as part of the SimpleBLE project using CMake.
+From the repository root:
 
 ```bash
-# Clone the repository (if you haven't already)
 git clone https://github.com/simpleble/simpleble.git
 cd simpleble
-
-# Build SimpleCBLE
-cmake -S simplecble -B build_simplecble
+cmake -S simplecble -B build_simplecble -DCMAKE_BUILD_TYPE=Release
 cmake --build build_simplecble
 ```
 
-This will produce the `simplecble` library (and `simpleble` which it depends on).
+This builds both `simplecble` and its `simpleble` dependency. Add `-DBUILD_SHARED_LIBS=ON` for shared libraries. `SIMPLEBLE_LOG_LEVEL` controls compiled logging verbosity; the default is `INFO`.
 
-### Build Options
-
-- `BUILD_SHARED_LIBS`: Set to `TRUE` to build shared libraries (default is usually static).
-- `SIMPLEBLE_LOG_LEVEL`: Set the log level (`VERBOSE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`).
-
-Example:
+To install the headers and libraries into a chosen prefix:
 
 ```bash
-cmake -S simplecble -B build_simplecble -DBUILD_SHARED_LIBS=TRUE -DSIMPLEBLE_LOG_LEVEL=DEBUG
+cmake --install build_simplecble --prefix /path/to/install
 ```
 
-## Installing SimpleCBLE
+Use libraries built for the same platform and architecture as your application.
 
-To install the library:
+## Add to a CMake project
 
-```bash
-sudo cmake --install build_simplecble
+With a SimpleBLE checkout at `vendor/simpleble`, a minimal application can use the source targets directly:
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(ble_app LANGUAGES C CXX)
+
+add_subdirectory(vendor/simpleble/simplecble)
+add_executable(ble_app main.c)
+target_link_libraries(ble_app PRIVATE simplecble::simplecble)
 ```
 
-This will install the headers to your system's include directory (e.g., `/usr/local/include/simplecble`) and the libraries to the lib directory.
+CMake supplies the include paths and links the C++ implementation and platform dependencies. Put the [scan tutorial](./tutorial#scan-for-devices) in `main.c` to try it.
 
-## Usage in your Project
+For manual or FFI loading, ship the matching SimpleCBLE and SimpleBLE shared libraries and make their dependent libraries discoverable by the platform loader. Match the current headers exactly: opaque handles and array fields are pointers, and lengths/counts use `size_t`. Use the library's release functions for returned allocations.
 
-### Runtime Configuration
+## Runtime configuration
 
-Set configuration values before the first adapter call. For example, Unity or other P/Invoke users on Android can request high connection priority with:
+Set configuration before the first backend or adapter enumeration. Configuration and logging functions do not take an error slot.
 
 ```c
+#include <stdio.h>
+#include <stdlib.h>
 #include <simplecble/simplecble.h>
 
 int main(void) {
-    simpleble_config_set_android_connection_priority(1);
+    simpleble_config_android_set_connection_priority(SIMPLEBLE_CONFIG_ANDROID_CONNECTION_PRIORITY_HIGH);
 
-    size_t adapter_count = simpleble_adapter_get_count();
-    /* Continue with adapter selection and scanning. */
+    simpleble_error_t* error = NULL;
+    size_t count = simpleble_adapter_get_count(&error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        simpleble_error_release(&error);
+        return EXIT_FAILURE;
+    }
+    printf("Available adapters: %zu\n", count);
+    return EXIT_SUCCESS;
 }
 ```
 
-### Using CMake
+Use backend enumeration when selecting a particular implementation; see [Choose a backend](./tutorial#choose-a-backend). `SIMPLEBLE_PLAIN=ON` builds the simulation backend for testing without a native Bluetooth stack. It does not provide native advanced APIs.
 
-If you are using CMake, you can use `find_package` to locate SimpleCBLE.
-
-```cmake
-find_package(simplecble REQUIRED)
-target_link_libraries(your_target PRIVATE simplecble::simplecble)
-```
-
-### Using pkg-config
-
-(Note: Check if pkg-config files are generated. If not, maybe skip this or say "Manual linking")
-
-### Manual Linking
-
-If you are not using CMake, you need to link against `simplecble` and `simpleble`. You also need to link against the necessary system libraries (e.g., `dbus-1` on Linux, `CoreBluetooth` on macOS).
-
-**Linux Example:**
-
-```bash
-gcc main.c -o main -lsimplecble -lsimpleble $(pkg-config --libs --cflags dbus-1) -lstdc++
-```
-
-(Note: Since SimpleBLE is C++, you need to link with the C++ standard library usually, or use `g++` to link even if compiling C source).
-
-**MacOS Example:**
-
-```bash
-clang main.c -o main -lsimplecble -lsimpleble -framework CoreBluetooth -framework Foundation -lc++
-```
+The public CMake definitions `SIMPLEBLE_BACKEND_*` describe which backends were built. The `simpleble` target propagates them to targets that link it; `SIMPLEBLE_BACKEND_DONGL` is always `1`. Runtime enumeration and Bluetooth-status queries determine what is actually available to the application.

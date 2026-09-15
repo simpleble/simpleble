@@ -1,37 +1,51 @@
 ---
 title: FAQ
-description: Frequently asked questions about SimpleCBLE.
+description: SimpleCBLE errors, ownership, data collections, and callback lifetimes.
 ---
 
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 
 <Accordions type="multiple">
 
-<Accordion title="What is the correct approach to memory management of SimpleBLE objects in the C-API?" id="memory-management">
+<Accordion title="How do I release returned data?" id="memory-management">
 
-In the C API (SimpleCBLE), you are responsible for freeing memory allocated by the library.
+Use `simpleble_free()` for allocated strings and read buffers. Release handles with their matching `simpleble_*_release_handle()` function, and errors with `simpleble_error_release(&error)`.
 
-1.  **Handles**: Objects like `simpleble_adapter_t` and `simpleble_peripheral_t` are handles. When you obtain one (e.g., via `simpleble_adapter_get_handle` or `simpleble_adapter_scan_get_results_handle`), you *must* release it when you are done using `simpleble_adapter_release_handle` or `simpleble_peripheral_release_handle`.
-2.  **Strings**: Functions that return `char*` (e.g., `simpleble_adapter_identifier`) allocate memory. You *must* free this memory using `simpleble_free()`.
-3.  **Data Buffers**: Data buffers passed to callbacks are usually owned by the library and valid only for the duration of the callback. If you need to keep the data, copy it.
+Service and manufacturer snapshots now contain allocated pointers. Release them with `simpleble_service_release(&service)` and `simpleble_manufacturer_data_release(&data)`. These functions free the contents and zero the caller's struct. The service owns its characteristics and descriptors; do not free those separately. See the [ownership table](./tutorial#memory-management).
+
+Borrowed error messages, version strings, native pointers, and callback bytes must not be freed. Copy borrowed data when you need it after its documented lifetime.
 
 </Accordion>
 
-<Accordion title="How are vectors supposed to be handled in the C-API?" id="vectors">
+<Accordion title="Can I ignore errors?" id="errors">
 
-The C API does not use vectors directly. Instead, it uses a count/get pattern.
+You can ignore their contents, but every function declaring `out_error` still requires the address of an error variable initialized to `NULL`. Each call releases the previous error in that slot. Release the final error with `simpleble_error_release(&error)`.
 
-1.  Call `_count()` to get the number of items.
-2.  Loop from `0` to `count - 1`.
-3.  Call `_get_handle(index)` or `_get(index, &struct)` to retrieve the item.
+Only a NULL error indicates success. A boolean false, zero count, or NULL read buffer can be a valid result. Error code zero is not success. See the [migration guide](./migration#replace-status-returns-with-an-error-object).
 
-For example, `simpleble_adapter_scan_get_results_count` and `simpleble_adapter_scan_get_results_handle`.
+</Accordion>
+
+<Accordion title="How are collections represented?" id="vectors">
+
+Backend, adapter, peripheral, and local-object lists use count/get functions. Each obtained handle is owned and requires release. These calls read the current collection; a count does not freeze a changing scan result set.
+
+Remote services are returned as snapshots. Their characteristic and descriptor arrays have explicit counts; service and manufacturer payloads have explicit byte lengths. There are no fixed 16-entry or 27-byte limits in the C structs. Do not use `sizeof(pointer)` to determine an array's length.
+
+</Accordion>
+
+<Accordion title="Do I release handles received in callbacks?" id="callbacks">
+
+Scan-found and scan-updated callbacks transfer a newly allocated peripheral handle on every invocation. Release it after use, or retain it and release it later. The registered adapter handle is borrowed.
+
+Other callback handles refer to their registration object and are borrowed. Notification and write callback bytes are valid only during the callback. A local read callback returns application-owned storage that must remain valid after the callback returns while SimpleCBLE copies it; see the [local hosting tutorial](./tutorial#local-peripheral-hosting).
+
+Pass NULL to ordinary callback setters to unregister. GATT subscriptions use `simpleble_peripheral_unsubscribe()`. Clear registrations before releasing the associated handles and userdata. FFI callers must also retain their callback objects while registered.
 
 </Accordion>
 
 <Accordion title="What platforms are supported?" id="platforms">
 
-SimpleCBLE supports the same platforms as SimpleBLE: Windows 10+, Linux (BlueZ), MacOS 13+, iOS 15+, and Android API 31+.
+SimpleCBLE wraps the same backends as SimpleBLE. See [system requirements](../simpleble/usage#system-requirements) and [Platform Notes](./platform_notes). Native advanced functions belong to their platform backend and are unavailable in Plain builds.
 
 </Accordion>
 

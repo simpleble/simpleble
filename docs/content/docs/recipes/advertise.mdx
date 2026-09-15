@@ -56,6 +56,10 @@ Configure services, characteristics, and advertising before `start()`. While sta
 
 SimpleBLE permits the same adapter to scan while the local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time.
 
+## Hosting from C
+
+SimpleCBLE provides the same local-hosting flow through owned local peripheral, service, and characteristic handles. See the [C hosting example](../simplecble/tutorial#local-peripheral-hosting) for creation, start/stop, and cleanup.
+
 ## Practical notes
 
 - Keep the process alive after `start()`. Advertising stops when the object is destroyed or `stop()` is called.

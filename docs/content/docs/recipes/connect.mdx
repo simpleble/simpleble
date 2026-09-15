@@ -5,6 +5,8 @@ description: Connect to a BLE peripheral and inspect its services, characteristi
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
+The C examples include `<stdio.h>` and `<simplecble/simplecble.h>` and borrow the peripheral handle passed to them. See the [C tutorial](../simplecble/tutorial) for acquisition and cleanup.
+
 Connecting moves from BLE advertisements into the GATT database. Once connected, SimpleBLE resolves services and characteristics so you can decide which characteristic to read, write, notify, or indicate.
 
 ## Flow
@@ -47,25 +49,38 @@ peripheral.disconnect();
 <Tab value="C">
 
 ```c
-simpleble_peripheral_t peripheral = peripheral_list[selected_index];
-
-if (simpleble_peripheral_connect(peripheral) != SIMPLEBLE_SUCCESS) {
-    printf("Failed to connect.\n");
-    return 1;
-}
-
-size_t service_count = simpleble_peripheral_services_count(peripheral);
-for (size_t i = 0; i < service_count; i++) {
-    simpleble_service_t service;
-    simpleble_peripheral_services_get(peripheral, i, &service);
-
-    printf("Service: %s\n", service.uuid.value);
-    for (size_t j = 0; j < service.characteristic_count; j++) {
-        printf("  Characteristic: %s\n", service.characteristics[j].uuid.value);
+bool connect_and_inspect(simpleble_peripheral_t peripheral) {
+    simpleble_error_t* error = NULL;
+    simpleble_peripheral_connect(peripheral, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        simpleble_error_release(&error);
+        return false;
     }
-}
 
-simpleble_peripheral_disconnect(peripheral);
+    size_t count = simpleble_peripheral_services_count(peripheral, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_peripheral_services_get(peripheral, i, &service, &error);
+        if (!error) {
+            printf("Service: %s\n", service.uuid.value);
+            for (size_t j = 0; j < service.characteristic_count; j++) {
+                printf("  Characteristic: %s\n", service.characteristics[j].uuid.value);
+            }
+        }
+        simpleble_service_release(&service);
+    }
+
+    bool success = error == NULL;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_peripheral_disconnect(peripheral, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        success = false;
+    }
+    simpleble_error_release(&error);
+    return success;
+}
 ```
 
 </Tab>
