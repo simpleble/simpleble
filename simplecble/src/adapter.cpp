@@ -211,54 +211,22 @@ bool simpleble_adapter_is_powered(simpleble_adapter_t handle, simpleble_error_t*
 }
 
 void simpleble_adapter_set_callback_on_power_on(simpleble_adapter_t handle,
-                                                void (*callback)(simpleble_adapter_t, void*), void* userdata,
-                                                simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                void (*callback)(simpleble_adapter_t, void*), void* userdata) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
+    if (callback == nullptr) {
+        adapter->set_callback_on_power_on(nullptr);
+    } else {
         adapter->set_callback_on_power_on([=]() { callback(handle, userdata); });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
 
 void simpleble_adapter_set_callback_on_power_off(simpleble_adapter_t handle,
-                                                 void (*callback)(simpleble_adapter_t, void*), void* userdata,
-                                                 simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                 void (*callback)(simpleble_adapter_t, void*), void* userdata) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
+    if (callback == nullptr) {
+        adapter->set_callback_on_power_off(nullptr);
+    } else {
         adapter->set_callback_on_power_off([=]() { callback(handle, userdata); });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
 
@@ -508,112 +476,48 @@ simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle(simple
 }
 
 void simpleble_adapter_set_callback_on_scan_start(simpleble_adapter_t handle,
-                                                  void (*callback)(simpleble_adapter_t, void*), void* userdata,
-                                                  simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                  void (*callback)(simpleble_adapter_t, void*), void* userdata) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
+    if (callback == nullptr) {
+        adapter->set_callback_on_scan_start(nullptr);
+    } else {
         adapter->set_callback_on_scan_start([=]() { callback(handle, userdata); });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
 
 void simpleble_adapter_set_callback_on_scan_stop(simpleble_adapter_t handle,
-                                                 void (*callback)(simpleble_adapter_t, void*), void* userdata,
-                                                 simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                 void (*callback)(simpleble_adapter_t, void*), void* userdata) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
+    if (callback == nullptr) {
+        adapter->set_callback_on_scan_stop(nullptr);
+    } else {
         adapter->set_callback_on_scan_stop([=]() { callback(handle, userdata); });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
 
-void simpleble_adapter_set_callback_on_scan_updated(simpleble_adapter_t handle,
-                                                    void (*callback)(simpleble_adapter_t, simpleble_peripheral_t,
-                                                                     void*),
-                                                    void* userdata, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+void simpleble_adapter_set_callback_on_scan_updated(
+    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t, simpleble_peripheral_t, void*), void* userdata) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
+    if (callback == nullptr) {
+        adapter->set_callback_on_scan_updated(nullptr);
+    } else {
         adapter->set_callback_on_scan_updated([=](SimpleBLE::Peripheral peripheral) {
             SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(peripheral);
             callback(handle, (simpleble_peripheral_t)peripheral_handle, userdata);
         });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
 
 void simpleble_adapter_set_callback_on_scan_found(simpleble_adapter_t handle,
                                                   void (*callback)(simpleble_adapter_t, simpleble_peripheral_t, void*),
-                                                  void* userdata, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                  void* userdata) {
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
+    if (callback == nullptr) {
+        adapter->set_callback_on_scan_found(nullptr);
+    } else {
         adapter->set_callback_on_scan_found([=](SimpleBLE::Peripheral peripheral) {
             SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(peripheral);
             callback(handle, (simpleble_peripheral_t)peripheral_handle, userdata);
         });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }

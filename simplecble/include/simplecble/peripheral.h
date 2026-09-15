@@ -168,8 +168,7 @@ SIMPLECBLE_EXPORT size_t simpleble_peripheral_services_count(simpleble_periphera
  * @param[out] out_service Required caller-owned storage for one service and its characteristics and descriptors.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Characteristic and descriptor counts are clamped to their fixed array capacities. Service data is
- *     also truncated to its array capacity, but data_length reports the original length. Read at most
- *     sizeof(out_service->data) bytes.
+ *     also truncated to its array capacity, and data_length reports the number of bytes copied.
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index,
@@ -194,8 +193,7 @@ SIMPLECBLE_EXPORT size_t simpleble_peripheral_manufacturer_data_count(simpleble_
  * @param[in] index Zero-based index into the current collection.
  * @param[out] out_data Required caller-owned storage for one manufacturer data entry.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @note Data is truncated to the fixed array capacity, but data_length reports the original length. Read
- *     at most sizeof(out_data->data) bytes.
+ * @note Data is truncated to the fixed array capacity, and data_length reports the number of bytes copied.
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index,
@@ -337,29 +335,23 @@ SIMPLECBLE_EXPORT void simpleble_peripheral_write_descriptor(simpleble_periphera
  * @brief Registers a callback invoked when the peripheral connects.
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered peripheral handle and userdata.
- * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_peripheral_set_callback_on_connected(
-    simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t peripheral, void* userdata), void* userdata,
-    simpleble_error_t** out_error);
+    simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t peripheral, void* userdata), void* userdata);
 
 /**
  * @brief Registers a callback invoked when the peripheral disconnects.
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered peripheral handle and userdata.
- * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_peripheral_set_callback_on_disconnected(
-    simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t peripheral, void* userdata), void* userdata,
-    simpleble_error_t** out_error);
+    simpleble_peripheral_t handle, void (*callback)(simpleble_peripheral_t peripheral, void* userdata), void* userdata);
 
 #ifdef __cplusplus
 }

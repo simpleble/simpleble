@@ -358,8 +358,9 @@ void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t ind
 
         strncpy(out_service->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
 
+        // TODO: Support advertisement payloads larger than the fixed data buffer.
         const size_t copy_len = std::min(service.data().size(), sizeof(out_service->data));
-        out_service->data_length = service.data().size();
+        out_service->data_length = copy_len;
         memcpy(out_service->data, service.data().data(), copy_len);
 
         out_service->characteristic_count = service.characteristics().size();
@@ -454,8 +455,9 @@ void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, s
 
         auto& selected_manufacturer_data = *it;
         out_data->manufacturer_id = selected_manufacturer_data.first;
+        // TODO: Support advertisement payloads larger than the fixed data buffer.
         const size_t copy_len = std::min(selected_manufacturer_data.second.size(), sizeof(out_data->data));
-        out_data->data_length = selected_manufacturer_data.second.size();
+        out_data->data_length = copy_len;
         memcpy(out_data->data, selected_manufacturer_data.second.data(), copy_len);
     } catch (const SimpleBLE::Exception::BaseException& e) {
         *out_error = e.make_error().release();
@@ -714,53 +716,22 @@ void simpleble_peripheral_write_descriptor(simpleble_peripheral_t handle, simple
 }
 
 void simpleble_peripheral_set_callback_on_connected(simpleble_peripheral_t handle,
-                                                    void (*callback)(simpleble_peripheral_t, void*), void* userdata,
-                                                    simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                    void (*callback)(simpleble_peripheral_t, void*), void* userdata) {
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
+    if (callback == nullptr) {
+        peripheral->set_callback_on_connected(nullptr);
+    } else {
         peripheral->set_callback_on_connected([=]() { callback(handle, userdata); });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
 
 void simpleble_peripheral_set_callback_on_disconnected(simpleble_peripheral_t handle,
-                                                       void (*callback)(simpleble_peripheral_t, void*), void* userdata,
-                                                       simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
-    if (callback == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "callback is NULL");
-        return;
-    }
-
+                                                       void (*callback)(simpleble_peripheral_t, void*),
+                                                       void* userdata) {
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
+    if (callback == nullptr) {
+        peripheral->set_callback_on_disconnected(nullptr);
+    } else {
         peripheral->set_callback_on_disconnected([=]() { callback(handle, userdata); });
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }

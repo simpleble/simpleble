@@ -34,85 +34,73 @@ static void peripheral_on_notify(simpleble_peripheral_t handle, simpleble_uuid_t
                                  simpleble_uuid_t characteristic, const uint8_t* data, size_t data_length,
                                  void* userdata);
 
-static service_characteristic_t characteristic_list[SERVICES_LIST_SIZE] = {0};
 static simpleble_peripheral_t peripheral_list[PERIPHERAL_LIST_SIZE] = {0};
 static size_t peripheral_list_len = 0;
 static simpleble_adapter_t adapter = NULL;
 
-int main() {
-    simpleble_err_t err_code = SIMPLEBLE_SUCCESS;
+int main(void) {
     atexit(clean_on_exit);
 
-    // NOTE: It's necessary to call this function before any other to allow the
-    // underlying driver to run its initialization routine.
-    size_t adapter_count = simpleble_adapter_get_count();
+    int result = EXIT_FAILURE;
+    simpleble_error_t* error = NULL;
+    size_t adapter_count = simpleble_adapter_get_count(&error);
+    if (error) goto cleanup;
     if (adapter_count == 0) {
         printf("No adapter was found.\n");
-        return 1;
+        goto cleanup;
     }
 
     // TODO: Allow the user to pick an adapter.
-    adapter = simpleble_adapter_get_handle(0);
-    if (adapter == NULL) {
-        printf("No adapter was found.\n");
-        return 1;
-    }
+    adapter = simpleble_adapter_get_handle(0, &error);
+    if (error) goto cleanup;
 
     simpleble_adapter_set_callback_on_scan_start(adapter, adapter_on_scan_start, NULL);
     simpleble_adapter_set_callback_on_scan_stop(adapter, adapter_on_scan_stop, NULL);
     simpleble_adapter_set_callback_on_scan_found(adapter, adapter_on_scan_found, NULL);
 
-    simpleble_adapter_scan_for(adapter, 5000);
+    simpleble_adapter_scan_for(adapter, 5000, &error);
+    if (error) goto cleanup;
 
     printf("The following devices were found:\n");
     for (size_t i = 0; i < peripheral_list_len; i++) {
-        simpleble_peripheral_t peripheral = peripheral_list[i];
-        char* peripheral_identifier = simpleble_peripheral_identifier(peripheral);
-        char* peripheral_address = simpleble_peripheral_address(peripheral);
-        printf("[%zu] %s [%s]\n", i, peripheral_identifier, peripheral_address);
+        char* peripheral_identifier = simpleble_peripheral_identifier(peripheral_list[i], &error);
+        char* peripheral_address = simpleble_peripheral_address(peripheral_list[i], &error);
+        printf("[%zu] %s [%s]\n", i, peripheral_identifier ? peripheral_identifier : "Unknown",
+               peripheral_address ? peripheral_address : "Unknown");
         simpleble_free(peripheral_identifier);
         simpleble_free(peripheral_address);
     }
 
-    int selection = -1;
     printf("Please select a device to connect to: ");
-    scanf("%d", &selection);
-
-    if (selection < 0 || selection >= (int)peripheral_list_len) {
+    int selection = -1;
+    if (scanf("%d", &selection) != 1 || selection < 0 || selection >= (int)peripheral_list_len) {
         printf("Invalid selection.\n");
-        return 1;
+        goto cleanup;
     }
 
     simpleble_peripheral_t peripheral = peripheral_list[selection];
-
-    char* peripheral_identifier = simpleble_peripheral_identifier(peripheral);
-    char* peripheral_address = simpleble_peripheral_address(peripheral);
-    printf("Connecting to %s [%s]\n", peripheral_identifier, peripheral_address);
+    char* peripheral_identifier = simpleble_peripheral_identifier(peripheral, &error);
+    char* peripheral_address = simpleble_peripheral_address(peripheral, &error);
+    printf("Connecting to %s [%s]\n", peripheral_identifier ? peripheral_identifier : "Unknown",
+           peripheral_address ? peripheral_address : "Unknown");
     simpleble_free(peripheral_identifier);
     simpleble_free(peripheral_address);
 
-    err_code = simpleble_peripheral_connect(peripheral);
-    if (err_code != SIMPLEBLE_SUCCESS) {
-        printf("Failed to connect.\n");
-        return 1;
-    }
+    simpleble_peripheral_connect(peripheral, &error);
+    if (error) goto cleanup;
 
     printf("Successfully connected, listing services and characteristics.\n");
 
+    size_t services_count = simpleble_peripheral_services_count(peripheral, &error);
+    service_characteristic_t characteristic_list[SERVICES_LIST_SIZE] = {0};
     size_t characteristic_count = 0;
-    for (size_t i = 0; i < simpleble_peripheral_services_count(peripheral); i++) {
+    for (size_t i = 0; i < services_count; i++) {
         simpleble_service_t service;
-        err_code = simpleble_peripheral_services_get(peripheral, i, &service);
-
-        if (err_code != SIMPLEBLE_SUCCESS) {
-            printf("Failed to get service.\n");
-            return 1;
-        }
+        simpleble_peripheral_services_get(peripheral, i, &service, &error);
+        if (error) continue;
 
         for (size_t j = 0; j < service.characteristic_count; j++) {
-            if (characteristic_count >= SERVICES_LIST_SIZE) {
-                break;
-            }
+            if (characteristic_count >= SERVICES_LIST_SIZE) break;
 
             printf("[%zu] %s %s\n", characteristic_count, service.uuid.value, service.characteristics[j].uuid.value);
             characteristic_list[characteristic_count].service = service.uuid;
@@ -121,89 +109,81 @@ int main() {
         }
     }
 
-    selection = -1;
-    printf("Please select a characteristic to read from: ");
-    scanf("%d", &selection);
-
-    if (selection < 0 || selection >= (int)characteristic_count) {
+    printf("Please select a characteristic to subscribe to: ");
+    int characteristic_selection = -1;
+    if (scanf("%d", &characteristic_selection) != 1 || characteristic_selection < 0 ||
+        characteristic_selection >= (int)characteristic_count) {
         printf("Invalid selection.\n");
-        return 1;
+        goto disconnect;
     }
+    service_characteristic_t selected_characteristic = characteristic_list[characteristic_selection];
 
-    simpleble_peripheral_notify(peripheral, characteristic_list[selection].service,
-                                characteristic_list[selection].characteristic, peripheral_on_notify, NULL);
+    simpleble_peripheral_notify(peripheral, selected_characteristic.service, selected_characteristic.characteristic,
+                                peripheral_on_notify, NULL, &error);
+    if (error) goto disconnect;
 
-    // Sleep for 5 seconds
+    // Sleep for 5 seconds.
     msleep(5000);
+    simpleble_peripheral_unsubscribe(peripheral, selected_characteristic.service,
+                                     selected_characteristic.characteristic, &error);
+    if (error) goto disconnect;
+    result = EXIT_SUCCESS;
 
-    simpleble_peripheral_unsubscribe(peripheral, characteristic_list[selection].service,
-                                     characteristic_list[selection].characteristic);
+disconnect:
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_peripheral_disconnect(peripheral, &error);
+    if (error) result = EXIT_FAILURE;
 
-    simpleble_peripheral_disconnect(peripheral);
-
-    return 0;
+cleanup:
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    return result;
 }
 
 static void clean_on_exit(void) {
     printf("Releasing allocated resources.\n");
-
-    // Release all saved peripherals
     for (size_t i = 0; i < peripheral_list_len; i++) {
         simpleble_peripheral_release_handle(peripheral_list[i]);
     }
-
-    // Let's not forget to release the associated handle.
     simpleble_adapter_release_handle(adapter);
 }
 
 static void adapter_on_scan_start(simpleble_adapter_t adapter, void* userdata) {
-    char* identifier = simpleble_adapter_identifier(adapter);
-
-    if (identifier == NULL) {
-        return;
-    }
-
-    printf("Adapter %s started scanning.\n", identifier);
-
-    // Let's not forget to clear the allocated memory.
+    simpleble_error_t* error = NULL;
+    char* identifier = simpleble_adapter_identifier(adapter, &error);
+    printf("Adapter %s started scanning.\n", identifier ? identifier : "Unknown");
     simpleble_free(identifier);
+    simpleble_error_release(&error);
 }
 
 static void adapter_on_scan_stop(simpleble_adapter_t adapter, void* userdata) {
-    char* identifier = simpleble_adapter_identifier(adapter);
-
-    if (identifier == NULL) {
-        return;
-    }
-
-    printf("Adapter %s stopped scanning.\n", identifier);
-
-    // Let's not forget to clear the allocated memory.
+    simpleble_error_t* error = NULL;
+    char* identifier = simpleble_adapter_identifier(adapter, &error);
+    printf("Adapter %s stopped scanning.\n", identifier ? identifier : "Unknown");
     simpleble_free(identifier);
+    simpleble_error_release(&error);
 }
 
 static void adapter_on_scan_found(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata) {
-    char* adapter_identifier = simpleble_adapter_identifier(adapter);
-    char* peripheral_identifier = simpleble_peripheral_identifier(peripheral);
-    char* peripheral_address = simpleble_peripheral_address(peripheral);
+    simpleble_error_t* error = NULL;
 
-    if (adapter_identifier == NULL || peripheral_identifier == NULL || peripheral_address == NULL) {
-        return;
-    }
+    char* adapter_identifier = simpleble_adapter_identifier(adapter, &error);
+    char* peripheral_identifier = simpleble_peripheral_identifier(peripheral, &error);
+    char* peripheral_address = simpleble_peripheral_address(peripheral, &error);
 
-    printf("Adapter %s found device: %s [%s]\n", adapter_identifier, peripheral_identifier, peripheral_address);
-
+    printf("Adapter %s found device: %s [%s]\n", adapter_identifier ? adapter_identifier : "Unknown",
+           peripheral_identifier ? peripheral_identifier : "Unknown",
+           peripheral_address ? peripheral_address : "Unknown");
     if (peripheral_list_len < PERIPHERAL_LIST_SIZE) {
-        // Save the peripheral
         peripheral_list[peripheral_list_len++] = peripheral;
     } else {
-        // As there was no space left for this peripheral, release the associated handle.
         simpleble_peripheral_release_handle(peripheral);
     }
 
-    // Let's not forget to release all allocated memory.
+    simpleble_free(adapter_identifier);
     simpleble_free(peripheral_identifier);
     simpleble_free(peripheral_address);
+    simpleble_error_release(&error);
 }
 
 static void peripheral_on_notify(simpleble_peripheral_t handle, simpleble_uuid_t service,

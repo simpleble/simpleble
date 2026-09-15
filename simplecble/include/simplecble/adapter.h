@@ -112,31 +112,23 @@ SIMPLECBLE_EXPORT bool simpleble_adapter_is_powered(simpleble_adapter_t handle, 
  * @brief Registers a callback invoked when the adapter powers on.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
- * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_power_on(simpleble_adapter_t handle,
-                                                                  void (*callback)(simpleble_adapter_t adapter,
-                                                                                   void* userdata),
-                                                                  void* userdata, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_power_on(
+    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata);
 
 /**
  * @brief Registers a callback invoked when the adapter powers off.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
- * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_power_off(simpleble_adapter_t handle,
-                                                                   void (*callback)(simpleble_adapter_t adapter,
-                                                                                    void* userdata),
-                                                                   void* userdata, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_power_off(
+    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata);
 
 /**
  * @brief Starts scanning for peripherals.
@@ -252,64 +244,49 @@ SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_get_connected_periphe
  * @brief Registers a callback invoked when scanning starts.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
- * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_start(simpleble_adapter_t handle,
-                                                                    void (*callback)(simpleble_adapter_t adapter,
-                                                                                     void* userdata),
-                                                                    void* userdata, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_start(
+    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata);
 
 /**
  * @brief Registers a callback invoked when scanning stops.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
- * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_stop(simpleble_adapter_t handle,
-                                                                   void (*callback)(simpleble_adapter_t adapter,
-                                                                                    void* userdata),
-                                                                   void* userdata, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_stop(
+    simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t adapter, void* userdata), void* userdata);
 
 /**
  * @brief Registers a callback invoked when a previously discovered peripheral is updated.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Each callback transfers a newly allocated peripheral handle to the caller. Release it with
  *     simpleble_peripheral_release_handle(). The adapter handle is borrowed.
- * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_updated(
     simpleble_adapter_t handle,
-    void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata,
-    simpleble_error_t** out_error);
+    void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata);
 
 /**
  * @brief Registers a callback invoked when a peripheral is discovered.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] callback Non-NULL callback to register.
+ * @param[in] callback Callback to register, or NULL to clear it.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Each callback transfers a newly allocated peripheral handle to the caller. Release it with
  *     simpleble_peripheral_release_handle(). The adapter handle is borrowed.
- * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_found(simpleble_adapter_t handle,
-                                                                    void (*callback)(simpleble_adapter_t adapter,
-                                                                                     simpleble_peripheral_t peripheral,
-                                                                                     void* userdata),
-                                                                    void* userdata, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_found(
+    simpleble_adapter_t handle,
+    void (*callback)(simpleble_adapter_t adapter, simpleble_peripheral_t peripheral, void* userdata), void* userdata);
 
 #ifdef __cplusplus
 }
