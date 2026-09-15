@@ -26,6 +26,7 @@ set(SIMPLEBLE_C_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simplecble.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/adapter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/config.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/error.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/peripheral.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cpp)

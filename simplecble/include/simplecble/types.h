@@ -11,15 +11,69 @@
 /**
  * @brief Opaque error details for a failed call.
  *
- * Pass NULL for out_error to ignore errors, or provide
- * a pointer that receives NULL on success and an owned error on failure.
+ * Initialize the error variable to NULL and pass its address as out_error.
+ * Each call releases the previous error before clearing the variable, then
+ * leaves it NULL on success or stores an owned error on failure.
+ * Inspect an error before the next call if its details are needed.
+ * Release the final error by passing its address to simpleble_error_release(),
+ * which also sets the variable to NULL.
  */
 typedef struct simpleble_error simpleble_error_t;
 
-// TODO: Add proper error codes.
+/**
+ * @brief Identifies the reported exception or binding error.
+ *
+ * A NULL error pointer indicates success; these codes describe failures only.
+ */
 typedef enum {
-    SIMPLEBLE_SUCCESS = 0,
-    SIMPLEBLE_FAILURE = 1,
+    /** @brief A required argument is NULL or otherwise invalid. */
+    SIMPLEBLE_ERROR_INVALID_ARGUMENT = 0,
+
+    /** @brief Memory allocation failed during an operation. */
+    SIMPLEBLE_ERROR_OUT_OF_MEMORY = 1,
+
+    /** @brief A SimpleBLE object has not been initialized. */
+    SIMPLEBLE_ERROR_OBJECT_NOT_INITIALIZED = 2,
+
+    /** @brief An internal object reference cannot be resolved. */
+    SIMPLEBLE_ERROR_INVALID_BACKEND_REFERENCE = 3,
+
+    /** @brief A GATT read, write, subscription, or unsubscription requires a connected peripheral. */
+    SIMPLEBLE_ERROR_PERIPHERAL_NOT_CONNECTED = 4,
+
+    /** @brief The requested service UUID is absent from the discovered GATT services. */
+    SIMPLEBLE_ERROR_GATT_SERVICE_NOT_FOUND = 5,
+
+    /** @brief The requested characteristic UUID is absent from the selected GATT service. */
+    SIMPLEBLE_ERROR_GATT_CHARACTERISTIC_NOT_FOUND = 6,
+
+    /** @brief The requested descriptor UUID is absent from the selected GATT characteristic. */
+    SIMPLEBLE_ERROR_GATT_DESCRIPTOR_NOT_FOUND = 7,
+
+    /** @brief The requested operation is not supported by the adapter or characteristic,
+     * or is unavailable in the library implementation. */
+    SIMPLEBLE_ERROR_OPERATION_NOT_SUPPORTED = 8,
+
+    /** @brief An operation failed without a more specific exception classification.
+     * Includes connection and GATT failures, rejected local-peripheral configuration,
+     * and hosting failures. The exception message supplies any available detail. */
+    SIMPLEBLE_ERROR_OPERATION_FAILED = 9,
+
+    /** @brief Retrieving a WinRT asynchronous result raised hresult_access_denied.
+     * The exception retains the original signed 32-bit HRESULT and message. */
+    SIMPLEBLE_ERROR_WINRT_ACCESS_DENIED = 10,
+
+    /** @brief Retrieving a WinRT asynchronous result raised another hresult_error.
+     * The exception retains the original signed 32-bit HRESULT and message. */
+    SIMPLEBLE_ERROR_WINRT_EXCEPTION = 11,
+
+    /** @brief A CoreBluetoothException containing a diagnostic message. */
+    SIMPLEBLE_ERROR_CORE_BLUETOOTH_EXCEPTION = 12,
+
+    /** @brief An exception has no dedicated error classification.
+     * Covers BaseException, other standard exceptions, and non-standard exceptions;
+     * the message is preserved when available. */
+    SIMPLEBLE_ERROR_UNCLASSIFIED_EXCEPTION = 13,
 } simpleble_err_t;
 
 typedef struct {

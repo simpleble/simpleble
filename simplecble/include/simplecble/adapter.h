@@ -15,7 +15,7 @@ extern "C" {
 /**
  * @brief Checks whether Bluetooth is enabled.
  *
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return true if Bluetooth is enabled; false otherwise or on failure.
  * @see simpleble_error_t
  */
@@ -24,7 +24,7 @@ SIMPLECBLE_EXPORT bool simpleble_adapter_is_bluetooth_enabled(simpleble_error_t*
 /**
  * @brief Counts the available Bluetooth adapters.
  *
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return The number of available adapters, or zero on failure.
  * @see simpleble_error_t
  */
@@ -34,7 +34,7 @@ SIMPLECBLE_EXPORT size_t simpleble_adapter_get_count(simpleble_error_t** out_err
  * @brief Obtains an owned handle for the adapter at the specified index.
  *
  * @param[in] index Zero-based index into the current collection.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An owned adapter handle, or NULL on failure. Release with simpleble_adapter_release_handle().
  * @see simpleble_error_t
  */
@@ -51,7 +51,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_release_handle(simpleble_adapter_t hand
  * @brief Retrieves the underlying OS object or handle.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return The borrowed OS object or handle, or NULL if unavailable or on failure. Do not free it.
  * @note The native object type and its availability depend on the backend.
  * @see simpleble_error_t
@@ -62,7 +62,7 @@ SIMPLECBLE_EXPORT void* simpleble_adapter_underlying(simpleble_adapter_t handle,
  * @brief Retrieves the adapter identifier.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An allocated, NUL-terminated identifier, or NULL on failure. Release with simpleble_free().
  * @see simpleble_error_t
  */
@@ -72,7 +72,7 @@ SIMPLECBLE_EXPORT char* simpleble_adapter_identifier(simpleble_adapter_t handle,
  * @brief Retrieves the adapter address.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An allocated, NUL-terminated address, or NULL on failure. Release with simpleble_free().
  * @see simpleble_error_t
  */
@@ -82,7 +82,7 @@ SIMPLECBLE_EXPORT char* simpleble_adapter_address(simpleble_adapter_t handle, si
  * @brief Requests that the adapter be powered on.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Power control is backend-dependent; unsupported backends may do nothing.
  * @see simpleble_error_t
  */
@@ -92,7 +92,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_power_on(simpleble_adapter_t handle, si
  * @brief Requests that the adapter be powered off.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Power control is backend-dependent; unsupported backends may do nothing.
  * @see simpleble_error_t
  */
@@ -102,7 +102,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_power_off(simpleble_adapter_t handle, s
  * @brief Checks whether the adapter is powered on.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return true if the adapter is powered on; false otherwise or on failure.
  * @see simpleble_error_t
  */
@@ -114,7 +114,7 @@ SIMPLECBLE_EXPORT bool simpleble_adapter_is_powered(simpleble_adapter_t handle, 
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] callback Non-NULL callback to register.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
  * @see simpleble_error_t
  */
@@ -129,7 +129,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_power_on(simpleble_adap
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] callback Non-NULL callback to register.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
  * @see simpleble_error_t
  */
@@ -142,7 +142,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_power_off(simpleble_ada
  * @brief Starts scanning for peripherals.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_adapter_scan_start(simpleble_adapter_t handle, simpleble_error_t** out_error);
@@ -151,7 +151,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_scan_start(simpleble_adapter_t handle, 
  * @brief Stops scanning for peripherals.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_adapter_scan_stop(simpleble_adapter_t handle, simpleble_error_t** out_error);
@@ -160,7 +160,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_scan_stop(simpleble_adapter_t handle, s
  * @brief Checks whether the adapter is scanning.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return true if scanning is active; false otherwise or on failure.
  * @see simpleble_error_t
  */
@@ -171,7 +171,7 @@ SIMPLECBLE_EXPORT bool simpleble_adapter_scan_is_active(simpleble_adapter_t hand
  *
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] timeout_ms Nonnegative scan duration in milliseconds.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @see simpleble_error_t
  */
 SIMPLECBLE_EXPORT void simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms,
@@ -181,7 +181,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_scan_for(simpleble_adapter_t handle, in
  * @brief Counts the scan results reported by the adapter.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return The number of scan results, or zero on failure.
  * @see simpleble_error_t
  */
@@ -193,7 +193,7 @@ SIMPLECBLE_EXPORT size_t simpleble_adapter_scan_get_results_count(simpleble_adap
  *
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] index Zero-based index into the current collection.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
  * @see simpleble_error_t
  */
@@ -205,7 +205,7 @@ SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_scan_get_results_hand
  * @brief Counts the paired peripherals reported by the adapter.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return The number of paired peripherals, or zero on failure.
  * @see simpleble_error_t
  */
@@ -217,7 +217,7 @@ SIMPLECBLE_EXPORT size_t simpleble_adapter_get_paired_peripherals_count(simplebl
  *
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] index Zero-based index into the current collection.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
  * @see simpleble_error_t
  */
@@ -229,7 +229,7 @@ SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_get_paired_peripheral
  * @brief Counts the connected peripherals reported by the adapter.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return The number of connected peripherals, or zero on failure.
  * @see simpleble_error_t
  */
@@ -241,7 +241,7 @@ SIMPLECBLE_EXPORT size_t simpleble_adapter_get_connected_peripherals_count(simpl
  *
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] index Zero-based index into the current collection.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
  * @see simpleble_error_t
  */
@@ -254,7 +254,7 @@ SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_get_connected_periphe
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] callback Non-NULL callback to register.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
  * @see simpleble_error_t
  */
@@ -269,7 +269,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_start(simpleble_ad
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] callback Non-NULL callback to register.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note The callback receives the registered adapter handle and userdata.
  * @see simpleble_error_t
  */
@@ -284,7 +284,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_stop(simpleble_ada
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] callback Non-NULL callback to register.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Each callback transfers a newly allocated peripheral handle to the caller. Release it with
  *     simpleble_peripheral_release_handle(). The adapter handle is borrowed.
  * @see simpleble_error_t
@@ -300,7 +300,7 @@ SIMPLECBLE_EXPORT void simpleble_adapter_set_callback_on_scan_updated(
  * @param[in] handle Valid, non-NULL adapter handle.
  * @param[in] callback Non-NULL callback to register.
  * @param[in] userdata User data passed unchanged to the callback; may be NULL.
- * @param[out] out_error Optional error output; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Each callback transfers a newly allocated peripheral handle to the caller. Release it with
  *     simpleble_peripheral_release_handle(). The adapter handle is borrowed.
  * @see simpleble_error_t
