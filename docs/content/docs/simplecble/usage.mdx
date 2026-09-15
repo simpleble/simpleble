@@ -32,7 +32,20 @@ Use libraries built for the same platform and architecture as your application.
 
 ## Add to a CMake project
 
-With a SimpleBLE checkout at `vendor/simpleble`, a minimal application can use the source targets directly:
+For an installed library, use its exported CMake target:
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(ble_app LANGUAGES C CXX)
+
+find_package(simplecble CONFIG REQUIRED)
+add_executable(ble_app main.c)
+target_link_libraries(ble_app PRIVATE simplecble::simplecble)
+```
+
+Configure the application with `-DCMAKE_PREFIX_PATH=/path/to/install`. The package finds its SimpleBLE dependency automatically.
+
+Alternatively, with a SimpleBLE checkout at `vendor/simpleble`, use the source targets directly:
 
 ```cmake
 cmake_minimum_required(VERSION 3.21)

@@ -14,6 +14,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/epilogue.cmake)
 
 include(GenerateExportHeader)
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 if(SIMPLECBLE_TEST)
     message(STATUS "Building tests requires plain version of SimpleBLE")
@@ -80,9 +81,9 @@ target_link_libraries(simplecble PRIVATE simpleble::simpleble)
 target_compile_definitions(simplecble PRIVATE SIMPLEBLE_VERSION="${PROJECT_VERSION}")
 
 # Apply OS-specific settings for simplecble
-if(SIMPLEBLE_BACKEND_LINUX)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set_property(TARGET simplecble PROPERTY INSTALL_RPATH $ORIGIN)
-elseif(SIMPLEBLE_BACKEND_MACOS)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set_property(TARGET simplecble PROPERTY INSTALL_RPATH @loader_path)
 endif()
 
@@ -92,15 +93,43 @@ apply_build_options(simplecble
     "${PRIVATE_LINK_OPTIONS}"
     "${PUBLIC_LINK_OPTIONS}")
 
+set(SIMPLECBLE_CMAKE_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/simplecble)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/simplecble-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/simplecble-config.cmake
+    INSTALL_DESTINATION ${SIMPLECBLE_CMAKE_INSTALL_DIR})
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/simplecble-config-version.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+
 install(
     TARGETS simplecble
-    EXPORT simplecble-config
+    EXPORT simplecble-targets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(
+    EXPORT simplecble-targets
+    FILE simplecble-targets.cmake
+    NAMESPACE simplecble::
+    DESTINATION ${SIMPLECBLE_CMAKE_INSTALL_DIR})
+
+install(
+    FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/simplecble-config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/simplecble-config-version.cmake
+    DESTINATION ${SIMPLECBLE_CMAKE_INSTALL_DIR})
+
+install(
     DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/simplecble/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simplecble)
+
+install(
+    FILES ${PROJECT_BINARY_DIR}/export/simplecble/export.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/simplecble)
 
 if(SIMPLECBLE_TEST)
