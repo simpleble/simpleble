@@ -29,8 +29,8 @@ Why SimpleBLE
 Get Started
 -----------
 
-Choose the API that fits your project in the `Installation`_ guide, then run the `Quickstart`_. For tutorials, recipes,
-platform notes, and API references, visit the `Documentation`_.
+Choose the API that fits your project in the `Installation`_ guide, then get to a first BLE scan in minutes
+with the `Quickstart`_. For tutorials, recipes, platform notes, and API references, visit the `Documentation`_.
 
 Dongl: Official SimpleBLE Hardware
 ----------------------------------
