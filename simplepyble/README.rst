@@ -39,8 +39,31 @@ When building from source on Debian or Ubuntu, install the DBus development head
 Usage
 -----
 
-Please review our `code examples`_ on GitHub for more information on how to use
-SimplePyBLE.
+Scan for nearby devices: ::
+
+    import simplepyble
+
+    adapters = simplepyble.Adapter.get_adapters()
+    if not adapters:
+        raise SystemExit("No Bluetooth adapters found.")
+
+    adapter = adapters[0]
+    print(f"Using adapter: {adapter.identifier()} [{adapter.address()}]")
+
+    adapter.set_callback_on_scan_found(
+        lambda peripheral: print(
+            f"Found: {peripheral.identifier()} [{peripheral.address()}] {peripheral.rssi()} dBm"
+        )
+    )
+
+    adapter.scan_for(5000)
+
+    print("Scan results:")
+    for peripheral in adapter.scan_get_results():
+        state = "connectable" if peripheral.is_connectable() else "not connectable"
+        print(f"- {peripheral.identifier()} [{peripheral.address()}] {state}")
+
+See the `code examples`_ on GitHub for connect, read/write, and notify flows.
 
 Asynchronous Support
 --------------------

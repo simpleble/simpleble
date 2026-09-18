@@ -36,6 +36,59 @@ cargo add simplersble
 
 Please review our [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplersble/src/bin) on GitHub for more information on how to use SimpleRsBLE.
 
+## Scan for nearby devices
+
+Add the dependencies:
+
+```toml
+[dependencies]
+simplersble = "1"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+```
+
+Then scan:
+
+```rust
+use futures::stream::StreamExt;
+
+#[tokio::main]
+async fn main() {
+    let mut adapters = simplersble::Adapter::get_adapters().unwrap();
+    if adapters.is_empty() {
+        println!("No Bluetooth adapters found.");
+        return;
+    }
+
+    let adapter = adapters.remove(0);
+
+    let mut events = adapter.on_scan_event();
+    tokio::spawn(async move {
+        while let Some(Ok(event)) = events.next().await {
+            if let simplersble::ScanEvent::Found(peripheral) = event {
+                println!(
+                    "Found: {} [{}] {} dBm",
+                    peripheral.identifier().unwrap(),
+                    peripheral.address().unwrap(),
+                    peripheral.rssi().unwrap()
+                );
+            }
+        }
+    });
+
+    adapter.scan_for(5000).unwrap();
+
+    println!("Scan results:");
+    for peripheral in adapter.scan_get_results().unwrap() {
+        println!(
+            "- {} [{}]",
+            peripheral.identifier().unwrap(),
+            peripheral.address().unwrap()
+        );
+    }
+}
+```
+
 # License
 
 Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1). Each
