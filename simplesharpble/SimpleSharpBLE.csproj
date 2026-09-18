@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
+    <PackageVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-dev([0-9]+)$', '-dev.$1'))</PackageVersion>
+    <Description>.NET bindings for SimpleBLE.</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId Condition="'$(PackageId)' == ''">SimpleSharpBLE</PackageId>
+    <Authors>The California Open Source Company</Authors>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/simpleble/simpleble</RepositoryUrl>
+    <PackageTags>bluetooth;ble;simpleble</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src/**/*.cs" />
+    <InternalsVisibleTo Include="SimpleSharpBLE.Tests" />
+    <None Include="../LICENSE.md" Pack="true" PackagePath="/LICENSE.md" />
+    <None Update="README.md" Pack="true" PackagePath="/README.md" />
+    <None Include="$(NativeLibrariesDirectory)/**/*.dll" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
+    <None Include="$(NativeLibraryDirectory)/simplecble.dll" Link="simplecble.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/win-x64/native/" Condition="'$(NativeLibraryDirectory)' != ''" />
+    <None Include="$(NativeLibraryDirectory)/simpleble.dll" Link="simpleble.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/win-x64/native/" Condition="'$(NativeLibraryDirectory)' != ''" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NativeLibrariesDirectory)' != ''">
+    <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/win-x64/native/simpleble.dll;$(NativeLibrariesDirectory)/win-x64/native/simplecble.dll" />
+    <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/win-arm64/native/simpleble.dll;$(NativeLibrariesDirectory)/win-arm64/native/simplecble.dll" Condition="'$(PackageId)' != 'SimpleSharpBLE.Plain'" />
+  </ItemGroup>
+  <Target Name="RequireNativeLibraries" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain'"
+           Text="Set NativeLibrariesDirectory to the directory containing win-x64/native and win-arm64/native libraries." />
+    <Error Condition="'$(NativeLibrariesDirectory)' != '' And '$(NativeLibraryDirectory)' != ''"
+           Text="Specify either NativeLibrariesDirectory or NativeLibraryDirectory." />
+    <Error Condition="'$(NativeLibrariesDirectory)' == '' And ('$(NativeLibraryDirectory)' == '' Or !Exists('$(NativeLibraryDirectory)/simplecble.dll') Or !Exists('$(NativeLibraryDirectory)/simpleble.dll'))"
+           Text="Provide the PLAIN native libraries using NativeLibraryDirectory." />
+    <Error Condition="'$(NativeLibrariesDirectory)' != '' And !Exists('%(RequiredNativeLibrary.Identity)')" Text="Missing native library: %(RequiredNativeLibrary.Identity)" />
+  </Target>
+</Project>

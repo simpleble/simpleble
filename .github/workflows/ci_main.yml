@@ -120,6 +120,10 @@ jobs:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simplersble.yml
 
+  simplesharpble:
+    needs: [smoketest]
+    uses: ./.github/workflows/ci_simplesharpble.yml
+
   linux-internals:
     needs: [smoketest, libraries]
     if: ${{ needs.libraries.outputs.values != '[]' && needs.libraries.outputs.values != '' }}
@@ -128,7 +132,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     permissions:
       contents: write
@@ -138,7 +142,7 @@ jobs:
       - name: "Download all artifacts"
         uses: actions/download-artifact@v4
         with:
-          pattern: "*"
+          pattern: "!(simplesharpble-native-*)"
           path: artifacts
           merge-multiple: true
 
@@ -197,6 +201,34 @@ jobs:
           packages-dir: sdist
           skip-existing: true
           attestations: false # Broken, see: https://github.com/pypa/gh-action-pypi-publish/issues/166
+
+  publish-simplesharpble:
+    needs: [publish-release]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download SimpleSharpBLE package
+        uses: actions/download-artifact@v4
+        with:
+          name: SimpleSharpBLE-nuget
+          path: packages
+
+      - name: Sign in to NuGet
+        uses: NuGet/login@v1
+        id: nuget
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "packages/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
 
   publish-simpleaible:
     needs: [publish-release]

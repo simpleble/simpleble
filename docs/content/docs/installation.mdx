@@ -13,6 +13,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | --- | --- | --- | --- | --- |
 | [SimpleBLE](./simpleble/usage) | C++ | Production-ready | Native desktop, mobile native code, shared libraries | CMake from source |
 | [SimpleCBLE](./simplecble/usage) | C | Production-ready | C applications, FFI, language bridges | CMake from source |
+| [SimpleSharpBLE](./simplesharpble/usage) | C# / .NET | Development | Windows x64 and ARM64 applications | [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/) |
 | [SimplePyBLE](./simplepyble/usage) | Python | Production-ready | Scripts, tools, data pipelines, tests | PyPI or local source |
 | [SimpleJavaBLE](./simplejavable/usage) | Java | Production-ready | JVM desktop apps and integrations | Maven Central or local source |
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
@@ -36,7 +37,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Rust", "Android", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -86,6 +87,17 @@ target_link_libraries(your_app PRIVATE simplecble::simplecble)
 ```
 
 If you are compiling manually, include `simplecble` headers and link both `simplecble` and the platform Bluetooth dependencies.
+
+</Tab>
+<Tab value="C#">
+
+Install SimpleSharpBLE from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/):
+
+```sh
+dotnet add package SimpleSharpBLE --prerelease
+```
+
+Requires .NET 10. The package includes native libraries for Windows x64 and ARM64.
 
 </Tab>
 <Tab value="Python">
@@ -201,6 +213,7 @@ See [MCP Server](./simpleaible/mcp) and [HTTP Server](./simpleaible/http) for ag
 The fastest smoke test is to scan for nearby devices:
 
 - C++, C, Python, Java, Rust, and Android users can start with [Quickstart](./quickstart).
+- C# users can start with the scan example in [SimpleSharpBLE Usage](./simplesharpble/usage).
 - CMake users can build the repository examples from [SimpleBLE Examples](./simpleble/examples) or [SimpleCBLE Examples](./simplecble/examples).
 - Python users can run the examples under `examples/simplepyble`.
 - Rust users can run the examples under `examples/simplersble`.

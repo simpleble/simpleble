@@ -1,0 +1,29 @@
+---
+title: Examples
+description: Code examples for SimpleSharpBLE.
+---
+
+The [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble)
+follow the C++ examples, with one file-based C# app per use case.
+
+## Central
+
+| Example | Demonstrates |
+| --- | --- |
+| [list_adapters](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/list_adapters.cs) | Backends and their adapters, plus the consolidated adapter list. |
+| [list_paired](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/list_paired.cs) | Paired devices for each adapter. |
+| [power_cycle](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/power_cycle.cs) | Adapter power control and events. |
+| [scan](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/scan.cs) | Discovery events, signal strength, service data, and manufacturer data. |
+| [connect](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/connect.cs) | Device selection, connection, MTU, services, characteristics, and descriptors. |
+| [multiconnect](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/multiconnect.cs) | Five connect/disconnect cycles and connection events. |
+| [read](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/read.cs) | Characteristic selection and repeated reads. |
+| [write](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/write.cs) | Acknowledged or unacknowledged writes of hex bytes. |
+| [notify](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/notify.cs) | Notifications and unsubscription. |
+| [indicate](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/indicate.cs) | Indications and unsubscription. |
+| [notify_multi](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/notify_multi.cs) | Notifications from two devices and staggered disconnection. |
+
+## Peripheral
+
+[peripheral](https://github.com/simpleble/simpleble/blob/main/examples/simplesharpble/peripheral.cs)
+advertises a custom service, accepts reads and writes, echoes written values to
+subscribers, and reports client and subscription events. Press Ctrl+C to stop.

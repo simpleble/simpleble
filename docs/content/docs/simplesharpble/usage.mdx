@@ -1,0 +1,49 @@
+---
+title: Usage
+description: Install SimpleSharpBLE and scan for nearby Bluetooth devices.
+---
+
+SimpleSharpBLE brings SimpleBLE to .NET applications on Windows x64 and ARM64.
+
+## Install from NuGet
+
+Add [SimpleSharpBLE](https://www.nuget.org/packages/SimpleSharpBLE/) to your .NET 10 project:
+
+```sh
+dotnet add package SimpleSharpBLE --prerelease
+```
+
+The package includes the native libraries for both architectures.
+
+## First scan
+
+```csharp
+using SimpleSharpBLE;
+
+var adapters = Adapter.GetAdapters();
+try
+{
+    if (adapters.Count == 0)
+    {
+        Console.WriteLine("No Bluetooth adapters found.");
+        return;
+    }
+
+    var adapter = adapters[0];
+    adapter.ScanFound += (_, e) =>
+    {
+        using var peripheral = e.Peripheral;
+        Console.WriteLine($"{peripheral.Identifier} [{peripheral.Address}] {peripheral.Rssi} dBm");
+    };
+    adapter.ScanFor(TimeSpan.FromSeconds(5));
+}
+finally
+{
+    foreach (var adapter in adapters) adapter.Dispose();
+}
+```
+
+Adapters and peripherals are disposable. Use `using` for individual objects and
+dispose each item returned in a collection.
+
+See [Examples](./examples) for connections, reads, writes, notifications, and peripheral hosting.

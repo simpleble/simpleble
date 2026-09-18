@@ -1,0 +1,91 @@
+name: Build and Test SimpleSharpBLE
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  test-plain:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build native PLAIN backend
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake -S simplesharpble/test/native -B build_simplesharpble_tests -G "Visual Studio 17 2022" -A x64 -DSIMPLEBLE_PLAIN=ON -DBUILD_SHARED_LIBS=ON "-DCMAKE_CXX_FLAGS=/utf-8 /EHsc"
+          cmake --build build_simplesharpble_tests --config Release --parallel 4
+      - name: Test bindings
+        run: dotnet test simplesharpble/test -c Release "-p:NativeLibraryDirectory=$pwd/build_simplesharpble_tests/bin/Release"
+
+  build-windows:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - name: Build native libraries
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $architecture = '${{ matrix.architecture }}'
+          $platform = if ($architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
+          cmake -S simplecble -B build_simplesharpble_windows -G "Visual Studio 17 2022" -A $platform -DSIMPLEBLE_PLAIN=OFF -DBUILD_SHARED_LIBS=ON "-DCMAKE_CXX_FLAGS=/utf-8 /EHsc"
+          cmake --build build_simplesharpble_windows --config Release --parallel 4
+          $destination = "native/win-$architecture/native"
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          Copy-Item build_simplesharpble_windows/bin/Release/simpleble.dll, build_simplesharpble_windows/bin/Release/simplecble.dll -Destination $destination
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simplesharpble-native-win-${{ matrix.architecture }}
+          path: native/
+          if-no-files-found: error
+
+  package-windows:
+    needs: [test-plain, build-windows]
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: simplesharpble-native-win-*
+          path: native
+          merge-multiple: true
+      - name: Pack native libraries
+        run: dotnet pack simplesharpble -c Release "-p:NativeLibrariesDirectory=$pwd/native" -o simplesharpble/artifacts
+      - name: Build examples
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          Get-ChildItem examples/simplesharpble/*.cs | ForEach-Object {
+            dotnet build $_.FullName -c Release --artifacts-path "$pwd/build_simplesharpble_examples/$($_.BaseName)"
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SimpleSharpBLE-nuget
+          path: simplesharpble/artifacts/*.nupkg
+          if-no-files-found: error

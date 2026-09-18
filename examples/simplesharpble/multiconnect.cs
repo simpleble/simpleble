@@ -1,0 +1,65 @@
+#:project ../../simplesharpble
+#:property PublishAot=false
+
+using SimpleSharpBLE;
+
+using var adapter = Select(Adapter.GetAdapters(),
+    a => $"{a.Identifier} [{a.Address}]", "Select an adapter");
+if (adapter is null) return;
+
+adapter.ScanStarted += (_, _) => Console.WriteLine("Scan started.");
+adapter.ScanStopped += (_, _) => Console.WriteLine("Scan stopped.");
+adapter.ScanFor(TimeSpan.FromSeconds(5));
+using var peripheral = Select(adapter.ScanGetResults(),
+    p => $"{p.Identifier} [{p.Address}] Connectable: {p.IsConnectable}", "Select a device");
+if (peripheral is null) return;
+if (!peripheral.IsConnectable)
+{
+    Console.WriteLine("Device is not connectable.");
+    return;
+}
+
+peripheral.Connected += (_, _) => Console.WriteLine("Connected callback triggered.");
+peripheral.Disconnected += (_, _) => Console.WriteLine("Disconnected callback triggered.");
+for (int i = 0; i < 5; i++)
+{
+    Console.WriteLine($"Connection {i + 1}");
+    peripheral.Connect();
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(2));
+    }
+    finally
+    {
+        peripheral.Disconnect();
+    }
+}
+
+static T? Select<T>(IReadOnlyList<T> items, Func<T, string> describe, string prompt)
+    where T : class, IDisposable
+{
+    T? selected = null;
+    try
+    {
+        if (items.Count == 0)
+        {
+            Console.WriteLine("No matching devices found.");
+            return null;
+        }
+        for (int i = 0; i < items.Count; i++)
+            Console.WriteLine($"[{i}] {describe(items[i])}");
+        while (true)
+        {
+            Console.Write($"{prompt} (0-{items.Count - 1}): ");
+            string? input = Console.ReadLine();
+            if (input is null) return null;
+            if (int.TryParse(input, out int index) && index >= 0 && index < items.Count)
+                return selected = items[index];
+        }
+    }
+    finally
+    {
+        foreach (var item in items)
+            if (!ReferenceEquals(item, selected)) item.Dispose();
+    }
+}
