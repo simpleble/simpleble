@@ -3,7 +3,8 @@ title: Usage
 description: Install SimpleSharpBLE and scan for nearby Bluetooth devices.
 ---
 
-SimpleSharpBLE brings SimpleBLE to .NET applications on Windows x64 and ARM64.
+SimpleSharpBLE brings SimpleBLE to .NET applications on Windows x64/ARM64 and
+macOS 14 or newer on Apple Silicon. Intel macOS and Mac Catalyst are not supported.
 
 ## Install from NuGet
 
@@ -13,7 +14,11 @@ Add [SimpleSharpBLE](https://www.nuget.org/packages/SimpleSharpBLE/) to your .NE
 dotnet add package SimpleSharpBLE --prerelease
 ```
 
-The package includes the native libraries for both architectures.
+The package includes the native libraries for all supported platforms.
+
+On macOS, packaged applications need `NSBluetoothAlwaysUsageDescription` in
+their `Info.plist`. Sandboxed applications also need the Bluetooth entitlement.
+See [Bluetooth Permissions](../fundamentals/permissions).
 
 ## First scan
 

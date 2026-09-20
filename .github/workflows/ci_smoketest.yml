@@ -75,6 +75,32 @@ jobs:
         run: |
           utils/gradle/gradlew -p simplejavable/java -PbuildFromCMake --no-daemon build
 
+  build-csharp:
+    runs-on: macos-14
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build CoreBluetooth libraries
+        run: |
+          cmake -S simplecble -B build_simplesharpble_smoke -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DSIMPLEBLE_PLAIN=OFF -DBUILD_SHARED_LIBS=ON
+          cmake --build build_simplesharpble_smoke --parallel 4
+
+      - name: Build SimpleSharpBLE bindings
+        run: dotnet build simplesharpble -c Release "-p:NativeLibraryDirectory=$PWD/build_simplesharpble_smoke/lib"
+
   build-python:
     runs-on: ubuntu-22.04
     strategy:

@@ -14,5 +14,7 @@
     <ProjectReference Include="../SimpleSharpBLE.csproj" />
     <None Include="$(NativeLibraryDirectory)/*.dll" Link="%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" Condition="'$(NativeLibraryDirectory)' != ''" />
+    <None Include="$(NativeLibraryDirectory)/*.dylib" Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" Condition="'$(NativeLibraryDirectory)' != ''" />
   </ItemGroup>
 </Project>

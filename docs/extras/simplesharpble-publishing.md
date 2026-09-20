@@ -14,9 +14,11 @@ The .NET project reads that file directly and converts the package suffix to
 `-dev.N`, so NuGet sorts development builds numerically. Stable versions are
 unchanged. Continue using the repository's usual version bump and release process.
 
-CI publishes the tested `SimpleSharpBLE-nuget` artifact, with the managed
-assembly and Windows x64/ARM64 native DLLs. Matrix builds feed one packaging job. Repeated pushes of an existing version are
-skipped. `SimpleSharpBLE.Plain` is available for local development.
+CI publishes the built `SimpleSharpBLE-nuget` artifact, with the managed
+assembly, Windows x64/ARM64 native DLLs, and Apple Silicon macOS native libraries.
+Platform builds feed one packaging job.
+Repeated pushes of an existing version are skipped. `SimpleSharpBLE.Plain`
+is available for local development.
 
 ## Install a development version
 

@@ -255,6 +255,14 @@ public sealed class LocalAndConfigurationTests
         using var peripheral = new SimpleSharpBLE.Peripheral(NativeFixture.test_remote());
         Assert.Equal(BleErrorCode.OperationNotSupported,
             Assert.Throws<BleException>(() => Advanced.Dongl.SetPasskeyRequestCallback(peripheral, () => "001234")).Code);
-        Assert.Throws<PlatformNotSupportedException>(() => Advanced.MacOS.RetrieveCachedPeripherals(null!, []));
+    }
+
+    [Fact]
+    public void MacOSCachedRetrievalChecksPlatformAndAdapter()
+    {
+        if (System.OperatingSystem.IsMacOS())
+            Assert.Throws<ArgumentNullException>(() => Advanced.MacOS.RetrieveCachedPeripherals(null!, []));
+        else
+            Assert.Throws<PlatformNotSupportedException>(() => Advanced.MacOS.RetrieveCachedPeripherals(null!, []));
     }
 }

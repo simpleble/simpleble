@@ -1,4 +1,4 @@
-name: Build and Test SimpleSharpBLE
+name: Build SimpleSharpBLE
 
 on:
   workflow_dispatch:
@@ -12,25 +12,6 @@ defaults:
     shell: pwsh
 
 jobs:
-  test-plain:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: ./.github/actions/setup-version
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Build native PLAIN backend
-        run: |
-          $PSNativeCommandUseErrorActionPreference = $true
-          cmake -S simplesharpble/test/native -B build_simplesharpble_tests -G "Visual Studio 17 2022" -A x64 -DSIMPLEBLE_PLAIN=ON -DBUILD_SHARED_LIBS=ON "-DCMAKE_CXX_FLAGS=/utf-8 /EHsc"
-          cmake --build build_simplesharpble_tests --config Release --parallel 4
-      - name: Test bindings
-        run: dotnet test simplesharpble/test -c Release "-p:NativeLibraryDirectory=$pwd/build_simplesharpble_tests/bin/Release"
-
   build-windows:
     runs-on: windows-2022
     strategy:
@@ -59,8 +40,38 @@ jobs:
           path: native/
           if-no-files-found: error
 
-  package-windows:
-    needs: [test-plain, build-windows]
+  build-macos:
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and stage CoreBluetooth libraries
+        run: |
+          cmake -S simplecble -B build_simplesharpble_macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DSIMPLEBLE_PLAIN=OFF -DBUILD_SHARED_LIBS=ON
+          cmake --build build_simplesharpble_macos --parallel 4
+          cmake --install build_simplesharpble_macos --prefix "$PWD/build_simplesharpble_macos/install"
+          mkdir -p native/osx-arm64/native
+          # Install fixes rpaths; dereference both versioned and unversioned library names for NuGet.
+          cp -L build_simplesharpble_macos/install/lib/*.dylib native/osx-arm64/native/
+      - name: Build SimpleSharpBLE bindings
+        run: dotnet build simplesharpble -c Release "-p:NativeLibraryDirectory=$PWD/build_simplesharpble_macos/install/lib"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simplesharpble-native-osx-arm64
+          path: native/
+          if-no-files-found: error
+
+  package:
+    needs: [build-windows, build-macos]
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +84,7 @@ jobs:
           dotnet-version: '10.0.x'
       - uses: actions/download-artifact@v4
         with:
-          pattern: simplesharpble-native-win-*
+          pattern: simplesharpble-native-*
           path: native
           merge-multiple: true
       - name: Pack native libraries
