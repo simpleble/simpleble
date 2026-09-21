@@ -16,5 +16,7 @@
           CopyToOutputDirectory="PreserveNewest" Condition="'$(NativeLibraryDirectory)' != ''" />
     <None Include="$(NativeLibraryDirectory)/*.dylib" Link="%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" Condition="'$(NativeLibraryDirectory)' != ''" />
+    <None Include="$(NativeLibraryDirectory)/*.so*" Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" Condition="'$(NativeLibraryDirectory)' != ''" />
   </ItemGroup>
 </Project>

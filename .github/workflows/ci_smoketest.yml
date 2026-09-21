@@ -76,7 +76,13 @@ jobs:
           utils/gradle/gradlew -p simplejavable/java -PbuildFromCMake --no-daemon build
 
   build-csharp:
-    runs-on: macos-14
+    runs-on: ${{ matrix.config.runner-os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { runner-os: ubuntu-22.04, os: linux, architecture: x64, cmake-options: '' }
+          - { runner-os: macos-14, os: macos, architecture: aarch64, cmake-options: '-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0' }
 
     steps:
       - name: Clone Repository
@@ -93,13 +99,27 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Build CoreBluetooth libraries
+      - name: Install dependencies
+        if: matrix.config.os == 'linux'
         run: |
-          cmake -S simplecble -B build_simplesharpble_smoke -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DSIMPLEBLE_PLAIN=OFF -DBUILD_SHARED_LIBS=ON
-          cmake --build build_simplesharpble_smoke --parallel 4
+          sudo -H apt-get update -y
+          sudo -H apt-get install -y libdbus-1-dev
+
+      - name: Build native libraries
+        uses: ./.github/actions/build-native
+        with:
+          source-dir: "$GITHUB_WORKSPACE/simplecble"
+          build-dir: "$GITHUB_WORKSPACE/build_simplesharpble_smoke"
+          install-prefix: "$GITHUB_WORKSPACE/build_simplesharpble_smoke/install"
+          build-config: "Release"
+          os: "${{ matrix.config.os }}"
+          target-arch: "${{ matrix.config.architecture }}"
+          cmake-options: "-DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_LIBDIR=lib ${{ matrix.config.cmake-options }}"
+          parallel-jobs: '4'
+          linux-use-system-dbus: 'true'
 
       - name: Build SimpleSharpBLE bindings
-        run: dotnet build simplesharpble -c Release "-p:NativeLibraryDirectory=$PWD/build_simplesharpble_smoke/lib"
+        run: dotnet build simplesharpble -c Release "-p:NativeLibraryDirectory=$PWD/build_simplesharpble_smoke/install/lib"
 
   build-python:
     runs-on: ubuntu-22.04

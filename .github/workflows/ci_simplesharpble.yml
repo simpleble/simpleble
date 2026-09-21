@@ -29,7 +29,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $architecture = '${{ matrix.architecture }}'
           $platform = if ($architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
-          cmake -S simplecble -B build_simplesharpble_windows -G "Visual Studio 17 2022" -A $platform -DSIMPLEBLE_PLAIN=OFF -DBUILD_SHARED_LIBS=ON "-DCMAKE_CXX_FLAGS=/utf-8 /EHsc"
+          cmake -S simplecble -B build_simplesharpble_windows -G "Visual Studio 17 2022" -A $platform -DBUILD_SHARED_LIBS=ON "-DCMAKE_CXX_FLAGS=/utf-8 /EHsc"
           cmake --build build_simplesharpble_windows --config Release --parallel 4
           $destination = "native/win-$architecture/native"
           New-Item -ItemType Directory -Path $destination -Force | Out-Null
@@ -56,7 +56,7 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build and stage CoreBluetooth libraries
         run: |
-          cmake -S simplecble -B build_simplesharpble_macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DSIMPLEBLE_PLAIN=OFF -DBUILD_SHARED_LIBS=ON
+          cmake -S simplecble -B build_simplesharpble_macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DBUILD_SHARED_LIBS=ON
           cmake --build build_simplesharpble_macos --parallel 4
           cmake --install build_simplesharpble_macos --prefix "$PWD/build_simplesharpble_macos/install"
           mkdir -p native/osx-arm64/native
@@ -70,8 +70,52 @@ jobs:
           path: native/
           if-no-files-found: error
 
+  build-linux:
+    runs-on: ${{ matrix.config.runner-os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { runner-os: ubuntu-22.04, architecture: x64, rid: linux-x64 }
+          - { runner-os: ubuntu-22.04-arm, architecture: aarch64, rid: linux-arm64 }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - name: Install dependencies
+        run: |
+          sudo -H apt-get update -y
+          sudo -H apt-get install -y libdbus-1-dev
+      - name: Build BlueZ libraries
+        uses: ./.github/actions/build-native
+        with:
+          source-dir: "$GITHUB_WORKSPACE/simplecble"
+          build-dir: "$GITHUB_WORKSPACE/build_simplesharpble_linux"
+          install-prefix: "$GITHUB_WORKSPACE/build_simplesharpble_linux/install"
+          build-config: "Release"
+          os: "linux"
+          target-arch: "${{ matrix.config.architecture }}"
+          cmake-options: "-DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_LIBDIR=lib"
+          parallel-jobs: '4'
+          linux-use-system-dbus: 'true'
+      - name: Stage native libraries
+        run: |
+          mkdir -p native/${{ matrix.config.rid }}/native
+          # Install fixes rpaths; dereference the SONAME and unversioned links for NuGet.
+          cp -L build_simplesharpble_linux/install/lib/libsimpleble.so* build_simplesharpble_linux/install/lib/libsimplecble.so* native/${{ matrix.config.rid }}/native/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simplesharpble-native-${{ matrix.config.rid }}
+          path: native/
+          if-no-files-found: error
+
   package:
-    needs: [build-windows, build-macos]
+    needs: [build-windows, build-macos, build-linux]
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4

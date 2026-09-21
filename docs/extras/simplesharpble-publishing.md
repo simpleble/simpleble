@@ -15,8 +15,11 @@ The .NET project reads that file directly and converts the package suffix to
 unchanged. Continue using the repository's usual version bump and release process.
 
 CI publishes the built `SimpleSharpBLE-nuget` artifact, with the managed
-assembly, Windows x64/ARM64 native DLLs, and Apple Silicon macOS native libraries.
-Platform builds feed one packaging job.
+assembly, Windows x64/ARM64 native DLLs, Apple Silicon macOS native libraries,
+and Linux x64/ARM64 native libraries. Platform builds feed one packaging job.
+Linux builds use the shared `build-native` action on Ubuntu 22.04 with system
+D-Bus. Installed `.so` files, including their versioned SONAME filenames, are
+copied into `runtimes/linux-x64/native` and `runtimes/linux-arm64/native`.
 Repeated pushes of an existing version are skipped. `SimpleSharpBLE.Plain`
 is available for local development.
 

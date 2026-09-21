@@ -13,7 +13,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | --- | --- | --- | --- | --- |
 | [SimpleBLE](./simpleble/usage) | C++ | Production-ready | Native desktop, mobile native code, shared libraries | CMake from source |
 | [SimpleCBLE](./simplecble/usage) | C | Production-ready | C applications, FFI, language bridges | CMake from source |
-| [SimpleSharpBLE](./simplesharpble/usage) | C# / .NET | Development | Windows x64 and ARM64 applications | [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/) |
+| [SimpleSharpBLE](./simplesharpble/usage) | C# / .NET | Development | Windows, macOS, and Linux applications | [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/) |
 | [SimplePyBLE](./simplepyble/usage) | Python | Production-ready | Scripts, tools, data pipelines, tests | PyPI or local source |
 | [SimpleJavaBLE](./simplejavable/usage) | Java | Production-ready | JVM desktop apps and integrations | Maven Central or local source |
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
@@ -97,8 +97,8 @@ Install SimpleSharpBLE from [NuGet](https://www.nuget.org/packages/SimpleSharpBL
 dotnet add package SimpleSharpBLE --prerelease
 ```
 
-Requires .NET 10. The package includes native libraries for Windows x64/ARM64 and
-macOS 14 or newer on Apple Silicon.
+Requires .NET 10. See [SimpleSharpBLE Usage](./simplesharpble/usage) for dependencies
+and a first scan example.
 
 </Tab>
 <Tab value="Python">

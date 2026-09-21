@@ -9,6 +9,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
     <PackageVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-dev([0-9]+)$', '-dev.$1'))</PackageVersion>
+    <_NativeLibraryMajorVersion>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^[0-9]+').Value)</_NativeLibraryMajorVersion>
     <Description>.NET bindings for SimpleBLE.</Description>
     <IsPackable>true</IsPackable>
     <PackageId Condition="'$(PackageId)' == ''">SimpleSharpBLE</PackageId>
@@ -27,29 +28,34 @@
     <None Update="README.md" Pack="true" PackagePath="/README.md" />
     <None Include="$(NativeLibrariesDirectory)/**/*.dll" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
     <None Include="$(NativeLibrariesDirectory)/**/*.dylib" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
+    <None Include="$(NativeLibrariesDirectory)/**/*.so*" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
     <None Include="$(NativeLibraryDirectory)/simplecble.dll;$(NativeLibraryDirectory)/simpleble.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/$(_NativeRuntimeIdentifier)/native/" Condition="'$(NativeLibraryDirectory)' != '' And $(_NativeRuntimeIdentifier.StartsWith('win-'))" />
     <None Include="$(NativeLibraryDirectory)/libsimpleble*.dylib;$(NativeLibraryDirectory)/libsimplecble*.dylib" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/osx-arm64/native/" Condition="'$(NativeLibraryDirectory)' != '' And '$(_NativeRuntimeIdentifier)' == 'osx-arm64'" />
+    <None Include="$(NativeLibraryDirectory)/libsimpleble.so*;$(NativeLibraryDirectory)/libsimplecble.so*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/$(_NativeRuntimeIdentifier)/native/" Condition="'$(NativeLibraryDirectory)' != '' And ('$(_NativeRuntimeIdentifier)' == 'linux-x64' Or '$(_NativeRuntimeIdentifier)' == 'linux-arm64')" />
   </ItemGroup>
   <ItemGroup Condition="'$(NativeLibrariesDirectory)' != ''">
     <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/win-x64/native/simpleble.dll;$(NativeLibrariesDirectory)/win-x64/native/simplecble.dll" Condition="'$(RuntimeIdentifier)' == '' Or '$(RuntimeIdentifier)' == 'win-x64'" />
     <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/win-arm64/native/simpleble.dll;$(NativeLibrariesDirectory)/win-arm64/native/simplecble.dll" Condition="'$(RuntimeIdentifier)' == 'win-arm64' Or ('$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain')" />
     <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/osx-arm64/native/libsimpleble.dylib;$(NativeLibrariesDirectory)/osx-arm64/native/libsimplecble.dylib" Condition="'$(RuntimeIdentifier)' == 'osx-arm64' Or ('$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain')" />
+    <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/linux-x64/native/libsimpleble.so;$(NativeLibrariesDirectory)/linux-x64/native/libsimpleble.so.$(_NativeLibraryMajorVersion);$(NativeLibrariesDirectory)/linux-x64/native/libsimplecble.so;$(NativeLibrariesDirectory)/linux-x64/native/libsimplecble.so.$(_NativeLibraryMajorVersion)" Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or ('$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain')" />
+    <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/linux-arm64/native/libsimpleble.so;$(NativeLibrariesDirectory)/linux-arm64/native/libsimpleble.so.$(_NativeLibraryMajorVersion);$(NativeLibrariesDirectory)/linux-arm64/native/libsimplecble.so;$(NativeLibrariesDirectory)/linux-arm64/native/libsimplecble.so.$(_NativeLibraryMajorVersion)" Condition="'$(RuntimeIdentifier)' == 'linux-arm64' Or ('$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain')" />
   </ItemGroup>
   <ItemGroup Condition="'$(NativeLibrariesDirectory)' == '' And '$(NativeLibraryDirectory)' != ''">
     <RequiredNativeLibrary Include="$(NativeLibraryDirectory)/simpleble.dll;$(NativeLibraryDirectory)/simplecble.dll" Condition="$(_NativeRuntimeIdentifier.StartsWith('win-'))" />
     <RequiredNativeLibrary Include="$(NativeLibraryDirectory)/libsimpleble.dylib;$(NativeLibraryDirectory)/libsimplecble.dylib" Condition="'$(_NativeRuntimeIdentifier)' == 'osx-arm64'" />
+    <RequiredNativeLibrary Include="$(NativeLibraryDirectory)/libsimpleble.so;$(NativeLibraryDirectory)/libsimpleble.so.$(_NativeLibraryMajorVersion);$(NativeLibraryDirectory)/libsimplecble.so;$(NativeLibraryDirectory)/libsimplecble.so.$(_NativeLibraryMajorVersion)" Condition="'$(_NativeRuntimeIdentifier)' == 'linux-x64' Or '$(_NativeRuntimeIdentifier)' == 'linux-arm64'" />
   </ItemGroup>
   <Target Name="RequireNativeLibraries" BeforeTargets="GenerateNuspec">
     <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain'"
-           Text="Set NativeLibrariesDirectory to the directory containing win-x64/native, win-arm64/native, and osx-arm64/native libraries, or select one platform with RuntimeIdentifier." />
+           Text="Set NativeLibrariesDirectory to the directory containing win-x64/native, win-arm64/native, osx-arm64/native, linux-x64/native, and linux-arm64/native libraries, or select one platform with RuntimeIdentifier." />
     <Error Condition="'$(NativeLibrariesDirectory)' != '' And '$(NativeLibraryDirectory)' != ''"
            Text="Specify either NativeLibrariesDirectory or NativeLibraryDirectory." />
-    <Error Condition="'$(RuntimeIdentifier)' != '' And '$(RuntimeIdentifier)' != 'win-x64' And '$(RuntimeIdentifier)' != 'win-arm64' And '$(RuntimeIdentifier)' != 'osx-arm64'"
-           Text="Supported RuntimeIdentifiers are win-x64, win-arm64, and osx-arm64." />
+    <Error Condition="'$(RuntimeIdentifier)' != '' And '$(RuntimeIdentifier)' != 'win-x64' And '$(RuntimeIdentifier)' != 'win-arm64' And '$(RuntimeIdentifier)' != 'osx-arm64' And '$(RuntimeIdentifier)' != 'linux-x64' And '$(RuntimeIdentifier)' != 'linux-arm64'"
+           Text="Supported RuntimeIdentifiers are win-x64, win-arm64, osx-arm64, linux-x64, and linux-arm64." />
     <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(NativeLibraryDirectory)' == ''"
            Text="Provide the PLAIN native libraries using NativeLibraryDirectory." />
-    <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(_NativeRuntimeIdentifier)' != 'win-x64' And '$(_NativeRuntimeIdentifier)' != 'win-arm64' And '$(_NativeRuntimeIdentifier)' != 'osx-arm64'"
-           Text="Local native libraries require win-x64, win-arm64, or osx-arm64." />
+    <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(_NativeRuntimeIdentifier)' != 'win-x64' And '$(_NativeRuntimeIdentifier)' != 'win-arm64' And '$(_NativeRuntimeIdentifier)' != 'osx-arm64' And '$(_NativeRuntimeIdentifier)' != 'linux-x64' And '$(_NativeRuntimeIdentifier)' != 'linux-arm64'"
+           Text="Local native libraries require win-x64, win-arm64, osx-arm64, linux-x64, or linux-arm64." />
     <Error Condition="!Exists('%(RequiredNativeLibrary.Identity)')" Text="Missing native library: %(RequiredNativeLibrary.Identity)" />
   </Target>
 </Project>
