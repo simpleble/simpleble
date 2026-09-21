@@ -3,7 +3,7 @@ title: Usage
 description: Install SimpleSharpBLE and scan for nearby Bluetooth devices.
 ---
 
-SimpleSharpBLE provides C# and .NET bindings for SimpleBLE on Windows, macOS, and Linux.
+SimpleSharpBLE provides C# and .NET bindings for SimpleBLE on Windows, macOS, Linux, and Android.
 
 ## Install from NuGet
 
@@ -18,6 +18,21 @@ On Ubuntu, install BlueZ and D-Bus:
 ```sh
 sudo apt-get install bluez libdbus-1-3
 ```
+
+On Android, target Android 12 or newer (`SupportedOSPlatformVersion` >= `31.0`)
+and select `android-arm64` and/or `android-x64` runtimes. Declare and request
+`BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` permissions (`BLUETOOTH_ADVERTISE` for
+peripheral hosting), enable Bluetooth, then initialize on the application thread:
+
+```csharp
+Java.Lang.JavaSystem.LoadLibrary("simpleble");
+SimpleSharpBLE.Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointer,
+    Android.App.Application.Context.Handle);
+```
+
+Run blocking operations off the UI thread. The
+[Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
+includes the manifest and runtime permission handling.
 
 ## First scan
 

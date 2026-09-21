@@ -1,0 +1,16 @@
+<Project>
+  <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+    <AndroidJavaSource Include="$(MSBuildThisFileDirectory)android/bridge/*.java" Bind="false" />
+    <ProguardConfiguration Include="$(MSBuildThisFileDirectory)android/proguard.cfg" />
+  </ItemGroup>
+  <Target Name="CheckSimpleSharpBLEAndroidPlatform" BeforeTargets="PrepareForBuild"
+          Condition="'$(TargetPlatformIdentifier)' == 'android' And '$(AndroidApplication)' == 'true'">
+    <Error Condition="$([MSBuild]::VersionLessThan('$(SupportedOSPlatformVersion)', '31.0'))"
+           Text="SimpleSharpBLE requires Android 12 or newer. Set SupportedOSPlatformVersion to 31.0 or higher." />
+    <ItemGroup>
+      <_SimpleSharpBLEUnsupportedRuntime Include="$(RuntimeIdentifiers);$(RuntimeIdentifier)" Exclude="android-arm64;android-x64" />
+    </ItemGroup>
+    <Error Condition="'@(_SimpleSharpBLEUnsupportedRuntime)' != ''"
+           Text="SimpleSharpBLE supports Android ARM64 and x64. Unsupported runtimes: @(_SimpleSharpBLEUnsupportedRuntime)." />
+  </Target>
+</Project>

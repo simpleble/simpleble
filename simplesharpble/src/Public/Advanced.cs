@@ -48,6 +48,32 @@ public static class Advanced
         }
     }
 
+    public static class Android
+    {
+        /// <summary>
+        /// Initializes Android on the application thread after Bluetooth is enabled and permissions are granted.
+        /// Load simpleble with JavaSystem.LoadLibrary first. Pass the Java VM invocation pointer
+        /// and an application Context JNI handle; the native backend retains the context.
+        /// </summary>
+        public static void Initialize(nint javaVm, nint applicationContext)
+        {
+            Require(System.OperatingSystem.IsAndroid());
+            if (javaVm == 0) throw new ArgumentException("Java VM cannot be null.", nameof(javaVm));
+            if (applicationContext == 0) throw new ArgumentException("Application context cannot be null.", nameof(applicationContext));
+            NativeCall.Invoke((ref nint error) =>
+            {
+                NativeMethods.simpleble_advanced_android_set_jvm(javaVm, ref error);
+                return 0;
+            });
+            NativeCall.Invoke((ref nint error) =>
+            {
+                NativeMethods.simpleble_advanced_android_set_context(applicationContext, ref error);
+                return 0;
+            });
+            // Preload Java callback classes on the application thread before worker calls.
+            NativeCall.Invoke(NativeMethods.simpleble_backend_get_count);
+        }
+    }
     public static class MacOS
     {
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)

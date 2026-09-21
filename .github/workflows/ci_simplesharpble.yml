@@ -114,8 +114,53 @@ jobs:
           path: native/
           if-no-files-found: error
 
+  build-android:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { abi: arm64-v8a, rid: android-arm64 }
+          - { abi: x86_64, rid: android-x64 }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - uses: android-actions/setup-android@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Android NDK
+        run: sdkmanager "ndk;29.0.14206865"
+      - name: Build and stage Android libraries
+        run: |
+          cmake -S simplecble -B build_simplesharpble_android -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/29.0.14206865/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=${{ matrix.config.abi }} -DANDROID_PLATFORM=android-31
+          cmake --build build_simplesharpble_android --parallel 4
+          cmake --install build_simplesharpble_android --strip --prefix "$PWD/build_simplesharpble_android/install"
+          mkdir -p native/${{ matrix.config.rid }}/native
+          cp build_simplesharpble_android/install/lib/*.so native/${{ matrix.config.rid }}/native/
+      - name: Build SimpleSharpBLE bindings
+        run: dotnet build simplesharpble -c Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simplesharpble-native-${{ matrix.config.rid }}
+          path: native/
+          if-no-files-found: error
+
   package:
-    needs: [build-windows, build-macos, build-linux]
+    needs: [build-windows, build-macos, build-linux, build-android]
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4

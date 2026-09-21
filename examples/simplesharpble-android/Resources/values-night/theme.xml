@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="background">#0D1526</color>
+  <color name="surface">#111D32</color>
+  <color name="foreground">#E6EDF8</color>
+  <color name="muted">#B9C6D9</color>
+  <color name="primary">#9DCAFF</color>
+  <color name="on_primary">#003B78</color>
+  <color name="primary_container">#075BAB</color>
+  <color name="on_primary_container">#E4F0FF</color>
+  <color name="surface_variant">#26364E</color>
+  <color name="outline">#8291A8</color>
+  <style name="ExplorerTheme" parent="android:style/Theme.Material.NoActionBar">
+    <item name="android:fontFamily">sans</item>
+    <item name="android:colorAccent">@color/primary</item>
+    <item name="android:windowBackground">@color/background</item>
+    <item name="android:windowLightStatusBar">false</item>
+    <item name="android:windowLightNavigationBar">false</item>
+    <item name="android:navigationBarColor">@color/background</item>
+  </style>
+</resources>

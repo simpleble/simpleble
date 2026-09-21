@@ -6,7 +6,7 @@ SimpleSharpBLE provides the C# and .NET bindings for SimpleBLE.
 
 ## Key Features
 
-* **Cross-Platform**: Enterprise-grade support for Windows, macOS, and Linux
+* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, and Android
 * **Easy Integration**: Clean, consistent API across all platforms
 * **Multiple Language Bindings**: Production-ready bindings for C, C++, C#, Python, Java and Rust, with more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
@@ -28,6 +28,7 @@ Requirements:
 
 - .NET 10
 - Windows or glibc-based Linux (x64/ARM64), or macOS 14 or newer on Apple Silicon
+- Android 12 or newer (ARM64/x64)
 - On Linux, BlueZ and D-Bus; on Ubuntu, install them with `sudo apt-get install bluez libdbus-1-3`
 
 Add SimpleSharpBLE to your project from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/):
@@ -78,6 +79,17 @@ finally
 
 See the [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble)
 on GitHub for connect, read/write, notify, and peripheral hosting flows.
+
+On Android, enable Bluetooth and grant Nearby devices permissions, then initialize on the application thread before using the API:
+
+```csharp
+Java.Lang.JavaSystem.LoadLibrary("simpleble");
+Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointer,
+    Android.App.Application.Context.Handle);
+```
+
+See the [Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
+for the manifest, runtime permissions, and scanning off the UI thread.
 
 ## License
 
