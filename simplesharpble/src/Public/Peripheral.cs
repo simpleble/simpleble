@@ -87,6 +87,14 @@ public sealed class Peripheral : IDisposable
         ArgumentNullException.ThrowIfNull(descriptor);
         return ReadCore(service, characteristic, descriptor);
     }
+
+    /// <summary>Runs Read on a worker. Cancellation only applies before the operation starts.</summary>
+    public Task<byte[]> ReadAsync(string service, string characteristic, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Read(service, characteristic), cancellationToken);
+
+    /// <summary>Runs the descriptor read on a worker. Cancellation only applies before the operation starts.</summary>
+    public Task<byte[]> ReadAsync(string service, string characteristic, string descriptor, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Read(service, characteristic, descriptor), cancellationToken);
     private byte[] ReadCore(string service, string characteristic, string? descriptor)
     {
         var s = new NativeUuid(service); var c = new NativeUuid(characteristic);
@@ -109,6 +117,18 @@ public sealed class Peripheral : IDisposable
         ArgumentNullException.ThrowIfNull(descriptor);
         WriteCore(service, characteristic, descriptor, data, true);
     }
+
+    /// <summary>Runs WriteRequest on a worker. Keep data unchanged until completion. Cancellation only applies before starting.</summary>
+    public Task WriteRequestAsync(string service, string characteristic, byte[] data, CancellationToken cancellationToken = default) =>
+        Task.Run(() => WriteRequest(service, characteristic, data), cancellationToken);
+
+    /// <summary>Runs WriteCommand on a worker. Keep data unchanged until completion. Cancellation only applies before starting.</summary>
+    public Task WriteCommandAsync(string service, string characteristic, byte[] data, CancellationToken cancellationToken = default) =>
+        Task.Run(() => WriteCommand(service, characteristic, data), cancellationToken);
+
+    /// <summary>Runs the descriptor write on a worker. Keep data unchanged until completion. Cancellation only applies before starting.</summary>
+    public Task WriteAsync(string service, string characteristic, string descriptor, byte[] data, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Write(service, characteristic, descriptor, data), cancellationToken);
     private void WriteCore(string service, string characteristic, string? descriptor, byte[] data, bool request)
     {
         byte[] input = Buffers.Input(data);
@@ -147,6 +167,14 @@ public sealed class Peripheral : IDisposable
 
     public void Notify(string service, string characteristic, Action<byte[]> callback) => Subscribe(service, characteristic, callback, false);
     public void Indicate(string service, string characteristic, Action<byte[]> callback) => Subscribe(service, characteristic, callback, true);
+
+    /// <summary>Completes when the notification subscription is installed. Cancellation only applies before starting.</summary>
+    public Task NotifyAsync(string service, string characteristic, Action<byte[]> callback, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Notify(service, characteristic, callback), cancellationToken);
+
+    /// <summary>Completes when the indication subscription is installed. Cancellation only applies before starting.</summary>
+    public Task IndicateAsync(string service, string characteristic, Action<byte[]> callback, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Indicate(service, characteristic, callback), cancellationToken);
     private void Subscribe(string service, string characteristic, Action<byte[]> callback, bool indicate)
     {
         ArgumentNullException.ThrowIfNull(callback);
@@ -170,6 +198,10 @@ public sealed class Peripheral : IDisposable
             return 0;
         }));
     }
+
+    /// <summary>Stops the subscription on a worker. Cancellation only applies before the operation starts.</summary>
+    public Task UnsubscribeAsync(string service, string characteristic, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Unsubscribe(service, characteristic), cancellationToken);
 
     public void Dispose()
     {

@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
     <!-- Apple mobile runtime assets import symbols from the statically linked app. -->
     <DefineConstants Condition="'$(SimpleSharpBLEStaticLink)' == 'true'">$(DefineConstants);SIMPLESHARPBLE_STATIC</DefineConstants>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>

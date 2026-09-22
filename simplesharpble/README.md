@@ -81,6 +81,13 @@ finally
 See the [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble)
 on GitHub for connect, read/write, notify, and peripheral hosting flows.
 
+Blocking GATT calls also have `Async` counterparts. Cancellation prevents queued work
+from starting; operations already in native code complete normally. Keep write buffers
+unchanged until the returned task completes.
+
+The bindings support trimming and NativeAOT. In MAUI, use the same API and platform
+setup below; dispatch UI updates from callbacks with `MainThread.BeginInvokeOnMainThread`.
+
 On Android, enable Bluetooth and grant Nearby devices permissions, then initialize on the application thread before using the API:
 
 ```csharp
