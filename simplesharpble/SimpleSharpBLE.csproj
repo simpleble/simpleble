@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework Condition="'$(TargetFrameworks)' == ''">net10.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IsAotCompatible>true</IsAotCompatible>
+    <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
     <!-- Apple mobile runtime assets import symbols from the statically linked app. -->
     <DefineConstants Condition="'$(SimpleSharpBLEStaticLink)' == 'true'">$(DefineConstants);SIMPLESHARPBLE_STATIC</DefineConstants>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
@@ -26,6 +27,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src/**/*.cs" />
+    <Compile Remove="src/Compatibility/IsExternalInit.cs" Condition="'$(TargetFramework)' != 'netstandard2.1'" />
     <InternalsVisibleTo Include="SimpleSharpBLE.Tests" />
     <None Include="../LICENSE.md" Pack="true" PackagePath="/LICENSE.md" />
     <None Update="README.md" Pack="true" PackagePath="/README.md" />

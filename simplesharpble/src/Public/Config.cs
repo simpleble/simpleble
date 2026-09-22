@@ -79,7 +79,7 @@ public static class Config
             get => NativeMethods.simpleble_config_android_get_connection_priority();
             set
             {
-                if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value));
+                if (!Enum.IsDefined(typeof(AndroidConnectionPriority), value)) throw new ArgumentOutOfRangeException(nameof(value));
                 NativeMethods.simpleble_config_android_set_connection_priority(value);
             }
         }

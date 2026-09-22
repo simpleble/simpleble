@@ -33,20 +33,20 @@ public static class Advanced
         /// <summary>Runs synchronously on a native pairing worker. Return null to reject.</summary>
         public static void SetPasskeyRequestCallback(Peripheral peripheral, Func<string?>? callback)
         {
-            ArgumentNullException.ThrowIfNull(peripheral);
+            if (peripheral is null) throw new ArgumentNullException(nameof(peripheral));
             peripheral.callbacks.Set("pair-request", callback is null ? null : _ => callback(), (h, id) =>
                 NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_advanced_dongl_set_passkey_request_callback(h, id == 0 ? null : request, id, ref e); return 0; }));
         }
         public static void SetPasskeyDisplayCallback(Peripheral peripheral, Action<string>? callback)
         {
-            ArgumentNullException.ThrowIfNull(peripheral);
+            if (peripheral is null) throw new ArgumentNullException(nameof(peripheral));
             peripheral.callbacks.Set("pair-display", callback is null ? null : value => { callback((string)value!); return null; }, (h, id) =>
                 NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_advanced_dongl_set_passkey_display_callback(h, id == 0 ? null : NativeCallbacks.OnText, id, ref e); return 0; }));
         }
         /// <summary>Runs synchronously on a native pairing worker. Return false to reject.</summary>
         public static void SetNumericComparisonCallback(Peripheral peripheral, Func<string, bool>? callback)
         {
-            ArgumentNullException.ThrowIfNull(peripheral);
+            if (peripheral is null) throw new ArgumentNullException(nameof(peripheral));
             peripheral.callbacks.Set("pair-compare", callback is null ? null : value => callback((string)value!), (h, id) =>
                 NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_advanced_dongl_set_numeric_comparison_callback(h, id == 0 ? null : compare, id, ref e); return 0; }));
         }
@@ -61,7 +61,7 @@ public static class Advanced
         /// </summary>
         public static void Initialize(nint javaVm, nint applicationContext)
         {
-            Require(System.OperatingSystem.IsAndroid());
+            Require(Utils.OperatingSystem == NativeOperatingSystem.Android);
             if (javaVm == 0) throw new ArgumentException("Java VM cannot be null.", nameof(javaVm));
             if (applicationContext == 0) throw new ArgumentException("Application context cannot be null.", nameof(applicationContext));
             NativeCall.Invoke((ref nint error) =>
@@ -82,12 +82,12 @@ public static class Advanced
     {
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
-            Require(System.OperatingSystem.IsMacOS());
+            Require(Utils.OperatingSystem == NativeOperatingSystem.MacOS);
             SetName(peripheral, name, NativeMethods.simpleble_advanced_macos_set_advertisement_local_name);
         }
         public static IReadOnlyList<Peripheral> RetrieveCachedPeripherals(Adapter adapter, IEnumerable<string> identifiers)
         {
-            Require(System.OperatingSystem.IsMacOS());
+            Require(Utils.OperatingSystem == NativeOperatingSystem.MacOS);
             return Retrieve(adapter, identifiers, NativeMethods.simpleble_advanced_macos_retrieve_cached_peripheral);
         }
     }
@@ -95,12 +95,12 @@ public static class Advanced
     {
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
-            Require(System.OperatingSystem.IsIOS() || System.OperatingSystem.IsMacCatalyst());
+            Require(Utils.OperatingSystem == NativeOperatingSystem.IOS);
             SetName(peripheral, name, NativeMethods.simpleble_advanced_ios_set_advertisement_local_name);
         }
         public static IReadOnlyList<Peripheral> RetrieveCachedPeripherals(Adapter adapter, IEnumerable<string> identifiers)
         {
-            Require(System.OperatingSystem.IsIOS() || System.OperatingSystem.IsMacCatalyst());
+            Require(Utils.OperatingSystem == NativeOperatingSystem.IOS);
             return Retrieve(adapter, identifiers, NativeMethods.simpleble_advanced_ios_retrieve_cached_peripheral);
         }
     }
@@ -108,7 +108,7 @@ public static class Advanced
     {
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
-            Require(System.OperatingSystem.IsLinux() && !System.OperatingSystem.IsAndroid());
+            Require(Utils.OperatingSystem == NativeOperatingSystem.Linux);
             SetName(peripheral, name, NativeMethods.simpleble_advanced_linux_set_advertisement_local_name);
         }
     }
@@ -119,20 +119,20 @@ public static class Advanced
     private delegate void NameSetter(nint handle, string? name, ref nint error);
     private static void SetName(Local.Peripheral peripheral, string? name, NameSetter setter)
     {
-        ArgumentNullException.ThrowIfNull(peripheral);
+        if (peripheral is null) throw new ArgumentNullException(nameof(peripheral));
         if (name?.Contains('\0') == true) throw new ArgumentException("Name cannot contain NUL.", nameof(name));
         peripheral.handle.Execute((nint h, ref nint e) => setter(h, name, ref e));
     }
     private delegate nint Retriever(nint adapter, string identifier, ref nint error);
     private static IReadOnlyList<Peripheral> Retrieve(Adapter adapter, IEnumerable<string> identifiers, Retriever retrieve)
     {
-        ArgumentNullException.ThrowIfNull(adapter); ArgumentNullException.ThrowIfNull(identifiers);
+        if (adapter is null) throw new ArgumentNullException(nameof(adapter)); if (identifiers is null) throw new ArgumentNullException(nameof(identifiers));
         var result = new List<Peripheral>();
         try
         {
             foreach (string id in identifiers)
             {
-                ArgumentNullException.ThrowIfNull(id);
+                if (id is null) throw new ArgumentNullException(nameof(id));
                 if (id.Contains('\0')) throw new ArgumentException("Identifier cannot contain NUL.", nameof(identifiers));
                 nint value = adapter.handle.Query((nint h, ref nint e) => retrieve(h, id, ref e));
                 if (value != 0) result.Add(new(value));

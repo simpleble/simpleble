@@ -28,7 +28,7 @@ public sealed class Peripheral : IDisposable
     }
     public void AddAdvertisedService(IEnumerable<string> uuids)
     {
-        ArgumentNullException.ThrowIfNull(uuids);
+        if (uuids is null) throw new ArgumentNullException(nameof(uuids));
         // Validate the entire input before changing the host.
         var values = uuids.Select(x => new NativeUuid(x)).ToArray();
         foreach (var value in values)

@@ -24,7 +24,7 @@ public static class Logging
     public static LogLevel Level
     {
         get => NativeMethods.simpleble_logging_get_level();
-        set { if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value)); NativeMethods.simpleble_logging_set_level(value); }
+        set { if (!Enum.IsDefined(typeof(LogLevel), value)) throw new ArgumentOutOfRangeException(nameof(value)); NativeMethods.simpleble_logging_set_level(value); }
     }
     public static bool HasCallback => NativeMethods.simpleble_logging_has_callback();
     public static void SetCallback(Action<LogMessage>? callback)

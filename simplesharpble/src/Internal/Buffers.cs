@@ -24,7 +24,7 @@ internal static class Buffers
 
     internal static byte[] Input(byte[] data)
     {
-        ArgumentNullException.ThrowIfNull(data);
+        if (data is null) throw new ArgumentNullException(nameof(data));
         // Several existing C writes require non-NULL even for a zero-length write.
         return data.Length == 0 ? new byte[1] : data;
     }

@@ -20,7 +20,7 @@ internal sealed class NativeHandle : SafeHandleZeroOrMinusOneIsInvalid
 
     internal T Query<T>(HandleQuery<T> query)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+        if (Volatile.Read(ref disposed) != 0) throw new ObjectDisposedException(GetType().FullName);
         bool acquired = false;
         try
         {

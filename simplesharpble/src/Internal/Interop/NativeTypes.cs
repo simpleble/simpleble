@@ -9,7 +9,7 @@ internal unsafe struct NativeUuid
     internal fixed byte Value[37];
     internal NativeUuid(string value)
     {
-        ArgumentNullException.ThrowIfNull(value);
+        if (value is null) throw new ArgumentNullException(nameof(value));
         // C++ accepts short Bluetooth UUIDs as well as full UUID strings.
         if ((value.Length != 4 && value.Length != 8 && value.Length != 36) ||
             (value.Length == 36 ? !Guid.TryParseExact(value, "D", out _) : !value.All(Uri.IsHexDigit)))

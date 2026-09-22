@@ -105,7 +105,7 @@ internal sealed class CallbackOwner(NativeHandle handle) : IDisposable
     {
         lock (gate)
         {
-            ObjectDisposedException.ThrowIf(disposed, this);
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
             CallbackSlot? slot = action is null ? null : new(action, dispatcher);
             try { handle.Query((nint h, ref nint e) => { install(h, slot?.Id ?? 0); return 0; }); }
             catch { slot?.Dispose(); throw; }

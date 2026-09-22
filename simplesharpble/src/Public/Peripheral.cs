@@ -84,7 +84,7 @@ public sealed class Peripheral : IDisposable
     public byte[] Read(string service, string characteristic) => ReadCore(service, characteristic, null);
     public byte[] Read(string service, string characteristic, string descriptor)
     {
-        ArgumentNullException.ThrowIfNull(descriptor);
+        if (descriptor is null) throw new ArgumentNullException(nameof(descriptor));
         return ReadCore(service, characteristic, descriptor);
     }
 
@@ -114,7 +114,7 @@ public sealed class Peripheral : IDisposable
     public void WriteCommand(string service, string characteristic, byte[] data) => WriteCore(service, characteristic, null, data, false);
     public void Write(string service, string characteristic, string descriptor, byte[] data)
     {
-        ArgumentNullException.ThrowIfNull(descriptor);
+        if (descriptor is null) throw new ArgumentNullException(nameof(descriptor));
         WriteCore(service, characteristic, descriptor, data, true);
     }
 
@@ -177,7 +177,7 @@ public sealed class Peripheral : IDisposable
         Task.Run(() => Indicate(service, characteristic, callback), cancellationToken);
     private void Subscribe(string service, string characteristic, Action<byte[]> callback, bool indicate)
     {
-        ArgumentNullException.ThrowIfNull(callback);
+        if (callback is null) throw new ArgumentNullException(nameof(callback));
         var s = new NativeUuid(service); var c = new NativeUuid(characteristic);
         callbacks.Set($"data:{s}:{c}", data => { callback((byte[])data!); return null; }, (h, id) =>
             NativeCall.Invoke((ref nint error) =>
