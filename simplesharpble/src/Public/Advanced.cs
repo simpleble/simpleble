@@ -9,7 +9,10 @@ public static class Advanced
 {
     public static class Dongl
     {
-        private static readonly NativeMethods.PairCallback request = (_, buffer, token) =>
+        private static readonly NativeMethods.PairCallback request = Request;
+        private static readonly NativeMethods.PairCallback compare = Compare;
+        [MonoPInvokeCallback(typeof(NativeMethods.PairCallback))]
+        private static bool Request(nint handle, nint buffer, nint token)
         {
             try
             {
@@ -20,12 +23,13 @@ public static class Advanced
                 return true;
             }
             catch (Exception ex) { CallbackErrors.Report(ex); return false; }
-        };
-        private static readonly NativeMethods.PairCallback compare = (_, text, token) =>
+        }
+        [MonoPInvokeCallback(typeof(NativeMethods.PairCallback))]
+        private static bool Compare(nint handle, nint text, nint token)
         {
             try { return CallbackSlot.Find(token)?.Invoke(Marshal.PtrToStringUTF8(text) ?? "") is true; }
             catch (Exception ex) { CallbackErrors.Report(ex); return false; }
-        };
+        }
         /// <summary>Runs synchronously on a native pairing worker. Return null to reject.</summary>
         public static void SetPasskeyRequestCallback(Peripheral peripheral, Func<string?>? callback)
         {
@@ -91,12 +95,12 @@ public static class Advanced
     {
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
-            Require(System.OperatingSystem.IsIOS());
+            Require(System.OperatingSystem.IsIOS() || System.OperatingSystem.IsMacCatalyst());
             SetName(peripheral, name, NativeMethods.simpleble_advanced_ios_set_advertisement_local_name);
         }
         public static IReadOnlyList<Peripheral> RetrieveCachedPeripherals(Adapter adapter, IEnumerable<string> identifiers)
         {
-            Require(System.OperatingSystem.IsIOS());
+            Require(System.OperatingSystem.IsIOS() || System.OperatingSystem.IsMacCatalyst());
             return Retrieve(adapter, identifiers, NativeMethods.simpleble_advanced_ios_retrieve_cached_peripheral);
         }
     }

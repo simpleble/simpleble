@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Apple mobile runtime assets import symbols from the statically linked app. -->
+    <DefineConstants Condition="'$(SimpleSharpBLEStaticLink)' == 'true'">$(DefineConstants);SIMPLESHARPBLE_STATIC</DefineConstants>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
     <PackageVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-dev([0-9]+)$', '-dev.$1'))</PackageVersion>
@@ -32,11 +34,16 @@
     <None Include="$(NativeLibrariesDirectory)/**/*.dll" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
     <None Include="$(NativeLibrariesDirectory)/**/*.dylib" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
     <None Include="$(NativeLibrariesDirectory)/**/*.so*" Pack="true" PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
+    <!-- Static archives are link inputs, not files to copy into the app bundle. -->
+    <None Include="$(NativeLibrariesDirectory)/**/*.a" Pack="true" PackagePath="buildTransitive/apple/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(NativeLibrariesDirectory)' != ''" />
     <None Include="$(NativeLibraryDirectory)/simplecble.dll;$(NativeLibraryDirectory)/simpleble.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/$(_NativeRuntimeIdentifier)/native/" Condition="'$(NativeLibraryDirectory)' != '' And $(_NativeRuntimeIdentifier.StartsWith('win-'))" />
     <None Include="$(NativeLibraryDirectory)/libsimpleble*.dylib;$(NativeLibraryDirectory)/libsimplecble*.dylib" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/osx-arm64/native/" Condition="'$(NativeLibraryDirectory)' != '' And '$(_NativeRuntimeIdentifier)' == 'osx-arm64'" />
     <None Include="$(NativeLibraryDirectory)/libsimpleble.so*;$(NativeLibraryDirectory)/libsimplecble.so*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/$(_NativeRuntimeIdentifier)/native/" Condition="'$(NativeLibraryDirectory)' != '' And ('$(_NativeRuntimeIdentifier)' == 'linux-x64' Or '$(_NativeRuntimeIdentifier)' == 'linux-arm64' Or '$(_NativeRuntimeIdentifier)' == 'android-arm64' Or '$(_NativeRuntimeIdentifier)' == 'android-x64')" />
   </ItemGroup>
   <ItemGroup Condition="'$(NativeLibrariesDirectory)' != ''">
+    <_AppleRuntime Include="ios-arm64;iossimulator-arm64;maccatalyst-arm64" Condition="'$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain'" />
+    <_AppleRuntime Include="$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' == 'ios-arm64' Or '$(RuntimeIdentifier)' == 'iossimulator-arm64' Or '$(RuntimeIdentifier)' == 'maccatalyst-arm64'" />
+    <RequiredNativeLibrary Include="@(_AppleRuntime->'$(NativeLibrariesDirectory)/%(Identity)/native/libsimpleble.a');@(_AppleRuntime->'$(NativeLibrariesDirectory)/%(Identity)/native/libsimplecble.a');@(_AppleRuntime->'$(NativeLibrariesDirectory)/%(Identity)/lib/net10.0/SimpleSharpBLE.dll')" />
     <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/win-x64/native/simpleble.dll;$(NativeLibrariesDirectory)/win-x64/native/simplecble.dll" Condition="'$(RuntimeIdentifier)' == '' Or '$(RuntimeIdentifier)' == 'win-x64'" />
     <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/win-arm64/native/simpleble.dll;$(NativeLibrariesDirectory)/win-arm64/native/simplecble.dll" Condition="'$(RuntimeIdentifier)' == 'win-arm64' Or ('$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain')" />
     <RequiredNativeLibrary Include="$(NativeLibrariesDirectory)/osx-arm64/native/libsimpleble.dylib;$(NativeLibrariesDirectory)/osx-arm64/native/libsimplecble.dylib" Condition="'$(RuntimeIdentifier)' == 'osx-arm64' Or ('$(RuntimeIdentifier)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain')" />
@@ -53,11 +60,11 @@
   </ItemGroup>
   <Target Name="RequireNativeLibraries" BeforeTargets="GenerateNuspec">
     <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(PackageId)' != 'SimpleSharpBLE.Plain'"
-           Text="Set NativeLibrariesDirectory to the directory containing win-x64/native, win-arm64/native, osx-arm64/native, linux-x64/native, linux-arm64/native, android-arm64/native, and android-x64/native libraries, or select one platform with RuntimeIdentifier." />
+           Text="Set NativeLibrariesDirectory to the staged runtime assets directory, or select one platform with RuntimeIdentifier." />
     <Error Condition="'$(NativeLibrariesDirectory)' != '' And '$(NativeLibraryDirectory)' != ''"
            Text="Specify either NativeLibrariesDirectory or NativeLibraryDirectory." />
-    <Error Condition="'$(RuntimeIdentifier)' != '' And '$(RuntimeIdentifier)' != 'win-x64' And '$(RuntimeIdentifier)' != 'win-arm64' And '$(RuntimeIdentifier)' != 'osx-arm64' And '$(RuntimeIdentifier)' != 'linux-x64' And '$(RuntimeIdentifier)' != 'linux-arm64' And '$(RuntimeIdentifier)' != 'android-arm64' And '$(RuntimeIdentifier)' != 'android-x64'"
-           Text="Supported RuntimeIdentifiers are win-x64, win-arm64, osx-arm64, linux-x64, linux-arm64, android-arm64, and android-x64." />
+    <Error Condition="'$(RuntimeIdentifier)' != '' And '$(RuntimeIdentifier)' != 'win-x64' And '$(RuntimeIdentifier)' != 'win-arm64' And '$(RuntimeIdentifier)' != 'osx-arm64' And '$(RuntimeIdentifier)' != 'linux-x64' And '$(RuntimeIdentifier)' != 'linux-arm64' And '$(RuntimeIdentifier)' != 'android-arm64' And '$(RuntimeIdentifier)' != 'android-x64' And '@(_AppleRuntime)' == ''"
+           Text="Supported RuntimeIdentifiers are win-x64, win-arm64, osx-arm64, linux-x64, linux-arm64, android-arm64, android-x64, ios-arm64, iossimulator-arm64, and maccatalyst-arm64." />
     <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(NativeLibraryDirectory)' == ''"
            Text="Provide the PLAIN native libraries using NativeLibraryDirectory." />
     <Error Condition="'$(NativeLibrariesDirectory)' == '' And '$(_NativeRuntimeIdentifier)' != 'win-x64' And '$(_NativeRuntimeIdentifier)' != 'win-arm64' And '$(_NativeRuntimeIdentifier)' != 'osx-arm64' And '$(_NativeRuntimeIdentifier)' != 'linux-x64' And '$(_NativeRuntimeIdentifier)' != 'linux-arm64' And '$(_NativeRuntimeIdentifier)' != 'android-arm64' And '$(_NativeRuntimeIdentifier)' != 'android-x64'"

@@ -70,6 +70,53 @@ jobs:
           path: native/
           if-no-files-found: error
 
+  build-apple-mobile:
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { rid: ios-arm64, system: iOS, sdk: iphoneos }
+          - { rid: iossimulator-arm64, system: iOS, sdk: iphonesimulator }
+          - { rid: maccatalyst-arm64, system: Darwin, sdk: macosx }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: ./.github/actions/setup-version
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and stage Apple static libraries
+        run: |
+          options=()
+          if [[ '${{ matrix.config.rid }}' == 'maccatalyst-arm64' ]]; then
+            options+=(-DCMAKE_C_COMPILER_TARGET=arm64-apple-ios15.0-macabi -DCMAKE_CXX_COMPILER_TARGET=arm64-apple-ios15.0-macabi)
+          else
+            options+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0)
+          fi
+          cmake -S simplecble -B build_simplesharpble_apple \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_SYSTEM_NAME=${{ matrix.config.system }} \
+            -DCMAKE_OSX_SYSROOT=${{ matrix.config.sdk }} -DCMAKE_OSX_ARCHITECTURES=arm64 "${options[@]}"
+          cmake --build build_simplesharpble_apple --parallel 4
+          mkdir -p native/${{ matrix.config.rid }}/native
+          cp build_simplesharpble_apple/lib/libsimpleble.a build_simplesharpble_apple/lib/libsimplecble.a native/${{ matrix.config.rid }}/native/
+      - name: Build SimpleSharpBLE static-link bindings
+        run: |
+          dotnet build simplesharpble -c Release -p:SimpleSharpBLEStaticLink=true
+          mkdir -p native/${{ matrix.config.rid }}/lib/net10.0
+          cp simplesharpble/bin/Release/net10.0/SimpleSharpBLE.dll native/${{ matrix.config.rid }}/lib/net10.0/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simplesharpble-native-${{ matrix.config.rid }}
+          path: native/
+          if-no-files-found: error
+
   build-linux:
     runs-on: ${{ matrix.config.runner-os }}
     defaults:
@@ -160,7 +207,7 @@ jobs:
           if-no-files-found: error
 
   package:
-    needs: [build-windows, build-macos, build-linux, build-android]
+    needs: [build-windows, build-macos, build-apple-mobile, build-linux, build-android]
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4

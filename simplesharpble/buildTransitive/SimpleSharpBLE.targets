@@ -1,4 +1,22 @@
 <Project>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'ios-arm64' Or '$(RuntimeIdentifier)' == 'iossimulator-arm64' Or '$(RuntimeIdentifier)' == 'maccatalyst-arm64'">
+    <NativeReference Include="$(MSBuildThisFileDirectory)apple/$(RuntimeIdentifier)/native/libsimpleble.a;$(MSBuildThisFileDirectory)apple/$(RuntimeIdentifier)/native/libsimplecble.a">
+      <Kind>Static</Kind>
+      <ForceLoad>true</ForceLoad>
+      <IsCxx>true</IsCxx>
+      <Frameworks>Foundation CoreBluetooth</Frameworks>
+    </NativeReference>
+  </ItemGroup>
+  <Target Name="CheckSimpleSharpBLEApplePlatform" BeforeTargets="PrepareForBuild"
+          Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+    <Error Condition="$([MSBuild]::VersionLessThan('$(SupportedOSPlatformVersion)', '15.0'))"
+           Text="SimpleSharpBLE requires iOS or Mac Catalyst 15.0 or newer. Set SupportedOSPlatformVersion to 15.0 or higher." />
+    <ItemGroup>
+      <_SimpleSharpBLEUnsupportedAppleRuntime Include="$(RuntimeIdentifiers);$(RuntimeIdentifier)" Exclude="ios-arm64;iossimulator-arm64;maccatalyst-arm64" />
+    </ItemGroup>
+    <Error Condition="'@(_SimpleSharpBLEUnsupportedAppleRuntime)' != ''"
+           Text="SimpleSharpBLE supports ARM64 iOS devices, simulators, and Mac Catalyst. Unsupported runtimes: @(_SimpleSharpBLEUnsupportedAppleRuntime)." />
+  </Target>
   <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
     <AndroidJavaSource Include="$(MSBuildThisFileDirectory)android/bridge/*.java" Bind="false" />
     <ProguardConfiguration Include="$(MSBuildThisFileDirectory)android/proguard.cfg" />

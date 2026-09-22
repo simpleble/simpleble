@@ -12,7 +12,9 @@ public static class Logging
 {
     private static readonly object gate = new();
     private static CallbackSlot? slot;
-    private static readonly NativeMethods.LogCallback trampoline = (level, module, file, line, function, message) =>
+    private static readonly NativeMethods.LogCallback trampoline = LogCallback;
+    [MonoPInvokeCallback(typeof(NativeMethods.LogCallback))]
+    private static void LogCallback(LogLevel level, nint module, nint file, uint line, nint function, nint message) =>
         NativeCallbacks.Guard(() =>
         {
             var current = Volatile.Read(ref slot);

@@ -16,8 +16,16 @@ internal static class NativeCallbacks
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate void Text(nint handle, nint text, nint token);
 
-    internal static readonly Signal OnSignal = (_, token) => Guard(() => CallbackSlot.Post(token));
-    internal static readonly Found OnFound = (_, pointer, token) => Guard(() =>
+    internal static readonly Signal OnSignal = SignalCallback;
+    internal static readonly Found OnFound = FoundCallback;
+    internal static readonly Data OnData = DataCallback;
+    internal static readonly Value OnValue = ValueCallback;
+    internal static readonly Text OnText = TextCallback;
+
+    [MonoPInvokeCallback(typeof(Signal))]
+    private static void SignalCallback(nint handle, nint token) => Guard(() => CallbackSlot.Post(token));
+    [MonoPInvokeCallback(typeof(Found))]
+    private static void FoundCallback(nint adapter, nint pointer, nint token) => Guard(() =>
     {
         var owned = new NativeHandle(pointer, HandleKind.Peripheral);
         Peripheral peripheral;
@@ -25,9 +33,12 @@ internal static class NativeCallbacks
         catch { owned.Dispose(); throw; }
         CallbackSlot.Post(token, peripheral, peripheral.Dispose);
     });
-    internal static readonly Data OnData = (_, _, _, data, length, token) => Guard(() => CallbackSlot.Post(token, Buffers.Copy(data, length)));
-    internal static readonly Value OnValue = (_, data, length, token) => Guard(() => CallbackSlot.Post(token, Buffers.Copy(data, length)));
-    internal static readonly Text OnText = (_, text, token) => Guard(() => CallbackSlot.Post(token, Marshal.PtrToStringUTF8(text) ?? ""));
+    [MonoPInvokeCallback(typeof(Data))]
+    private static void DataCallback(nint handle, NativeUuid service, NativeUuid characteristic, nint data, nuint length, nint token) => Guard(() => CallbackSlot.Post(token, Buffers.Copy(data, length)));
+    [MonoPInvokeCallback(typeof(Value))]
+    private static void ValueCallback(nint handle, nint data, nuint length, nint token) => Guard(() => CallbackSlot.Post(token, Buffers.Copy(data, length)));
+    [MonoPInvokeCallback(typeof(Text))]
+    private static void TextCallback(nint handle, nint text, nint token) => Guard(() => CallbackSlot.Post(token, Marshal.PtrToStringUTF8(text) ?? ""));
     internal static void Guard(Action action)
     {
         try { action(); } catch (Exception ex) { CallbackErrors.Report(ex); }

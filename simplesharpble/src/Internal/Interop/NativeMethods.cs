@@ -4,7 +4,12 @@ namespace SimpleSharpBLE.Internal.Interop;
 
 internal static partial class NativeMethods
 {
-    private const string Library = "simplecble";
+    private const string SharedLibrary = "simplecble";
+#if SIMPLESHARPBLE_STATIC
+    private const string Library = "__Internal";
+#else
+    private const string Library = SharedLibrary;
+#endif
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_free(nint value);

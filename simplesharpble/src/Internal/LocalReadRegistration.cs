@@ -72,6 +72,7 @@ internal sealed class LocalReadRegistration : IDisposable
         }
     }
 
+    [MonoPInvokeCallback(typeof(NativeMethods.ReadCallback))]
     private static nint Read(nint _, out nuint length, nint token)
     {
         length = 0;

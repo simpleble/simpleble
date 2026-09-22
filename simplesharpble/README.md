@@ -6,7 +6,7 @@ SimpleSharpBLE provides the C# and .NET bindings for SimpleBLE.
 
 ## Key Features
 
-* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, and Android
+* **Cross-Platform**: Enterprise-grade support for Windows, macOS, Linux, Android, iOS/iPadOS, and Mac Catalyst
 * **Easy Integration**: Clean, consistent API across all platforms
 * **Multiple Language Bindings**: Production-ready bindings for C, C++, C#, Python, Java and Rust, with more coming soon
 * **Commercial Ready**: Source-available commercial license for proprietary applications
@@ -29,6 +29,7 @@ Requirements:
 - .NET 10
 - Windows or glibc-based Linux (x64/ARM64), or macOS 14 or newer on Apple Silicon
 - Android 12 or newer (ARM64/x64)
+- iOS/iPadOS 15 or newer, the iOS simulator, and Mac Catalyst 15 or newer (ARM64)
 - On Linux, BlueZ and D-Bus; on Ubuntu, install them with `sudo apt-get install bluez libdbus-1-3`
 
 Add SimpleSharpBLE to your project from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/):
@@ -90,6 +91,11 @@ Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointe
 
 See the [Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
 for the manifest, runtime permissions, and scanning off the UI thread.
+
+On iOS/iPadOS and Mac Catalyst, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`
+and run blocking BLE operations off the UI thread. Sandboxed Catalyst apps also need the
+`com.apple.security.device.bluetooth` entitlement. Native libraries link automatically;
+`Advanced.IOS` applies to both iOS and Catalyst.
 
 ## License
 

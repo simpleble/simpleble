@@ -121,6 +121,10 @@ jobs:
       - name: Build SimpleSharpBLE bindings
         run: dotnet build simplesharpble -c Release "-p:NativeLibraryDirectory=$PWD/build_simplesharpble_smoke/install/lib"
 
+      - name: Build SimpleSharpBLE static-link bindings
+        if: matrix.config.os == 'linux'
+        run: dotnet build simplesharpble -c Release -p:SimpleSharpBLEStaticLink=true
+
   build-python:
     runs-on: ubuntu-22.04
     strategy:
