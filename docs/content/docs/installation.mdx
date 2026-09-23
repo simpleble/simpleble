@@ -19,6 +19,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
+| [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
 | [SimpleBluez](./simplebluez/usage) | C++ | Lower-level utility | Direct BlueZ integration on Linux | CMake from source |
 | [SimpleDBus](./simpledbus/usage) | C++ | Lower-level utility | DBus object model work | CMake from source |
 | [SimpleAIBLE](./simpleaible/mcp) | Python / AI agents | Utility package | Local BLE tools for agents and HTTP/MCP workflows | `uv` or PyPI |
@@ -37,7 +38,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Rust", "Android", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Rust", "Android", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -182,6 +183,16 @@ include(":app")
 ```
 
 The app must also declare and request Bluetooth permissions at runtime.
+
+</Tab>
+<Tab value="Unity">
+
+In Unity's Package Manager, select **My Assets**, find **SimpleBLE for Unity**,
+then download and import it. For a supplied `.unitypackage`, use **Assets > Import
+Package > Custom Package**. Use Unity 6.3 LTS or 6.6.
+
+See [SimpleBLE for Unity Installation](./simpleunityble/installation) for assembly
+references and [Platform notes](./simpleunityble/platform_notes) for Android settings.
 
 </Tab>
 <Tab value="SimpleAIBLE">

@@ -1,0 +1,38 @@
+---
+title: Installation
+description: Install SimpleBLE for Unity and reference its API.
+---
+
+Use Unity 6.3 LTS or 6.6. See [Platform notes](./platform_notes) for target settings.
+
+## Install the package
+
+After purchasing SimpleBLE for Unity, open **Window > Package Management >
+Package Manager**, select **My Assets**, and find **SimpleBLE for Unity**.
+Choose **Download**, then **Import**, and import all of its files.
+
+The plugin is installed under `Assets/SimpleBLE`. Its managed and native libraries
+are included, and the offline guide is in `Assets/SimpleBLE/Documentation`.
+
+For a supplied `.unitypackage` file, choose **Assets > Import Package > Custom
+Package** and select the file. Use one installation of SimpleBLE in a project;
+remove a previous UPM installation before importing the Store package.
+
+Android projects need Unity's **Android JNI** built-in module. It is included in
+standard projects; if you removed it, enable it in Package Manager under
+**Built-in** before building for Android.
+
+## Reference the API
+
+Scripts use the plugin namespace:
+
+```csharp
+using SimpleBLE;
+```
+
+If your scripts use an assembly definition, add `SimpleBLE.Managed` to its Assembly
+Definition References.
+
+Call `await Bluetooth.InitializeAsync()` on Unity's main thread before accessing
+adapters. This requests Android permissions when needed. Then follow [Usage](./usage)
+to scan for a device.

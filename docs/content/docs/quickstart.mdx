@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android", "Unreal"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -296,6 +296,14 @@ void UMyBluetoothController::StartBluetoothScan()
 ```
 
 See the [SimpleBLE for Unreal quickstart](./simpleunrealble/quickstart) for connect, read, write, notify, payload helpers, and the lower-level adapter/peripheral API.
+
+</Tab>
+<Tab value="Unity">
+
+Use the [SimpleBLE for Unity scan component](./simpleunityble/usage#scan-for-devices)
+on a GameObject and enter Play mode. It initializes Bluetooth, scans for five
+seconds and prints nearby devices to the Console. On Android, accept the Nearby
+devices permission prompt.
 
 </Tab>
 </Tabs>

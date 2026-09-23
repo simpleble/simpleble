@@ -1,0 +1,33 @@
+---
+title: SimpleBLE for Unity
+description: Bluetooth Low Energy for Unity.
+---
+
+SimpleBLE for Unity brings Bluetooth Low Energy to Unity through C#: discover devices,
+connect, exchange GATT data and receive notifications.
+
+- [Installation](./installation)
+- [Usage](./usage)
+- [Platform notes](./platform_notes)
+- [Troubleshooting](./troubleshooting)
+
+## API
+
+`SimpleBLE.Bluetooth` initializes Unity's platform integration. The
+`SimpleBLE` namespace provides the BLE API:
+
+| Type | Purpose |
+| --- | --- |
+| `Adapter` | Discover devices and control scanning. |
+| `Peripheral` | Connect, inspect services, read/write and subscribe. |
+| `Service`, `Characteristic`, `Descriptor` | Describe remote GATT services and capabilities. |
+| `SimpleBLE.Local` | Define local services and advertise where the backend supports it. |
+
+Adapters and peripherals own resources and must be disposed. Service,
+characteristic and descriptor objects are managed snapshots.
+
+## Support
+
+Report issues at [SimpleBLE](https://github.com/simpleble/simpleble/issues).
+Include the package version, Unity version, target device, platform and relevant
+Console or device log output.

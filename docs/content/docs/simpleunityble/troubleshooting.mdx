@@ -1,0 +1,21 @@
+---
+title: Troubleshooting
+description: Diagnose Bluetooth connections, permissions and callbacks.
+---
+
+| Symptom | Check |
+| --- | --- |
+| No adapters | Enable Bluetooth and confirm the host has a BLE adapter. On Android, initialize the plugin and grant Nearby devices permission. |
+| No scan results | Make sure the peripheral is advertising, move it closer and try a longer scan. For beacons, see [Platform notes](./platform_notes). |
+| Connection fails | Disconnect the peripheral from other apps and check that it is connectable. |
+| Read or write fails | Check both UUIDs and the characteristic's capabilities. Some devices require pairing before access. |
+| No notifications | Use `Notify` or `Indicate` according to the characteristic's capabilities, retain the peripheral, and confirm the device is sending updates. |
+| Native library cannot load | Reinstall the complete package and check that the build architecture matches [Platform notes](./platform_notes). |
+| Unity object access fails in a callback | Return to the main thread before accessing scenes or UI; see [Usage](./usage#callbacks-and-lifetime). |
+
+BLE operation failures throw `BleException`. Include its `Code` and `Message`
+when diagnosing a failure. Exceptions raised by synchronous application callback
+handlers are reported through `CallbackErrors.Unhandled`.
+
+For help, [open an issue](https://github.com/simpleble/simpleble/issues) with the
+package and Unity versions, device/OS, reproduction steps and the relevant log.

@@ -1,0 +1,159 @@
+---
+title: Usage
+description: Scan, connect, read, write and receive notifications in Unity.
+---
+
+## Scan for devices
+
+Attach this component to a GameObject and enter Play mode. On Android, accept the
+Nearby devices permission prompt. Discovered devices appear in the Console.
+
+```csharp
+using System;
+using SimpleBLE;
+using UnityEngine;
+
+public class BleScan : MonoBehaviour
+{
+    private async void Start()
+    {
+        try
+        {
+            await Bluetooth.InitializeAsync();
+            if (this == null) return;
+            var adapters = Adapter.GetAdapters();
+            try
+            {
+                if (adapters.Count == 0)
+                {
+                    Debug.Log("No Bluetooth adapters found.");
+                    return;
+                }
+
+                var adapter = adapters[0];
+                await adapter.ScanForAsync(TimeSpan.FromSeconds(5));
+                if (this == null) return;
+                var devices = adapter.ScanGetResults();
+                try
+                {
+                    foreach (var device in devices)
+                        Debug.Log($"{device.Identifier} [{device.Address}] {device.Rssi} dBm");
+                }
+                finally
+                {
+                    foreach (var device in devices) device.Dispose();
+                }
+            }
+            finally
+            {
+                foreach (var adapter in adapters) adapter.Dispose();
+            }
+        }
+        catch (Exception error)
+        {
+            Debug.LogException(error);
+        }
+    }
+}
+```
+
+For a device picker, retain the selected `Peripheral` instead of disposing it
+with the other results. Dispose it when the session ends. Device names need not
+be unique; use the advertised services and your device protocol to identify it.
+
+## Connect and discover services
+
+The following snippets use a retained `Peripheral` named `peripheral` inside an
+async method. Keep it alive until all operations finish.
+
+```csharp
+await peripheral.ConnectAsync();
+
+foreach (var service in peripheral.Services)
+    foreach (var characteristic in service.Characteristics)
+        Debug.Log($"{service.Uuid} / {characteristic.Uuid}: " +
+                  string.Join(", ", characteristic.Capabilities));
+```
+
+Use the device's documented service and characteristic UUIDs for GATT operations.
+The capability flags (`CanRead`, `CanWriteRequest`, `CanWriteCommand`, `CanNotify`,
+`CanIndicate`) tell you which operations each characteristic supports.
+
+## Read and write
+
+GATT calls are synchronous. Await them on a worker when a device operation could
+block a frame. This example reads the standard Battery Level characteristic:
+
+```csharp
+const string batteryService = "0000180f-0000-1000-8000-00805f9b34fb";
+const string batteryLevel = "00002a19-0000-1000-8000-00805f9b34fb";
+byte[] value = await System.Threading.Tasks.Task.Run(
+    () => peripheral.Read(batteryService, batteryLevel));
+if (value.Length > 0) Debug.Log($"Battery: {value[0]}%");
+```
+
+Only use that UUID pair on devices that expose the Battery Service. For writes,
+use your device's UUIDs and payload format:
+
+```csharp
+await System.Threading.Tasks.Task.Run(
+    () => peripheral.WriteRequest(serviceUuid, characteristicUuid, payload));
+```
+
+`WriteRequest` waits for a response; `WriteCommand` writes without one. Choose
+the operation supported by the characteristic. Payloads are `byte[]`; decode them
+according to the device protocol.
+
+Use `ReadAsync`, `WriteRequestAsync`, `WriteCommandAsync` and `WriteAsync` to keep
+native GATT operations off the calling thread. Subscriptions also offer
+`NotifyAsync`, `IndicateAsync` and `UnsubscribeAsync`.
+
+## Receive notifications
+
+Register a callback on a connected peripheral. Here, `OnValue` is a method on
+your component:
+
+```csharp
+peripheral.Notify(serviceUuid, characteristicUuid, OnValue);
+```
+
+```csharp
+private async void OnValue(byte[] data)
+{
+    await UnityEngine.Awaitable.MainThreadAsync();
+    if (this == null) return;
+    Debug.Log(BitConverter.ToString(data));
+}
+```
+
+Use `Indicate` for a characteristic that supports indications. When finished:
+
+```csharp
+peripheral.Unsubscribe(serviceUuid, characteristicUuid);
+await peripheral.DisconnectAsync();
+peripheral.Dispose();
+```
+
+Put session cleanup in a `finally` block or an explicit shutdown method so it
+also runs after errors and when leaving a scene. Use `try`/`finally` around
+disconnect if disposal must proceed even when the disconnect fails.
+
+## Callbacks and lifetime
+
+Connection events, scan events and notification callbacks run on worker threads.
+Use `Awaitable.MainThreadAsync()` before touching Unity scenes or UI. Catch errors
+inside async callback handlers; `CallbackErrors.Unhandled` cannot observe an
+exception thrown after an `await` in an `async void` handler.
+
+Dispose every adapter and peripheral returned by a collection. If you use
+`ScanFound` or `ScanUpdated`, the event's `Peripheral` is also an owned wrapper.
+Service, characteristic and descriptor snapshots do not need disposal.
+
+Disposing a wrapper releases its resources; it does not stop an ongoing scan or
+disconnect a device. Stop scans and subscriptions, finish outstanding operations,
+then disconnect and dispose. Cancellation passed to an async method prevents
+queued work from starting; it does not interrupt a native operation already running.
+
+Register logging and callback-error handlers during each Play session. These
+static registrations reset when entering Play mode, including when domain reload
+is disabled. Instance resources still require the cleanup described above.

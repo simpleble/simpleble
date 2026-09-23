@@ -1,0 +1,36 @@
+---
+title: Platform notes
+description: Windows and Android requirements for SimpleBLE.
+---
+
+The current package includes Windows x64 and Android ARM64 libraries for
+Unity 6.3 LTS and 6.6.
+
+| Target | Settings |
+| --- | --- |
+| Windows | Windows 10/11, x86_64, BLE-capable adapter. |
+| Android | Android 12 / API 31 or later, IL2CPP, ARM64. |
+
+## Windows
+
+Turn on Bluetooth in Windows before scanning. Both the Editor and the built
+player use the host's Bluetooth adapter.
+
+## Android
+
+In the Android Player settings, select **IL2CPP**, enable **ARM64**, and set the
+minimum API level to **Android 12 (API 31)** or later. Install the build on a device
+with BLE hardware.
+
+`Bluetooth.InitializeAsync()` requests `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT`.
+When hosting a local peripheral, call it with `advertise: true` to request
+`BLUETOOTH_ADVERTISE` as well. The package supplies the manifest declarations.
+Denied permissions raise `UnauthorizedAccessException`; the user can grant them
+in the app's Android settings before retrying.
+
+The manifest uses `neverForLocation` for scanning. Android can filter some BLE
+beacons with this setting. If your application derives location from scans,
+configure its location permissions and manifest for that use case instead.
+
+An Android build selected in the Windows Editor still uses the Windows Bluetooth
+backend during Play mode. Run the player on the Android device to use its radio.
