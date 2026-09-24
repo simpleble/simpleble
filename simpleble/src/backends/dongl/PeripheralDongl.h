@@ -11,12 +11,15 @@
 #include <kvn_safe_map.hpp>
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 
-#include "AdapterBaseTypes.h"
+#include "AdvertisingData.h"
 #include "protocol/d2h.pb.h"
 #include "serial/Protocol.h"
 
@@ -24,7 +27,8 @@ namespace SimpleBLE {
 
 class PeripheralDongl : public PeripheralBase {
   public:
-    PeripheralDongl(std::shared_ptr<Dongl::Serial::Protocol> serial_protocol, advertising_data_t advertising_data);
+    PeripheralDongl(std::shared_ptr<Dongl::Serial::Protocol> serial_protocol,
+                    Dongl::advertising_data_t advertising_data);
     virtual ~PeripheralDongl();
 
     void* underlying() const override;
@@ -70,14 +74,13 @@ class PeripheralDongl : public PeripheralBase {
     // Internal methods not exposed to the user.
     // TODO: Make these private and the adapter a friend.
     uint16_t conn_handle() const;
-    void update_advertising_data(advertising_data_t advertising_data);
+    void update_advertising_data(Dongl::advertising_data_t advertising_data);
     void notify_connected(uint16_t conn_handle);
     void notify_disconnected();
     void notify_service_discovered(simpleble_ServiceDiscoveredEvt const& service_discovered_evt);
     void notify_characteristic_discovered(simpleble_CharacteristicDiscoveredEvt const& characteristic_discovered_evt);
     void notify_descriptor_discovered(simpleble_DescriptorDiscoveredEvt const& descriptor_discovered_evt);
-    void notify_attribute_discovery_complete(
-        simpleble_AttributeDiscoveryCompleteEvt const& attribute_discovery_complete_evt);
+    void notify_connect_complete(simpleble_ConnectCompleteEvt const& connect_complete_evt);
     void notify_value_changed(simpleble_ValueChangedEvt const& value_changed_evt);
     void notify_passkey_display(simpleble_PasskeyDisplayEvt const& passkey_display_evt);
     void notify_auth_key_request(simpleble_AuthKeyRequestEvt const& auth_key_request_evt);
@@ -112,7 +115,10 @@ class PeripheralDongl : public PeripheralBase {
         std::vector<CharacteristicDefinition> characteristics;
     };
 
-    bool _attempt_connect();
+    static constexpr std::chrono::milliseconds CONNECT_TIMEOUT{10000};
+    static constexpr std::chrono::milliseconds CONNECT_RESULT_MARGIN{5000};
+
+    void _resolve_missing_uuids();
 
     ServiceDefinition& _find_service_from_handle(uint16_t handle);
     CharacteristicDefinition& _find_characteristic_from_handle(uint16_t handle);
@@ -136,7 +142,7 @@ class PeripheralDongl : public PeripheralBase {
     std::map<BluetoothUUID, ByteArray> _service_data;
 
     std::vector<ServiceDefinition> _services;
-    std::atomic_bool _attributes_discovered{false};
+    std::optional<simpleble_ConnectCompleteEvt> _connect_result;
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;
 
@@ -144,8 +150,6 @@ class PeripheralDongl : public PeripheralBase {
     std::mutex connection_mutex_;
     std::condition_variable disconnection_cv_;
     std::mutex disconnection_mutex_;
-    std::condition_variable attributes_discovered_cv_;
-    std::mutex attributes_discovered_mutex_;
     kvn::safe_callback<std::optional<std::string>()> passkey_request_callback_;
     kvn::safe_callback<void(const std::string& passkey)> passkey_display_callback_;
     kvn::safe_callback<bool(const std::string& passkey)> numeric_comparison_callback_;

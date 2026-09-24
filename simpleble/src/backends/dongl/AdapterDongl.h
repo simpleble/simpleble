@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "AdapterBaseTypes.h"
+#include "AdvertisingData.h"
 #include "PeripheralDongl.h"
 #include "serial/Protocol.h"
 
@@ -49,7 +49,7 @@ class AdapterDongl : public AdapterBase {
   private:
     void _check_for_updates(uint32_t current_version);
     void _update_firmware();
-    void _scan_received_callback(advertising_data_t data);
+    void _scan_received_callback(Dongl::advertising_data_t data);
     void _on_simpleble_event(const simpleble_Event& event);
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;

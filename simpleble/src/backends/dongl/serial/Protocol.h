@@ -30,7 +30,8 @@ class Protocol : public ProtocolBase {
     simpleble_ScanStartRsp simpleble_scan_start();
     simpleble_ScanStopRsp simpleble_scan_stop();
     simpleble_ScanIsActiveRsp simpleble_scan_is_active();
-    simpleble_ConnectRsp simpleble_connect(simpleble_BluetoothAddressType address_type, const std::string& address);
+    simpleble_ConnectRsp simpleble_connect(simpleble_BluetoothAddressType address_type, const std::string& address,
+                                           uint32_t timeout_ms);
     simpleble_DisconnectRsp simpleble_disconnect(uint16_t conn_handle);
     simpleble_ReadRsp simpleble_read(uint16_t conn_handle, uint16_t handle);
     simpleble_WriteRsp simpleble_write(uint16_t conn_handle, uint16_t handle, simpleble_WriteOperation operation, const std::vector<uint8_t>& data);

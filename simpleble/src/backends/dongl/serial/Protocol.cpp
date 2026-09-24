@@ -109,7 +109,7 @@ simpleble_ScanIsActiveRsp Protocol::simpleble_scan_is_active() {
 }
 
 simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType address_type,
-                                                 const std::string& address) {
+                                                 const std::string& address, uint32_t timeout_ms) {
     dongl_Command command = dongl_Command_init_zero;
     command.which_cmd = dongl_Command_simpleble_tag;
     command.cmd.simpleble.which_cmd = simpleble_Command_connect_tag;
@@ -119,6 +119,7 @@ simpleble_ConnectRsp Protocol::simpleble_connect(simpleble_BluetoothAddressType 
     command.cmd.simpleble.cmd.connect.address_type = address_type;
     strncpy(command.cmd.simpleble.cmd.connect.address, address.c_str(),
             sizeof(command.cmd.simpleble.cmd.connect.address));
+    command.cmd.simpleble.cmd.connect.timeout_ms = timeout_ms;
 
     dongl_Response response = exchange(command);
     return response.rsp.simpleble.rsp.connect;

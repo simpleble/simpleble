@@ -35,5 +35,22 @@ BluetoothUUID uuid_from_proto(const simpleble_UUID& uuid) {
     }
 }
 
+const char* connect_status_to_string(simpleble_ConnectStatus status) {
+    switch (status) {
+        case simpleble_ConnectStatus_CONNECT_SUCCESS:
+            return "success";
+        case simpleble_ConnectStatus_CONNECT_TIMEOUT:
+            return "timed out";
+        case simpleble_ConnectStatus_CONNECT_CANCELLED:
+            return "cancelled";
+        case simpleble_ConnectStatus_CONNECT_DISCONNECTED:
+            return "disconnected";
+        case simpleble_ConnectStatus_CONNECT_DISCOVERY_FAILED:
+            return "attribute discovery failed";
+        default:
+            return "unknown status";
+    }
+}
+
 }  // namespace Dongl
 }  // namespace SimpleBLE

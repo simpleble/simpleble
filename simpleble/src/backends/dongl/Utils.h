@@ -13,6 +13,7 @@ BluetoothUUID uuid_from_uuid16(uint16_t uuid);
 BluetoothUUID uuid_from_uuid32(uint32_t uuid);
 BluetoothUUID uuid_from_uuid128(const uint8_t uuid[16]);
 BluetoothUUID uuid_from_proto(const simpleble_UUID& uuid);
+const char* connect_status_to_string(simpleble_ConnectStatus status);
 
 }  // namespace Dongl
 }  // namespace SimpleBLE

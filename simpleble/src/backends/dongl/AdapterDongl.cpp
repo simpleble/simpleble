@@ -115,7 +115,7 @@ SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
         BluetoothAddress address = std::string(response.address);
         auto peripheral = peripherals_.find(address);
         if (peripheral == peripherals_.end()) {
-            advertising_data_t data{};
+            Dongl::advertising_data_t data{};
             data.identifier = address;
             data.address_type = static_cast<BluetoothAddressType>(response.address_type);
             data.mac_address = address;
@@ -128,7 +128,7 @@ SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
     return paired_peripherals;
 }
 
-void AdapterDongl::_scan_received_callback(advertising_data_t data) {
+void AdapterDongl::_scan_received_callback(Dongl::advertising_data_t data) {
     if (this->peripherals_.count(data.mac_address) == 0) {
         // If the incoming peripheral has never been seen before, create and save a reference to it.
         auto base_peripheral = std::make_shared<PeripheralDongl>(_serial_protocol, data);
@@ -155,7 +155,7 @@ void AdapterDongl::_scan_received_callback(advertising_data_t data) {
 void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
     switch (event.which_evt) {
         case simpleble_Event_adv_evt_tag: {
-            advertising_data_t data = advertising_data_t();
+            Dongl::advertising_data_t data = Dongl::advertising_data_t();
             data.mac_address = std::string(event.evt.adv_evt.address);
             data.address_type = static_cast<SimpleBLE::BluetoothAddressType>(event.evt.adv_evt.address_type);
             data.identifier = std::string(event.evt.adv_evt.identifier);
@@ -233,10 +233,11 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             break;
         }
 
-        case simpleble_Event_attribute_discovery_complete_evt_tag: {
+        case simpleble_Event_connect_complete_evt_tag: {
+            // Routed by address: failed attempts have no connection handle.
             for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.attribute_discovery_complete_evt.conn_handle) {
-                    peripheral->notify_attribute_discovery_complete(event.evt.attribute_discovery_complete_evt);
+                if (peripheral->address() == std::string(event.evt.connect_complete_evt.address)) {
+                    peripheral->notify_connect_complete(event.evt.connect_complete_evt);
                     break;
                 }
             }

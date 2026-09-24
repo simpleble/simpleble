@@ -33,6 +33,14 @@ typedef enum _simpleble_PairingAuthKeyType {
     simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY = 1
 } simpleble_PairingAuthKeyType;
 
+typedef enum _simpleble_ConnectStatus {
+    simpleble_ConnectStatus_CONNECT_SUCCESS = 0,
+    simpleble_ConnectStatus_CONNECT_TIMEOUT = 1, /* Deadline expired before discovery finished. */
+    simpleble_ConnectStatus_CONNECT_CANCELLED = 2, /* Host disconnected or powered off during the attempt. */
+    simpleble_ConnectStatus_CONNECT_DISCONNECTED = 3, /* Link dropped before discovery finished. See hci_reason. */
+    simpleble_ConnectStatus_CONNECT_DISCOVERY_FAILED = 4 /* GATT discovery returned an error. */
+} simpleble_ConnectStatus;
+
 /* Struct definitions */
 typedef struct _simpleble_UUID16Bit {
     uint16_t uuid;
@@ -128,6 +136,7 @@ typedef struct _simpleble_ScanIsActiveCmd {
 typedef struct _simpleble_ConnectCmd {
     simpleble_BluetoothAddressType address_type;
     char address[18]; /* 17 characters + null terminator */
+    uint32_t timeout_ms; /* Deadline for the whole attempt, discovery included. 0 selects the firmware default. */
 } simpleble_ConnectCmd;
 
 typedef struct _simpleble_DisconnectCmd {
@@ -279,10 +288,15 @@ typedef struct _simpleble_DescriptorDiscoveredEvt {
     simpleble_UUID uuid;
 } simpleble_DescriptorDiscoveredEvt;
 
-typedef struct _simpleble_AttributeDiscoveryCompleteEvt {
+/* Sent exactly once for every accepted ConnectCmd. On failure the link is already down and a new ConnectCmd can be
+ sent right away. */
+typedef struct _simpleble_ConnectCompleteEvt {
+    char address[18]; /* 17 characters + null terminator */
     uint16_t conn_handle;
+    simpleble_ConnectStatus status;
     uint16_t mtu; /* ATT payload size (negotiated ATT MTU minus 3) */
-} simpleble_AttributeDiscoveryCompleteEvt;
+    uint8_t hci_reason;
+} simpleble_ConnectCompleteEvt;
 
 typedef PB_BYTES_ARRAY_T(512) simpleble_ValueChangedEvt_data_t;
 typedef struct _simpleble_ValueChangedEvt {
@@ -352,7 +366,7 @@ typedef struct _simpleble_Event {
         simpleble_ServiceDiscoveredEvt service_discovered_evt;
         simpleble_CharacteristicDiscoveredEvt characteristic_discovered_evt;
         simpleble_DescriptorDiscoveredEvt descriptor_discovered_evt;
-        simpleble_AttributeDiscoveryCompleteEvt attribute_discovery_complete_evt;
+        simpleble_ConnectCompleteEvt connect_complete_evt;
         simpleble_ValueChangedEvt value_changed_evt;
         simpleble_PasskeyDisplayEvt passkey_display_evt;
         simpleble_AuthKeyRequestEvt auth_key_request_evt;
@@ -380,6 +394,10 @@ extern "C" {
 #define _simpleble_PairingAuthKeyType_MIN simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_NONE
 #define _simpleble_PairingAuthKeyType_MAX simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY
 #define _simpleble_PairingAuthKeyType_ARRAYSIZE ((simpleble_PairingAuthKeyType)(simpleble_PairingAuthKeyType_PAIRING_AUTH_KEY_PASSKEY+1))
+
+#define _simpleble_ConnectStatus_MIN simpleble_ConnectStatus_CONNECT_SUCCESS
+#define _simpleble_ConnectStatus_MAX simpleble_ConnectStatus_CONNECT_DISCOVERY_FAILED
+#define _simpleble_ConnectStatus_ARRAYSIZE ((simpleble_ConnectStatus)(simpleble_ConnectStatus_CONNECT_DISCOVERY_FAILED+1))
 
 
 
@@ -430,6 +448,7 @@ extern "C" {
 
 
 
+#define simpleble_ConnectCompleteEvt_status_ENUMTYPE simpleble_ConnectStatus
 
 #define simpleble_ValueChangedEvt_type_ENUMTYPE simpleble_ValueChangedType
 
@@ -456,7 +475,7 @@ extern "C" {
 #define simpleble_ScanStartCmd_init_default      {0}
 #define simpleble_ScanStopCmd_init_default       {0}
 #define simpleble_ScanIsActiveCmd_init_default   {0}
-#define simpleble_ConnectCmd_init_default        {_simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_ConnectCmd_init_default        {_simpleble_BluetoothAddressType_MIN, "", 0}
 #define simpleble_DisconnectCmd_init_default     {0}
 #define simpleble_ReadCmd_init_default           {0, 0}
 #define simpleble_WriteCmd_init_default          {0, 0, _simpleble_WriteOperation_MIN, {0, {0}}}
@@ -484,7 +503,7 @@ extern "C" {
 #define simpleble_ServiceDiscoveredEvt_init_default {0, 0, 0, false, simpleble_UUID16Bit_init_default}
 #define simpleble_CharacteristicDiscoveredEvt_init_default {0, 0, 0, false, simpleble_UUID16Bit_init_default, false, simpleble_CharacteristicProperties_init_default}
 #define simpleble_DescriptorDiscoveredEvt_init_default {0, 0, false, simpleble_UUID_init_default}
-#define simpleble_AttributeDiscoveryCompleteEvt_init_default {0, 0}
+#define simpleble_ConnectCompleteEvt_init_default {"", 0, _simpleble_ConnectStatus_MIN, 0, 0}
 #define simpleble_ValueChangedEvt_init_default   {0, 0, _simpleble_ValueChangedType_MIN, {0, {0}}}
 #define simpleble_PasskeyDisplayEvt_init_default {0, "", 0, 0}
 #define simpleble_AuthKeyRequestEvt_init_default {0, _simpleble_PairingAuthKeyType_MIN, 0}
@@ -506,7 +525,7 @@ extern "C" {
 #define simpleble_ScanStartCmd_init_zero         {0}
 #define simpleble_ScanStopCmd_init_zero          {0}
 #define simpleble_ScanIsActiveCmd_init_zero      {0}
-#define simpleble_ConnectCmd_init_zero           {_simpleble_BluetoothAddressType_MIN, ""}
+#define simpleble_ConnectCmd_init_zero           {_simpleble_BluetoothAddressType_MIN, "", 0}
 #define simpleble_DisconnectCmd_init_zero        {0}
 #define simpleble_ReadCmd_init_zero              {0, 0}
 #define simpleble_WriteCmd_init_zero             {0, 0, _simpleble_WriteOperation_MIN, {0, {0}}}
@@ -534,7 +553,7 @@ extern "C" {
 #define simpleble_ServiceDiscoveredEvt_init_zero {0, 0, 0, false, simpleble_UUID16Bit_init_zero}
 #define simpleble_CharacteristicDiscoveredEvt_init_zero {0, 0, 0, false, simpleble_UUID16Bit_init_zero, false, simpleble_CharacteristicProperties_init_zero}
 #define simpleble_DescriptorDiscoveredEvt_init_zero {0, 0, false, simpleble_UUID_init_zero}
-#define simpleble_AttributeDiscoveryCompleteEvt_init_zero {0, 0}
+#define simpleble_ConnectCompleteEvt_init_zero   {"", 0, _simpleble_ConnectStatus_MIN, 0, 0}
 #define simpleble_ValueChangedEvt_init_zero      {0, 0, _simpleble_ValueChangedType_MIN, {0, {0}}}
 #define simpleble_PasskeyDisplayEvt_init_zero    {0, "", 0, 0}
 #define simpleble_AuthKeyRequestEvt_init_zero    {0, _simpleble_PairingAuthKeyType_MIN, 0}
@@ -574,6 +593,7 @@ extern "C" {
 #define simpleble_Attribute_descriptor_tag       3
 #define simpleble_ConnectCmd_address_type_tag    1
 #define simpleble_ConnectCmd_address_tag         2
+#define simpleble_ConnectCmd_timeout_ms_tag      3
 #define simpleble_DisconnectCmd_conn_handle_tag  1
 #define simpleble_ReadCmd_conn_handle_tag        1
 #define simpleble_ReadCmd_handle_tag             2
@@ -632,8 +652,11 @@ extern "C" {
 #define simpleble_DescriptorDiscoveredEvt_conn_handle_tag 1
 #define simpleble_DescriptorDiscoveredEvt_handle_tag 2
 #define simpleble_DescriptorDiscoveredEvt_uuid_tag 3
-#define simpleble_AttributeDiscoveryCompleteEvt_conn_handle_tag 1
-#define simpleble_AttributeDiscoveryCompleteEvt_mtu_tag 2
+#define simpleble_ConnectCompleteEvt_address_tag 1
+#define simpleble_ConnectCompleteEvt_conn_handle_tag 2
+#define simpleble_ConnectCompleteEvt_status_tag  3
+#define simpleble_ConnectCompleteEvt_mtu_tag     4
+#define simpleble_ConnectCompleteEvt_hci_reason_tag 5
 #define simpleble_ValueChangedEvt_conn_handle_tag 1
 #define simpleble_ValueChangedEvt_handle_tag     2
 #define simpleble_ValueChangedEvt_type_tag       3
@@ -677,7 +700,7 @@ extern "C" {
 #define simpleble_Event_service_discovered_evt_tag 4
 #define simpleble_Event_characteristic_discovered_evt_tag 5
 #define simpleble_Event_descriptor_discovered_evt_tag 6
-#define simpleble_Event_attribute_discovery_complete_evt_tag 7
+#define simpleble_Event_connect_complete_evt_tag 7
 #define simpleble_Event_value_changed_evt_tag    8
 #define simpleble_Event_passkey_display_evt_tag  9
 #define simpleble_Event_auth_key_request_evt_tag 10
@@ -789,7 +812,8 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (attribute,descriptor,attribute.descriptor), 
 
 #define simpleble_ConnectCmd_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    address_type,      1) \
-X(a, STATIC,   SINGULAR, STRING,   address,           2)
+X(a, STATIC,   SINGULAR, STRING,   address,           2) \
+X(a, STATIC,   SINGULAR, UINT32,   timeout_ms,        3)
 #define simpleble_ConnectCmd_CALLBACK NULL
 #define simpleble_ConnectCmd_DEFAULT NULL
 
@@ -966,11 +990,14 @@ X(a, STATIC,   OPTIONAL, MESSAGE,  uuid,              3)
 #define simpleble_DescriptorDiscoveredEvt_DEFAULT NULL
 #define simpleble_DescriptorDiscoveredEvt_uuid_MSGTYPE simpleble_UUID
 
-#define simpleble_AttributeDiscoveryCompleteEvt_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       1) \
-X(a, STATIC,   SINGULAR, UINT32,   mtu,               2)
-#define simpleble_AttributeDiscoveryCompleteEvt_CALLBACK NULL
-#define simpleble_AttributeDiscoveryCompleteEvt_DEFAULT NULL
+#define simpleble_ConnectCompleteEvt_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, STRING,   address,           1) \
+X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       2) \
+X(a, STATIC,   SINGULAR, UENUM,    status,            3) \
+X(a, STATIC,   SINGULAR, UINT32,   mtu,               4) \
+X(a, STATIC,   SINGULAR, UINT32,   hci_reason,        5)
+#define simpleble_ConnectCompleteEvt_CALLBACK NULL
+#define simpleble_ConnectCompleteEvt_DEFAULT NULL
 
 #define simpleble_ValueChangedEvt_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   conn_handle,       1) \
@@ -1062,7 +1089,7 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (evt,disconnection_evt,evt.disconnection_evt)
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,service_discovered_evt,evt.service_discovered_evt),   4) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,characteristic_discovered_evt,evt.characteristic_discovered_evt),   5) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,descriptor_discovered_evt,evt.descriptor_discovered_evt),   6) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (evt,attribute_discovery_complete_evt,evt.attribute_discovery_complete_evt),   7) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (evt,connect_complete_evt,evt.connect_complete_evt),   7) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,value_changed_evt,evt.value_changed_evt),   8) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,passkey_display_evt,evt.passkey_display_evt),   9) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (evt,auth_key_request_evt,evt.auth_key_request_evt),  10)
@@ -1074,7 +1101,7 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (evt,auth_key_request_evt,evt.auth_key_reques
 #define simpleble_Event_evt_service_discovered_evt_MSGTYPE simpleble_ServiceDiscoveredEvt
 #define simpleble_Event_evt_characteristic_discovered_evt_MSGTYPE simpleble_CharacteristicDiscoveredEvt
 #define simpleble_Event_evt_descriptor_discovered_evt_MSGTYPE simpleble_DescriptorDiscoveredEvt
-#define simpleble_Event_evt_attribute_discovery_complete_evt_MSGTYPE simpleble_AttributeDiscoveryCompleteEvt
+#define simpleble_Event_evt_connect_complete_evt_MSGTYPE simpleble_ConnectCompleteEvt
 #define simpleble_Event_evt_value_changed_evt_MSGTYPE simpleble_ValueChangedEvt
 #define simpleble_Event_evt_passkey_display_evt_MSGTYPE simpleble_PasskeyDisplayEvt
 #define simpleble_Event_evt_auth_key_request_evt_MSGTYPE simpleble_AuthKeyRequestEvt
@@ -1122,7 +1149,7 @@ extern const pb_msgdesc_t simpleble_DisconnectionEvt_msg;
 extern const pb_msgdesc_t simpleble_ServiceDiscoveredEvt_msg;
 extern const pb_msgdesc_t simpleble_CharacteristicDiscoveredEvt_msg;
 extern const pb_msgdesc_t simpleble_DescriptorDiscoveredEvt_msg;
-extern const pb_msgdesc_t simpleble_AttributeDiscoveryCompleteEvt_msg;
+extern const pb_msgdesc_t simpleble_ConnectCompleteEvt_msg;
 extern const pb_msgdesc_t simpleble_ValueChangedEvt_msg;
 extern const pb_msgdesc_t simpleble_PasskeyDisplayEvt_msg;
 extern const pb_msgdesc_t simpleble_AuthKeyRequestEvt_msg;
@@ -1174,7 +1201,7 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_ServiceDiscoveredEvt_fields &simpleble_ServiceDiscoveredEvt_msg
 #define simpleble_CharacteristicDiscoveredEvt_fields &simpleble_CharacteristicDiscoveredEvt_msg
 #define simpleble_DescriptorDiscoveredEvt_fields &simpleble_DescriptorDiscoveredEvt_msg
-#define simpleble_AttributeDiscoveryCompleteEvt_fields &simpleble_AttributeDiscoveryCompleteEvt_msg
+#define simpleble_ConnectCompleteEvt_fields &simpleble_ConnectCompleteEvt_msg
 #define simpleble_ValueChangedEvt_fields &simpleble_ValueChangedEvt_msg
 #define simpleble_PasskeyDisplayEvt_fields &simpleble_PasskeyDisplayEvt_msg
 #define simpleble_AuthKeyRequestEvt_fields &simpleble_AuthKeyRequestEvt_msg
@@ -1185,7 +1212,6 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 /* Maximum encoded size of messages (where known) */
 #define SIMPLEBLE_SIMPLEBLE_PB_H_MAX_SIZE        simpleble_Command_size
 #define simpleble_AdvEvt_size                    418
-#define simpleble_AttributeDiscoveryCompleteEvt_size 8
 #define simpleble_Attribute_size                 48
 #define simpleble_AuthKeyReplyCmd_size           30
 #define simpleble_AuthKeyReplyRsp_size           6
@@ -1194,7 +1220,8 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_CharacteristicProperties_size  14
 #define simpleble_Characteristic_size            46
 #define simpleble_Command_size                   528
-#define simpleble_ConnectCmd_size                21
+#define simpleble_ConnectCmd_size                27
+#define simpleble_ConnectCompleteEvt_size        32
 #define simpleble_ConnectRsp_size                6
 #define simpleble_ConnectionEvt_size             23
 #define simpleble_DescriptorDiscoveredEvt_size   30

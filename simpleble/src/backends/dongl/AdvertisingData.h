@@ -7,7 +7,11 @@
 #include <string>
 
 namespace SimpleBLE {
+namespace Dongl {
 
+// Dongl-specific counterpart of SimpleBLE::advertising_data_t (backends/common/AdapterBaseTypes.h). It lives in its
+// own namespace because two different definitions of the same type in one namespace violate the one-definition rule
+// and corrupt fields on builds that compile both.
 struct advertising_data_t {
     std::string identifier;
     bool identifier_complete = false;
@@ -21,4 +25,5 @@ struct advertising_data_t {
     std::map<BluetoothUUID, ByteArray> service_data;
 };
 
+}  // namespace Dongl
 }  // namespace SimpleBLE

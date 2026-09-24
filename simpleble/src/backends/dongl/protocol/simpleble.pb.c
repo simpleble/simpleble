@@ -135,7 +135,7 @@ PB_BIND(simpleble_CharacteristicDiscoveredEvt, simpleble_CharacteristicDiscovere
 PB_BIND(simpleble_DescriptorDiscoveredEvt, simpleble_DescriptorDiscoveredEvt, AUTO)
 
 
-PB_BIND(simpleble_AttributeDiscoveryCompleteEvt, simpleble_AttributeDiscoveryCompleteEvt, AUTO)
+PB_BIND(simpleble_ConnectCompleteEvt, simpleble_ConnectCompleteEvt, AUTO)
 
 
 PB_BIND(simpleble_ValueChangedEvt, simpleble_ValueChangedEvt, 2)
@@ -154,3 +154,16 @@ PB_BIND(simpleble_Response, simpleble_Response, 2)
 
 
 PB_BIND(simpleble_Event, simpleble_Event, 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
