@@ -73,7 +73,7 @@ void Adapter::set_callback_on_power_off(std::function<void()> on_power_off) {
 }
 
 void Adapter::scan_start() {
-    if (!bluetooth_enabled()) {
+    if (!(*this)->bluetooth_enabled()) {
         SIMPLEBLE_LOG_WARN(fmt::format("Bluetooth is not enabled."));
         return;
     }
@@ -81,7 +81,7 @@ void Adapter::scan_start() {
 }
 
 void Adapter::scan_stop() {
-    if (!bluetooth_enabled()) {
+    if (!(*this)->bluetooth_enabled()) {
         SIMPLEBLE_LOG_WARN(fmt::format("Bluetooth is not enabled."));
         return;
     }
@@ -89,7 +89,7 @@ void Adapter::scan_stop() {
 }
 
 void Adapter::scan_for(int timeout_ms) {
-    if (!bluetooth_enabled()) {
+    if (!(*this)->bluetooth_enabled()) {
         SIMPLEBLE_LOG_WARN(fmt::format("Bluetooth is not enabled."));
         return;
     }
