@@ -20,14 +20,13 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
         }
 
         if (d2h.which_type == dongl_D2H_rsp_tag) {
-            // First, try to fulfill any pending sync request
-            {
-                std::lock_guard<std::mutex> lock(_pending_mutex);
-                if (!_pending_response.has_value()) {
-                    _pending_response = d2h.type.rsp;
-                    _response_cv.notify_one();
-                }
+            std::lock_guard<std::mutex> lock(_pending_mutex);
+            if (_expected_id != d2h.type.rsp.id || _pending_response.has_value()) {
+                SIMPLEBLE_LOG_WARN("Discarding a Dongl response to an earlier command");
+                return;
             }
+            _pending_response = d2h.type.rsp;
+            _response_cv.notify_one();
 
         } else if (d2h.which_type == dongl_D2H_evt_tag) {
             std::lock_guard<std::mutex> lock(_event_mutex);
@@ -54,15 +53,16 @@ ProtocolBase::~ProtocolBase() {
     _wire.reset();
 }
 
-dongl_Response ProtocolBase::exchange(const dongl_Command& command) {
-    // The wire protocol has no transaction IDs, so serialize exchanges and
-    // discard any response that arrived after a previous timeout.
+dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::milliseconds timeout) {
+    // Serialize exchanges. Responses to earlier, timed-out commands carry a different id and are discarded.
     std::lock_guard<std::mutex> exchange_lock(_exchange_mutex);
+    command.id = ++_last_id;
 
     // Clear any previous response and send the command
     {
         std::unique_lock<std::mutex> lock(_pending_mutex);
         _pending_response.reset();  // Ensure it's empty to indicate we're waiting
+        _expected_id = command.id;
     }
 
     try {
@@ -83,10 +83,12 @@ dongl_Response ProtocolBase::exchange(const dongl_Command& command) {
         throw;
     }
 
-    // Wait for the response with 1 second timeout
+    // Wait for the response
     {
         std::unique_lock<std::mutex> lock(_pending_mutex);
-        if (_response_cv.wait_for(lock, std::chrono::seconds(1), [this]() { return _pending_response.has_value(); })) {
+        const bool received = _response_cv.wait_for(lock, timeout, [this]() { return _pending_response.has_value(); });
+        _expected_id.reset();
+        if (received) {
             dongl_Response response = *_pending_response;
             _pending_response.reset();
             return response;

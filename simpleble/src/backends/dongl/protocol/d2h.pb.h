@@ -19,6 +19,7 @@ typedef struct _dongl_Response {
         basic_Response basic;
         simpleble_Response simpleble;
     } rsp;
+    uint8_t id; /* The id of the command this responds to. */
 } dongl_Response;
 
 typedef struct _dongl_Event {
@@ -42,16 +43,17 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define dongl_Response_init_default              {0, {basic_Response_init_default}}
+#define dongl_Response_init_default              {0, {basic_Response_init_default}, 0}
 #define dongl_Event_init_default                 {0, {simpleble_Event_init_default}}
 #define dongl_D2H_init_default                   {0, {dongl_Response_init_default}}
-#define dongl_Response_init_zero                 {0, {basic_Response_init_zero}}
+#define dongl_Response_init_zero                 {0, {basic_Response_init_zero}, 0}
 #define dongl_Event_init_zero                    {0, {simpleble_Event_init_zero}}
 #define dongl_D2H_init_zero                      {0, {dongl_Response_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define dongl_Response_basic_tag                 1
 #define dongl_Response_simpleble_tag             2
+#define dongl_Response_id_tag                    3
 #define dongl_Event_simpleble_tag                2
 #define dongl_D2H_rsp_tag                        1
 #define dongl_D2H_evt_tag                        2
@@ -59,7 +61,8 @@ extern "C" {
 /* Struct field encoding specification for nanopb */
 #define dongl_Response_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,basic,rsp.basic),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,simpleble,rsp.simpleble),   2)
+X(a, STATIC,   ONEOF,    MESSAGE,  (rsp,simpleble,rsp.simpleble),   2) \
+X(a, STATIC,   SINGULAR, UINT32,   id,                3)
 #define dongl_Response_CALLBACK NULL
 #define dongl_Response_DEFAULT NULL
 #define dongl_Response_rsp_basic_MSGTYPE basic_Response
@@ -90,9 +93,9 @@ extern const pb_msgdesc_t dongl_D2H_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define DONGL_D2H_PB_H_MAX_SIZE                  dongl_D2H_size
-#define dongl_D2H_size                           534
+#define dongl_D2H_size                           537
 #define dongl_Event_size                         531
-#define dongl_Response_size                      531
+#define dongl_Response_size                      534
 
 #ifdef __cplusplus
 } /* extern "C" */

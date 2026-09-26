@@ -128,7 +128,7 @@ class PeripheralDongl : public PeripheralBase {
                                                      BluetoothUUID const& descriptor);
     void _send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key, bool accept);
 
-    uint16_t _conn_handle = BLE_CONN_HANDLE_INVALID;
+    std::atomic<uint16_t> _conn_handle{BLE_CONN_HANDLE_INVALID};  // Written by the serial reader thread.
     std::atomic_bool _connection_announced = false;
     uint16_t _mtu = 0;
     std::string _identifier;
@@ -136,13 +136,23 @@ class PeripheralDongl : public PeripheralBase {
     BluetoothAddress _address;
     BluetoothAddressType _address_type;
     int16_t _rssi;
-    int16_t _tx_power = std::numeric_limits<int16_t>::min();
+    // Advertising fields are written by the serial reader thread during scans and read by user threads.
+    mutable std::mutex _advertising_mutex;
     bool _connectable;
-    std::map<uint16_t, ByteArray> _manufacturer_data;
     std::map<BluetoothUUID, ByteArray> _service_data;
+
+    // Fields of the latest advertisement and the latest scan response. Like the OS backends, the peripheral reports
+    // what is currently advertised, so a field that stops being advertised disappears. Service data accumulates.
+    struct PacketFields {
+        int16_t tx_power = std::numeric_limits<int16_t>::min();
+        std::map<uint16_t, ByteArray> manufacturer_data;
+    };
+    PacketFields _advertisement;
+    PacketFields _scan_response;
 
     std::vector<ServiceDefinition> _services;
     std::optional<simpleble_ConnectCompleteEvt> _connect_result;
+    bool _connect_pending = false;  // Guarded by connection_mutex_.
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;
 
@@ -153,7 +163,8 @@ class PeripheralDongl : public PeripheralBase {
     kvn::safe_callback<std::optional<std::string>()> passkey_request_callback_;
     kvn::safe_callback<void(const std::string& passkey)> passkey_display_callback_;
     kvn::safe_callback<bool(const std::string& passkey)> numeric_comparison_callback_;
-    TaskRunner pairing_task_runner_;
+    // Runs work that issues Dongl commands off the serial reader thread, which must stay free to receive responses.
+    TaskRunner task_runner_;
 
     kvn::safe_callback<void()> _callback_on_connected;
     kvn::safe_callback<void()> _callback_on_disconnected;

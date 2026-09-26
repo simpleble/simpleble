@@ -146,7 +146,9 @@ simpleble_ReadRsp Protocol::simpleble_read(uint16_t conn_handle, uint16_t handle
     command.cmd.simpleble.cmd.read.conn_handle = conn_handle;
     command.cmd.simpleble.cmd.read.handle = handle;
 
-    dongl_Response response = exchange(command);
+    // Long values take one ATT round trip per MTU-sized chunk, up to 512 bytes, before the Dongl responds. With a
+    // slow connection interval and peripheral latency that can take several seconds.
+    dongl_Response response = exchange(command, std::chrono::milliseconds(15000));
     return response.rsp.simpleble.rsp.read;
 }
 

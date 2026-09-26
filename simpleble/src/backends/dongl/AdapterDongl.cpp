@@ -161,6 +161,8 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             data.identifier = std::string(event.evt.adv_evt.identifier);
             data.identifier_complete = event.evt.adv_evt.identifier_complete;
             data.connectable = event.evt.adv_evt.connectable;
+            data.scan_response = event.evt.adv_evt.scan_response;
+            data.scannable = event.evt.adv_evt.scannable;
             data.rssi = event.evt.adv_evt.rssi;
             data.tx_power = event.evt.adv_evt.tx_power;
             // Extract decoded manufacturer and service data

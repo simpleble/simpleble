@@ -39,11 +39,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **API CHANGE**: (SimpleBLE) Replaced `Local::Advertisement` with additive advertised-service APIs on local peripherals.
 - **API CHANGE**: (SimpleDroidBLE) Replaced `LocalAdvertisement` with additive advertised-service APIs on local peripherals.
 - (Dongl) Consolidated UUID conversion and routed diagnostics through SimpleBLE logging.
+- (Dongl) `connect()` waits for the Dongl's result instead of retrying. Requires Dongl firmware 0.1.0.
+- (Dongl) Advertising data reflects the latest advertisement and scan response.
+- (SimpleBLE) Scan methods check Bluetooth on the adapter's own backend.
+- (MacOS) CoreBluetooth starts on first use.
 
 **Fixed**
 
 - (Dongl) Fixed scan callbacks, advertising-data merging, and disconnect notifications.
 - (Dongl) Fixed queued pairing callbacks running after unregistration.
+- (Dongl) Fixed UUIDs reported in uppercase.
+- (Dongl) Fixed truncated reads of long values.
+- (Dongl) Fixed a late response being returned for the next command.
+- (Dongl) Fixed data races on advertising data during scans.
 - (SimpleBLE/SimpleCBLE) Corrected advanced API build guards for Plain builds and non-Apple platforms.
 - (SimpleJavaBLE) Fixed JPMS compatibility with a stable automatic module name.
 - (SimpleCBLE) Fixed out-of-bounds reads when copying short service, characteristic, and descriptor UUIDs.

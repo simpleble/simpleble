@@ -37,15 +37,25 @@ PeripheralDongl::~PeripheralDongl() {}
 
 void* PeripheralDongl::underlying() const { return nullptr; }
 
-std::string PeripheralDongl::identifier() { return _identifier; }
+std::string PeripheralDongl::identifier() {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
+    return _identifier;
+}
 
 BluetoothAddress PeripheralDongl::address() { return _address; }
 
 BluetoothAddressType PeripheralDongl::address_type() { return _address_type; }
 
-int16_t PeripheralDongl::rssi() { return _rssi; }
+int16_t PeripheralDongl::rssi() {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
+    return _rssi;
+}
 
-int16_t PeripheralDongl::tx_power() { return _tx_power; }
+int16_t PeripheralDongl::tx_power() {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
+    return _advertisement.tx_power != std::numeric_limits<int16_t>::min() ? _advertisement.tx_power
+                                                                          : _scan_response.tx_power;
+}
 
 uint16_t PeripheralDongl::mtu() { return _mtu; }
 
@@ -60,12 +70,22 @@ void PeripheralDongl::connect() {
     {
         std::lock_guard<std::mutex> lock(connection_mutex_);
         _connect_result.reset();
+        _connect_pending = true;
     }
 
     // The Dongl owns the attempt, including retries, and reports its outcome exactly once within the timeout.
-    auto response = _serial_protocol->simpleble_connect(static_cast<simpleble_BluetoothAddressType>(_address_type),
-                                                        _address, CONNECT_TIMEOUT.count());
+    simpleble_ConnectRsp response;
+    try {
+        response = _serial_protocol->simpleble_connect(static_cast<simpleble_BluetoothAddressType>(_address_type),
+                                                       _address, CONNECT_TIMEOUT.count());
+    } catch (...) {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        _connect_pending = false;
+        throw;
+    }
     if (response.ret_code != 0) {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        _connect_pending = false;
         throw Exception::OperationFailed(fmt::format("Error when attempting to connect: {}", response.ret_code));
     }
 
@@ -73,8 +93,11 @@ void PeripheralDongl::connect() {
     {
         std::unique_lock<std::mutex> lock(connection_mutex_);
         // Waiting past the Dongl's own deadline means the Dongl stopped responding. Don't resend the command.
-        if (!connection_cv_.wait_for(lock, CONNECT_TIMEOUT + CONNECT_RESULT_MARGIN,
-                                     [this]() { return _connect_result.has_value(); })) {
+        const bool reported = connection_cv_.wait_for(lock, CONNECT_TIMEOUT + CONNECT_RESULT_MARGIN,
+                                                      [this]() { return _connect_result.has_value(); });
+        _connect_pending = false;
+        if (!reported) {
+            _conn_handle = BLE_CONN_HANDLE_INVALID;
             throw Exception::OperationFailed("Dongl did not report the connection result");
         }
         result = *_connect_result;
@@ -87,7 +110,10 @@ void PeripheralDongl::connect() {
                                                      result.hci_reason));
     }
 
-    _conn_handle = result.conn_handle;
+    // ConnectionEvt set the handle. If the link dropped since, the disconnection cleared it: don't restore it.
+    if (_conn_handle != result.conn_handle) {
+        throw Exception::OperationFailed("Connection lost right after it was established");
+    }
     _mtu = result.mtu;
     _resolve_missing_uuids();
 
@@ -117,7 +143,10 @@ void PeripheralDongl::disconnect() {
 
 bool PeripheralDongl::is_connected() { return _conn_handle != BLE_CONN_HANDLE_INVALID; }
 
-bool PeripheralDongl::is_connectable() { return _connectable; }
+bool PeripheralDongl::is_connectable() {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
+    return _connectable;
+}
 
 bool PeripheralDongl::is_paired() {
     return _serial_protocol->simpleble_is_paired(static_cast<simpleble_BluetoothAddressType>(_address_type), _address)
@@ -176,6 +205,7 @@ SharedPtrVector<ServiceBase> PeripheralDongl::available_services() {
 }
 
 SharedPtrVector<ServiceBase> PeripheralDongl::advertised_services() {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
     SharedPtrVector<ServiceBase> service_list;
     for (auto& [service_uuid, data] : _service_data) {
         service_list.push_back(std::make_shared<ServiceBase>(service_uuid, data));
@@ -184,7 +214,14 @@ SharedPtrVector<ServiceBase> PeripheralDongl::advertised_services() {
     return service_list;
 }
 
-std::map<uint16_t, ByteArray> PeripheralDongl::manufacturer_data() { return _manufacturer_data; }
+std::map<uint16_t, ByteArray> PeripheralDongl::manufacturer_data() {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
+    auto data = _scan_response.manufacturer_data;
+    for (auto& [company_id, bytes] : _advertisement.manufacturer_data) {
+        data[company_id] = bytes;
+    }
+    return data;
+}
 
 ByteArray PeripheralDongl::read(BluetoothUUID const& service_uuid, BluetoothUUID const& characteristic_uuid) {
     auto& characteristic = _find_characteristic_from_uuid(service_uuid, characteristic_uuid);
@@ -340,25 +377,31 @@ void PeripheralDongl::set_callback_on_disconnected(std::function<void()> on_disc
 uint16_t PeripheralDongl::conn_handle() const { return _conn_handle; }
 
 void PeripheralDongl::update_advertising_data(Dongl::advertising_data_t advertising_data) {
+    std::lock_guard<std::mutex> lock(_advertising_mutex);
     if (!advertising_data.identifier.empty() && (advertising_data.identifier_complete || !_identifier_complete)) {
         _identifier = advertising_data.identifier;
         _identifier_complete = advertising_data.identifier_complete;
     }
     _rssi = advertising_data.rssi;
-    if (advertising_data.tx_power != std::numeric_limits<int16_t>::min()) {
-        _tx_power = advertising_data.tx_power;
+    if (!advertising_data.scan_response) {
+        _connectable = advertising_data.connectable;
+        if (!advertising_data.scannable) {
+            // No scan response follows a non-scannable advertisement, so the last one no longer applies.
+            _scan_response = {};
+        }
     }
 
-    for (auto& [company_id, data] : advertising_data.manufacturer_data) {
-        _manufacturer_data[company_id] = std::move(data);
-    }
+    auto& packet = advertising_data.scan_response ? _scan_response : _advertisement;
+    packet.tx_power = advertising_data.tx_power;
+    packet.manufacturer_data = std::move(advertising_data.manufacturer_data);
+
     for (auto& [uuid, data] : advertising_data.service_data) {
         _service_data[uuid] = std::move(data);
     }
 }
 
 void PeripheralDongl::_resolve_missing_uuids() {
-    // Discovery events only carry 16-bit UUIDs, so read the declarations of everything else.
+    // The Dongl omits 128-bit UUIDs it could not resolve, so read those declarations.
     for (auto& service : _services) {
         // Fetch the service UUID if missing.
         if (service.uuid.empty()) {
@@ -425,8 +468,8 @@ void PeripheralDongl::notify_disconnected() {
 
 void PeripheralDongl::notify_service_discovered(simpleble_ServiceDiscoveredEvt const& evt) {
     BluetoothUUID uuid;
-    if (evt.has_uuid16) {
-        uuid = Dongl::uuid_from_uuid16(evt.uuid16.uuid);
+    if (evt.has_uuid) {
+        uuid = Dongl::uuid_from_proto(evt.uuid);
     }
 
     _services.emplace_back(ServiceDefinition{
@@ -440,8 +483,8 @@ void PeripheralDongl::notify_characteristic_discovered(simpleble_CharacteristicD
     auto& service = _find_service_from_handle(evt.handle_decl);
 
     BluetoothUUID uuid;
-    if (evt.has_uuid16) {
-        uuid = Dongl::uuid_from_uuid16(evt.uuid16.uuid);
+    if (evt.has_uuid) {
+        uuid = Dongl::uuid_from_proto(evt.uuid);
     }
 
     service.characteristics.emplace_back(CharacteristicDefinition{
@@ -483,11 +526,28 @@ void PeripheralDongl::notify_descriptor_discovered(simpleble_DescriptorDiscovere
 }
 
 void PeripheralDongl::notify_connect_complete(simpleble_ConnectCompleteEvt const& evt) {
+    bool orphaned;
     {
         std::lock_guard<std::mutex> lock(connection_mutex_);
         _connect_result = evt;
+        orphaned = !_connect_pending && evt.status == simpleble_ConnectStatus_CONNECT_SUCCESS;
     }
     connection_cv_.notify_all();
+
+    if (orphaned) {
+        // connect() already gave up on this attempt, so nobody will use the link.
+        SIMPLEBLE_LOG_WARN("Connection completed after connect() gave up; disconnecting");
+        task_runner_.dispatch(
+            [this, conn_handle = evt.conn_handle]() -> std::optional<std::chrono::milliseconds> {
+                try {
+                    _serial_protocol->simpleble_disconnect(conn_handle);
+                } catch (const std::exception& e) {
+                    SIMPLEBLE_LOG_ERROR(fmt::format("Failed to disconnect abandoned connection: {}", e.what()));
+                }
+                return std::nullopt;
+            },
+            0ms);
+    }
 }
 
 void PeripheralDongl::notify_value_changed(simpleble_ValueChangedEvt const& evt) {
@@ -501,7 +561,7 @@ void PeripheralDongl::notify_value_changed(simpleble_ValueChangedEvt const& evt)
 void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& evt) {
     const std::string passkey = evt.passkey;
     if (evt.match_request) {
-        pairing_task_runner_.dispatch(
+        task_runner_.dispatch(
             [this, conn_handle = evt.conn_handle, request_id = evt.request_id,
              passkey]() -> std::optional<std::chrono::milliseconds> {
                 bool accept = false;
@@ -520,7 +580,7 @@ void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& 
         return;
     }
 
-    pairing_task_runner_.dispatch(
+    task_runner_.dispatch(
         [this, passkey]() -> std::optional<std::chrono::milliseconds> {
             try {
                 passkey_display_callback_(passkey);
@@ -540,7 +600,7 @@ void PeripheralDongl::notify_auth_key_request(simpleble_AuthKeyRequestEvt const&
         SIMPLEBLE_LOG_WARN(fmt::format("Unsupported pairing key type: {}", static_cast<int>(evt.key_type)));
     }
 
-    pairing_task_runner_.dispatch(
+    task_runner_.dispatch(
         [this, request_passkey, conn_handle = evt.conn_handle,
          request_id = evt.request_id]() -> std::optional<std::chrono::milliseconds> {
             std::optional<std::string> passkey;

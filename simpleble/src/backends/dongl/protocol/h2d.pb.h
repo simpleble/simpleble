@@ -19,6 +19,7 @@ typedef struct _dongl_Command {
         basic_Command basic;
         simpleble_Command simpleble;
     } cmd;
+    uint8_t id; /* Echoed in the response to this command. */
 } dongl_Command;
 
 
@@ -27,17 +28,19 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define dongl_Command_init_default               {0, {basic_Command_init_default}}
-#define dongl_Command_init_zero                  {0, {basic_Command_init_zero}}
+#define dongl_Command_init_default               {0, {basic_Command_init_default}, 0}
+#define dongl_Command_init_zero                  {0, {basic_Command_init_zero}, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define dongl_Command_basic_tag                  1
 #define dongl_Command_simpleble_tag              2
+#define dongl_Command_id_tag                     3
 
 /* Struct field encoding specification for nanopb */
 #define dongl_Command_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,basic,cmd.basic),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,simpleble,cmd.simpleble),   2)
+X(a, STATIC,   ONEOF,    MESSAGE,  (cmd,simpleble,cmd.simpleble),   2) \
+X(a, STATIC,   SINGULAR, UINT32,   id,                3)
 #define dongl_Command_CALLBACK NULL
 #define dongl_Command_DEFAULT NULL
 #define dongl_Command_cmd_basic_MSGTYPE basic_Command
@@ -50,7 +53,7 @@ extern const pb_msgdesc_t dongl_Command_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define DONGL_H2D_PB_H_MAX_SIZE                  dongl_Command_size
-#define dongl_Command_size                       531
+#define dongl_Command_size                       534
 
 #ifdef __cplusplus
 } /* extern "C" */

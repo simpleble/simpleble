@@ -18,6 +18,8 @@ struct advertising_data_t {
     BluetoothAddressType address_type;
     BluetoothAddress mac_address;
     bool connectable;
+    bool scan_response = false;  // The fields came from a scan response rather than the advertisement.
+    bool scannable = false;      // The advertisement accepts scan requests.
     int16_t rssi = std::numeric_limits<int16_t>::min();
     int16_t tx_power = std::numeric_limits<int16_t>::min();
 

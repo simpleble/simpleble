@@ -8,16 +8,16 @@ namespace SimpleBLE {
 namespace Dongl {
 
 BluetoothUUID uuid_from_uuid16(uint16_t uuid) {
-    return BluetoothUUID(fmt::format("0000{:04X}-0000-1000-8000-00805F9B34FB", uuid));
+    return BluetoothUUID(fmt::format("0000{:04x}-0000-1000-8000-00805f9b34fb", uuid));
 }
 
 BluetoothUUID uuid_from_uuid32(uint32_t uuid) {
-    return BluetoothUUID(fmt::format("{:08X}-0000-1000-8000-00805F9B34FB", uuid));
+    return BluetoothUUID(fmt::format("{:08x}-0000-1000-8000-00805f9b34fb", uuid));
 }
 
 BluetoothUUID uuid_from_uuid128(const uint8_t uuid[16]) {
     return BluetoothUUID(fmt::format(
-        "{:02X}{:02X}{:02X}{:02X}-{:02X}{:02X}-{:02X}{:02X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}",
+        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
         uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11],
         uuid[12], uuid[13], uuid[14], uuid[15]));
 }
