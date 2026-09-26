@@ -17,6 +17,7 @@ wheelhouse
 
 target
 .cache
+.sdk/
 
 .cursor
 .venv
