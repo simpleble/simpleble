@@ -1,15 +1,16 @@
 ---
 title: Platform notes
-description: Windows and Android requirements for SimpleBLE.
+description: Windows, Android and Linux requirements for SimpleBLE.
 ---
 
-The current package includes Windows x64 and Android ARM64 libraries for
+The current package includes Windows x64, Android ARM64 and Linux x86_64 libraries for
 Unity 6.3 LTS and 6.6.
 
 | Target | Settings |
 | --- | --- |
 | Windows | Windows 10/11, x86_64, BLE-capable adapter. |
 | Android | Android 12 / API 31 or later, IL2CPP, ARM64. |
+| Linux | Ubuntu 22.04/24.04 x86_64, system D-Bus, BlueZ and a BLE adapter; acceptance pending. |
 
 ## Windows
 
@@ -34,3 +35,30 @@ configure its location permissions and manifest for that use case instead.
 
 An Android build selected in the Windows Editor still uses the Windows Bluetooth
 backend during Play mode. Run the player on the Android device to use its radio.
+
+## Linux
+
+Linux packaging, clean import, Editor native loading, IL2CPP player loading and
+repeated PLAIN Play sessions have passed local checks on both pinned Editors.
+Physical BLE discovery has also passed in the Unity 6.6 Editor and IL2CPP player.
+These checks ran on an Ubuntu 26.04 development host; release acceptance on
+Ubuntu 22.04/24.04 and connection, GATT read/write, notification and disconnection
+testing remain outstanding.
+
+Install the distribution's `bluez` and `libdbus-1-3` packages, ensure the system
+D-Bus and Bluetooth services are running, and enable the adapter before scanning.
+For example, check `systemctl status bluetooth` and `bluetoothctl show`.
+The Editor and player use the host's BlueZ adapter and system D-Bus access policy;
+`Bluetooth.InitializeAsync()` does not install services or grant Linux permissions.
+
+Select Linux x86_64 as the player target. For IL2CPP builds, install Unity's
+**Linux Build Support (IL2CPP)** module. Both Linux plugins must be included:
+`libsimplecble.so` and `libsimpleble.so`. Keep them together in the built player's
+`*_Data/Plugins/x86_64` directory. D-Bus and the C/C++ runtimes come from the OS.
+Do not rename the plugins or replace them with versioned symlinks.
+
+The native build baseline is Ubuntu 22.04. Unity's
+[6.3 requirements](https://docs.unity3d.com/6000.3/Documentation/Manual/system-requirements.html)
+and [6.6 requirements](https://docs.unity3d.com/6000.6/Documentation/Manual/system-requirements.html)
+list Ubuntu 22.04 and 24.04 for desktop Linux. Other distributions and Linux ARM64
+are not part of this package's current validation scope.

@@ -19,3 +19,16 @@ handlers are reported through `CallbackErrors.Unhandled`.
 
 For help, [open an issue](https://github.com/simpleble/simpleble/issues) with the
 package and Unity versions, device/OS, reproduction steps and the relevant log.
+
+## Linux library loading or no adapters
+
+For `DllNotFoundException`, inspect the **built player's**
+`*_Data/Plugins/x86_64` folder. It needs both regular files `libsimplecble.so` and
+`libsimpleble.so`; checking only the native build directory is insufficient.
+Run `ldd` on the player's `libsimplecble.so` and resolve any missing system
+libraries, including `libdbus-1.so.3`. Do not copy libraries from a newer Linux
+distribution to work around a glibc or libstdc++ version error.
+
+If loading succeeds but adapters are absent, check the Bluetooth service,
+`bluetoothctl show`, radio blocking and system D-Bus permissions. Report the
+Linux distribution, BlueZ version and Editor/player log with the issue.
