@@ -8,6 +8,7 @@
 #include <kvn/kvn_safe_callback.hpp>
 
 #include <atomic>
+#include <cstdint>
 
 namespace SimpleBluez {
 
@@ -74,6 +75,8 @@ class Device : public SimpleDBus::Proxy {
     kvn::safe_callback<void()> _callback_on_disconnected;
     kvn::safe_callback<void(bool connected)> _callback_on_connected_changed;
     std::atomic_bool _outgoing{false};
+    std::atomic<int16_t> _rssi{INT16_MIN};
+    std::atomic<int16_t> _tx_power{INT16_MIN};
 };
 
 }  // namespace SimpleBluez

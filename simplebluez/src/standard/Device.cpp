@@ -16,6 +16,8 @@ Device::~Device() {
     _callback_on_disconnected.unload();
     _callback_on_connected_changed.unload();
     device1()->Connected.on_changed.unload();
+    device1()->RSSI.on_changed.unload();
+    device1()->TxPower.on_changed.unload();
 }
 
 void Device::on_registration() {
@@ -29,6 +31,10 @@ void Device::on_registration() {
         }
         _callback_on_connected_changed(connected);
     });
+    // BlueZ invalidates RSSI and TxPower when discovery stops, so keep the last received values.
+    device1->RSSI.on_changed.load([this](int16_t rssi) { _rssi = rssi; });
+    device1->TxPower.on_changed.load([this](int16_t tx_power) { _tx_power = tx_power; });
+
     _interfaces.emplace(std::make_pair("org.bluez.Device1", device1));
 
     auto properties = std::make_shared<SimpleDBus::Interfaces::Properties>(_conn, shared_from_this());
@@ -93,9 +99,9 @@ std::string Device::name() { return device1()->Name; }
 
 std::string Device::alias() { return device1()->Alias; }
 
-int16_t Device::rssi() { return device1()->RSSI; }
+int16_t Device::rssi() { return _rssi; }
 
-int16_t Device::tx_power() { return device1()->TxPower; }
+int16_t Device::tx_power() { return _tx_power; }
 
 std::vector<std::string> Device::uuids() { return device1()->UUIDs.refresh(); }
 

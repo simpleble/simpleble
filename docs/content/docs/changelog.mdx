@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Advertising data reflects the latest advertisement and scan response.
 - (SimpleBLE) Scan methods check Bluetooth on the adapter's own backend.
 - (MacOS) CoreBluetooth starts on first use.
+- (SimpleBluez) `DiscoveryFilter::DuplicateData` defaults to `false`, matching BlueZ's behavior.
 
 **Fixed**
 
@@ -56,6 +57,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleJavaBLE) Fixed JPMS compatibility with a stable automatic module name.
 - (SimpleCBLE) Fixed out-of-bounds reads when copying short service, characteristic, and descriptor UUIDs.
 - (SimpleCBLE) Fixed installed headers, CMake package configuration, and shared-library dependency lookup.
+- (Windows) Fixed `is_connectable()` not updating after the first advertisement.
+- (Linux) Fixed `rssi()` and `tx_power()` returning 0 instead of -32768 when never received.
+- (Android) Fixed `tx_power()` reading the extended advertising header instead of the TX Power Level field.
+- (SimpleBluez) Fixed discovery filters not sending `DuplicateData` when it is enabled.
 
 **Removed**
 

@@ -9,6 +9,7 @@
 #include <simpleble/Exceptions.h>
 #include <simpleble/Config.h>
 #include <algorithm>
+#include <limits>
 #include "CommonUtils.h"
 #include "LoggingInternal.h"
 #include "simpleble/Descriptor.h"
@@ -45,10 +46,17 @@ PeripheralAndroid::~PeripheralAndroid() {}
 
 void PeripheralAndroid::update_advertising_data(Android::ScanResult scan_result) {
     rssi_ = scan_result.getRssi();
-    tx_power_ = scan_result.getTxPower();
     connectable_ = scan_result.isConnectable();
 
     auto scan_record = scan_result.getScanRecord();
+
+    // ScanResult.getTxPower() is the extended advertising header field, not the TX Power Level AD type.
+    // Keep the last advertised value when a result omits it.
+    int tx_power_level = scan_record.getTxPowerLevel();
+    if (tx_power_level != std::numeric_limits<int>::min()) {
+        tx_power_ = tx_power_level;
+    }
+
     auto service_uuids = scan_record.getServiceUuids();
     for (auto& service_uuid : service_uuids) {
         if (std::find(advertised_services_.begin(), advertised_services_.end(), service_uuid) ==

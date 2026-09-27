@@ -19,6 +19,7 @@ class ScanRecord {
 
     std::vector<std::string> getServiceUuids();
     std::map<uint16_t, kvn::bytearray> getManufacturerData();
+    int getTxPowerLevel();
 
     std::string toString();
 
@@ -30,6 +31,7 @@ class ScanRecord {
     static SimpleJNI::GlobalRef<jclass> _cls;
     static jmethodID _method_getServiceUuids;
     static jmethodID _method_getManufacturerData;
+    static jmethodID _method_getTxPowerLevel;
     static jmethodID _method_toString;
 
     // JNI descriptor for auto-registration

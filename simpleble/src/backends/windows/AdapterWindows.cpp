@@ -291,6 +291,8 @@ void AdapterWindows::_on_scanner_received(
 
     data.identifier = winrt::to_string(args.Advertisement().LocalName());
     data.connectable = args.IsConnectable();
+    data.scan_response = args.IsScanResponse() ||
+                         args.AdvertisementType() == Advertisement::BluetoothLEAdvertisementType::ScanResponse;
     data.rssi = rssi;
 
     if (args.TransmitPowerLevelInDBm()) {

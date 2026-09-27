@@ -12,6 +12,7 @@ struct advertising_data_t {
     BluetoothAddressType address_type;
     BluetoothAddress mac_address;
     bool connectable;
+    bool scan_response = false;  // The fields came from a scan response rather than the advertisement.
     int16_t rssi;
     int16_t tx_power;
 

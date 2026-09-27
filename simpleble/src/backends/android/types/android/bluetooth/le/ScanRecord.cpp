@@ -10,6 +10,7 @@ namespace Android {
 SimpleJNI::GlobalRef<jclass> ScanRecord::_cls;
 jmethodID ScanRecord::_method_getServiceUuids = nullptr;
 jmethodID ScanRecord::_method_getManufacturerData = nullptr;
+jmethodID ScanRecord::_method_getTxPowerLevel = nullptr;
 jmethodID ScanRecord::_method_toString = nullptr;
 
 // Define the JNI descriptor
@@ -19,6 +20,7 @@ const SimpleJNI::JNIDescriptor ScanRecord::descriptor{
     {                                  // Methods to preload
      {"getServiceUuids", "()Ljava/util/List;", &_method_getServiceUuids},
      {"getManufacturerSpecificData", "()Landroid/util/SparseArray;", &_method_getManufacturerData},
+     {"getTxPowerLevel", "()I", &_method_getTxPowerLevel},
      {"toString", "()Ljava/lang/String;", &_method_toString}
     }};
 
@@ -58,6 +60,11 @@ std::map<uint16_t, kvn::bytearray> ScanRecord::getManufacturerData() {
         result[key] = value.bytes();
     }
     return result;
+}
+
+int ScanRecord::getTxPowerLevel() {
+    if (!_obj) throw std::runtime_error("ScanRecord object is not initialized");
+    return _obj.call_int_method(_method_getTxPowerLevel);
 }
 
 std::string ScanRecord::toString() {

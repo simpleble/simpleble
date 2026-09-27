@@ -18,7 +18,7 @@ class Adapter1 : public SimpleDBus::Interface {
         std::optional<int16_t> RSSI;
         std::optional<uint16_t> Pathloss;
         TransportType Transport = TransportType::AUTO;
-        bool DuplicateData = true;
+        bool DuplicateData = false;
         bool Discoverable = false;
         std::string Pattern = "";
     };
