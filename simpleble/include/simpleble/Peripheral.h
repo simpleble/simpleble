@@ -42,6 +42,14 @@ class SIMPLEBLE_EXPORT Peripheral {
     void connect();
     void disconnect();
     bool is_connected();
+
+    /**
+     * @brief Indicates whether the peripheral's advertisements are connectable.
+     *
+     * @note On Linux, BlueZ does not report connectability, so the value is
+     *       estimated: true if the peripheral has a name, false otherwise.
+     *       It can be wrong in either direction.
+     */
     bool is_connectable();
     bool is_paired();
     void unpair();
