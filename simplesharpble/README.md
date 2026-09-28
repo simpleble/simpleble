@@ -35,7 +35,7 @@ Requirements:
 Add SimpleSharpBLE to your project from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/):
 
 ```sh
-dotnet add package SimpleSharpBLE --prerelease
+dotnet add package SimpleSharpBLE
 ```
 
 ## Usage

@@ -3,15 +3,22 @@ title: Usage
 description: Install SimpleSharpBLE and scan for nearby Bluetooth devices.
 ---
 
-SimpleSharpBLE provides C# and .NET bindings for SimpleBLE on Windows, macOS, Linux, and Android.
+SimpleSharpBLE provides C# and .NET bindings for SimpleBLE on Windows, macOS, Linux, Android,
+iOS/iPadOS, and Mac Catalyst.
 
 ## Install from NuGet
 
 Add [SimpleSharpBLE](https://www.nuget.org/packages/SimpleSharpBLE/) to your .NET 10 project:
 
 ```sh
-dotnet add package SimpleSharpBLE --prerelease
+dotnet add package SimpleSharpBLE
 ```
+
+Supported platforms:
+
+- Windows or glibc-based Linux (x64/ARM64), or macOS 14 or newer on Apple Silicon
+- Android 12 or newer (ARM64/x64)
+- iOS/iPadOS 15 or newer, the iOS simulator, and Mac Catalyst 15 or newer (ARM64)
 
 On Ubuntu, install BlueZ and D-Bus:
 
@@ -33,6 +40,11 @@ SimpleSharpBLE.Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.I
 Run blocking operations off the UI thread. The
 [Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
 includes the manifest and runtime permission handling.
+
+On iOS/iPadOS and Mac Catalyst, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`
+and run blocking BLE operations off the UI thread. Sandboxed Catalyst apps also need the
+`com.apple.security.device.bluetooth` entitlement. Native libraries link automatically;
+`SimpleSharpBLE.Advanced.IOS` applies to both iOS and Catalyst.
 
 ## First scan
 
@@ -61,5 +73,14 @@ finally
     foreach (var adapter in adapters) adapter.Dispose();
 }
 ```
+
+## Async, NativeAOT, and MAUI
+
+Blocking GATT calls also have `Async` counterparts. Cancellation prevents queued work
+from starting; operations already in native code complete normally. Keep write buffers
+unchanged until the returned task completes.
+
+The bindings support trimming and NativeAOT. In MAUI, use the same API and platform
+setup above; dispatch UI updates from callbacks with `MainThread.BeginInvokeOnMainThread`.
 
 See [Examples](./examples) for connections, reads, writes, notifications, and peripheral hosting.
