@@ -74,6 +74,7 @@ Before releasing a new version of the project, perform the following steps in or
    - `simpleaible/README.rst`
    - `simplepyble/README.rst`
    - `simplersble/README.md`
+   - `simplesharpble/README.md`
 
 2. Update and review the release version in the following files:
 
@@ -82,6 +83,8 @@ Before releasing a new version of the project, perform the following steps in or
    - `Cargo.lock`
    - `docs/content/docs/changelog.mdx` (add the actual release date)
    - `simpleaible/pyproject.toml` (remove the `-dev1` suffix)
+
+   If the release version differs from the development version, for example when releasing `1.2.0` from `1.1.1-dev1`, also rename the changelog heading and search the repository for the old version with `git grep` to catch references such as migration guides.
 
 3. Run the Hardware In The Loop tests listed below.
 
@@ -99,9 +102,9 @@ Before releasing a new version of the project, perform the following steps in or
 
 6. Push the release commit to the remote repository without a tag.
 
-7. Wait for the branch-triggered `CI Main` workflow to finish successfully. A `main` push publishes development packages: `X.Y.Z-devN` to crates.io and Maven Central, and `X.Y.Z.devN` to PyPI.
+7. Wait for the branch-triggered `CI Main` workflow to finish successfully. A `main` push publishes development packages: `X.Y.Z-devN` to crates.io and Maven Central, `X.Y.Z.devN` to PyPI, and `X.Y.Z-dev.N` to NuGet.
 
-   Confirm that SimpleRsBLE, SimplePyBLE, SimpleAIBLE, SimpleJavaBLE, SimpleDroidBridge, and SimpleDroidBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing.
+   Confirm that SimpleRsBLE, SimplePyBLE, SimpleAIBLE, SimpleJavaBLE, SimpleDroidBridge, SimpleDroidBLE, and SimpleSharpBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing. If a job fails for a reason unrelated to the release, such as an interrupted Android SDK download, use **Re-run failed jobs** on that run instead.
 
 ### Tag and publish the release
 
@@ -115,7 +118,10 @@ Before releasing a new version of the project, perform the following steps in or
 
 10. Create and publish a stable GitHub release for that tag. A draft does not trigger publication, and the release must not be marked as a prerelease.
 
-11. Wait for the release-triggered `CI Main` workflow to finish. Do not cancel it. This workflow uploads the GitHub release artifacts and publishes the stable packages.
+11. Wait for the release-triggered `CI Main` workflow to finish. This workflow uploads the GitHub release artifacts and publishes the stable packages.
+
+    - Do not cancel it, unpublish and republish the release, or run `CI Main` manually on the tag. Runs for the tag cancel each other. Editing the release notes is safe.
+    - If a job fails, use **Re-run failed jobs**, never **Re-run all jobs**. PyPI and NuGet skip versions that already exist, but crates.io and Maven Central reject them, so repeating a publish job that already succeeded fails.
 
 12. Verify the published release:
 
@@ -125,10 +131,15 @@ Before releasing a new version of the project, perform the following steps in or
     - SimpleRsBLE `X.Y.Z` is available and not yanked on crates.io.
     - SimpleJavaBLE `X.Y.Z` is available on Maven Central.
     - SimpleDroidBLE and SimpleDroidBridge `X.Y.Z` are available on Maven Central.
+    - SimpleSharpBLE `X.Y.Z` is available on NuGet.
+
+    Maven Central and NuGet can take 15 minutes or more to list a new version after its publish job succeeds.
+
+13. Replace references to development builds outside this repository now that the stable packages are available, such as the SimplePyBLE version pinned by the Dongl quickstart on simpleble.org. Search sibling checkouts for `.devN` and `-devN` pins, and deploy any site that changes.
 
 ### Start the next development version
 
-13. Advance to the next development version in the following files:
+14. Advance to the next development version in the following files:
 
     - `VERSION` (next version without a development suffix)
     - `Cargo.toml` (next version with a `-dev1` suffix)
@@ -136,18 +147,18 @@ Before releasing a new version of the project, perform the following steps in or
     - `docs/content/docs/changelog.mdx` (add an empty section for the next version)
     - `simpleaible/pyproject.toml` (next version with a `-dev1` suffix)
 
-14. Validate the development bump and documentation:
+15. Validate the development bump and documentation:
 
     ```bash
     cargo build
     (cd docs && npm run types:check && npm run build)
     ```
 
-15. Commit and push the development-version bump.
+16. Commit and push the development-version bump.
 
-16. Wait for the branch-triggered `CI Main` workflow to finish successfully and confirm that the new development packages were published to crates.io, PyPI, and Maven Central with the expected `-devN`/`.devN` versions.
+17. Wait for the branch-triggered `CI Main` workflow to finish successfully and confirm that the new development packages were published to crates.io, PyPI, Maven Central, and NuGet with the expected `-devN`/`.devN`/`-dev.N` versions.
 
-17. From the documentation root, run `berth app deploy` to deploy the documentation.
+18. From the documentation root, run `berth app deploy` to deploy the documentation.
 
 
 ## Hardware In The Loop - Recommended Tests
