@@ -61,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Linux) Fixed `rssi()` and `tx_power()` returning 0 instead of -32768 when never received.
 - (Android) Fixed `tx_power()` reading the extended advertising header instead of the TX Power Level field.
 - (SimpleBluez) Fixed discovery filters not sending `DuplicateData` when it is enabled.
+- (Windows) Fixed scan responses clearing `tx_power()` and `manufacturer_data()` from the advertisement.
 
 **Removed**
 

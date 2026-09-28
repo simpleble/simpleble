@@ -86,12 +86,19 @@ void PeripheralWindows::update_advertising_data(advertising_data_t advertising_d
         identifier_ = advertising_data.identifier;
     }
     rssi_ = advertising_data.rssi;
-    tx_power_ = advertising_data.tx_power;
+
+    if (advertising_data.tx_power != INT16_MIN) {
+        tx_power_ = advertising_data.tx_power;
+    }
+
     address_type_ = advertising_data.address_type;
+    
     if (!advertising_data.scan_response) {
-        // WinRT reports scan responses as separate events, and they don't describe connectability.
+        // Scan responses don't describe connectability.
         connectable_ = advertising_data.connectable;
     }
+
+    advertising_data.manufacturer_data.merge(manufacturer_data_);
     manufacturer_data_ = advertising_data.manufacturer_data;
 
     advertising_data.service_data.merge(service_data_);
