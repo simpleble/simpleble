@@ -349,7 +349,11 @@ std::pair<AttStatus, ByteArray> PeripheralSimulator::transact(Pdu pdu) {
         promise->set_value({status, std::move(value)});
     };
 
-    if (!link->send_to_device(std::move(pdu))) throw Exception::NotConnected();
+    const bool sent = link->send_to_device(std::move(pdu));
+    // A moved-from std::function can keep its target (libc++ does for small ones), which would keep
+    // the promise alive after the connection drops the request.
+    pdu.on_response = nullptr;
+    if (!sent) throw Exception::NotConnected();
 
     if (future.wait_for(ATT_TIMEOUT) != std::future_status::ready) {
         throw Exception::OperationFailed("ATT transaction with the simulated device timed out");

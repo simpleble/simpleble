@@ -35,11 +35,21 @@ std::weak_ptr<EnvironmentCore> g_active;
 Clock::duration air_time(size_t payload) { return std::chrono::microseconds(8 * (10 + payload)); }
 
 
-/** Whether the head of a queue can be sent. A request waits until the previous one is answered. */
-bool sendable(const std::deque<Pdu>& queue, bool request_in_flight) {
-    if (queue.empty()) return false;
-    const Pdu& head = queue.front();
-    return !(head.is_request() && !head.started && request_in_flight);
+/**
+ * The PDU a side sends next, or the end of the queue if none can go.
+ *
+ * A termination is queued first and goes at once. The fragments of one PDU go back to back, so a
+ * PDU in progress comes next. Otherwise the first PDU that can go: a request waits until the
+ * previous one is answered, but what is queued behind it does not wait with it.
+ */
+std::deque<Pdu>::iterator next_sendable(std::deque<Pdu>& queue, bool request_in_flight) {
+    if (!queue.empty() && queue.front().type == PduType::TERMINATE) return queue.begin();
+
+    auto in_progress = std::find_if(queue.begin(), queue.end(), [](const Pdu& pdu) { return pdu.started; });
+    if (in_progress != queue.end()) return in_progress;
+
+    return std::find_if(queue.begin(), queue.end(),
+                        [&](const Pdu& pdu) { return !pdu.is_request() || !request_in_flight; });
 }
 
 void respond(EventContext& context, Pdu request, AttStatus status, ByteArray value) {
@@ -560,22 +570,24 @@ Clock::duration EnvironmentCore::exchange_packets(const std::shared_ptr<Connecti
 
     // The central opens every exchange and the device answers, each sending an empty packet if it has
     // nothing to send. The first exchange always happens; later ones only if they fit in the event.
+    auto& to_device = connection->to_device;
+    auto& to_central = connection->to_central;
     for (bool first = true; connection->open; first = false) {
-        Pdu* from_central = sendable(connection->to_device, connection->request_in_flight)
-                                ? &connection->to_device.front()
-                                : nullptr;
-        Pdu* from_device = sendable(connection->to_central, false) ? &connection->to_central.front() : nullptr;
-        const size_t central_length = from_central ? std::min(from_central->bytes_left, connection->data_length) : 0;
-        const size_t device_length = from_device ? std::min(from_device->bytes_left, connection->data_length) : 0;
+        const auto from_central = next_sendable(to_device, connection->request_in_flight);
+        const auto from_device = next_sendable(to_central, false);
+        const bool central_sends = from_central != to_device.end();
+        const bool device_sends = from_device != to_central.end();
+        const size_t central_length = central_sends ? std::min(from_central->bytes_left, connection->data_length) : 0;
+        const size_t device_length = device_sends ? std::min(from_device->bytes_left, connection->data_length) : 0;
 
         const auto exchange = air_time(central_length) + T_IFS + air_time(device_length) + T_IFS;
         if (!first && elapsed + exchange > window) break;
         elapsed += exchange;
 
-        if (from_central && from_central->is_request() && !from_central->started) {
+        if (central_sends && from_central->is_request() && !from_central->started) {
             connection->request_in_flight = true;
         }
-        if (from_central) {
+        if (central_sends) {
             from_central->started = true;
         }
 
@@ -585,12 +597,12 @@ Clock::duration EnvironmentCore::exchange_packets(const std::shared_ptr<Connecti
         } else {
             consecutive_errors = 0;
             connection->heard_by_device = anchor + elapsed;
-            if (from_central) {
+            if (central_sends) {
                 from_central->bytes_left -= central_length;
             }
-            if (from_central && from_central->bytes_left == 0) {
-                Pdu pdu = std::move(connection->to_device.front());
-                connection->to_device.pop_front();
+            if (central_sends && from_central->bytes_left == 0) {
+                Pdu pdu = std::move(*from_central);
+                to_device.erase(from_central);
                 deliver_to_device(connection, std::move(pdu), context);
             }
         }
@@ -602,12 +614,12 @@ Clock::duration EnvironmentCore::exchange_packets(const std::shared_ptr<Connecti
         } else {
             consecutive_errors = 0;
             connection->heard_by_central = anchor + elapsed;
-            if (from_device) {
+            if (device_sends) {
                 from_device->bytes_left -= device_length;
             }
-            if (from_device && from_device->bytes_left == 0) {
-                Pdu pdu = std::move(connection->to_central.front());
-                connection->to_central.pop_front();
+            if (device_sends && from_device->bytes_left == 0) {
+                Pdu pdu = std::move(*from_device);
+                to_central.erase(from_device);
                 if (pdu.uses_tx_buffer) {
                     connection->tx_in_use--;
                     context.tx_freed++;
@@ -620,8 +632,8 @@ Clock::duration EnvironmentCore::exchange_packets(const std::shared_ptr<Connecti
         // Two consecutive CRC errors close the event.
         if (consecutive_errors >= 2) break;
         // Otherwise the event continues while either side has more to send.
-        const bool more_data = sendable(connection->to_device, connection->request_in_flight) ||
-                               sendable(connection->to_central, false);
+        const bool more_data = next_sendable(to_device, connection->request_in_flight) != to_device.end() ||
+                               next_sendable(to_central, false) != to_central.end();
         if (!more_data) break;
     }
 
@@ -849,7 +861,14 @@ void EnvironmentCore::handle_request(const std::shared_ptr<ConnectionCore>& conn
                                             ex.what()));
             status = AttStatus::UNLIKELY_ERROR;
             value = {};
+        } catch (...) {
+            SIMPLEBLE_LOG_ERROR(fmt::format("Simulated device '{}' failed to handle a request", device.name()));
+            status = AttStatus::UNLIKELY_ERROR;
+            value = {};
         }
+
+        // A command has no response to carry the error.
+        if (pdu.type == PduType::WRITE_COMMAND) return;
 
         Pdu response{PduType::RESPONSE};
         response.status = status;
