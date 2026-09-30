@@ -537,16 +537,13 @@ void PeripheralDongl::notify_connect_complete(simpleble_ConnectCompleteEvt const
     if (orphaned) {
         // connect() already gave up on this attempt, so nobody will use the link.
         SIMPLEBLE_LOG_WARN("Connection completed after connect() gave up; disconnecting");
-        task_runner_.dispatch(
-            [this, conn_handle = evt.conn_handle]() -> std::optional<std::chrono::milliseconds> {
-                try {
-                    _serial_protocol->simpleble_disconnect(conn_handle);
-                } catch (const std::exception& e) {
-                    SIMPLEBLE_LOG_ERROR(fmt::format("Failed to disconnect abandoned connection: {}", e.what()));
-                }
-                return std::nullopt;
-            },
-            0ms);
+        _enqueue([this, conn_handle = evt.conn_handle]() {
+            try {
+                _serial_protocol->simpleble_disconnect(conn_handle);
+            } catch (const std::exception& e) {
+                SIMPLEBLE_LOG_ERROR(fmt::format("Failed to disconnect abandoned connection: {}", e.what()));
+            }
+        });
     }
 }
 
@@ -561,37 +558,30 @@ void PeripheralDongl::notify_value_changed(simpleble_ValueChangedEvt const& evt)
 void PeripheralDongl::notify_passkey_display(simpleble_PasskeyDisplayEvt const& evt) {
     const std::string passkey = evt.passkey;
     if (evt.match_request) {
-        task_runner_.dispatch(
-            [this, conn_handle = evt.conn_handle, request_id = evt.request_id,
-             passkey]() -> std::optional<std::chrono::milliseconds> {
-                bool accept = false;
-                try {
-                    accept = numeric_comparison_callback_(passkey);
-                } catch (const std::exception& e) {
-                    SIMPLEBLE_LOG_ERROR(fmt::format("Numeric comparison callback failed: {}", e.what()));
-                } catch (...) {
-                    SIMPLEBLE_LOG_ERROR("Numeric comparison callback failed with an unknown exception");
-                }
+        _enqueue([this, conn_handle = evt.conn_handle, request_id = evt.request_id, passkey]() {
+            bool accept = false;
+            try {
+                accept = numeric_comparison_callback_(passkey);
+            } catch (const std::exception& e) {
+                SIMPLEBLE_LOG_ERROR(fmt::format("Numeric comparison callback failed: {}", e.what()));
+            } catch (...) {
+                SIMPLEBLE_LOG_ERROR("Numeric comparison callback failed with an unknown exception");
+            }
 
-                _send_auth_key_reply(conn_handle, request_id, {}, accept);
-                return std::nullopt;
-            },
-            0ms);
+            _send_auth_key_reply(conn_handle, request_id, {}, accept);
+        });
         return;
     }
 
-    task_runner_.dispatch(
-        [this, passkey]() -> std::optional<std::chrono::milliseconds> {
-            try {
-                passkey_display_callback_(passkey);
-            } catch (const std::exception& e) {
-                SIMPLEBLE_LOG_ERROR(fmt::format("Passkey display callback failed: {}", e.what()));
-            } catch (...) {
-                SIMPLEBLE_LOG_ERROR("Passkey display callback failed with an unknown exception");
-            }
-            return std::nullopt;
-        },
-        0ms);
+    _enqueue([this, passkey]() {
+        try {
+            passkey_display_callback_(passkey);
+        } catch (const std::exception& e) {
+            SIMPLEBLE_LOG_ERROR(fmt::format("Passkey display callback failed: {}", e.what()));
+        } catch (...) {
+            SIMPLEBLE_LOG_ERROR("Passkey display callback failed with an unknown exception");
+        }
+    });
 }
 
 void PeripheralDongl::notify_auth_key_request(simpleble_AuthKeyRequestEvt const& evt) {
@@ -600,34 +590,37 @@ void PeripheralDongl::notify_auth_key_request(simpleble_AuthKeyRequestEvt const&
         SIMPLEBLE_LOG_WARN(fmt::format("Unsupported pairing key type: {}", static_cast<int>(evt.key_type)));
     }
 
-    task_runner_.dispatch(
-        [this, request_passkey, conn_handle = evt.conn_handle,
-         request_id = evt.request_id]() -> std::optional<std::chrono::milliseconds> {
-            std::optional<std::string> passkey;
-            try {
-                if (request_passkey) {
-                    passkey = passkey_request_callback_();
-                }
-            } catch (const std::exception& e) {
-                SIMPLEBLE_LOG_ERROR(fmt::format("Passkey request callback failed: {}", e.what()));
-            } catch (...) {
-                SIMPLEBLE_LOG_ERROR("Passkey request callback failed with an unknown exception");
+    _enqueue([this, request_passkey, conn_handle = evt.conn_handle, request_id = evt.request_id]() {
+        std::optional<std::string> passkey;
+        try {
+            if (request_passkey) {
+                passkey = passkey_request_callback_();
             }
+        } catch (const std::exception& e) {
+            SIMPLEBLE_LOG_ERROR(fmt::format("Passkey request callback failed: {}", e.what()));
+        } catch (...) {
+            SIMPLEBLE_LOG_ERROR("Passkey request callback failed with an unknown exception");
+        }
 
-            std::vector<uint8_t> key;
-            const bool accept = passkey && passkey->size() == 6 &&
-                                std::all_of(passkey->begin(), passkey->end(),
-                                            [](char c) { return c >= '0' && c <= '9'; });
-            if (accept) {
-                key.assign(passkey->begin(), passkey->end());
-            } else if (passkey) {
-                SIMPLEBLE_LOG_WARN("Passkey request callback returned an invalid passkey");
-            }
+        std::vector<uint8_t> key;
+        const bool accept = passkey && passkey->size() == 6 &&
+                            std::all_of(passkey->begin(), passkey->end(), [](char c) { return c >= '0' && c <= '9'; });
+        if (accept) {
+            key.assign(passkey->begin(), passkey->end());
+        } else if (passkey) {
+            SIMPLEBLE_LOG_WARN("Passkey request callback returned an invalid passkey");
+        }
 
-            _send_auth_key_reply(conn_handle, request_id, key, accept);
-            return std::nullopt;
-        },
-        0ms);
+        _send_auth_key_reply(conn_handle, request_id, key, accept);
+    });
+}
+
+void PeripheralDongl::_enqueue(std::function<void()> func) {
+    std::lock_guard<std::mutex> lock(scheduler_mutex_);
+    if (!scheduler_) {
+        scheduler_.emplace();
+    }
+    scheduler_->enqueue(std::move(func));
 }
 
 void PeripheralDongl::_send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key,

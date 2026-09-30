@@ -305,6 +305,39 @@ int main(int argc, char** argv) {
             if (worker_failure) std::rethrow_exception(worker_failure);
         });
 
+        harness.run("named native thread attachment", [&] {
+            std::exception_ptr worker_failure;
+            std::thread worker([&] {
+                try {
+                    VM::attach("SimpleJNI worker");
+                    {
+                        // Local references are released before the thread detaches.
+                        JNIEnv* worker_env = VM::env();
+                        LocalRef<jclass> thread_class(adopt_local_ref, worker_env->FindClass("java/lang/Thread"));
+                        Exception::check(worker_env);
+                        jmethodID current_thread = worker_env->GetStaticMethodID(thread_class.get(), "currentThread",
+                                                                                 "()Ljava/lang/Thread;");
+                        jmethodID get_name = worker_env->GetMethodID(thread_class.get(), "getName",
+                                                                     "()Ljava/lang/String;");
+                        Exception::check(worker_env);
+                        LocalRef<jobject> thread(adopt_local_ref,
+                                                 worker_env->CallStaticObjectMethod(thread_class.get(), current_thread));
+                        Exception::check(worker_env);
+                        LocalRef<jstring> name(adopt_local_ref, static_cast<jstring>(
+                                                                    worker_env->CallObjectMethod(thread.get(), get_name)));
+                        Exception::check(worker_env);
+                        require(String<LocalRef>(name.get()).str() == "SimpleJNI worker",
+                                "Attached thread was not named");
+                    }
+                    VM::detach();
+                } catch (...) {
+                    worker_failure = std::current_exception();
+                }
+            });
+            worker.join();
+            if (worker_failure) std::rethrow_exception(worker_failure);
+        });
+
         failures = harness.failures();
     }
 

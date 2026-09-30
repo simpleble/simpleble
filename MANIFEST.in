@@ -276,8 +276,6 @@ include simpleble/src/backends/windows/Utils.cpp
 include simpleble/src/backends/windows/Utils.h
 include simpleble/src/builders/BuildVec.h
 include simpleble/src/builders/BuilderBase.h
-include simpleble/src/external/TaskRunner.hpp
-include simpleble/src/external/ThreadRunner.h
 include simpleble/src/external/kvn_safe_callback.hpp
 include simpleble/src/external/kvn_safe_map.hpp
 include simpleble/src/external/kvn_scheduler.hpp

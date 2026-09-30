@@ -97,19 +97,7 @@ void PeripheralPlain::notify(BluetoothUUID const& service, BluetoothUUID const& 
         callbacks_[{service, characteristic}] = std::move(callback);
         callback_mutex_.unlock();
 
-        task_runner_.dispatch(
-            [this, service, characteristic]() -> std::optional<std::chrono::seconds> {
-                std::lock_guard<std::mutex> lock(callback_mutex_);
-                auto it = this->callbacks_.find({service, characteristic});
-
-                if (it == this->callbacks_.end()) {
-                    return std::nullopt;
-                }
-
-                it->second("Hello from notify");
-                return 1s;
-            },
-            1s);
+        _schedule_notification(service, characteristic);
     }
 }
 
@@ -120,20 +108,23 @@ void PeripheralPlain::indicate(BluetoothUUID const& service, BluetoothUUID const
         callbacks_[{service, characteristic}] = std::move(callback);
         callback_mutex_.unlock();
 
-        task_runner_.dispatch(
-            [this, service, characteristic]() -> std::optional<std::chrono::seconds> {
-                std::lock_guard<std::mutex> lock(callback_mutex_);
-                auto it = this->callbacks_.find({service, characteristic});
-
-                if (it == this->callbacks_.end()) {
-                    return std::nullopt;
-                }
-
-                it->second("Hello from notify");
-                return 1s;
-            },
-            1s);
+        _schedule_notification(service, characteristic);
     }
+}
+
+void PeripheralPlain::_schedule_notification(BluetoothUUID const& service, BluetoothUUID const& characteristic) {
+    // Repeats every second until unsubscribed.
+    scheduler_.schedule_after(1s, [this, service, characteristic]() {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        auto it = callbacks_.find({service, characteristic});
+
+        if (it == callbacks_.end()) {
+            return;
+        }
+
+        it->second("Hello from notify");
+        _schedule_notification(service, characteristic);
+    });
 }
 
 void PeripheralPlain::unsubscribe(BluetoothUUID const& service, BluetoothUUID const& characteristic) {

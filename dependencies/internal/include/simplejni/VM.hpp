@@ -67,13 +67,15 @@ class VM {
         return env;
     }
 
-    static void attach() {
+    static void attach(const char* thread_name = nullptr) {
         JNIEnv* env = nullptr;
         JavaVM* jvm = VM::jvm();
+        // OpenJDK declares the name as char*, but the JVM only reads it.
+        JavaVMAttachArgs args{JNI_VERSION_1_6, const_cast<char*>(thread_name), nullptr};
 #ifdef __ANDROID__
-        auto result = jvm->AttachCurrentThread(&env, nullptr);
+        auto result = jvm->AttachCurrentThread(&env, &args);
 #else
-        auto result = jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), nullptr);
+        auto result = jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), &args);
 #endif
         if (result != JNI_OK) {
             throw std::runtime_error("Failed to attach the current thread to the JVM");

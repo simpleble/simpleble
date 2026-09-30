@@ -6,9 +6,9 @@
 #include <simpleble/Types.h>
 #include "PeripheralBase.h"
 
-#include <TaskRunner.hpp>
 #include <kvn_safe_callback.hpp>
 #include <kvn_safe_map.hpp>
+#include <kvn_scheduler.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -127,6 +127,7 @@ class PeripheralDongl : public PeripheralBase {
     DescriptorDefinition& _find_descriptor_from_uuid(BluetoothUUID const& service, BluetoothUUID const& characteristic,
                                                      BluetoothUUID const& descriptor);
     void _send_auth_key_reply(uint16_t conn_handle, uint32_t request_id, const std::vector<uint8_t>& key, bool accept);
+    void _enqueue(std::function<void()> func);
 
     std::atomic<uint16_t> _conn_handle{BLE_CONN_HANDLE_INVALID};  // Written by the serial reader thread.
     std::atomic_bool _connection_announced = false;
@@ -164,7 +165,9 @@ class PeripheralDongl : public PeripheralBase {
     kvn::safe_callback<void(const std::string& passkey)> passkey_display_callback_;
     kvn::safe_callback<bool(const std::string& passkey)> numeric_comparison_callback_;
     // Runs work that issues Dongl commands off the serial reader thread, which must stay free to receive responses.
-    TaskRunner task_runner_;
+    // Started on first use: the adapter keeps a peripheral for every address it has seen.
+    std::mutex scheduler_mutex_;
+    std::optional<kvn::scheduler> scheduler_;
 
     kvn::safe_callback<void()> _callback_on_connected;
     kvn::safe_callback<void()> _callback_on_disconnected;

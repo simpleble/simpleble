@@ -5,8 +5,8 @@
 #include <simpleble/Types.h>
 #include "PeripheralBase.h"
 
-#include <TaskRunner.hpp>
 #include <kvn_safe_callback.hpp>
+#include <kvn_scheduler.hpp>
 
 #include <atomic>
 #include <map>
@@ -57,6 +57,8 @@ class PeripheralPlain : public PeripheralBase {
     virtual void set_callback_on_disconnected(std::function<void()> on_disconnected) override;
 
   private:
+    void _schedule_notification(BluetoothUUID const& service, BluetoothUUID const& characteristic);
+
     std::atomic_bool connected_{false};
     std::atomic_bool paired_{false};
 
@@ -66,7 +68,8 @@ class PeripheralPlain : public PeripheralBase {
     std::mutex callback_mutex_;
     std::map<std::pair<BluetoothUUID, BluetoothUUID>, std::function<void(ByteArray payload)>> callbacks_;
 
-    TaskRunner task_runner_;
+    // Declared last so it stops before the members its functions use are destroyed.
+    kvn::scheduler scheduler_;
 };
 
 }  // namespace SimpleBLE
