@@ -650,6 +650,640 @@ The portable API does not select a local name. Linux, macOS, and iOS expose thei
 
 </ApiSection>
 
+<ApiSection title="Simulation API" id="simulation-api">
+
+The classes in `SimpleBLE::Simulation` build a simulated BLE environment of adapters and devices. While an [Environment](#simpleble-simulation-environment) is active, the Simulator backend reports its adapters, and the regular [Adapter](#simpleble-adapter) and [Peripheral](#simpleble-peripheral) API scans for, connects to and talks with the simulated devices. Include `<simpleble/Simulation.h>` to use them.
+
+<Callout type="warn" title="Experimental">
+The Simulation API is experimental and may change between minor releases. It is available in C++ only for now.
+</Callout>
+
+For a walkthrough, see [Build a Simulation](./simulation/build-a-simulation). [Timing and Radio Model](./simulation/timing-and-radio-model) explains how traffic is timed, and [Fidelity and Limits](./simulation/fidelity-and-limits) covers what the simulation does and does not model.
+
+## SimpleBLE::Simulation::Environment [#simpleble-simulation-environment]
+
+<ApiClass name="SimpleBLE::Simulation::Environment" detailed="Owns simulated adapters and devices. Only one environment can be active at a time. Destroying an active environment deactivates it, which closes its connections. Environments cannot be copied.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Environment()"
+/>
+
+<ApiMethod
+  signature="~Environment()"
+  detailed="Deactivates the environment if it is active."
+/>
+
+<ApiMethod
+  signature="Adapter add_adapter(const std::string& identifier, const BluetoothAddress& address)"
+  parameters={[{"name":"identifier","type":"const std::string&"},{"name":"address","type":"const BluetoothAddress&"}]}
+  detailed="Add a simulated adapter and return its [Simulation::Adapter](#simpleble-simulation-adapter). While the environment is active, it is reported through [SimpleBLE::Adapter](#simpleble-adapter)."
+/>
+
+<ApiMethod
+  signature="void add_device(std::shared_ptr< Device > device)"
+  parameters={[{"name":"device","type":"std::shared_ptr< Device >"}]}
+  detailed="Add a simulated [Device](#simpleble-simulation-device) to the environment."
+  notes={[{ content: "Throws `OperationFailed` if `device` is null or already belongs to an environment.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="template <typename T, typename... Args> std::shared_ptr< T > add_device(Args&&... args)"
+  parameters={[{"name":"args","type":"Args&&..."}]}
+  detailed="Construct a device of type `T` from `args`, add it with `add_device()`, and return it."
+/>
+
+<ApiMethod
+  signature="Link link(const Adapter& adapter, const std::shared_ptr< Device >& device)"
+  parameters={[{"name":"adapter","type":"const Adapter&"},{"name":"device","type":"const std::shared_ptr< Device >&"}]}
+  detailed="The radio [Link](#simpleble-simulation-link) between an adapter and a device of this environment."
+/>
+
+<ApiMethod
+  signature="void activate()"
+  detailed="Activate the environment. While it is active, the Simulator backend reports its adapters."
+  notes={[{ content: "Throws `OperationFailed` if another environment is already active.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="void deactivate()"
+  detailed="Deactivate the environment, which closes its connections."
+/>
+
+<ApiMethod
+  signature="bool is_active() const"
+/>
+
+</ApiClass>
+
+## SimpleBLE::Simulation::Device [#simpleble-simulation-device]
+
+<ApiClass name="SimpleBLE::Simulation::Device" detailed="A simulated peripheral. Subclass it to give the device behavior. The device declares its GATT database with its own methods, addressed by UUID, and every event reaches the device through the virtual `on_*` methods. Events for one device never run concurrently, like callbacks in single-threaded firmware. Configuration takes effect for later advertisements and connections. Devices cannot be copied.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Device(std::string name, BluetoothAddress address)"
+  parameters={[{"name":"name","type":"std::string"},{"name":"address","type":"BluetoothAddress"}]}
+/>
+
+<ApiMethod
+  signature="virtual ~Device()"
+/>
+
+<ApiMethod
+  signature="std::string name() const"
+/>
+
+<ApiMethod
+  signature="BluetoothAddress address() const"
+/>
+
+### Advertising [!toc]
+
+<ApiMethod
+  signature="void set_advertising_interval(std::chrono::milliseconds interval)"
+  parameters={[{"name":"interval","type":"std::chrono::milliseconds"}]}
+  detailed="Advertising events occur every interval plus a random 0-10 ms delay. Default: 100 ms. Intervals below 20 ms are clamped to 20 ms."
+/>
+
+<ApiMethod
+  signature="void set_connectable(bool connectable)"
+  parameters={[{"name":"connectable","type":"bool"}]}
+  detailed="Default: true."
+/>
+
+<ApiMethod
+  signature="void set_tx_power(int16_t tx_power)"
+  parameters={[{"name":"tx_power","type":"int16_t"}]}
+  detailed="Advertised TX power in dBm. Not advertised by default."
+/>
+
+<ApiMethod
+  signature="void add_advertised_service(const BluetoothUUID& service)"
+  parameters={[{"name":"service","type":"const BluetoothUUID&"}]}
+  detailed="Add a service UUID to the advertisement."
+/>
+
+<ApiMethod
+  signature="void set_manufacturer_data(uint16_t company_id, const ByteArray& data)"
+  parameters={[{"name":"company_id","type":"uint16_t"},{"name":"data","type":"const ByteArray&"}]}
+  detailed="Set the manufacturer data advertised for `company_id`."
+/>
+
+<ApiMethod
+  signature="void set_service_data(const BluetoothUUID& service, const ByteArray& data)"
+  parameters={[{"name":"service","type":"const BluetoothUUID&"},{"name":"data","type":"const ByteArray&"}]}
+  detailed="Set the service data advertised for `service`."
+/>
+
+### Link layer [!toc]
+
+<ApiMethod
+  signature="void set_preferred_connection_interval(std::chrono::microseconds min, std::chrono::microseconds max)"
+  parameters={[{"name":"min","type":"std::chrono::microseconds"},{"name":"max","type":"std::chrono::microseconds"}]}
+  detailed="Interval range the device asks for right after connecting, if the central chose an interval outside it. Default: no preference."
+/>
+
+<ApiMethod
+  signature="void set_max_mtu(uint16_t mtu)"
+  parameters={[{"name":"mtu","type":"uint16_t"}]}
+  detailed="Largest ATT MTU the device accepts during the MTU exchange. Default: 247. Values outside 23 to 517 are clamped."
+/>
+
+<ApiMethod
+  signature="void set_max_data_length(uint16_t octets)"
+  parameters={[{"name":"octets","type":"uint16_t"}]}
+  detailed="Largest link-layer payload in octets, 27 to 251. Default: 27. Values outside that range are clamped."
+/>
+
+<ApiMethod
+  signature="void set_max_event_length(std::chrono::microseconds length)"
+  parameters={[{"name":"length","type":"std::chrono::microseconds"}]}
+  detailed="Longest the device spends in one connection event. Takes effect immediately. Default: 7.5 ms."
+/>
+
+<ApiMethod
+  signature="void set_tx_buffers(size_t count)"
+  parameters={[{"name":"count","type":"size_t"}]}
+  detailed="Notifications and indications that can be queued per connection. Default: 4. Values below 1 are clamped to 1."
+/>
+
+<ApiMethod
+  signature="void set_max_connections(size_t count)"
+  parameters={[{"name":"count","type":"size_t"}]}
+  detailed="Centrals connected at once. Below the limit the device keeps advertising. Default: 1. Values below 1 are clamped to 1."
+/>
+
+### GATT database [!toc]
+
+<ApiMethod
+  signature="void add_service(const BluetoothUUID& service)"
+  parameters={[{"name":"service","type":"const BluetoothUUID&"}]}
+  notes={[{ content: "Throws `OperationFailed` if the service already exists.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="void add_characteristic(const BluetoothUUID& service, const BluetoothUUID& characteristic, std::set< Property > properties)"
+  parameters={[
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"properties","type":"std::set< Property >"}
+  ]}
+  detailed="Add a characteristic with the given [properties](#simpleble-simulation-property) to `service`. Characteristics that notify or indicate get a Client Characteristic Configuration descriptor automatically."
+  notes={[
+    { content: "Throws `ServiceNotFound` if the service does not exist.", type: "warn" },
+    { content: "Throws `OperationFailed` if the characteristic already exists in the service.", type: "warn" }
+  ]}
+/>
+
+<ApiMethod
+  signature="void add_descriptor(const BluetoothUUID& service, const BluetoothUUID& characteristic, const BluetoothUUID& descriptor)"
+  parameters={[
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"descriptor","type":"const BluetoothUUID&"}
+  ]}
+  detailed="Add a descriptor. The Client Characteristic Configuration descriptor is managed by the simulation and added automatically to characteristics that notify or indicate."
+  notes={[{ content: "Throws `OperationFailed` for the Client Characteristic Configuration descriptor (0x2902).", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="ByteArray value(const BluetoothUUID& service, const BluetoothUUID& characteristic) const"
+  parameters={[{"name":"service","type":"const BluetoothUUID&"},{"name":"characteristic","type":"const BluetoothUUID&"}]}
+  detailed="The stored value of a characteristic."
+/>
+
+<ApiMethod
+  signature="void set_value(const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value)"
+  parameters={[
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Set the stored value of a characteristic. The default `on_read()` serves this value. Subscribed centrals are not notified; call `notify()` or `indicate()` to push a value."
+/>
+
+<ApiMethod
+  signature="ByteArray value(const BluetoothUUID& service, const BluetoothUUID& characteristic, const BluetoothUUID& descriptor) const"
+  parameters={[
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"descriptor","type":"const BluetoothUUID&"}
+  ]}
+  detailed="The stored value of a descriptor."
+/>
+
+<ApiMethod
+  signature="void set_value(const BluetoothUUID& service, const BluetoothUUID& characteristic, const BluetoothUUID& descriptor, const ByteArray& value)"
+  parameters={[
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"descriptor","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Set the stored value of a descriptor. The default `on_read_descriptor()` serves this value."
+/>
+
+### Actions [!toc]
+
+<ApiMethod
+  signature="std::vector< Connection > connections() const"
+  detailed="Connections to this device. See [Connection](#simpleble-simulation-connection)."
+/>
+
+<ApiMethod
+  signature="TxStatus notify(const Connection& connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value)"
+  parameters={[
+    {"name":"connection","type":"const Connection&"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Queue a notification. Values longer than MTU - 3 are truncated. Returns a [TxStatus](#simpleble-simulation-txstatus)."
+  notes={[{ content: "Throws `OperationNotSupported` if the characteristic does not have the `NOTIFY` property.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="TxStatus indicate(const Connection& connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value)"
+  parameters={[
+    {"name":"connection","type":"const Connection&"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Queue an indication. Only one indication per connection awaits confirmation at a time. Returns a [TxStatus](#simpleble-simulation-txstatus)."
+  notes={[{ content: "Throws `OperationNotSupported` if the characteristic does not have the `INDICATE` property.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="void disconnect(const Connection& connection)"
+  parameters={[{"name":"connection","type":"const Connection&"}]}
+/>
+
+<ApiMethod
+  signature="void request_connection_interval(const Connection& connection, std::chrono::microseconds min, std::chrono::microseconds max)"
+  parameters={[
+    {"name":"connection","type":"const Connection&"},
+    {"name":"min","type":"std::chrono::microseconds"},
+    {"name":"max","type":"std::chrono::microseconds"}
+  ]}
+  detailed="Ask the central for an interval in this range. If it grants one, `on_connection_interval_changed()` follows once the update takes effect."
+/>
+
+<ApiMethod
+  signature="void start_timer(int id, std::chrono::milliseconds period)"
+  parameters={[{"name":"id","type":"int"},{"name":"period","type":"std::chrono::milliseconds"}]}
+  detailed="Call `on_timer(id)` every period while the environment is active. Restarting an id replaces it. Periods below 1 ms are clamped to 1 ms."
+/>
+
+<ApiMethod
+  signature="void stop_timer(int id)"
+  parameters={[{"name":"id","type":"int"}]}
+/>
+
+### Events [!toc]
+
+The simulation calls these methods on the device's executor. Override the ones the device needs; the defaults serve stored values. A write whose handler returns `SUCCESS` stores the value afterwards, so handlers still see the previous value through `value()`. UUIDs passed to events are lowercase. If a handler for a read or write request throws, the exception is logged and the request is answered with `UNLIKELY_ERROR` (0x0E).
+
+<ApiMethod
+  signature="virtual void on_connected(Connection connection)"
+  parameters={[{"name":"connection","type":"Connection"}]}
+  detailed="Called when a central connects. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_disconnected(Connection connection)"
+  parameters={[{"name":"connection","type":"Connection"}]}
+  detailed="Called when the connection closes. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_mtu_changed(Connection connection, uint16_t mtu)"
+  parameters={[{"name":"connection","type":"Connection"},{"name":"mtu","type":"uint16_t"}]}
+  detailed="Called when the ATT MTU of the connection changes. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_connection_interval_changed(Connection connection, std::chrono::microseconds interval)"
+  parameters={[{"name":"connection","type":"Connection"},{"name":"interval","type":"std::chrono::microseconds"}]}
+  detailed="Called once a connection interval update takes effect. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual ReadResult on_read(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"}
+  ]}
+  detailed="Called when the central reads a characteristic. Return a value or an ATT error as a [ReadResult](#simpleble-simulation-readresult). Default: returns the stored value."
+/>
+
+<ApiMethod
+  signature="virtual AttStatus on_write_request(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Called when the central writes a characteristic with a response. Return `SUCCESS` to store the value, or an [AttStatus](#simpleble-simulation-attstatus) error to reject it. Default: returns `SUCCESS`."
+/>
+
+<ApiMethod
+  signature="virtual void on_write_command(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Called when the central writes a characteristic without a response. The value is stored after the handler returns. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_subscribed(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, SubscriptionKind kind)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"kind","type":"SubscriptionKind"}
+  ]}
+  detailed="Called when the central subscribes to notifications or indications of a characteristic. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_unsubscribed(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"}
+  ]}
+  detailed="Called when the central unsubscribes from a characteristic. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_indication_confirmed(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"}
+  ]}
+  detailed="Called when the central confirms an indication. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual void on_tx_complete(Connection connection)"
+  parameters={[{"name":"connection","type":"Connection"}]}
+  detailed="TX buffers were freed on this connection. Default: does nothing."
+/>
+
+<ApiMethod
+  signature="virtual ReadResult on_read_descriptor(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, const BluetoothUUID& descriptor)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"descriptor","type":"const BluetoothUUID&"}
+  ]}
+  detailed="Called when the central reads a descriptor other than the Client Characteristic Configuration descriptor, which the simulation handles. Default: returns the stored value."
+/>
+
+<ApiMethod
+  signature="virtual AttStatus on_write_descriptor(Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic, const BluetoothUUID& descriptor, const ByteArray& value)"
+  parameters={[
+    {"name":"connection","type":"Connection"},
+    {"name":"service","type":"const BluetoothUUID&"},
+    {"name":"characteristic","type":"const BluetoothUUID&"},
+    {"name":"descriptor","type":"const BluetoothUUID&"},
+    {"name":"value","type":"const ByteArray&"}
+  ]}
+  detailed="Called when the central writes a descriptor other than the Client Characteristic Configuration descriptor, which the simulation handles. Return `SUCCESS` to store the value, or an [AttStatus](#simpleble-simulation-attstatus) error to reject it. Default: returns `SUCCESS`."
+/>
+
+<ApiMethod
+  signature="virtual void on_timer(int id)"
+  parameters={[{"name":"id","type":"int"}]}
+  detailed="Called every period of a timer started with `start_timer()`. Default: does nothing."
+/>
+
+</ApiClass>
+
+## SimpleBLE::Simulation::Adapter [#simpleble-simulation-adapter]
+
+<ApiClass name="SimpleBLE::Simulation::Adapter" detailed="A simulated adapter, reported through [SimpleBLE::Adapter](#simpleble-adapter) while its environment is active. Create one with [`Environment::add_adapter()`](#simpleble-simulation-environment). The connection policy setters apply to the adapter as the central.">
+
+<Callout type="info" title="Note">
+`SimpleBLE::Simulation::Adapter` configures a simulated adapter. Scanning and connecting go through the matching `SimpleBLE::Adapter`.
+</Callout>
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Adapter() = default"
+/>
+
+<ApiMethod
+  signature="bool initialized() const"
+/>
+
+<ApiMethod
+  signature="std::string identifier() const"
+/>
+
+<ApiMethod
+  signature="BluetoothAddress address() const"
+/>
+
+<ApiMethod
+  signature="void set_connection_interval(std::chrono::microseconds interval)"
+  parameters={[{"name":"interval","type":"std::chrono::microseconds"}]}
+  detailed="Interval used when the adapter connects. Default: 30 ms. Values outside 7.5 ms to 4 s are clamped."
+/>
+
+<ApiMethod
+  signature="void set_accepted_connection_intervals(std::chrono::microseconds min, std::chrono::microseconds max)"
+  parameters={[{"name":"min","type":"std::chrono::microseconds"},{"name":"max","type":"std::chrono::microseconds"}]}
+  detailed="Intervals granted when a device asks for an update. Default: 7.5 ms to 4 s. Values outside that range are clamped."
+/>
+
+<ApiMethod
+  signature="void set_max_event_length(std::chrono::microseconds length)"
+  parameters={[{"name":"length","type":"std::chrono::microseconds"}]}
+  detailed="Longest the adapter spends in one connection event. Takes effect immediately. Default: 3.75 ms."
+/>
+
+<ApiMethod
+  signature="void set_supervision_timeout(std::chrono::milliseconds timeout)"
+  parameters={[{"name":"timeout","type":"std::chrono::milliseconds"}]}
+  detailed="A connection without a valid packet for this long is lost. Default: 4 s. Values below 100 ms are clamped to 100 ms."
+/>
+
+</ApiClass>
+
+## SimpleBLE::Simulation::Link [#simpleble-simulation-link]
+
+<ApiClass name="SimpleBLE::Simulation::Link" detailed="Radio conditions between one adapter and one device. Changes take effect immediately, including on an open connection. Get one with [`Environment::link()`](#simpleble-simulation-environment).">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Link() = default"
+/>
+
+<ApiMethod
+  signature="void set_in_range(bool in_range)"
+  parameters={[{"name":"in_range","type":"bool"}]}
+  detailed="Out of range, neither side hears the other. Default: true."
+/>
+
+<ApiMethod
+  signature="bool is_in_range() const"
+/>
+
+<ApiMethod
+  signature="void set_packet_error_rate(float rate)"
+  parameters={[{"name":"rate","type":"float"}]}
+  detailed="Probability that a packet is corrupted, from 0 to 1. Corrupted packets are sent again, and two in a row end the connection event. Default: 0."
+/>
+
+<ApiMethod
+  signature="float packet_error_rate() const"
+/>
+
+<ApiMethod
+  signature="void set_rssi(int16_t rssi)"
+  parameters={[{"name":"rssi","type":"int16_t"}]}
+  detailed="Default: -60 dBm."
+/>
+
+<ApiMethod
+  signature="int16_t rssi() const"
+/>
+
+</ApiClass>
+
+## SimpleBLE::Simulation::Connection [#simpleble-simulation-connection]
+
+<ApiClass name="SimpleBLE::Simulation::Connection" detailed="Handle to a connection between a simulated adapter and a device. Copies refer to the same connection and may be kept after the callback that provided them. Once the connection closes, actions on it report `NOT_CONNECTED`.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="Connection() = default"
+/>
+
+<ApiMethod
+  signature="bool is_connected() const"
+/>
+
+<ApiMethod
+  signature="uint16_t mtu() const"
+/>
+
+<ApiMethod
+  signature="std::chrono::microseconds interval() const"
+  detailed="The current connection interval."
+/>
+
+<ApiMethod
+  signature="bool operator==(const Connection& other) const"
+  parameters={[{"name":"other","type":"const Connection&"}]}
+  detailed="True if both handles refer to the same connection."
+/>
+
+<ApiMethod
+  signature="bool operator!=(const Connection& other) const"
+  parameters={[{"name":"other","type":"const Connection&"}]}
+/>
+
+</ApiClass>
+
+## SimpleBLE::Simulation::Property [#simpleble-simulation-property]
+
+Characteristic properties that SimpleBLE exposes to the central. They are passed to `Device::add_characteristic()` as a `std::set`.
+
+| Enumerator | Meaning |
+| --- | --- |
+| `READ` | The central can read |
+| `WRITE_REQUEST` | The central can write with a response |
+| `WRITE_COMMAND` | The central can write without a response |
+| `NOTIFY` | The central can subscribe to notifications |
+| `INDICATE` | The central can subscribe to indications |
+
+## SimpleBLE::Simulation::SubscriptionKind [#simpleble-simulation-subscriptionkind]
+
+Passed to `Device::on_subscribed()`.
+
+| Enumerator | Meaning |
+| --- | --- |
+| `NOTIFY` | The central subscribed to notifications |
+| `INDICATE` | The central subscribed to indications |
+
+## SimpleBLE::Simulation::AttStatus [#simpleble-simulation-attstatus]
+
+ATT status returned by a device to a request. The underlying type is `uint8_t`. Application errors (0x80-0x9F) can be returned with a `static_cast`.
+
+| Enumerator | Value |
+| --- | --- |
+| `SUCCESS` | `0x00` |
+| `INVALID_HANDLE` | `0x01` |
+| `READ_NOT_PERMITTED` | `0x02` |
+| `WRITE_NOT_PERMITTED` | `0x03` |
+| `INSUFFICIENT_AUTHORIZATION` | `0x08` |
+| `INVALID_ATTRIBUTE_VALUE_LENGTH` | `0x0D` |
+| `UNLIKELY_ERROR` | `0x0E` |
+| `VALUE_NOT_ALLOWED` | `0x13` |
+
+## SimpleBLE::Simulation::TxStatus [#simpleble-simulation-txstatus]
+
+Result of queueing a notification or indication with `Device::notify()` or `Device::indicate()`.
+
+| Enumerator | Meaning |
+| --- | --- |
+| `QUEUED` | Queued for the next connection events |
+| `BUSY` | TX buffers are full, or an indication awaits confirmation |
+| `NOT_SUBSCRIBED` | The central has not subscribed to this characteristic |
+| `NOT_CONNECTED` | The connection has closed |
+
+## SimpleBLE::Simulation::ReadResult [#simpleble-simulation-readresult]
+
+<ApiClass name="SimpleBLE::Simulation::ReadResult" detailed="Reply to a read: a value, or an ATT error. Returned by `Device::on_read()` and `Device::on_read_descriptor()`. The constructors are not explicit, so a handler can return a `ByteArray` or an `AttStatus` directly.">
+
+### Public Functions [!toc]
+
+<ApiMethod
+  signature="ReadResult() = default"
+/>
+
+<ApiMethod
+  signature="ReadResult(ByteArray value)"
+  parameters={[{"name":"value","type":"ByteArray"}]}
+  detailed="A successful read that returns `value`."
+/>
+
+<ApiMethod
+  signature="ReadResult(AttStatus status)"
+  parameters={[{"name":"status","type":"AttStatus"}]}
+  detailed="A reply with `status` and an empty value."
+/>
+
+### Public Attributes [!toc]
+
+<ApiMethod
+  signature="AttStatus status = AttStatus::SUCCESS"
+/>
+
+<ApiMethod
+  signature="ByteArray value"
+/>
+
+</ApiClass>
+
+</ApiSection>
+
 <ApiSection title="Safe API" id="safe-api">
 
 ## SimpleBLE::Safe::Adapter [#simpleble-safe-adapter] [toc]

@@ -1,0 +1,292 @@
+---
+title: Build a Simulation
+description: Simulate BLE adapters, devices, and radio links inside your process, and drive them through the regular SimpleBLE API.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The Simulator backend runs simulated BLE devices inside your process. Your application talks to them through the regular SimpleBLE API, exactly as it would talk to hardware, so the code under test runs unchanged and without Bluetooth hardware, including in CI. A separate API, `SimpleBLE::Simulation`, builds what it sees: the adapters, the devices, and the radio link between each adapter and each device.
+
+<Callout type="warn" title="Experimental">
+The Simulation API may change between minor releases. It is available in C++ only; the language bindings do not expose it yet.
+</Callout>
+
+The Simulator backend is part of every SimpleBLE build; include `<simpleble/Simulation.h>` to use it. Traffic moves only at connection events and every packet costs its air time, so operations take about as long as they would over a real link with the same parameters. [Timing and Radio Model](./timing-and-radio-model) describes the model, and [Fidelity and Limits](./fidelity-and-limits) covers what it leaves out.
+
+## A first simulation
+
+```cpp
+#include <simpleble/Backend.h>
+#include <simpleble/SimpleBLE.h>
+#include <simpleble/Simulation.h>
+
+#include <chrono>
+#include <iostream>
+
+using namespace std::chrono_literals;
+namespace sim = SimpleBLE::Simulation;
+
+const SimpleBLE::BluetoothUUID BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb";
+const SimpleBLE::BluetoothUUID BATTERY_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb";
+
+class Battery : public sim::Device {
+  public:
+    Battery() : sim::Device("Simulated Battery", "C0:FF:EE:00:00:01") {
+        add_advertised_service(BATTERY_SERVICE);
+        add_service(BATTERY_SERVICE);
+        add_characteristic(BATTERY_SERVICE, BATTERY_LEVEL, {sim::Property::READ});
+        set_value(BATTERY_SERVICE, BATTERY_LEVEL, SimpleBLE::ByteArray{87});
+    }
+};
+
+int main() {
+    sim::Environment environment;
+    environment.add_adapter("sim0", "00:11:22:33:44:55");
+    environment.add_device<Battery>();
+    environment.activate();
+
+    // From here on, this is ordinary SimpleBLE code.
+    for (auto& backend : SimpleBLE::Backend::get_backends()) {
+        if (backend.identifier() != "Simulator") continue;
+
+        auto adapter = backend.adapters().at(0);
+        adapter.scan_for(200);
+        for (auto& peripheral : adapter.scan_get_results()) {
+            peripheral.connect();
+            auto level = peripheral.read(BATTERY_SERVICE, BATTERY_LEVEL);
+            std::cout << peripheral.identifier() << ": " << int(level[0]) << "%" << std::endl;
+            peripheral.disconnect();
+        }
+    }
+    return 0;
+}
+```
+
+1. Create an `Environment`, and add adapters and devices to it.
+2. Call `activate()`. From then on, the Simulator backend reports the environment's adapters.
+3. Use the regular SimpleBLE API.
+
+### Finding the simulated adapter
+
+`Adapter::get_adapters()` returns the adapters of every active backend. On a machine with Bluetooth, the simulated adapters appear next to the real ones. Select the simulated adapter explicitly, either through the backend named `"Simulator"` as above, or by the identifier you gave it in `add_adapter()`. SimpleBLE does not yet offer a way to turn off hardware backends while simulating.
+
+## Environment
+
+An environment owns adapters and devices.
+
+- `add_adapter(identifier, address)` creates a simulated adapter and returns a handle to configure it.
+- `add_device<T>(args...)` constructs a device of type `T` and returns it as a `std::shared_ptr<T>`. `add_device(device)` adds a device you created yourself. A device belongs to one environment.
+- `link(adapter, device)` returns the radio link between an adapter and a device. See [Links](#links).
+
+Devices can be added before or after activation. A device added to an active environment starts advertising right away.
+
+Only one environment can be active at a time; `activate()` throws `OperationFailed` if another one is active. `deactivate()` closes every connection and fails the operations still waiting on them, and the Simulator backend stops reporting adapters. Destroying an active environment deactivates it.
+
+## Devices
+
+Subclass `Simulation::Device`. The constructor takes the name the device advertises, which `Peripheral::identifier()` reports, and its address. Configure the device in its constructor, then override the events it reacts to.
+
+### Advertising
+
+```cpp
+set_advertising_interval(100ms);  // The default. At least 20 ms.
+set_connectable(true);            // The default.
+set_tx_power(-4);
+add_advertised_service(SERVICE);
+set_manufacturer_data(0xFFFF, SimpleBLE::ByteArray{0x01, 0x02});
+set_service_data(SERVICE, SimpleBLE::ByteArray{0x64});
+```
+
+Changes apply from the next advertisement.
+
+### Link-layer limits
+
+These describe the device's Bluetooth controller and stack. Set them to match the firmware you are simulating; [Timing and Radio Model](./timing-and-radio-model#throughput) shows how each affects latency and throughput.
+
+| Method | Default | Notes |
+| --- | --- | --- |
+| `set_preferred_connection_interval(min, max)` | No preference | The device asks for this range right after connecting if the central chose an interval outside it. |
+| `set_max_mtu` | 247 | 23 to 517. |
+| `set_max_data_length` | 27 | Largest link-layer packet payload, 27 to 251 bytes. 27 matches devices without Data Length Extension. |
+| `set_max_event_length` | 7.5 ms | Longest the device spends in one connection event. |
+| `set_tx_buffers` | 4 | Notifications and indications that can be queued per connection. |
+| `set_max_connections` | 1 | Centrals connected at once. Below the limit, the device keeps advertising. |
+
+### GATT database
+
+```cpp
+add_service(SERVICE);
+add_characteristic(SERVICE, CONTROL, {sim::Property::READ, sim::Property::WRITE_REQUEST});
+add_characteristic(SERVICE, SAMPLES, {sim::Property::NOTIFY});
+add_descriptor(SERVICE, CONTROL, USER_DESCRIPTION);
+set_value(SERVICE, CONTROL, SimpleBLE::ByteArray{0x00});
+```
+
+- Characteristic properties are the ones SimpleBLE exposes: `READ`, `WRITE_REQUEST`, `WRITE_COMMAND`, `NOTIFY`, and `INDICATE`.
+- Characteristics that notify or indicate get a Client Characteristic Configuration descriptor (CCCD) automatically. The simulation handles it and tracks subscriptions per connection; do not add it yourself.
+- The device stores characteristic and descriptor values. `value()` and `set_value()` read and change them. `set_value()` only stores the value; call `notify()` or `indicate()` to push it to a subscribed central.
+- The central reads the GATT database when it connects. Services and characteristics added later appear from the next connection.
+
+### Events
+
+Override the events the device needs. The defaults serve the stored values.
+
+| Event | Called when | Default |
+| --- | --- | --- |
+| `on_connected(connection)` | A central connected. | Nothing |
+| `on_disconnected(connection)` | The connection closed, from either side or through link loss. | Nothing |
+| `on_mtu_changed(connection, mtu)` | The MTU exchange completed. | Nothing |
+| `on_connection_interval_changed(connection, interval)` | A new connection interval took effect. | Nothing |
+| `on_read(connection, service, characteristic)` | The central read a characteristic. | Returns the stored value |
+| `on_write_request(connection, service, characteristic, value)` | The central wrote with a response. | Returns `SUCCESS` |
+| `on_write_command(connection, service, characteristic, value)` | The central wrote without a response. | Nothing |
+| `on_subscribed(connection, service, characteristic, kind)` | The central enabled notifications or indications. | Nothing |
+| `on_unsubscribed(connection, service, characteristic)` | The central disabled them. | Nothing |
+| `on_indication_confirmed(connection, service, characteristic)` | The central confirmed an indication. | Nothing |
+| `on_tx_complete(connection)` | TX buffers were freed on this connection. | Nothing |
+| `on_read_descriptor(...)` | The central read a descriptor other than the CCCD. | Returns the stored value |
+| `on_write_descriptor(...)` | The central wrote a descriptor other than the CCCD. | Returns `SUCCESS` |
+| `on_timer(id)` | A timer started with `start_timer(id, period)` fired. | Nothing |
+
+- When `on_write_request` or `on_write_descriptor` returns `SUCCESS`, the simulation stores the value after the handler returns. The handler still sees the previous value through `value()`. A write command has no response, so its value is always stored.
+- UUIDs passed to events are lowercase. Compare them against lowercase constants.
+- Operations a characteristic does not support fail on the central with `OperationNotSupported`, as they do on hardware backends, and never reach the device.
+
+### Replying with errors
+
+Handlers reply with values, not exceptions. `on_read` returns a `ReadResult`, which holds either a value or an `AttStatus`; write handlers return an `AttStatus`.
+
+```cpp
+sim::ReadResult on_read(sim::Connection connection, const SimpleBLE::BluetoothUUID& service,
+                        const SimpleBLE::BluetoothUUID& characteristic) override {
+    if (!unlocked_) return sim::AttStatus::INSUFFICIENT_AUTHORIZATION;
+    return value(service, characteristic);
+}
+
+sim::AttStatus on_write_request(sim::Connection connection, const SimpleBLE::BluetoothUUID& service,
+                                const SimpleBLE::BluetoothUUID& characteristic,
+                                const SimpleBLE::ByteArray& value) override {
+    if (value.size() != 1) return sim::AttStatus::INVALID_ATTRIBUTE_VALUE_LENGTH;
+    // Application errors use codes 0x80 to 0x9F.
+    if (value[0] > 2) return static_cast<sim::AttStatus>(0x80);
+    return sim::AttStatus::SUCCESS;
+}
+```
+
+On the central, an error status fails the operation with `SimpleBLE::Exception::OperationFailed`, and the message carries the ATT error code. `INVALID_HANDLE` from a descriptor handler becomes `DescriptorNotFound`. If a handler throws, the exception is logged and the central receives `UNLIKELY_ERROR` (0x0E).
+
+### Acting on its own
+
+A device can also act without being asked:
+
+- `notify(connection, service, characteristic, value)` and `indicate(...)` queue a value for a subscribed central and return a `TxStatus`:
+  - `QUEUED`: the value goes out at the next connection events.
+  - `BUSY`: the TX buffers are full, or an indication is still waiting for its confirmation. Try again from `on_tx_complete` or `on_indication_confirmed`.
+  - `NOT_SUBSCRIBED`: the central has not subscribed to this characteristic on this connection.
+  - `NOT_CONNECTED`: the connection has closed.
+
+  Values longer than the MTU minus 3 bytes are truncated, as ATT requires.
+- `disconnect(connection)` ends the connection from the device's side.
+- `request_connection_interval(connection, min, max)` asks the central for a different connection interval.
+- `start_timer(id, period)` calls `on_timer(id)` every `period` while the environment is active. Starting an `id` again replaces its period; `stop_timer(id)` stops it. Timers are how a device produces data by itself.
+
+A device that streams as fast as the link allows refills its buffers when they free up:
+
+```cpp
+void on_subscribed(sim::Connection connection, const SimpleBLE::BluetoothUUID& service,
+                   const SimpleBLE::BluetoothUUID& characteristic, sim::SubscriptionKind kind) override {
+    subscriber_ = connection;
+    send_samples();
+}
+
+void on_tx_complete(sim::Connection connection) override { send_samples(); }
+
+void send_samples() {
+    // Move on to the next sample only once this one is queued.
+    while (notify(subscriber_, SERVICE, SAMPLES, sample_) == sim::TxStatus::QUEUED) {
+        sample_ = next_sample();
+    }
+}
+```
+
+### Connections
+
+`Connection` is a handle to one connection. Copies refer to the same connection and can be kept after the event that provided them, for example to notify from a timer. `is_connected()`, `mtu()`, and `interval()` describe it, and `==` compares handles. Once the connection closes, actions on it report `NOT_CONNECTED`. `Device::connections()` lists the open ones.
+
+With `set_max_connections(n)`, a device serves up to `n` centrals, one per simulated adapter. The MTU, connection interval, and subscriptions are separate for each connection.
+
+## Adapters
+
+A simulated adapter acts as the central. `add_adapter()` returns a `Simulation::Adapter` that sets its connection policy:
+
+| Method | Default | Notes |
+| --- | --- | --- |
+| `set_connection_interval` | 30 ms | Interval used when connecting. |
+| `set_accepted_connection_intervals(min, max)` | 7.5 ms to 4 s | Range granted when a device asks for a new interval. |
+| `set_max_event_length` | 3.75 ms | Longest the adapter spends in one connection event. |
+| `set_supervision_timeout` | 4 s | A connection that hears no valid packet for this long is lost. At least 100 ms. |
+
+Connection intervals are clamped to 7.5 ms to 4 s. The adapter always offers an ATT MTU of 517 and a data length of 251 bytes, so the device's limits decide the negotiated values.
+
+Several adapters in one environment act as independent centrals. Each one scans, connects, and hears devices through its own links.
+
+## Links
+
+`environment.link(adapter, device)` returns the radio conditions between one adapter and one device. Changes take effect immediately, including on an open connection.
+
+| Method | Default | Notes |
+| --- | --- | --- |
+| `set_in_range` | `true` | Out of range, neither side hears the other: no advertisements, and connection events are lost. |
+| `set_packet_error_rate` | 0 | Probability, from 0 to 1, that each packet is corrupted. Corrupted packets are sent again. |
+| `set_rssi` | -60 dBm | Reported by `Peripheral::rssi()` with each advertisement. |
+
+```cpp
+auto link = environment.link(adapter, device);
+link.set_packet_error_rate(0.3f);
+link.set_in_range(false);
+```
+
+A connection survives an outage shorter than the adapter's supervision timeout: queued operations complete once the device is back in range. After a longer outage the connection is lost, SimpleBLE reports the disconnection, and operations still waiting fail with `OperationFailed`.
+
+## Threads
+
+- A device's events run one at a time, like callbacks in single-threaded firmware, so members that only its events touch need no locking.
+- The events of every device in an environment are delivered on the same thread. Keep handlers short: a slow handler delays every device, and a response is sent only once its handler returns.
+- Device methods such as `notify()`, `set_value()`, and `disconnect()` can be called from any thread, for example from a test that pushes a value at a precise moment. Members of your subclass that both the test and the handlers touch need their own locking.
+- Do not call the central API, such as `Peripheral::read()`, from a device handler. The operation needs the device thread to answer, so it blocks until it times out.
+- SimpleBLE callbacks such as scan results, notifications, and connection events run on one thread per simulated adapter. See [Concurrency](../../fundamentals/concurrency) for the rules that apply to every backend.
+
+## Full example
+
+The repository example [`examples/simpleble/src/simulation.cpp`](https://github.com/simpleble/simpleble/blob/main/examples/simpleble/src/simulation.cpp) simulates a heart rate monitor. The device asks for a 15 ms connection interval and sends a measurement every 250 ms while subscribed. The program then scans, connects, reads, and subscribes through the regular SimpleBLE API, printing how long each step takes. It needs no Bluetooth hardware.
+
+Build it with the other SimpleBLE examples:
+
+```bash
+cmake -S <path-to-simpleble>/examples/simpleble -B build_simpleble_examples -DSIMPLEBLE_LOCAL=ON
+cmake --build build_simpleble_examples -j7 --target simpleble_simulation
+```
+
+A run on macOS:
+
+```text
+[  108 ms] Found Simulated HRM [C0:FF:EE:00:00:01] -60 dBm
+[  516 ms] Connected in 211 ms, MTU 247
+[  572 ms] [device] Connection interval is now 15 ms
+[  572 ms] Read body sensor location 1 in 55 ms
+[  696 ms] Read body sensor location 1 in 18 ms
+[  829 ms] Read body sensor location 1 in 29 ms
+[  962 ms] Subscribed in 27 ms
+[ 1202 ms] Heart rate: 60 bpm
+[ 1458 ms] Heart rate: 61 bpm
+[ 1713 ms] Heart rate: 62 bpm
+[ 1999 ms] Disconnected in 15 ms
+```
+
+The adapter connected at its default 30 ms interval, and the first read took about two intervals. Once the device's request for 15 ms took effect, reads took one to two 15 ms intervals. [Timing and Radio Model](./timing-and-radio-model) explains where each number comes from.
+
+## Where to next?
+
+- [Timing and Radio Model](./timing-and-radio-model) for how packets, intervals, and link conditions turn into latency and throughput
+- [Fidelity and Limits](./fidelity-and-limits) for how close the simulation is to hardware, and what to keep in mind
+- [API reference](../api#simulation-api) for every class in `SimpleBLE::Simulation`

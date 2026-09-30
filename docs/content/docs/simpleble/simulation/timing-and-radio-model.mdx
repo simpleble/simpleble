@@ -1,0 +1,136 @@
+---
+title: Timing and Radio Model
+description: How the Simulator moves packets between adapters and devices, what each operation costs, and how link parameters shape latency and throughput.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The simulator reproduces BLE timing at the level of connection events and packets. It does not model radio signals. This page describes the model, so you can predict what a simulation will do and choose parameters that match the hardware you care about.
+
+<Callout type="info" title="Real time">
+The simulation runs on the system's steady clock. A 30 ms connection interval takes 30 ms of wall-clock time, and a test that waits for ten notifications at that interval takes about 300 ms. There is no virtual clock to fast-forward.
+</Callout>
+
+## Advertising and scanning
+
+- Each device advertises once per advertising interval, plus a random 0-10 ms delay per event, as the Bluetooth specification requires of real devices.
+- Each advertising event reaches every scanning adapter that has the device in range, unless the link's packet error rate drops it. The first report calls the adapter's scan-found callback, later ones the scan-updated callback, both with the link's RSSI.
+- A scanning adapter listens continuously, so it hears every advertising event. A device is usually found within one advertising interval of starting a scan: about 110 ms at the default 100 ms interval.
+- A device keeps advertising while it has fewer connections than `set_max_connections()` allows, and stops once it reaches the limit.
+
+## Connecting
+
+`Peripheral::connect()`:
+
+1. Waits for the device's next connectable advertising event that the adapter hears.
+2. Opens the connection. The first connection event takes place one connection interval later.
+3. Exchanges the ATT MTU, then discovers the GATT database, one ATT request at a time.
+4. Returns once discovery is complete.
+
+Discovery takes `1 + S + C` requests for a device with `S` services and `C` characteristics: one for the list of services, one per service for its characteristics, and one per characteristic for its descriptors. Each request and its response cost one connection interval (see [What operations cost](#what-operations-cost)), so:
+
+```text
+connect time = wait for an advertisement + (3 + S + C) x connection interval
+```
+
+For the heart rate monitor in the [example](./build-a-simulation#full-example), with one service and two characteristics, that is 6 intervals: 180 ms at the adapter's default 30 ms. If the device gets a faster interval before discovery ends, the remaining requests run at the new one.
+
+`connect()` gives up after 10 seconds, for example when the device is out of range, not connectable, or already at its connection limit.
+
+## Connection events
+
+```text
+anchor                                                                next anchor
+  |                                                                         |
+  |[C->D] 150us [D->C] 150us|[C->D] 150us [D->C] 150us|  ...                |
+  |<------- exchange ------>|<------- exchange ------>|                     |
+  |<------------- no longer than the event window ------------->|           |
+```
+
+Once per connection interval, at the anchor point, the central opens a connection event. The event is a series of exchanges. In each one, the central sends a packet, both sides wait the 150 µs inter-frame space, the device replies, and both wait again. A side with nothing to send sends an empty packet.
+
+**Air time.** On the LE 1M PHY, every byte takes 8 µs, and every packet carries 10 bytes of overhead (preamble, access address, header, and CRC) on top of its payload:
+
+| Payload | Air time | Exchange, with an empty packet from the other side |
+| --- | --- | --- |
+| Empty | 80 µs | 460 µs |
+| 27 bytes | 296 µs | 676 µs |
+| 251 bytes | 2,088 µs | 2,468 µs |
+
+**Event window.** The event continues while either side has more to send and the next exchange still fits in the window:
+
+```text
+event window = min(adapter event length, device event length, interval - 150 us)
+```
+
+The first exchange of an event always takes place, even when it does not fit.
+
+**Packet size.** Each packet carries at most the connection's data length, the smaller of the device's `set_max_data_length()` and 251. Longer PDUs, including their 4-byte L2CAP header, are split across packets, and across events when needed.
+
+**Turnaround.** Whatever a side produces in reply to an event goes out in the next event. When a request arrives, the device's handler runs after that connection event ends, and its response goes out in the following event. Received data reaches the application when the event that carried it ends.
+
+**One request at a time.** Reads, write requests, descriptor operations, and subscription changes each wait for the previous request's response, as ATT requires. Everything else goes ahead of a request that is waiting its turn: write commands, notifications, indications and their confirmations, and connection parameter traffic. Several of those can travel in one event.
+
+## What operations cost
+
+| Operation | Connection events | Latency from the call |
+| --- | --- | --- |
+| `read()`, `write_request()`, descriptor reads and writes | 2: request, then response | 1 to 2 intervals |
+| `notify()`, `indicate()`, `unsubscribe()` on the central | 2: CCCD write, then response | 1 to 2 intervals |
+| `write_command()` | 1 | Returns at once; reaches the device within 1 interval |
+| `Device::notify()` | 1 | Reaches the central within 1 interval |
+| `Device::indicate()` | 1, then a confirmation in the next | At most one indication every 2 intervals |
+| `disconnect()` | 1 | Up to 1 interval |
+| `connect()` | See [Connecting](#connecting) | |
+
+Latency is 1 to 2 intervals because a call first waits for the next anchor, between 0 and 1 interval away, and the response comes one interval after that.
+
+## Throughput
+
+A device streaming notifications is limited by three things:
+
+1. **TX buffers.** At most `set_tx_buffers()` notifications are queued at once. Buffers are freed as the central acknowledges the packets, and `on_tx_complete` runs when the event ends, so refills go out from the next event. A device sends at most its number of TX buffers per event.
+2. **The event window.** Only the exchanges that fit in it take place.
+3. **MTU and data length.** A notification carries up to MTU - 3 bytes, split into packets of up to the data length.
+
+```text
+notifications per event = min(TX buffers, exchanges that fit in the event window)
+throughput              = notifications per event x payload / connection interval
+```
+
+For a device that refills its buffers from `on_tx_complete`, with an MTU of 247 and 4 TX buffers:
+
+| Interval | Adapter event length | Data length | Payload | Per event | Throughput |
+| --- | --- | --- | --- | --- | --- |
+| 30 ms | 3.75 ms (default) | 27 (default) | 20 B | 4, limited by TX buffers | 2.7 kB/s |
+| 30 ms | 3.75 ms | 251 | 244 B | 1, limited by the window | 8.1 kB/s |
+| 30 ms | 7.5 ms | 251 | 244 B | 3, limited by the window | 24.4 kB/s |
+| 7.5 ms | 7.5 ms | 251 | 244 B | 2, limited by the interval | 65.0 kB/s |
+
+With the defaults, the link is idle for most of each interval. The device's data length and the adapter's event length are what open it up.
+
+## MTU and data length
+
+- The MTU exchange is the first transaction on every connection. The result is the smaller of the adapter's 517 and the device's `set_max_mtu()`, which defaults to 247. `Peripheral::mtu()` and `Device::on_mtu_changed()` report it.
+- Notifications and indications carry at most MTU - 3 bytes. `Device::notify()` and `Device::indicate()` truncate longer values.
+- The data length is the smaller of the device's `set_max_data_length()` and 251. The default of 27 matches devices without Data Length Extension: a 244-byte notification then takes 10 packets instead of 1.
+
+## Connection interval negotiation
+
+1. The adapter connects at its `set_connection_interval()`, 30 ms by default.
+2. If the device has a preferred range, set with `set_preferred_connection_interval()`, and the interval is outside it, the device asks for its range right after connecting. `request_connection_interval()` sends the same request at any time.
+3. The adapter grants the fastest interval that is in both the requested range and its own `set_accepted_connection_intervals()`. If the two ranges do not overlap, it rejects the request and the interval stays as it is.
+4. A granted update takes effect 6 connection events after the device receives it, at the same instant on both sides. The device then gets `on_connection_interval_changed()`, and `Connection::interval()` reports the new value.
+
+## Packet errors
+
+- Each packet, in both directions, is corrupted independently with probability `Link::set_packet_error_rate()`. A corrupted packet is not acknowledged and is sent again in the next exchange.
+- Two corrupted packets in a row close the connection event, after the specification's rule for consecutive CRC errors. The rest waits for the next event.
+- While the connection holds, errors cost time, never data: every PDU arrives, only later, and throughput drops.
+- Advertising events are lost at the same rate, so scans and connection attempts take longer on a noisy link.
+
+## Range and supervision timeout
+
+- Out of range, nothing gets through: no advertising event is heard, and every connection event is lost.
+- A connection is lost when either side has heard no valid packet for the adapter's supervision timeout, 4 s by default. SimpleBLE then reports the disconnection, the device gets `on_disconnected()`, and operations still waiting fail with `OperationFailed`.
+- Back in range before the timeout, the connection resumes. Queued operations proceed, and the application sees only the delay.

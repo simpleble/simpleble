@@ -19,6 +19,7 @@ SimpleBLE never invokes callbacks on your application's main thread. Every backe
 | macOS / iOS | A serial CoreBluetooth dispatch queue | One serial queue per adapter. CoreBluetooth delegate events and your callbacks are serialized on it. |
 | Windows | WinRT threadpool threads | Advertisement and GATT events arrive on arbitrary threadpool threads belonging to the multithreaded apartment (MTA). Callbacks are **not** guaranteed to arrive on the same thread every time. |
 | Android | A single SimpleJNI runner thread owned by SimpleBLE | JNI callbacks from the Android stack are enqueued onto this thread; all callbacks are serialized on it. |
+| Simulator | One thread per simulated adapter | Scan, connection, and notification callbacks for that adapter are serialized on it. |
 
 Two consequences apply on every platform:
 
@@ -50,6 +51,10 @@ SimpleBLE marshals its own WinRT calls onto a dedicated internal MTA thread, whi
 ### Android
 
 Operation completions are delivered through the same single runner thread that executes your callbacks. Calling a blocking operation from inside a callback stalls until its timeout expires and then throws: 5 seconds for GATT reads/writes, 8 seconds for `connect()`/`disconnect()`.
+
+### Simulator
+
+Blocking operations complete on the simulation's own thread, so calling them from inside a callback does not deadlock; it only delays that adapter's other callbacks. Do not rely on this: the same code deadlocks on macOS. See [Fidelity and Limits](../simpleble/simulation/fidelity-and-limits).
 
 <Callout type="warn" title="Notification callbacks are the common trap">
 The most frequent mistake on every platform is issuing a `read()` or `write_request()` from inside a notification callback — for example, responding to a device's notification with a command. On macOS this deadlocks forever; on Linux it stalls 30 seconds and throws; on Android it stalls 5 seconds and throws. Push the notification payload into a queue and let a worker thread issue the response instead.
@@ -99,6 +104,16 @@ The unbounded waits poll every 10 ms until the corresponding CoreBluetooth deleg
 | Disconnect | 8 s | Hardcoded |
 | Characteristic read / write | 5 s | Hardcoded |
 | Descriptor read / write | 5 s | Hardcoded |
+
+### Simulator
+
+| Operation | Timeout | Configurable |
+| --- | --- | --- |
+| Connect (including MTU exchange and service discovery) | 10 s | Hardcoded |
+| Disconnect | 5 s | Hardcoded |
+| Read, write request, notify, indicate, unsubscribe, descriptor ops | 30 s (the ATT transaction timeout) | Hardcoded |
+
+Operations still waiting when the connection is lost fail right away with `SimpleBLE::Exception::OperationFailed`.
 
 ## Configuration knobs
 

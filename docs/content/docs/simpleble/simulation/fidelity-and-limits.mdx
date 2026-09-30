@@ -1,0 +1,84 @@
+---
+title: Fidelity and Limits
+description: What the Simulator reproduces, what it approximates, what it leaves out, and what to keep in mind when you rely on its results.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The simulator models the link layer and ATT, with the timing the Bluetooth Core Specification gives them and the parameters you set. It is not an RF simulation, and it does not emulate any particular operating system's Bluetooth stack.
+
+Latency and throughput follow from the parameters you set, on a link with no other traffic. Use the simulator to test behavior and compare configurations, and confirm performance figures and platform quirks on hardware.
+
+## Modeled after the specification
+
+| Area | What the simulator does |
+| --- | --- |
+| Packets | LE 1M air time: 8 µs per byte and 10 bytes of overhead per packet, with a 150 µs inter-frame space. |
+| Connection events | Exchanges led by the central, which continue while either side has data, within both sides' event lengths and the interval. |
+| Data length | Packets of 27 to 251 bytes. Longer PDUs, including their L2CAP header, are split across packets and events. |
+| ATT | The MTU exchange (23 to 517) comes first. One request is outstanding per connection, and commands, confirmations, and connection parameter traffic do not wait behind it. Notifications and indications carry at most MTU - 3 bytes, and only one indication awaits confirmation at a time. |
+| Subscriptions | Client Characteristic Configuration descriptor state per connection. |
+| Connection parameters | The device's connection parameter request, the central's decision, and an update that takes effect 6 events later. |
+| Link loss | Corrupted packets are retransmitted, two errors in a row close the event, and the supervision timeout ends a silent connection. |
+| Advertising | An interval plus a random 0-10 ms delay per event; connectable and non-connectable devices; advertising stops at the connection limit. |
+| Multiple connections | A device can serve several centrals, with separate MTU, interval, and subscriptions per connection. |
+
+## Approximated
+
+**Service discovery.** Discovery is modeled as `1 + S + C` requests of a fixed size, for `S` services and `C` characteristics. Real discovery repeats each kind of request until the device answers "Attribute Not Found", and the count depends on the MTU and on how the database is laid out. Operating systems may also cache the database of a known device and skip discovery. Real connections can take longer or less time.
+
+**Long values.** A read or write of a value longer than the MTU allows travels as a single ATT PDU. Real stacks split it into Read Blob or Prepare Write requests, one round trip per MTU-sized piece, so long reads and writes take longer on hardware.
+
+**Radio.** Packet errors are independent and equally likely for every packet: no bursts, no interference, and no channel hopping. RSSI is a fixed value per link and does not affect errors. Range is either in or out. To model a link that degrades, change these values over time from your test.
+
+**Scanning.** A scanning adapter hears every advertising event in range. The model has no scan intervals and windows, advertising channels, scan requests or responses, or 31-byte legacy advertising limit.
+
+**Connection timing.**
+- The first connection event comes one interval after the connection request.
+- Peripheral latency is always 0.
+- Intervals are not rounded to the specification's 1.25 ms steps.
+- The supervision timeout is set by the adapter, not negotiated.
+- Connection events of different connections never collide. A real controller serving several connections must interleave them, and may shorten or skip events.
+
+**Clock and scheduling.** Timing depends on the operating system's thread scheduling. Expect a few milliseconds of jitter on a desktop, and more on a loaded CI machine.
+
+**Randomness.** Each environment seeds its random numbers with the same value, but events interleave with wall-clock time. A run with packet errors is therefore not reproducible packet for packet.
+
+## Not modeled
+
+- **Security.** Pairing, bonding, and encryption are not modeled, because most platforms do not expose them in a way SimpleBLE can use portably. `Peripheral::is_paired()` is always `false`, and `unpair()` does nothing. A device can still return `INSUFFICIENT_AUTHORIZATION` or an application error, to exercise the error paths.
+- **Radio features.** Only the LE 1M PHY is modeled: there is no 2M or Coded PHY, and no extended or periodic advertising.
+- **Service Changed.** The central reads the GATT database when it connects. Changes appear from the next connection.
+- **Adapter power.** `power_off()` stops scanning but leaves connections open.
+- **Other roles.** Simulated adapters cannot host a local peripheral: `create_local_peripheral()` throws `OperationNotSupported`. Simulated centrals that connect to your application are not modeled either.
+- **Operating system behavior.** GATT caching, permission prompts, the connection parameters and MTU each operating system picks, and the way each one reports errors.
+
+## Things to consider
+
+### Simulate the central you ship on
+
+The adapter defaults describe a generic central. Phones and computers pick their own connection interval, MTU, and data length, limit how many packets they send per event, and may turn down the intervals a device asks for. Set the adapter's policy to match the platform you care about, and consider running the same test against several policies.
+
+### Configure devices like their firmware
+
+The device defaults are conservative: 27-byte packets, an MTU of 247, 4 TX buffers, and a 7.5 ms event length. Copy the values from your firmware's Bluetooth configuration, because they decide the throughput. See [Throughput](./timing-and-radio-model#throughput).
+
+### Test the unhappy paths
+
+The simulator makes failures easy to trigger on demand:
+
+- Take a device out of range with `set_in_range(false)`. Bring it back before the supervision timeout to test resumption, or after it to test reconnection.
+- Use `set_packet_error_rate()` for slow, noisy links.
+- Return ATT errors from handlers, disconnect from the device's side, or stop a device's timers to simulate a stalled device.
+
+### Threading is more forgiving than on hardware
+
+<Callout type="warn" title="More forgiving than hardware">
+In the simulator, calling a blocking SimpleBLE operation from inside a SimpleBLE callback works, because operations complete on the simulation's own thread. The same code deadlocks on macOS and stalls until a timeout on Linux and Android. Follow the rules in [Concurrency](../../fundamentals/concurrency) regardless.
+</Callout>
+
+### Keep simulations isolated and fast
+
+Only one environment can be active per process. Create a fresh environment for each test and let it go out of scope at the end; that closes its connections. A device belongs to one environment, so create new devices too.
+
+Simulations run in real time. Shorten connection intervals, advertising intervals, scan durations, and the supervision timeout to keep test suites fast, and write timing assertions with tolerances.
