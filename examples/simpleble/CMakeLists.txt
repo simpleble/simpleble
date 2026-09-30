@@ -65,3 +65,6 @@ configure_simpleble_target(simpleble_notify_multi)
 
 add_executable(simpleble_peripheral src/peripheral.cpp)
 configure_simpleble_target(simpleble_peripheral)
+
+add_executable(simpleble_simulation src/simulation.cpp)
+configure_simpleble_target(simpleble_simulation)

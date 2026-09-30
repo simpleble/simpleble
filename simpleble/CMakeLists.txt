@@ -31,6 +31,7 @@ set(SIMPLEBLE_PRIVATE_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/external
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator
     ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/safe
     ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/external
     ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/include)
@@ -51,6 +52,21 @@ set(SIMPLEBLE_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/ServiceBase.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/CharacteristicBase.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/common/DescriptorBase.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/AdapterSimulator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/BackendSimulator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/PeripheralSimulator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationAdapter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationConnection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationEnvironment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationLink.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/core/ConnectionCore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/core/DeviceCore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/core/EnvironmentCore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/core/Pdu.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/core/SimulatorUtils.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Config.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Error.cpp

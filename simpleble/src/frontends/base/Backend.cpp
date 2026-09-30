@@ -46,6 +46,9 @@ static SharedPtrVector<BackendBase> _get_backends() {
     extern BackendPtr BACKEND_DONGL;
     add_backend(BACKEND_DONGL());
 
+    extern BackendPtr BACKEND_SIMULATOR;
+    add_backend(BACKEND_SIMULATOR());
+
     return backends;
 }
 
