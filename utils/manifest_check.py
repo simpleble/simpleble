@@ -30,6 +30,7 @@ IGNORED_FOLDERS = {
     "simpledroidbridge",
     "simplejavable",
     "simplersble",
+    "simplesharpble",
     "simplecble",
     "scripts",
     ".github",
@@ -42,6 +43,7 @@ IGNORED_FOLDERS = {
 # Directories to explicitly prune in MANIFEST.in
 PRUNE_DIRS = {
     ".github",
+    "dependencies/internal/test",
     "docs",
     "examples",
     "hitl",
@@ -53,6 +55,7 @@ PRUNE_DIRS = {
     "simpledroidbridge",
     "simplejavable",
     "simplersble",
+    "simplesharpble",
     "utils",
 }
 
@@ -104,6 +107,10 @@ def generate_manifest():
 
             # Skip common file types that shouldn't be included
             if file.endswith(('.pyc', '.pyo', '.pyd')):
+                continue
+
+            # In a git worktree or submodule, .git is a file rather than a folder
+            if file == '.git':
                 continue
             
             # Skip files in EXCLUDE_FILES (they will be added as exclude directives)
