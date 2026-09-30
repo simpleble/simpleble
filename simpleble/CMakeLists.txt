@@ -471,7 +471,9 @@ if(SIMPLEBLE_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/main.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_bytearray.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_scheduler.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_threadrunner.cpp)
     set_target_properties(simpleble_test PROPERTIES
         CXX_VISIBILITY_PRESET hidden
         VISIBILITY_INLINES_HIDDEN YES
@@ -481,6 +483,7 @@ if(SIMPLEBLE_TEST)
 
     target_include_directories(simpleble_test PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/external
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/dongl
         ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/internal/include)
 
