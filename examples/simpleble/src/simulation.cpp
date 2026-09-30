@@ -6,7 +6,9 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <optional>
+#include <sstream>
 #include <thread>
 
 using namespace std::chrono_literals;
@@ -17,10 +19,18 @@ const SimpleBLE::BluetoothUUID HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000
 const SimpleBLE::BluetoothUUID BODY_SENSOR_LOCATION = "00002a38-0000-1000-8000-00805f9b34fb";
 
 const auto START = std::chrono::steady_clock::now();
+std::mutex log_mutex;
 
-std::ostream& log() {
+// The device, SimpleBLE callbacks and main() log from different threads, so each line is printed whole.
+template <typename... Parts>
+void log(const Parts&... parts) {
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - START);
-    return std::cout << "[" << std::setw(5) << elapsed.count() << " ms] ";
+    std::ostringstream line;
+    line << "[" << std::setw(5) << elapsed.count() << " ms] ";
+    (line << ... << parts);
+
+    std::lock_guard<std::mutex> lock(log_mutex);
+    std::cout << line.str() << std::endl;
 }
 
 template <typename Operation>
@@ -50,7 +60,7 @@ class HeartRateMonitor : public sim::Device {
     // Events for one device run one at a time, so members need no locking.
 
     void on_connection_interval_changed(sim::Connection connection, std::chrono::microseconds interval) override {
-        log() << "[device] Connection interval is now " << interval.count() / 1000.0f << " ms" << std::endl;
+        log("[device] Connection interval is now ", interval.count() / 1000.0f, " ms");
     }
 
     void on_subscribed(sim::Connection connection, const SimpleBLE::BluetoothUUID& service,
@@ -103,8 +113,7 @@ int main() {
 
     std::optional<SimpleBLE::Peripheral> monitor;
     adapter->set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
-        log() << "Found " << peripheral.identifier() << " [" << peripheral.address() << "] " << peripheral.rssi()
-              << " dBm" << std::endl;
+        log("Found ", peripheral.identifier(), " [", peripheral.address(), "] ", peripheral.rssi(), " dBm");
         if (peripheral.identifier() != "Simulated HRM") return;
         monitor = peripheral;
     });
@@ -115,26 +124,26 @@ int main() {
     }
 
     auto connect_ms = milliseconds_taken([&]() { monitor->connect(); });
-    log() << "Connected in " << connect_ms << " ms, MTU " << monitor->mtu() << std::endl;
+    log("Connected in ", connect_ms, " ms, MTU ", monitor->mtu());
 
     for (int i = 0; i < 3; i++) {
         SimpleBLE::ByteArray location;
         auto read_ms = milliseconds_taken([&]() { location = monitor->read(HEART_RATE_SERVICE, BODY_SENSOR_LOCATION); });
-        log() << "Read body sensor location " << int(location[0]) << " in " << read_ms << " ms" << std::endl;
+        log("Read body sensor location ", int(location[0]), " in ", read_ms, " ms");
         std::this_thread::sleep_for(100ms);
     }
 
     auto subscribe_ms = milliseconds_taken([&]() {
         monitor->notify(HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT, [&](SimpleBLE::ByteArray payload) {
-            log() << "Heart rate: " << int(payload[1]) << " bpm" << std::endl;
+            log("Heart rate: ", int(payload[1]), " bpm");
         });
     });
-    log() << "Subscribed in " << subscribe_ms << " ms" << std::endl;
+    log("Subscribed in ", subscribe_ms, " ms");
 
     std::this_thread::sleep_for(1s);
 
     monitor->unsubscribe(HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT);
     auto disconnect_ms = milliseconds_taken([&]() { monitor->disconnect(); });
-    log() << "Disconnected in " << disconnect_ms << " ms" << std::endl;
+    log("Disconnected in ", disconnect_ms, " ms");
     return EXIT_SUCCESS;
 }
