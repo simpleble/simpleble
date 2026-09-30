@@ -14,25 +14,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## API Documentation Generation
+## API Reference
 
-The API reference is automatically generated from the C++ source code using Doxygen and a custom parser that converts Doxygen XML to MDX with React components.
+`content/docs/simpleble/api.mdx` is maintained by hand. It is not generated from the C++ sources, so update it whenever the public API changes.
 
-### Scripts
-
-- `npm run build:doxygen`: Orchestrates the full API documentation build.
-  - Runs Doxygen using the `Doxyfile` to generate XML output in `_doxygen/xml/`.
-  - Executes `scripts/build-doxygen.js` to parse the XML and generate `content/docs/simpleble/api.mdx`.
-- `npm run build`: Runs the Doxygen build followed by the Next.js production build.
-
-### Script Details
-
-- **`scripts/build-doxygen.js`**: The main entry point for API generation. It defines which classes to include (Standard API, Safe API, etc.) and uses the helpers in `utils.js` to generate the final MDX file.
-- **`scripts/utils.js`**: Contains the logic for:
-  - Parsing Doxygen XML nodes.
-  - Extracting text, types, and method signatures safely.
-  - Converting XML structures into `<ApiClass>`, `<ApiMethod>`, and `<ApiSection>` React components.
-  - Handling edge cases like C++ template types, escaping JSX/Markdown, and generating stable anchor IDs for the Table of Contents.
+It is written with the `<ApiSection>`, `<ApiClass>` and `<ApiMethod>` components from `src/components/api/`. The `type` of each `ApiMethod` parameter is rendered as highlighted C++ code, so it must be plain C++ with no Markdown links.
 
 ## Project Structure
 
@@ -42,7 +28,6 @@ The API reference is automatically generated from the C++ source code using Doxy
 | `app/(docs)`         | The documentation layout and pages.                |
 | `content/docs`       | MDX/Markdown files for the documentation.          |
 | `src/components/api` | Custom React components used in the API reference. |
-| `scripts/`           | Automation scripts for Doxygen integration.        |
 
 ## Learn More
 

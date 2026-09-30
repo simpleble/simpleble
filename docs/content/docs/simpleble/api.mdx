@@ -10,7 +10,7 @@ The following notes provide an overview of the architecture of some of the highe
 
 <ApiSection title="Standard API" id="standard-api">
 
-## SimpleBLE::Backend [#simpleble-backend] [toc]
+## SimpleBLE::Backend [#simpleble-backend]
 
 <ApiClass name="SimpleBLE::Backend">
 
@@ -52,7 +52,7 @@ The following notes provide an overview of the architecture of some of the highe
 
 </ApiClass>
 
-## SimpleBLE::Adapter [#simpleble-adapter] [toc]
+## SimpleBLE::Adapter [#simpleble-adapter]
 
 <ApiClass name="SimpleBLE::Adapter" detailed="Bluetooth [Adapter](#simpleble-adapter).  A default-constructed [Adapter](#simpleble-adapter) object is not initialized. Calling any method other than `initialized()` on an uninitialized [Adapter](#simpleble-adapter) will throw an exception of type `SimpleBLE::Exception::NotInitialized`.">
 
@@ -153,12 +153,12 @@ This class is intended to be used by the user only. Library developers should us
 
 <ApiMethod
   signature="void set_callback_on_scan_updated(std::function< void(Peripheral)> on_scan_updated)"
-  parameters={[{"name":"on_scan_updated","type":"std::function< void([Peripheral](#simpleble-peripheral))>"}]}
+  parameters={[{"name":"on_scan_updated","type":"std::function< void(Peripheral)>"}]}
 />
 
 <ApiMethod
   signature="void set_callback_on_scan_found(std::function< void(Peripheral)> on_scan_found)"
-  parameters={[{"name":"on_scan_found","type":"std::function< void([Peripheral](#simpleble-peripheral))>"}]}
+  parameters={[{"name":"on_scan_found","type":"std::function< void(Peripheral)>"}]}
 />
 
 <ApiMethod
@@ -198,7 +198,7 @@ This class is intended to be used by the user only. Library developers should us
 
 </ApiClass>
 
-## SimpleBLE::Peripheral [#simpleble-peripheral] [toc]
+## SimpleBLE::Peripheral [#simpleble-peripheral]
 
 <ApiClass name="SimpleBLE::Peripheral">
 
@@ -332,7 +332,7 @@ This class is intended to be used by the user only. Library developers should us
 
 </ApiClass>
 
-## SimpleBLE::Service [#simpleble-service] [toc]
+## SimpleBLE::Service [#simpleble-service]
 
 <ApiClass name="SimpleBLE::Service">
 
@@ -364,7 +364,7 @@ This class is intended to be used by the user only. Library developers should us
 
 </ApiClass>
 
-## SimpleBLE::Characteristic [#simpleble-characteristic] [toc]
+## SimpleBLE::Characteristic [#simpleble-characteristic]
 
 <ApiClass name="SimpleBLE::Characteristic">
 
@@ -416,7 +416,7 @@ This class is intended to be used by the user only. Library developers should us
 
 </ApiClass>
 
-## SimpleBLE::Descriptor [#simpleble-descriptor] [toc]
+## SimpleBLE::Descriptor [#simpleble-descriptor]
 
 <ApiClass name="SimpleBLE::Descriptor">
 
@@ -446,7 +446,7 @@ This class is intended to be used by the user only. Library developers should us
 
 The Local API is how this host advertises and serves GATT. `SimpleBLE::Peripheral` is a remote device; `SimpleBLE::Local::Peripheral` is this host. Create a local peripheral with [`Adapter::create_local_peripheral()`](#simpleble-adapter).
 
-## SimpleBLE::Local::CharacteristicCapability [#simpleble-local-characteristiccapability] [toc]
+## SimpleBLE::Local::CharacteristicCapability [#simpleble-local-characteristiccapability]
 
 Capabilities are passed to `add_characteristic` as a `std::set`. Each characteristic needs at least one.
 
@@ -458,7 +458,7 @@ Capabilities are passed to `add_characteristic` as a `std::set`. Each characteri
 | `NOTIFY` | Remote centrals can subscribe to notifications |
 | `INDICATE` | Remote centrals can subscribe to indications |
 
-## SimpleBLE::Local::Peripheral [#simpleble-local-peripheral] [toc]
+## SimpleBLE::Local::Peripheral [#simpleble-local-peripheral]
 
 <ApiClass name="SimpleBLE::Local::Peripheral" detailed="Local BLE peripheral hosted by this process.  A default-constructed [Peripheral](#simpleble-local-peripheral) object is not initialized. Calling any method other than `initialized()` on an uninitialized object will throw `SimpleBLE::Exception::NotInitialized`.">
 
@@ -547,7 +547,7 @@ The portable API does not select a local name. Linux, macOS, and iOS expose thei
 
 </ApiClass>
 
-## SimpleBLE::Local::Service [#simpleble-local-service] [toc]
+## SimpleBLE::Local::Service [#simpleble-local-service]
 
 <ApiClass name="SimpleBLE::Local::Service">
 
@@ -585,7 +585,7 @@ The portable API does not select a local name. Linux, macOS, and iOS expose thei
 
 </ApiClass>
 
-## SimpleBLE::Local::Characteristic [#simpleble-local-characteristic] [toc]
+## SimpleBLE::Local::Characteristic [#simpleble-local-characteristic]
 
 <ApiClass name="SimpleBLE::Local::Characteristic">
 
@@ -1286,7 +1286,7 @@ Result of queueing a notification or indication with `Device::notify()` or `Devi
 
 <ApiSection title="Safe API" id="safe-api">
 
-## SimpleBLE::Safe::Adapter [#simpleble-safe-adapter] [toc]
+## SimpleBLE::Safe::Adapter [#simpleble-safe-adapter]
 
 <ApiClass name="SimpleBLE::Safe::Adapter" detailed="Wrapper around the [Adapter](#simpleble-safe-adapter) class that provides a noexcept interface.  We use instances of this class directly and not through shared_ptr because this is just a wrapper around the [Adapter](#simpleble-safe-adapter) class, which is already managed by shared_ptr.">
 
@@ -1294,12 +1294,12 @@ Result of queueing a notification or indication with `Device::notify()` or `Devi
 
 <ApiMethod
   signature="Adapter(SimpleBLE::Adapter &adapter)"
-  parameters={[{"name":"adapter","type":"[SimpleBLE::Adapter](#simpleble-adapter) &"}]}
+  parameters={[{"name":"adapter","type":"SimpleBLE::Adapter &"}]}
 />
 
 <ApiMethod
   signature="Adapter(SimpleBLE::Adapter &&adapter)"
-  parameters={[{"name":"adapter","type":"[SimpleBLE::Adapter](#simpleble-adapter) &&"}]}
+  parameters={[{"name":"adapter","type":"SimpleBLE::Adapter &&"}]}
 />
 
 <ApiMethod
@@ -1347,12 +1347,12 @@ Result of queueing a notification or indication with `Device::notify()` or `Devi
 
 <ApiMethod
   signature="bool set_callback_on_scan_updated(std::function< void(SimpleBLE::Safe::Peripheral)> on_scan_updated) noexcept"
-  parameters={[{"name":"on_scan_updated","type":"std::function< void([SimpleBLE::Safe::Peripheral](#simpleble-safe-peripheral))>"}]}
+  parameters={[{"name":"on_scan_updated","type":"std::function< void(SimpleBLE::Safe::Peripheral)>"}]}
 />
 
 <ApiMethod
   signature="bool set_callback_on_scan_found(std::function< void(SimpleBLE::Safe::Peripheral)> on_scan_found) noexcept"
-  parameters={[{"name":"on_scan_found","type":"std::function< void([SimpleBLE::Safe::Peripheral](#simpleble-safe-peripheral))>"}]}
+  parameters={[{"name":"on_scan_found","type":"std::function< void(SimpleBLE::Safe::Peripheral)>"}]}
 />
 
 <ApiMethod
@@ -1376,7 +1376,7 @@ Result of queueing a notification or indication with `Device::notify()` or `Devi
 
 </ApiClass>
 
-## SimpleBLE::Safe::Peripheral [#simpleble-safe-peripheral] [toc]
+## SimpleBLE::Safe::Peripheral [#simpleble-safe-peripheral]
 
 <ApiClass name="SimpleBLE::Safe::Peripheral">
 
@@ -1384,12 +1384,12 @@ Result of queueing a notification or indication with `Device::notify()` or `Devi
 
 <ApiMethod
   signature="Peripheral(SimpleBLE::Peripheral &peripheral)"
-  parameters={[{"name":"peripheral","type":"[SimpleBLE::Peripheral](#simpleble-peripheral) &"}]}
+  parameters={[{"name":"peripheral","type":"SimpleBLE::Peripheral &"}]}
 />
 
 <ApiMethod
   signature="Peripheral(SimpleBLE::Peripheral &&peripheral)"
-  parameters={[{"name":"peripheral","type":"[SimpleBLE::Peripheral](#simpleble-peripheral) &&"}]}
+  parameters={[{"name":"peripheral","type":"SimpleBLE::Peripheral &&"}]}
 />
 
 <ApiMethod
@@ -1513,7 +1513,7 @@ Result of queueing a notification or indication with `Device::notify()` or `Devi
 
 <ApiSection title="External API" id="external-api">
 
-## kvn::bytearray [#kvn-bytearray] [toc]
+## kvn::bytearray [#kvn-bytearray]
 
 <ApiClass name="kvn::bytearray" brief="A class to handle byte arrays and their conversion from/to hex strings.">
 
