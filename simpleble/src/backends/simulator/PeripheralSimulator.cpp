@@ -70,7 +70,7 @@ uint16_t PeripheralSimulator::mtu() {
     auto link = connection();
     if (!link) return 0;
     std::lock_guard<std::mutex> lock(link->mutex);
-    return link->open ? link->mtu : 0;
+    return link->open ? link->mtu - 3 : 0;
 }
 
 void PeripheralSimulator::connect() {
@@ -295,11 +295,12 @@ void PeripheralSimulator::update_advertisement(const Advertisement& advertisemen
     advertisement_ = advertisement;
 }
 
-void PeripheralSimulator::handle_value(const BluetoothUUID& service, const BluetoothUUID& characteristic,
-                                       const ByteArray& value) {
+void PeripheralSimulator::handle_value(const std::shared_ptr<ConnectionCore>& link, const BluetoothUUID& service,
+                                       const BluetoothUUID& characteristic, const ByteArray& value) {
     std::function<void(ByteArray payload)> callback;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (connection_ != link) return;
         auto entry = value_callbacks_.find({service, characteristic});
         if (entry == value_callbacks_.end()) return;
         callback = entry->second;
@@ -345,8 +346,10 @@ std::pair<AttStatus, ByteArray> PeripheralSimulator::transact(Pdu pdu) {
     // request, the promise breaks and the wait below ends.
     auto promise = std::make_shared<std::promise<std::pair<AttStatus, ByteArray>>>();
     auto future = promise->get_future();
-    pdu.on_response = [promise = std::move(promise)](AttStatus status, ByteArray value) {
+    pdu.on_response = [promise = std::move(promise), link](AttStatus status, ByteArray value) {
+        std::lock_guard<std::mutex> lock(link->mutex);
         promise->set_value({status, std::move(value)});
+        link->transaction_cv.notify_all();
     };
 
     const bool sent = link->send_to_device(std::move(pdu));
@@ -355,9 +358,17 @@ std::pair<AttStatus, ByteArray> PeripheralSimulator::transact(Pdu pdu) {
     pdu.on_response = nullptr;
     if (!sent) throw Exception::NotConnected();
 
-    if (future.wait_for(ATT_TIMEOUT) != std::future_status::ready) {
+    std::unique_lock<std::mutex> lock(link->mutex);
+    if (!link->transaction_cv.wait_for(lock, ATT_TIMEOUT, [&]() {
+            return !link->open || future.wait_for(0s) == std::future_status::ready;
+        })) {
         throw Exception::OperationFailed("ATT transaction with the simulated device timed out");
     }
+    // A device handler may still own the promise after the connection closes.
+    if (future.wait_for(0s) != std::future_status::ready) {
+        throw Exception::OperationFailed("The simulated device disconnected before responding");
+    }
+    lock.unlock();
     try {
         return future.get();
     } catch (const std::future_error&) {

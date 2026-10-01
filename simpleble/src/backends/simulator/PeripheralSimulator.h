@@ -78,7 +78,8 @@ class PeripheralSimulator : public PeripheralBase, public std::enable_shared_fro
 
     // Simulation, called on the adapter's executor.
     void update_advertisement(const Simulation::Internal::Advertisement& advertisement);
-    void handle_value(const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value);
+    void handle_value(const std::shared_ptr<Simulation::Internal::ConnectionCore>& connection,
+                      const BluetoothUUID& service, const BluetoothUUID& characteristic, const ByteArray& value);
     void handle_disconnected(const std::shared_ptr<Simulation::Internal::ConnectionCore>& connection);
 
   private:

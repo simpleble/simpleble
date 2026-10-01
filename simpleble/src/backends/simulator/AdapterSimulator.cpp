@@ -34,13 +34,13 @@ BluetoothAddress AdapterSimulator::address() { return address_; }
 
 void AdapterSimulator::power_on() {
     powered_ = true;
-    executor_->enqueue([this]() { SAFE_CALLBACK_CALL(this->_callback_on_power_on); });
+    executor_->enqueue([self = shared_from_this()]() { SAFE_CALLBACK_CALL(self->_callback_on_power_on); });
 }
 
 void AdapterSimulator::power_off() {
     powered_ = false;
     scanning_ = false;
-    executor_->enqueue([this]() { SAFE_CALLBACK_CALL(this->_callback_on_power_off); });
+    executor_->enqueue([self = shared_from_this()]() { SAFE_CALLBACK_CALL(self->_callback_on_power_off); });
 }
 
 bool AdapterSimulator::is_powered() { return powered_; }
@@ -51,12 +51,12 @@ void AdapterSimulator::scan_start() {
         seen_.clear();
     }
     scanning_ = true;
-    executor_->enqueue([this]() { SAFE_CALLBACK_CALL(this->_callback_on_scan_start); });
+    executor_->enqueue([self = shared_from_this()]() { SAFE_CALLBACK_CALL(self->_callback_on_scan_start); });
 }
 
 void AdapterSimulator::scan_stop() {
     scanning_ = false;
-    executor_->enqueue([this]() { SAFE_CALLBACK_CALL(this->_callback_on_scan_stop); });
+    executor_->enqueue([self = shared_from_this()]() { SAFE_CALLBACK_CALL(self->_callback_on_scan_stop); });
 }
 
 void AdapterSimulator::scan_for(int timeout_ms) {

@@ -85,6 +85,7 @@ class scheduler {
             dropped.swap(_state->queue);
         }
         _state->cv.notify_one();
+        dropped.clear();
 
         if (std::this_thread::get_id() == _thread_id) return;
 

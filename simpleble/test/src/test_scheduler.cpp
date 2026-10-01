@@ -99,6 +99,28 @@ TEST(Scheduler, StopDropsPendingFunctions) {
     EXPECT_FALSE(ran.load());
 }
 
+TEST(Scheduler, StopReleasesPendingCapturesBeforeJoining) {
+    kvn::scheduler scheduler;
+    auto promise = std::make_shared<std::promise<void>>();
+    auto released = promise->get_future().share();
+    std::weak_ptr<std::promise<void>> pending = promise;
+    std::promise<void> started;
+    scheduler.enqueue([&]() {
+        started.set_value();
+        released.wait();
+    });
+    scheduler.schedule_after(1h, [promise]() {});
+    promise.reset();
+    started.get_future().wait();
+
+    auto stopping = std::async(std::launch::async, [&]() { scheduler.stop(); });
+    EXPECT_EQ(stopping.wait_for(500ms), std::future_status::ready);
+    // Release the running function even when the regression fails.
+    if (auto retained = pending.lock()) retained->set_value();
+    stopping.get();
+    EXPECT_TRUE(pending.expired());
+}
+
 TEST(Scheduler, StopFromOwnFunction) {
     std::atomic<bool> stopped{false};
     std::atomic<bool> later{false};

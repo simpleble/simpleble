@@ -124,7 +124,7 @@ int main() {
     }
 
     auto connect_ms = milliseconds_taken([&]() { monitor->connect(); });
-    log("Connected in ", connect_ms, " ms, MTU ", monitor->mtu());
+    log("Connected in ", connect_ms, " ms, payload ", monitor->mtu(), " bytes");
 
     for (int i = 0; i < 3; i++) {
         SimpleBLE::ByteArray location;

@@ -90,7 +90,7 @@ class EnvironmentCore : public std::enable_shared_from_this<EnvironmentCore> {
   private:
     void start_device(const std::shared_ptr<DeviceCore>& device);
     void advertising_event(std::shared_ptr<DeviceCore> device, uint64_t activation, uint64_t generation);
-    /** Connects the first central waiting for this device, if it heard the advertisement. */
+    /** Connects the first waiting central that heard the advertisement. */
     bool answer_connection_request(const std::shared_ptr<DeviceCore>& device);
     bool establish(const std::shared_ptr<DeviceCore>& device, const std::shared_ptr<ConnectAttempt>& attempt,
                    const std::shared_ptr<SimpleBLE::AdapterSimulator>& adapter);

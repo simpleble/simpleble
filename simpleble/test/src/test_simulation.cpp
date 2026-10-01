@@ -5,10 +5,14 @@
 #include <simpleble/SimpleBLE.h>
 #include <simpleble/Simulation.h>
 
+#include "backends/simulator/AdapterSimulator.h"
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -233,6 +237,44 @@ TEST(Simulation, BackendFollowsEnvironmentActivation) {
     EXPECT_FALSE(simulator_active());
 }
 
+TEST(Simulation, AdapterCallbacksSurviveEnvironmentDestruction) {
+    auto environment = std::make_unique<sim::Environment>();
+    auto host = environment->add_adapter("sim0", "00:11:22:33:44:55");
+    environment->activate();
+    auto adapter = simulator_adapter();
+    auto executor = SimpleBLE::AdapterSimulator::from(host.internal()).executor();
+    std::weak_ptr<SimpleBLE::AdapterBase> weak_adapter = host.internal();
+    std::promise<void> entered, release;
+    auto gate = release.get_future().share();
+    std::atomic<bool> alive_after_destruction{false};
+    std::atomic<int> callbacks{0};
+    adapter.set_callback_on_scan_start([&]() {
+        entered.set_value();
+        gate.wait();
+        auto weak = weak_adapter;
+        auto* alive = &alive_after_destruction;
+        host = sim::Adapter{};
+        adapter = SimpleBLE::Adapter{};
+        environment.reset();
+        *alive = !weak.expired();
+    });
+    auto count = [&]() { callbacks++; };
+    adapter.set_callback_on_scan_stop(count);
+    adapter.set_callback_on_power_off(count);
+    adapter.set_callback_on_power_on(count);
+    adapter.scan_start();
+    EXPECT_EQ(entered.get_future().wait_for(2s), std::future_status::ready);
+    adapter.scan_stop();
+    adapter.power_off();
+    adapter.power_on();
+    release.set_value();
+    executor->stop();
+
+    EXPECT_TRUE(alive_after_destruction.load());
+    EXPECT_EQ(callbacks.load(), 3);
+    EXPECT_TRUE(weak_adapter.expired());
+}
+
 TEST_F(SimulationTest, ScanReportsAdvertisement) {
     std::atomic<int> updates{0};
     adapter.set_callback_on_scan_updated([&](SimpleBLE::Peripheral) { updates++; });
@@ -259,7 +301,7 @@ TEST_F(SimulationTest, ConnectDiscoversServices) {
     peripheral.connect();
 
     EXPECT_TRUE(peripheral.is_connected());
-    EXPECT_EQ(peripheral.mtu(), 247);
+    EXPECT_EQ(peripheral.mtu(), 244);
     EXPECT_TRUE(eventually([&]() { return connected.load(); }));
     EXPECT_EQ(widget->connections().size(), 1u);
 
@@ -305,6 +347,57 @@ TEST_F(SimulationTest, ReadAndWrite) {
                  SimpleBLE::Exception::ServiceNotFound);
 }
 
+TEST_F(SimulationTest, MtuReportsUsablePayloadSize) {
+    auto peripheral = find_widget();
+    for (uint16_t mtu : {23, 247, 517}) {
+        widget->set_max_mtu(mtu);
+        peripheral.connect();
+        EXPECT_EQ(peripheral.mtu(), mtu - 3);
+        EXPECT_EQ(widget_connection().mtu(), mtu);
+        peripheral.disconnect();
+        EXPECT_EQ(peripheral.mtu(), 0);
+        EXPECT_TRUE(eventually([&]() { return widget->connections().empty(); }));
+    }
+}
+
+TEST_F(SimulationTest, DeactivationCancelsConnectionBeingEstablished) {
+    for (bool reactivate : {false, true}) {
+        SCOPED_TRACE(reactivate);
+        environment->activate();
+        auto peripheral = find_widget();
+        std::promise<void> held, release;
+        auto gate = release.get_future().share();
+        auto holding = std::async(std::launch::async, [&]() {
+            SimpleBLE::AdapterSimulator::from(host.internal()).update_policy([&](auto&) {
+                held.set_value();
+                gate.wait();
+            });
+        });
+        held.get_future().wait();
+        auto connecting = std::async(std::launch::async, [&]() {
+            try {
+                peripheral.connect();
+                return true;
+            } catch (const SimpleBLE::Exception::OperationFailed&) {
+                return false;
+            }
+        });
+        // Let the advertising event enter establish(), which waits for the policy lock.
+        EXPECT_EQ(connecting.wait_for(150ms), std::future_status::timeout);
+        environment->deactivate();
+        EXPECT_EQ(connecting.wait_for(500ms), std::future_status::ready);
+        if (reactivate) environment->activate();
+        release.set_value();
+        holding.get();
+
+        EXPECT_FALSE(connecting.get());
+        EXPECT_FALSE(peripheral.is_connected());
+        EXPECT_TRUE(widget->connections().empty());
+        EXPECT_NO_THROW(peripheral.disconnect());
+        environment->deactivate();
+    }
+}
+
 TEST_F(SimulationTest, Descriptors) {
     auto peripheral = connect_widget();
 
@@ -337,6 +430,56 @@ TEST_F(SimulationTest, Notifications) {
     peripheral.unsubscribe(SERVICE, DATA);
     EXPECT_TRUE(eventually([&]() { return !widget->subscribed.load(); }));
     EXPECT_EQ(widget->notify(connection, SERVICE, DATA, ByteArray("late")), sim::TxStatus::NOT_SUBSCRIBED);
+}
+
+TEST_F(SimulationTest, ReconnectDropsQueuedValuesFromPreviousConnection) {
+    auto executor = SimpleBLE::AdapterSimulator::from(host.internal()).executor();
+    for (bool indication : {false, true}) {
+        SCOPED_TRACE(indication);
+        auto peripheral = find_widget();
+        std::promise<void> entered, release;
+        auto gate = release.get_future().share();
+        std::atomic<int> connections{0}, received{0}, last_value{0};
+        peripheral.set_callback_on_connected([&]() {
+            if (++connections == 1) {
+                entered.set_value();
+                gate.wait();
+            }
+        });
+        peripheral.connect();
+        EXPECT_EQ(entered.get_future().wait_for(2s), std::future_status::ready);
+        auto subscribe = [&](std::function<void(ByteArray)> callback) {
+            if (indication) peripheral.indicate(SERVICE, DATA, std::move(callback));
+            else peripheral.notify(SERVICE, DATA, std::move(callback));
+        };
+        auto send = [&](uint8_t value) {
+            auto connection = widget_connection();
+            return indication ? widget->indicate(connection, SERVICE, DATA, {value})
+                              : widget->notify(connection, SERVICE, DATA, {value});
+        };
+        subscribe([](ByteArray) {});
+        auto completed = widget->tx_completions.load();
+        EXPECT_EQ(send(0x11), sim::TxStatus::QUEUED);
+        // TX completion follows delivery to the blocked central callback queue.
+        EXPECT_TRUE(eventually([&]() { return widget->tx_completions.load() > completed; }));
+        peripheral.disconnect();
+        peripheral.connect();
+        subscribe([&](ByteArray value) {
+            last_value = value.at(0);
+            received++;
+        });
+        release.set_value();
+        std::promise<void> drained;
+        executor->enqueue([&]() { drained.set_value(); });
+        EXPECT_EQ(drained.get_future().wait_for(2s), std::future_status::ready);
+        EXPECT_EQ(received.load(), 0);
+
+        EXPECT_EQ(send(0x22), sim::TxStatus::QUEUED);
+        EXPECT_TRUE(eventually([&]() { return last_value.load() == 0x22; }));
+        EXPECT_EQ(received.load(), 1);
+        peripheral.disconnect();
+        peripheral.set_callback_on_connected(nullptr);
+    }
 }
 
 TEST_F(SimulationTest, IndicationsWaitForConfirmation) {
@@ -596,6 +739,84 @@ TEST_F(SimulationTest, LostConnectionFailsPendingRequest) {
     auto start = std::chrono::steady_clock::now();
     EXPECT_THROW(peripheral.read(SERVICE, CONTROL), SimpleBLE::Exception::OperationFailed);
     EXPECT_LT(std::chrono::steady_clock::now() - start, 1s);
+}
+
+TEST(Simulation, DisconnectFailsRequestWhileDeviceHandlerIsRunning) {
+    class BlockedReader : public sim::Device {
+      public:
+        BlockedReader(std::shared_future<void> release)
+            : sim::Device("Blocked reader", "C0:FF:EE:00:00:01"), release(std::move(release)) {
+            set_advertising_interval(20ms);
+            add_service(SERVICE);
+            add_characteristic(SERVICE, CONTROL, {sim::Property::READ});
+        }
+
+        sim::ReadResult on_read(sim::Connection, const BluetoothUUID&, const BluetoothUUID&) override {
+            started.set_value();
+            release.wait();
+            return ByteArray{0x00};
+        }
+
+        std::promise<void> started;
+        std::shared_future<void> release;
+    };
+
+    std::promise<void> release;
+    sim::Environment environment;
+    auto host = environment.add_adapter("sim0", "00:11:22:33:44:55");
+    host.set_connection_interval(15ms);
+    auto device = environment.add_device<BlockedReader>(release.get_future().share());
+    environment.activate();
+    auto adapter = simulator_adapter();
+    adapter.scan_for(150);
+    auto peripheral = adapter.scan_get_results().at(0);
+    peripheral.connect();
+
+    auto read = std::async(std::launch::async, [&]() {
+        try {
+            peripheral.read(SERVICE, CONTROL);
+            return false;
+        } catch (const SimpleBLE::Exception::OperationFailed&) {
+            return true;
+        }
+    });
+    EXPECT_EQ(device->started.get_future().wait_for(2s), std::future_status::ready);
+    EXPECT_NO_THROW(peripheral.disconnect());
+    EXPECT_EQ(read.wait_for(500ms), std::future_status::ready);
+    // Always release the handler, including when the regression fails.
+    release.set_value();
+    EXPECT_TRUE(read.get());
+}
+
+TEST_F(SimulationTest, UnreachableCentralDoesNotBlockOtherConnectionAttempts) {
+    environment->add_adapter("sim1", "00:11:22:33:44:66");
+    auto nearby_adapter = simulator_adapter("sim1");
+    auto distant = find_widget();
+    auto nearby = find_widget(nearby_adapter);
+    auto radio = environment->link(host, widget);
+    radio.set_in_range(false);
+
+    auto connect = [](SimpleBLE::Peripheral& peripheral) {
+        try {
+            peripheral.connect();
+            return true;
+        } catch (const SimpleBLE::Exception::OperationFailed&) {
+            return false;
+        }
+    };
+    auto distant_attempt = std::async(std::launch::async, [&]() { return connect(distant); });
+    EXPECT_EQ(distant_attempt.wait_for(100ms), std::future_status::timeout);
+    auto nearby_attempt = std::async(std::launch::async, [&]() { return connect(nearby); });
+    EXPECT_EQ(nearby_attempt.wait_for(2s), std::future_status::ready);
+    EXPECT_TRUE(nearby.is_connected());
+
+    // The skipped attempt stays pending and can connect after coming back in range.
+    EXPECT_NO_THROW(nearby.disconnect());
+    radio.set_in_range(true);
+    EXPECT_EQ(distant_attempt.wait_for(2s), std::future_status::ready);
+    environment->deactivate();
+    EXPECT_TRUE(nearby_attempt.get());
+    EXPECT_TRUE(distant_attempt.get());
 }
 
 TEST_F(SimulationTest, DeviceServesSeveralCentrals) {

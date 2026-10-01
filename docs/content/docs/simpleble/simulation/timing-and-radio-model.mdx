@@ -111,7 +111,7 @@ With the defaults, the link is idle for most of each interval. The device's data
 
 ## MTU and data length
 
-- The MTU exchange is the first transaction on every connection. The result is the smaller of the adapter's 517 and the device's `set_max_mtu()`, which defaults to 247. `Peripheral::mtu()` and `Device::on_mtu_changed()` report it.
+- The MTU exchange is the first transaction on every connection. The result is the smaller of the adapter's 517 and the device's `set_max_mtu()`, which defaults to 247. `Connection::mtu()` and `Device::on_mtu_changed()` report this ATT MTU. `Peripheral::mtu()` reports the usable payload size, ATT MTU minus 3 bytes (244 by default).
 - Notifications and indications carry at most MTU - 3 bytes. `Device::notify()` and `Device::indicate()` truncate longer values.
 - The data length is the smaller of the device's `set_max_data_length()` and 251. The default of 27 matches devices without Data Length Extension: a 244-byte notification then takes 10 packets instead of 1.
 

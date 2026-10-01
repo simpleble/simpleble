@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <condition_variable>
 #include <deque>
 #include <future>
 #include <memory>
@@ -43,6 +44,7 @@ class ConnectionCore {
     std::shared_ptr<LinkCore> radio;
 
     mutable std::mutex mutex;
+    std::condition_variable transaction_cv;
     bool open = true;
     uint16_t mtu = 23;
     uint16_t client_mtu = 23;

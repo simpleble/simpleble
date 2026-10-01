@@ -338,39 +338,34 @@ void EnvironmentCore::advertising_event(std::shared_ptr<DeviceCore> device, uint
 }
 
 bool EnvironmentCore::answer_connection_request(const std::shared_ptr<DeviceCore>& device) {
-    std::shared_ptr<ConnectAttempt> attempt;
+    std::deque<std::shared_ptr<ConnectAttempt>> attempts;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         auto pending = pending_.find(device.get());
         if (pending == pending_.end()) return false;
 
-        auto& attempts = pending->second;
-        while (!attempts.empty() && !attempt) {
-            auto candidate = attempts.front();
+        auto& queue = pending->second;
+        for (auto it = queue.begin(); it != queue.end();) {
+            auto candidate = *it;
             std::lock_guard<std::mutex> attempt_lock(candidate->mutex);
             if (candidate->cancelled || candidate->adapter.expired()) {
-                attempts.pop_front();
-                continue;
+                it = queue.erase(it);
+            } else {
+                ++it;
             }
-            attempt = candidate;
         }
-    }
-    if (!attempt) return false;
-
-    // The central connects only if it heard this advertisement.
-    auto adapter = attempt->adapter.lock();
-    int16_t rssi;
-    if (!adapter || !receives(adapter.get(), device.get(), rssi)) return false;
-
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        auto pending = pending_.find(device.get());
-        // Deactivation may have taken the attempt meanwhile.
-        if (pending == pending_.end() || pending->second.empty() || pending->second.front() != attempt) return false;
-        pending->second.pop_front();
+        attempts = queue;
     }
 
-    return establish(device, attempt, adapter);
+    for (auto& attempt : attempts) {
+        // A central that misses this advertisement stays pending, without blocking the others.
+        auto adapter = attempt->adapter.lock();
+        int16_t rssi;
+        if (!adapter || !receives(adapter.get(), device.get(), rssi)) continue;
+
+        if (establish(device, attempt, adapter)) return true;
+    }
+    return false;
 }
 
 bool EnvironmentCore::establish(const std::shared_ptr<DeviceCore>& device,
@@ -412,18 +407,18 @@ bool EnvironmentCore::establish(const std::shared_ptr<DeviceCore>& device,
 
     std::shared_ptr<std::promise<std::shared_ptr<ConnectionCore>>> ready;
     {
-        std::lock_guard<std::mutex> lock(attempt->mutex);
+        // Keep the attempt pending until both connection lists are published, so deactivation cannot miss it.
+        std::scoped_lock lock(mutex_, device->mutex, attempt->mutex);
+        auto pending = pending_.find(device.get());
+        if (!active_ || pending == pending_.end()) return false;
+        auto it = std::find(pending->second.begin(), pending->second.end(), attempt);
+        // Deactivation and reactivation may have replaced the pending queue during setup.
+        if (it == pending->second.end()) return false;
+        pending->second.erase(it);
         if (attempt->cancelled) return false;
         attempt->connection = connection;
         ready = std::move(attempt->ready);
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
         connections_.push_back(connection);
-    }
-    {
-        std::lock_guard<std::mutex> lock(device->mutex);
         device->connections.push_back(connection);
     }
 
@@ -899,12 +894,12 @@ void EnvironmentCore::deliver_to_central(const std::shared_ptr<ConnectionCore>& 
             }
             auto central = connection->central;
             auto executor = connection->central_executor;
-            context.actions.push_back([central, executor, service = pdu.service, characteristic = pdu.characteristic,
-                                       value = std::move(pdu.value)]() {
-                executor->enqueue([central, service, characteristic, value]() {
+            context.actions.push_back([central, executor, connection, service = pdu.service,
+                                       characteristic = pdu.characteristic, value = std::move(pdu.value)]() {
+                executor->enqueue([central, connection, service, characteristic, value]() {
                     auto peripheral = central.lock();
                     if (!peripheral) return;
-                    peripheral->handle_value(service, characteristic, value);
+                    peripheral->handle_value(connection, service, characteristic, value);
                 });
             });
             return;
@@ -950,6 +945,7 @@ void EnvironmentCore::close_locked(const std::shared_ptr<ConnectionCore>& connec
     connection->indicate_subscriptions.clear();
     connection->pending_update.reset();
     connection->closed_promise.set_value();
+    connection->transaction_cv.notify_all();
 
     actions.push_back([this, connection]() {
         forget(connection);
