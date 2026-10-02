@@ -15,9 +15,9 @@ jobs:
           - { runner-os: ubuntu-22.04, os: linux, architecture: x86, container-image: dockcross/linux-x86 }
           - { runner-os: ubuntu-22.04, os: linux, architecture: aarch64, container-image: dockcross/linux-arm64 }
           - { runner-os: ubuntu-22.04, os: linux, architecture: armv6, container-image: dockcross/linux-armv6-lts }
-          - { runner-os: macos-14, os: macos, architecture: x64 } # Containers are not required.
-          - { runner-os: macos-14, os: macos, architecture: aarch64 } # Containers are not required.
-          - { runner-os: macos-14, os: ios, architecture: aarch64 } # Containers are not required.
+          - { runner-os: macos-15-intel, os: macos, architecture: x64 } # Containers are not required.
+          - { runner-os: macos-15, os: macos, architecture: aarch64 } # Containers are not required.
+          - { runner-os: macos-15, os: ios, architecture: aarch64 } # Containers are not required.
           - { runner-os: windows-2022, os: windows, architecture: x64 } # Containers are not required.
           - { runner-os: windows-2022, os: windows, architecture: x86 } # Containers are not required.
           - { runner-os: ubuntu-22.04, os: android, architecture: armeabi-v7a }
@@ -121,7 +121,7 @@ jobs:
       matrix:
         config:
           - { runner-os: ubuntu-22.04, os: linux, architecture: x64, container-image: dockcross/linux-x64 }
-          - { runner-os: macos-14, os: macos, architecture: x64 } # Containers are not required.
+          - { runner-os: macos-15-intel, os: macos, architecture: x64 } # Containers are not required.
           # - { runner-os: windows-2022, os: windows, architecture: x64 } # Containers are not required. # FIXME: Some issue with lib installation is messing with the build.
 
     steps:
