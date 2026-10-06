@@ -1,21 +1,74 @@
 ---
 title: Platform notes
-description: Windows, Android and Linux requirements for SimpleBLE.
+description: Windows, macOS, iOS, Android and Linux requirements for SimpleBLE.
 ---
 
-The current package includes Windows x64, Android ARM64 and Linux x86_64 libraries for
-Unity 6.3 LTS and 6.6.
+The package includes native libraries for all five targets below and is validated
+with Unity 6.3 LTS (6000.3.24f1) and 6.6 (6000.6.4f1).
 
 | Target | Settings |
 | --- | --- |
 | Windows | Windows 10/11, x86_64, BLE-capable adapter. |
+| macOS | macOS 14+, Apple Silicon or Intel, Bluetooth usage description and permission. |
+| iOS | iOS 15+, ARM64 physical devices, IL2CPP, Device SDK, Xcode signing and Bluetooth usage description. |
 | Android | Android 12 / API 31 or later, IL2CPP, ARM64. |
-| Linux | Ubuntu 22.04/24.04 x86_64, system D-Bus, BlueZ and a BLE adapter; acceptance pending. |
+| Linux | Ubuntu 22.04/24.04 x86_64, system D-Bus, BlueZ and a BLE adapter. |
+
+Native builds and package audits cover every target. Representative Unity binding
+acceptance includes 39 managed tests, macOS ARM64 and x86_64 IL2CPP players,
+high managed stripping, domain reload disabled, and real GATT operations on macOS
+and a physical iPhone. SimpleBLE's native backends are tested separately.
+
+iOS simulators, Mac Catalyst, tvOS, Linux ARM64, WebGL and consoles are outside
+this package's target set. Background Bluetooth behavior depends on the OS and
+the consuming application's configuration.
 
 ## Windows
 
 Turn on Bluetooth in Windows before scanning. Both the Editor and the built
 player use the host's Bluetooth adapter.
+
+## macOS
+
+In **Project Settings > Player > macOS > Other Settings**, set the minimum version
+to **14.0** or later and provide a **Bluetooth Usage Description** explaining your
+app's use of Bluetooth. The package checks both settings before building and
+writes the description to `NSBluetoothAlwaysUsageDescription` in the player's
+Info.plist. Sandboxed applications also need the Bluetooth entitlement
+(`com.apple.security.device.bluetooth`) in their signing configuration.
+
+Call `await Bluetooth.InitializeAsync()` on Unity's main thread before getting
+adapters. Allow Bluetooth access when macOS prompts. If access was denied, check
+**System Settings > Privacy & Security > Bluetooth**. Editor permission belongs
+to Unity itself; the project's usage description configures its built player.
+Verify the installed Editor's Info.plist contains a Bluetooth usage description
+before scanning hardware.
+
+The macOS Editor uses the host's CoreBluetooth backend, including when iOS is the
+selected build target. Test an iOS player's behavior on the physical device.
+
+## iOS
+
+Install **iOS Build Support**, select **iOS** in Build Profiles, and set the minimum
+iOS version to **15.0** or later with **Device SDK** selected. Use IL2CPP and a
+physical ARM64 iPhone or iPad. The package rejects simulator builds.
+
+The build callback links Foundation and CoreBluetooth into UnityFramework and
+adds `NSBluetoothAlwaysUsageDescription` to the exported Info.plist if absent.
+Replace the default description with your app's actual use of Bluetooth before
+deploying; an existing nonempty description is preserved. Background Bluetooth
+modes are not enabled automatically.
+
+Open the exported `Unity-iPhone.xcodeproj` in Xcode, select your development team
+under **Signing & Capabilities**, select a connected device, then build and run.
+Call `await Bluetooth.InitializeAsync()` before getting adapters. CoreBluetooth
+requests consent when the native adapter is first created; InitializeAsync does
+not display the Apple permission dialog itself.
+
+Keep both managed DLLs and their platform importer settings. macOS uses the
+dynamic binding; iOS uses the binding compiled for static linking to `__Internal`.
+Only one is enabled for each target. Test scanning, connection, GATT operations,
+notifications, disconnection and cleanup on actual hardware before distribution.
 
 ## Android
 
@@ -37,13 +90,6 @@ An Android build selected in the Windows Editor still uses the Windows Bluetooth
 backend during Play mode. Run the player on the Android device to use its radio.
 
 ## Linux
-
-Linux packaging, clean import, Editor native loading, IL2CPP player loading and
-repeated PLAIN Play sessions have passed local checks on both pinned Editors.
-Physical BLE discovery has also passed in the Unity 6.6 Editor and IL2CPP player.
-These checks ran on an Ubuntu 26.04 development host; release acceptance on
-Ubuntu 22.04/24.04 and connection, GATT read/write, notification and disconnection
-testing remain outstanding.
 
 Install the distribution's `bluez` and `libdbus-1-3` packages, ensure the system
 D-Bus and Bluetooth services are running, and enable the adapter before scanning.
