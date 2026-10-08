@@ -210,9 +210,9 @@ void wrap_peripheral(py::module& m) {
             kDocsPeripheralDescriptorWrite)
 
         .def("set_callback_on_connected", &SimpleBLE::Peripheral::set_callback_on_connected,
-             py::keep_alive<1, 2>(), kDocsPeripheralSetCallbackOnConnected)
+             py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsPeripheralSetCallbackOnConnected)
         .def("set_callback_on_disconnected", &SimpleBLE::Peripheral::set_callback_on_disconnected,
-             py::keep_alive<1, 2>(), kDocsPeripheralSetCallbackOnDisconnected);
+             py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsPeripheralSetCallbackOnDisconnected);
 }
 
 // clang-format on

@@ -22,6 +22,7 @@ Latency and throughput follow from the parameters you set, on a link with no oth
 | Link loss | Corrupted packets are retransmitted, two errors in a row close the event, and the supervision timeout ends a silent connection. |
 | Advertising | An interval plus a random 0-10 ms delay per event; connectable and non-connectable devices; advertising stops at the connection limit. |
 | Multiple connections | A device can serve several centrals, with separate MTU, interval, and subscriptions per connection. |
+| Local GATT | A simulated adapter can host a local peripheral. Other simulated centrals, including the same adapter, can discover it and exercise reads, writes, subscriptions, notifications, indications, and client callbacks. |
 
 ## Approximated
 
@@ -46,11 +47,10 @@ Latency and throughput follow from the parameters you set, on a link with no oth
 
 ## Not modeled
 
-- **Security.** Pairing, bonding, and encryption are not modeled, because most platforms do not expose them in a way SimpleBLE can use portably. `Peripheral::is_paired()` is always `false`, and `unpair()` does nothing. A device can still return `INSUFFICIENT_AUTHORIZATION` or an application error, to exercise the error paths.
+- **Security.** Connections pair automatically; `unpair()` clears the paired state. Authentication and encryption are not modeled. A device can return `INSUFFICIENT_AUTHORIZATION` or an application error to exercise the error paths.
 - **Radio features.** Only the LE 1M PHY is modeled: there is no 2M or Coded PHY, and no extended or periodic advertising.
 - **Service Changed.** The central reads the GATT database when it connects. Changes appear from the next connection.
-- **Adapter power.** `power_off()` stops scanning but leaves connections open.
-- **Other roles.** Simulated adapters cannot host a local peripheral: `create_local_peripheral()` throws `OperationNotSupported`. Simulated centrals that connect to your application are not modeled either.
+- **Adapter power.** Power changes update the adapter state and emit callbacks. `power_off()` stops scanning; connections and local hosts continue running.
 - **Operating system behavior.** GATT caching, permission prompts, the connection parameters and MTU each operating system picks, and the way each one reports errors.
 
 ## Things to consider
@@ -75,6 +75,8 @@ The simulator makes failures easy to trigger on demand:
 
 <Callout type="warn" title="More forgiving than hardware">
 In the simulator, calling a blocking SimpleBLE operation from inside a SimpleBLE callback works, because operations complete on the simulation's own thread. The same code deadlocks on macOS and stalls until a timeout on Linux and Android. Follow the rules in [Concurrency](../../fundamentals/concurrency) regardless.
+
+Local GATT read and write handlers run on the simulated device's own thread. They must return before that thread can handle another GATT operation, so do not call blocking central GATT operations from those handlers.
 </Callout>
 
 ### Keep simulations isolated and fast

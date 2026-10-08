@@ -101,6 +101,7 @@ class PeripheralSimulator : public PeripheralBase, public std::enable_shared_fro
     std::shared_ptr<Simulation::Internal::ConnectionCore> connection_;
     std::vector<Simulation::Internal::ServiceData> services_;
     std::map<Key, std::function<void(ByteArray payload)>> value_callbacks_;
+    bool paired_ = false;
 
     kvn::safe_callback<void()> callback_on_connected_;
     kvn::safe_callback<void()> callback_on_disconnected_;

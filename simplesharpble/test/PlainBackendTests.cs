@@ -63,6 +63,7 @@ public sealed class PlainBackendTests
     public void PeripheralOutlivesAdapterAndSupportsConnectionState()
     {
         using var adapter = OpenAdapter();
+        adapter.ScanFor(TimeSpan.FromMilliseconds(250));
         var peripherals = adapter.ScanGetResults();
         try
         {
@@ -79,7 +80,7 @@ public sealed class PlainBackendTests
             peripheral.Connect();
             Assert.True(peripheral.IsConnected);
             Assert.True(peripheral.IsPaired);
-            Assert.Equal(247, peripheral.Mtu);
+            Assert.Equal(244, peripheral.Mtu);
             peripheral.Disconnect();
             Assert.False(peripheral.IsConnected);
             peripheral.Unpair();

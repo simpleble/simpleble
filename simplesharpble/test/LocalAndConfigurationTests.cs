@@ -141,10 +141,31 @@ public sealed class LocalAndConfigurationTests
         })));
     }
     [Fact]
-    public void PlainBackendReportsUnsupportedHostingAsManagedError()
+    public void PlainBackendHostsLocalGattServices()
     {
         var adapters = Adapter.GetAdapters();
-        try { Assert.Equal(BleErrorCode.OperationNotSupported, Assert.Throws<BleException>(() => adapters[0].CreateLocalPeripheral()).Code); }
+        try
+        {
+            using var host = adapters[0].CreateLocalPeripheral();
+            using var service = host.AddService(GattTests.Uuid);
+            using var characteristic = service.AddCharacteristic(GattTests.Uuid, CharacteristicCapability.Read);
+            byte[] expected = [0, 255, 128];
+            characteristic.Value = expected;
+            host.Start();
+            Assert.True(host.IsStarted);
+            Assert.True(host.IsAdvertising);
+            adapters[0].ScanFor(TimeSpan.FromMilliseconds(250));
+            var peers = adapters[0].ScanGetResults();
+            try
+            {
+                var peer = Assert.Single(peers, p => p.Identifier == "Plain Adapter Peripheral");
+                peer.Connect();
+                Assert.Equal(expected, peer.Read(GattTests.Uuid, GattTests.Uuid));
+                host.Stop();
+                Assert.False(peer.IsConnected);
+            }
+            finally { foreach (var peer in peers) peer.Dispose(); }
+        }
         finally { foreach (var adapter in adapters) adapter.Dispose(); }
     }
 

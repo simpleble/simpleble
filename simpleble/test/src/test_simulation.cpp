@@ -52,13 +52,15 @@ class Widget : public sim::Device {
         set_value(SERVICE, CONTROL, USER_DESCRIPTION, "Control");
     }
 
-    sim::AttStatus on_write_request(sim::Connection, const BluetoothUUID&, const BluetoothUUID& characteristic,
-                                    const ByteArray& value) override {
+    sim::AttStatus on_write_request(sim::Connection connection, const BluetoothUUID& service,
+                                    const BluetoothUUID& characteristic, const ByteArray& value) override {
         if (characteristic == CONTROL && value.size() != 1) return sim::AttStatus::INVALID_ATTRIBUTE_VALUE_LENGTH;
-        return sim::AttStatus::SUCCESS;
+        return Device::on_write_request(connection, service, characteristic, value);
     }
 
-    void on_write_command(sim::Connection, const BluetoothUUID&, const BluetoothUUID&, const ByteArray&) override {
+    void on_write_command(sim::Connection connection, const BluetoothUUID& service, const BluetoothUUID& characteristic,
+                          const ByteArray& value) override {
+        Device::on_write_command(connection, service, characteristic, value);
         commands++;
     }
 
@@ -118,16 +120,9 @@ bool eventually(Condition condition, std::chrono::milliseconds timeout = 3s) {
     return condition();
 }
 
-bool simulator_active() {
-    for (auto& backend : SimpleBLE::Backend::get_backends()) {
-        if (backend.identifier() == "Simulator") return true;
-    }
-    return false;
-}
-
 SimpleBLE::Adapter simulator_adapter(const std::string& identifier = "sim0") {
     for (auto& backend : SimpleBLE::Backend::get_backends()) {
-        if (backend.identifier() != "Simulator") continue;
+        if (backend.identifier() != (SIMPLEBLE_BACKEND_PLAIN ? "Plain" : "Simulator")) continue;
         for (auto& adapter : backend.adapters()) {
             if (adapter.identifier() == identifier) return adapter;
         }
@@ -215,26 +210,29 @@ std::vector<size_t> bursts(const std::vector<std::chrono::steady_clock::time_poi
 
 }  // namespace
 
-TEST(Simulation, BackendFollowsEnvironmentActivation) {
-    EXPECT_FALSE(simulator_active());
+TEST(Simulation, EnvironmentActivationSelectsAdapters) {
+    EXPECT_THROW(simulator_adapter(), std::runtime_error);
     {
         sim::Environment environment;
         environment.add_adapter("sim0", "00:11:22:33:44:55");
-        EXPECT_FALSE(simulator_active());
+        EXPECT_FALSE(environment.is_active());
+        EXPECT_THROW(simulator_adapter(), std::runtime_error);
 
         environment.activate();
-        EXPECT_TRUE(simulator_active());
+        EXPECT_TRUE(environment.is_active());
         EXPECT_EQ(simulator_adapter().identifier(), "sim0");
 
         sim::Environment other;
         EXPECT_THROW(other.activate(), SimpleBLE::Exception::OperationFailed);
 
         environment.deactivate();
-        EXPECT_FALSE(simulator_active());
+        EXPECT_FALSE(environment.is_active());
+        EXPECT_THROW(simulator_adapter(), std::runtime_error);
         other.activate();
-        EXPECT_TRUE(simulator_active());
+        EXPECT_TRUE(other.is_active());
+        EXPECT_THROW(simulator_adapter(), std::runtime_error);
     }
-    EXPECT_FALSE(simulator_active());
+    EXPECT_THROW(simulator_adapter(), std::runtime_error);
 }
 
 TEST(Simulation, AdapterCallbacksSurviveEnvironmentDestruction) {
@@ -301,6 +299,7 @@ TEST_F(SimulationTest, ConnectDiscoversServices) {
     peripheral.connect();
 
     EXPECT_TRUE(peripheral.is_connected());
+    EXPECT_TRUE(peripheral.is_paired());
     EXPECT_EQ(peripheral.mtu(), 244);
     EXPECT_TRUE(eventually([&]() { return connected.load(); }));
     EXPECT_EQ(widget->connections().size(), 1u);
@@ -567,7 +566,7 @@ TEST_F(SimulationTest, EnvironmentDestroyedWhileConnected) {
     auto peripheral = connect_widget();
     environment.reset();
 
-    EXPECT_FALSE(simulator_active());
+    EXPECT_THROW(simulator_adapter(), std::runtime_error);
     EXPECT_FALSE(peripheral.is_connected());
     EXPECT_THROW(peripheral.read(SERVICE, CONTROL), SimpleBLE::Exception::NotConnected);
     EXPECT_EQ(widget->disconnections.load(), 1);

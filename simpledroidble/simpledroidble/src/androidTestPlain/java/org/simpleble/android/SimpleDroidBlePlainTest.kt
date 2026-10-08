@@ -41,7 +41,6 @@ class SimpleDroidBlePlainTest {
         assertSame(peripheral, scanUpdated.await())
         assertTrue(adapter.scanIsActive)
         assertSame(peripheral, adapter.scanGetResults().single())
-        assertSame(peripheral, adapter.getPairedPeripherals().single())
 
         val scanStopped = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(2_000) { adapter.onScanStop.first() }
@@ -63,7 +62,8 @@ class SimpleDroidBlePlainTest {
         connected.await()
         assertTrue(peripheral.isConnected)
         assertTrue(peripheral.isPaired)
-        assertEquals(247, peripheral.mtu)
+        assertEquals(244, peripheral.mtu)
+        assertSame(peripheral, adapter.getPairedPeripherals().single())
 
         val services = peripheral.services()
         assertEquals(2, services.size)
@@ -80,7 +80,7 @@ class SimpleDroidBlePlainTest {
         val payload = withTimeout(3_000) {
             peripheral.notify(battery.uuid, battery.characteristics.single().uuid).first()
         }
-        assertArrayEquals("Hello from notify".encodeToByteArray(), payload)
+        assertArrayEquals(byteArrayOf(100), payload)
 
         repeat(250) {
             assertEquals(2, peripheral.services().size)

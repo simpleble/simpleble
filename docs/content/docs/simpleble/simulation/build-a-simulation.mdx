@@ -138,17 +138,17 @@ Override the events the device needs. The defaults serve the stored values.
 | `on_mtu_changed(connection, mtu)` | The MTU exchange completed. | Nothing |
 | `on_connection_interval_changed(connection, interval)` | A new connection interval took effect. | Nothing |
 | `on_read(connection, service, characteristic)` | The central read a characteristic. | Returns the stored value |
-| `on_write_request(connection, service, characteristic, value)` | The central wrote with a response. | Returns `SUCCESS` |
-| `on_write_command(connection, service, characteristic, value)` | The central wrote without a response. | Nothing |
+| `on_write_request(connection, service, characteristic, value)` | The central wrote with a response. | Stores the value and returns `SUCCESS` |
+| `on_write_command(connection, service, characteristic, value)` | The central wrote without a response. | Stores the value |
 | `on_subscribed(connection, service, characteristic, kind)` | The central enabled notifications or indications. | Nothing |
 | `on_unsubscribed(connection, service, characteristic)` | The central disabled them. | Nothing |
 | `on_indication_confirmed(connection, service, characteristic)` | The central confirmed an indication. | Nothing |
 | `on_tx_complete(connection)` | TX buffers were freed on this connection. | Nothing |
 | `on_read_descriptor(...)` | The central read a descriptor other than the CCCD. | Returns the stored value |
-| `on_write_descriptor(...)` | The central wrote a descriptor other than the CCCD. | Returns `SUCCESS` |
+| `on_write_descriptor(...)` | The central wrote a descriptor other than the CCCD. | Stores the value and returns `SUCCESS` |
 | `on_timer(id)` | A timer started with `start_timer(id, period)` fired. | Nothing |
 
-- When `on_write_request` or `on_write_descriptor` returns `SUCCESS`, the simulation stores the value after the handler returns. The handler still sees the previous value through `value()`. A write command has no response, so its value is always stored.
+- Write handlers own storage. Overrides can call the base handler to store the incoming value, use `set_value()` to store a different value, or leave it unchanged. Returning `SUCCESS` acknowledges a write without storing anything automatically.
 - UUIDs passed to events are lowercase. Compare them against lowercase constants.
 - Operations a characteristic does not support fail on the central with `OperationNotSupported`, as they do on hardware backends, and never reach the device.
 
@@ -169,7 +169,7 @@ sim::AttStatus on_write_request(sim::Connection connection, const SimpleBLE::Blu
     if (value.size() != 1) return sim::AttStatus::INVALID_ATTRIBUTE_VALUE_LENGTH;
     // Application errors use codes 0x80 to 0x9F.
     if (value[0] > 2) return static_cast<sim::AttStatus>(0x80);
-    return sim::AttStatus::SUCCESS;
+    return sim::Device::on_write_request(connection, service, characteristic, value);
 }
 ```
 

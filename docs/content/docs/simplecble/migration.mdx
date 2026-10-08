@@ -198,7 +198,7 @@ Logging setters return `void` and have no error argument. Configuration function
 
 - **Backends:** `simpleble_backend_*` enumerates backends, checks their Bluetooth status, and obtains their adapters. Release returned backend handles with `simpleble_backend_release_handle()`. Global adapter enumeration remains available.
 - **Local hosting:** Create a local peripheral from an adapter, add advertised services, GATT services and characteristics, then start and stop it. Local objects have separate owned handles and release functions. See [local hosting](./tutorial#local-peripheral-hosting).
-- **Advanced APIs:** Dongl pairing callbacks, Apple cached-peripheral lookup, platform-specific advertisement names, and Android JVM/context access are declared in `simplecble/advanced.h`. The OS-specific functions require their native backend build; Plain does not implement them.
+- **Advanced APIs:** Dongl pairing callbacks, Apple cached-peripheral lookup, platform-specific advertisement names, and Android JVM/context access are declared in `simplecble/advanced.h`. The OS-specific functions require their native backend build.
 - **Build definitions:** Linking the CMake `simpleble` target propagates `SIMPLEBLE_BACKEND_*` availability definitions to its consumers. Dongl is always built and defines `SIMPLEBLE_BACKEND_DONGL=1`. These describe the build, not the presence of hardware at runtime.
 
 The [API reference](./api) contains the complete current signatures. The [examples](./examples) show the updated scan, connect, and notification flows.

@@ -23,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Fixed**
 
--
+- (Python) Fixed GIL deadlocks when replacing or clearing callbacks.
 
 **Removed**
 
@@ -76,7 +76,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed truncated reads of long values.
 - (Dongl) Fixed a late response being returned for the next command.
 - (Dongl) Fixed data races on advertising data during scans.
-- (SimpleBLE/SimpleCBLE) Corrected advanced API build guards for Plain builds and non-Apple platforms.
+- (SimpleBLE/SimpleCBLE) Corrected advanced API build guards for non-Apple platforms.
 - (SimpleJavaBLE) Fixed JPMS compatibility with a stable automatic module name.
 - (SimpleCBLE) Fixed out-of-bounds reads when copying short service, characteristic, and descriptor UUIDs.
 - (SimpleCBLE) Fixed installed headers, CMake package configuration, and shared-library dependency lookup.
@@ -103,7 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (MacOS/iOS) Added advanced retrieval of cached CoreBluetooth peripherals by UUID.
 - (Python) Completed configuration bindings and exposed backend enumeration and advanced cached CoreBluetooth peripheral retrieval.
 - (SimpleDroidBLE) Added permission helpers, paired peripherals, write operations, and descriptor access.
-- (SimpleDroidBLE) Added the SimpleBLE Explorer example and a PLAIN test build for simulation.
+- (SimpleDroidBLE) Added the SimpleBLE Explorer example.
 - (SimpleDroidBLE) Published SimpleDroidBLE and SimpleDroidBridge on Maven Central with native libraries for all four supported Android ABIs.
 - (SimpleJavaBLE) Published SimpleJavaBLE on Maven Central with bundled native libraries for Windows, macOS, and Linux.
 - (Windows) Added support for scanning extended advertisements.
@@ -530,7 +530,6 @@ This entire series is dedicated to reviewing and updating the license terms of t
 
 **Added**
 
--  Option to build SimpleBLE plain-flavored (without any BLE code) for testing and debugging purposes.
 -  Support for advertized services.
 -  Support for GATT Characteristic properties.
 -  Retrieve the MTU value of an established connection. *(Thanks Marco Cruz!)*

@@ -63,7 +63,7 @@ class EnvironmentCore : public std::enable_shared_from_this<EnvironmentCore> {
 
     static std::shared_ptr<EnvironmentCore> active();
 
-    void activate();
+    void activate(bool publish = true);
     void deactivate();
     bool is_active() const;
     void shutdown();
@@ -72,6 +72,7 @@ class EnvironmentCore : public std::enable_shared_from_this<EnvironmentCore> {
                                                              const BluetoothAddress& address);
     std::vector<std::shared_ptr<SimpleBLE::AdapterSimulator>> adapters() const;
     void add_device(std::shared_ptr<Device> device);
+    void remove_device(const std::shared_ptr<Device>& device);
 
     /** The radio link between an adapter and a device, created on first use. */
     std::shared_ptr<LinkCore> link(const SimpleBLE::AdapterSimulator* adapter, const DeviceCore* device);

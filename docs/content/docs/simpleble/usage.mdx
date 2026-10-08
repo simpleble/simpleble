@@ -130,12 +130,6 @@ Note that if you want to modify the build configuration, you can do so by passin
 cmake -S <path-to-simpleble> -B build_simpleble -DBUILD_SHARED_LIBS=TRUE
 ```
 
-To build a plain-flavored version of the library, set the `SIMPLEBLE_PLAIN` CMake variable to `TRUE`:
-
-```bash
-cmake -S <path-to-simpleble> -B build_simpleble -DSIMPLEBLE_PLAIN=TRUE
-```
-
 To modify the log level, set the `SIMPLEBLE_LOG_LEVEL` CMake variable to one of the following values: `VERBOSE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`:
 
 ```bash

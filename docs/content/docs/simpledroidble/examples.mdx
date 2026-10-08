@@ -25,10 +25,4 @@ cd examples/simpleble-android
 ./gradlew :app:assembleDebug
 ```
 
-Install the APK on an Android API 31+ device with BLE support. For deterministic emulator development, build the PLAIN test build instead:
-
-```bash
-./gradlew :app:assemblePlain
-```
-
-The repository-only PLAIN build uses the same Kotlin and JNI layers with SimpleBLE's simulated backend. It supports the Explorer scan, connect, service, read, and notification workflow without Bluetooth hardware. Use the regular build on a physical phone before claiming real scan, connection, reconnection, or GATT behavior is verified.
+Install the APK on an Android API 31+ device with BLE support.

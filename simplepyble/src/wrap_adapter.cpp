@@ -110,12 +110,12 @@ void wrap_adapter(py::module& m) {
         .def("scan_is_active", &SimpleBLE::Adapter::scan_is_active, kDocsAdapterScanIsActive)
         .def("scan_for", &SimpleBLE::Adapter::scan_for, py::call_guard<py::gil_scoped_release>(), kDocsAdapterScanFor)
         .def("scan_get_results", &SimpleBLE::Adapter::scan_get_results, kDocsAdapterScanGetResults)
-        .def("set_callback_on_scan_start", &SimpleBLE::Adapter::set_callback_on_scan_start, py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanStart)
-        .def("set_callback_on_scan_stop", &SimpleBLE::Adapter::set_callback_on_scan_stop, py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanStop)
-        .def("set_callback_on_scan_found", &SimpleBLE::Adapter::set_callback_on_scan_found, py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanFound)
-        .def("set_callback_on_scan_updated", &SimpleBLE::Adapter::set_callback_on_scan_updated, py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanUpdated)
-        .def("set_callback_on_power_on", &SimpleBLE::Adapter::set_callback_on_power_on, py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnPowerOn)
-        .def("set_callback_on_power_off", &SimpleBLE::Adapter::set_callback_on_power_off, py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnPowerOff)
+        .def("set_callback_on_scan_start", &SimpleBLE::Adapter::set_callback_on_scan_start, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanStart)
+        .def("set_callback_on_scan_stop", &SimpleBLE::Adapter::set_callback_on_scan_stop, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanStop)
+        .def("set_callback_on_scan_found", &SimpleBLE::Adapter::set_callback_on_scan_found, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanFound)
+        .def("set_callback_on_scan_updated", &SimpleBLE::Adapter::set_callback_on_scan_updated, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnScanUpdated)
+        .def("set_callback_on_power_on", &SimpleBLE::Adapter::set_callback_on_power_on, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnPowerOn)
+        .def("set_callback_on_power_off", &SimpleBLE::Adapter::set_callback_on_power_off, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnPowerOff)
         .def("get_paired_peripherals", &SimpleBLE::Adapter::get_paired_peripherals, kDocsAdapterGetPairedPeripherals)
         .def("get_connected_peripherals", &SimpleBLE::Adapter::get_connected_peripherals, kDocsAdapterGetConnectedPeripherals);
 }

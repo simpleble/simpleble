@@ -8,6 +8,7 @@
 
 #include "BuilderBase.h"
 #include "CommonUtils.h"
+#include "LocalPeripheralSimulator.h"
 #include "PeripheralSimulator.h"
 
 using namespace SimpleBLE;
@@ -76,7 +77,20 @@ SharedPtrVector<PeripheralBase> AdapterSimulator::scan_get_results() {
     return results;
 }
 
-SharedPtrVector<PeripheralBase> AdapterSimulator::get_paired_peripherals() { return {}; }
+SharedPtrVector<PeripheralBase> AdapterSimulator::get_paired_peripherals() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    SharedPtrVector<PeripheralBase> results;
+    for (auto& [address, peripheral] : peripherals_) {
+        if (peripheral->is_paired()) results.push_back(peripheral);
+    }
+    return results;
+}
+
+std::shared_ptr<Local::PeripheralBase> AdapterSimulator::create_local_peripheral() {
+    auto environment = environment_.lock();
+    if (!environment) throw Exception::InvalidReference();
+    return Local::make_simulated_peripheral(environment, shared_from_this());
+}
 
 SharedPtrVector<PeripheralBase> AdapterSimulator::get_connected_peripherals() {
     std::lock_guard<std::mutex> lock(mutex_);

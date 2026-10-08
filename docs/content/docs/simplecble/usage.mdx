@@ -84,6 +84,6 @@ int main(void) {
 }
 ```
 
-Use backend enumeration when selecting a particular implementation; see [Choose a backend](./tutorial#choose-a-backend). `SIMPLEBLE_PLAIN=ON` builds the simulation backend for testing without a native Bluetooth stack. It does not provide native advanced APIs.
+Use backend enumeration when selecting a particular implementation; see [Choose a backend](./tutorial#choose-a-backend).
 
 The public CMake definitions `SIMPLEBLE_BACKEND_*` describe which backends were built. The `simpleble` target propagates them to targets that link it; `SIMPLEBLE_BACKEND_DONGL` is always `1`. Runtime enumeration and Bluetooth-status queries determine what is actually available to the application.

@@ -75,8 +75,8 @@ std::shared_ptr<EnvironmentCore> EnvironmentCore::active() {
     return g_active.lock();
 }
 
-void EnvironmentCore::activate() {
-    {
+void EnvironmentCore::activate(bool publish) {
+    if (publish) {
         std::lock_guard<std::mutex> lock(g_active_mutex);
         auto current = g_active.lock();
         if (current.get() == this) return;
@@ -162,7 +162,7 @@ void EnvironmentCore::add_device(std::shared_ptr<Device> device) {
     auto core = device->internal();
     {
         std::lock_guard<std::mutex> lock(core->mutex);
-        if (!core->self.expired()) throw Exception::OperationFailed("The device already belongs to an environment");
+        if (!core->environment.expired()) throw Exception::OperationFailed("The device already belongs to an environment");
         core->self = device;
         core->environment = weak_from_this();
     }
@@ -176,6 +176,41 @@ void EnvironmentCore::add_device(std::shared_ptr<Device> device) {
 
     if (!active) return;
     start_device(core);
+}
+
+void EnvironmentCore::remove_device(const std::shared_ptr<Device>& device) {
+    auto core = device->internal();
+    std::vector<std::shared_ptr<ConnectionCore>> connections;
+    std::deque<std::shared_ptr<ConnectAttempt>> pending;
+    {
+        std::scoped_lock lock(mutex_, core->mutex);
+        if (core->environment.lock().get() != this) return;
+
+        core->environment.reset();
+        ++core->advertising_generation;
+        core->timers.clear();
+
+        for (auto& weak : core->connections) {
+            if (auto connection = weak.lock()) connections.push_back(connection);
+        }
+        pending.swap(pending_[core.get()]);
+        pending_.erase(core.get());
+
+        devices_.erase(std::remove(devices_.begin(), devices_.end(), device), devices_.end());
+        for (auto it = links_.begin(); it != links_.end();) {
+            if (it->first.second == core.get()) {
+                it = links_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    for (auto& attempt : pending) {
+        std::lock_guard<std::mutex> lock(attempt->mutex);
+        attempt->ready.reset();
+    }
+    for (auto& connection : connections) close(connection);
 }
 
 std::shared_ptr<LinkCore> EnvironmentCore::link(const AdapterSimulator* adapter, const DeviceCore* device) {
@@ -192,8 +227,8 @@ std::shared_future<std::shared_ptr<ConnectionCore>> EnvironmentCore::request_con
     attempt->ready = std::make_shared<std::promise<std::shared_ptr<ConnectionCore>>>();
     auto ready = attempt->ready->get_future().share();
 
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!active_) {
+    std::scoped_lock lock(mutex_, device->mutex);
+    if (!active_ || device->environment.lock().get() != this || !device->advertisement.connectable) {
         // Dropping the promise fails the attempt right away.
         attempt->ready.reset();
         return ready;
@@ -827,13 +862,9 @@ void EnvironmentCore::handle_request(const std::shared_ptr<ConnectionCore>& conn
                 }
                 case PduType::WRITE_REQUEST:
                     status = device.on_write_request(handle, pdu.service, pdu.characteristic, pdu.value);
-                    if (status == AttStatus::SUCCESS) {
-                        device.set_value(pdu.service, pdu.characteristic, pdu.value);
-                    }
                     break;
                 case PduType::WRITE_COMMAND:
                     device.on_write_command(handle, pdu.service, pdu.characteristic, pdu.value);
-                    device.set_value(pdu.service, pdu.characteristic, pdu.value);
                     return;
                 case PduType::READ_DESCRIPTOR: {
                     auto result = device.on_read_descriptor(handle, pdu.service, pdu.characteristic, pdu.descriptor);
@@ -844,9 +875,6 @@ void EnvironmentCore::handle_request(const std::shared_ptr<ConnectionCore>& conn
                 case PduType::WRITE_DESCRIPTOR:
                     status = device.on_write_descriptor(handle, pdu.service, pdu.characteristic, pdu.descriptor,
                                                         pdu.value);
-                    if (status == AttStatus::SUCCESS) {
-                        device.set_value(pdu.service, pdu.characteristic, pdu.descriptor, pdu.value);
-                    }
                     break;
                 default:
                     return;

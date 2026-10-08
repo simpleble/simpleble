@@ -10,7 +10,7 @@ try
         using var peripheral = args.Peripheral;
         found.TrySetResult(peripheral.Identifier);
     };
-    await adapter.ScanForAsync(TimeSpan.Zero);
+    await adapter.ScanForAsync(TimeSpan.FromMilliseconds(250));
     if (await found.Task.WaitAsync(TimeSpan.FromSeconds(5)) != "Plain Peripheral")
         throw new InvalidOperationException("Expected the PLAIN peripheral.");
     Console.WriteLine("PASS: NativeAOT async scan and callback.");

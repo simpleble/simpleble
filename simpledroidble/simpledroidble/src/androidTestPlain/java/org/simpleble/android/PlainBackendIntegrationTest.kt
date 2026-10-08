@@ -1,6 +1,7 @@
 package org.simpleble.android
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.buffer
@@ -53,12 +54,12 @@ class PlainBackendIntegrationTest {
         assertTrue(characteristic.canRead)
         assertTrue(characteristic.canNotify)
         assertArrayEquals(
-            byteArrayOf(),
+            byteArrayOf(100),
             activePeripheral.read(service.uuid, characteristic.uuid)
         )
         val descriptor = characteristic.descriptors.single()
         assertArrayEquals(
-            byteArrayOf(),
+            byteArrayOf(0x00, 0x00),
             activePeripheral.read(
                 service.uuid,
                 characteristic.uuid,
@@ -73,7 +74,9 @@ class PlainBackendIntegrationTest {
         )
 
         val writeService = services.first { it.uuid == BluetoothUUID("0000fff0-0000-1000-8000-00805f9b34fb") }
-        val writeCharacteristic = writeService.characteristics.single()
+        val writeCharacteristic = writeService.characteristics.single {
+            it.uuid == BluetoothUUID("0000fff1-0000-1000-8000-00805f9b34fb")
+        }
         assertTrue(writeCharacteristic.canWriteRequest)
         assertTrue(writeCharacteristic.canWriteCommand)
         activePeripheral.writeRequest(
@@ -84,7 +87,17 @@ class PlainBackendIntegrationTest {
         activePeripheral.writeCommand(
             writeService.uuid,
             writeCharacteristic.uuid,
-            byteArrayOf(0x03, 0x04)
+            byteArrayOf(0x00, 0x7f, 0x80.toByte(), 0xff.toByte())
+        )
+        assertArrayEquals(
+            byteArrayOf(0x00, 0x7f, 0x80.toByte(), 0xff.toByte()),
+            activePeripheral.read(writeService.uuid, writeCharacteristic.uuid)
+        )
+        assertArrayEquals(
+            byteArrayOf(0x00, 0x7f, 0x80.toByte(), 0xff.toByte()),
+            withTimeout(3_000) {
+                activePeripheral.indicate(writeService.uuid, writeCharacteristic.uuid).first()
+            }
         )
 
         val firstPayload = withTimeout(3_000) {
@@ -93,7 +106,7 @@ class PlainBackendIntegrationTest {
                 characteristic.uuid
             ).first()
         }
-        assertEquals("Hello from notify", firstPayload.decodeToString())
+        assertArrayEquals(byteArrayOf(100), firstPayload)
 
         var payloadCount = 0
         val overflow = runCatching {
@@ -120,9 +133,53 @@ class PlainBackendIntegrationTest {
                 characteristic.uuid
             ).first()
         }
-        assertEquals("Hello from notify", secondPayload.decodeToString())
+        assertArrayEquals(byteArrayOf(100), secondPayload)
 
         activePeripheral.disconnect()
         assertTrue(!activePeripheral.isConnected)
+    }
+
+    @Test
+    fun localGattLoopback() = runBlocking {
+        val activeAdapter = Adapter.getAdapters().single()
+        adapter = activeAdapter
+        val local = activeAdapter.createLocalPeripheral(InstrumentationRegistry.getInstrumentation().targetContext)
+        val serviceUuid = BluetoothUUID("0000fff0-0000-1000-8000-00805f9b34fb")
+        val valueUuid = BluetoothUUID("0000fff1-0000-1000-8000-00805f9b34fb")
+        val value = local.addService(serviceUuid).addCharacteristic(
+            valueUuid,
+            LocalCharacteristicCapability.Read,
+            LocalCharacteristicCapability.WriteRequest,
+            LocalCharacteristicCapability.Notify
+        )
+        val payload = byteArrayOf(0x00, 0xff.toByte(), 0x80.toByte())
+        value.value = payload
+        local.addAdvertisedService(serviceUuid)
+        try {
+            local.start()
+            assertTrue(local.isStarted)
+            assertTrue(local.isAdvertising)
+            activeAdapter.scanFor(250)
+            val peer = activeAdapter.scanGetResults().single { it.identifier == "Plain Adapter Peripheral" }
+            peripheral = peer
+            peer.connect()
+            assertArrayEquals(payload, peer.read(serviceUuid, valueUuid))
+            value.setReadHandler { byteArrayOf(0x42) }
+            assertArrayEquals(byteArrayOf(0x42), peer.read(serviceUuid, valueUuid))
+            value.setReadHandler(null)
+            peer.writeRequest(serviceUuid, valueUuid, byteArrayOf(0x12))
+            assertArrayEquals(byteArrayOf(0x12), value.value)
+
+            val subscribed = async { withTimeout(2_000) { value.onSubscribed.first() } }
+            val notification = async { withTimeout(3_000) { peer.notify(serviceUuid, valueUuid).first() } }
+            subscribed.await()
+            value.value = payload
+            assertArrayEquals(payload, notification.await())
+            local.stop()
+            assertTrue(!peer.isConnected)
+            assertTrue(!local.isStarted)
+        } finally {
+            local.stop()
+        }
     }
 }

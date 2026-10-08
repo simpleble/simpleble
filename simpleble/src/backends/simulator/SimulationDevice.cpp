@@ -275,11 +275,16 @@ ReadResult Device::on_read(Connection, const BluetoothUUID& service, const Bluet
     return value(service, characteristic);
 }
 
-AttStatus Device::on_write_request(Connection, const BluetoothUUID&, const BluetoothUUID&, const ByteArray&) {
+AttStatus Device::on_write_request(Connection, const BluetoothUUID& service, const BluetoothUUID& characteristic,
+                                  const ByteArray& value) {
+    set_value(service, characteristic, value);
     return AttStatus::SUCCESS;
 }
 
-void Device::on_write_command(Connection, const BluetoothUUID&, const BluetoothUUID&, const ByteArray&) {}
+void Device::on_write_command(Connection, const BluetoothUUID& service, const BluetoothUUID& characteristic,
+                              const ByteArray& value) {
+    set_value(service, characteristic, value);
+}
 
 void Device::on_subscribed(Connection, const BluetoothUUID&, const BluetoothUUID&, SubscriptionKind) {}
 
@@ -294,8 +299,9 @@ ReadResult Device::on_read_descriptor(Connection, const BluetoothUUID& service, 
     return value(service, characteristic, descriptor);
 }
 
-AttStatus Device::on_write_descriptor(Connection, const BluetoothUUID&, const BluetoothUUID&, const BluetoothUUID&,
-                                      const ByteArray&) {
+AttStatus Device::on_write_descriptor(Connection, const BluetoothUUID& service, const BluetoothUUID& characteristic,
+                                     const BluetoothUUID& descriptor, const ByteArray& value) {
+    set_value(service, characteristic, descriptor, value);
     return AttStatus::SUCCESS;
 }
 

@@ -109,6 +109,7 @@ void PeripheralSimulator::connect() {
         std::lock_guard<std::mutex> lock(mutex_);
         connection_ = link;
         services_ = std::move(services);
+        paired_ = true;
     }
 
     if (!link->is_open()) {
@@ -141,9 +142,15 @@ bool PeripheralSimulator::is_connectable() {
     return advertisement_.connectable;
 }
 
-bool PeripheralSimulator::is_paired() { return false; }
+bool PeripheralSimulator::is_paired() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return paired_;
+}
 
-void PeripheralSimulator::unpair() {}
+void PeripheralSimulator::unpair() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    paired_ = false;
+}
 
 SharedPtrVector<ServiceBase> PeripheralSimulator::available_services() {
     if (!is_connected()) return {};

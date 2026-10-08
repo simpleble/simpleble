@@ -113,9 +113,8 @@ class SIMPLEBLE_EXPORT Device {
 
     // ---- Events ---------------------------------------------------------------------------------------------------
     //
-    // Called by the simulation on this device's executor. Override the ones the device needs; the defaults serve
-    // stored values. A write whose handler returns SUCCESS stores the value afterwards, so handlers still see the
-    // previous value through value(). UUIDs passed to events are lowercase.
+    // Called on this device's executor with lowercase UUIDs. Default read and write handlers use stored values;
+    // overrides own storage and can call the base handler to keep the default behavior.
 
     virtual void on_connected(Connection connection);
     virtual void on_disconnected(Connection connection);

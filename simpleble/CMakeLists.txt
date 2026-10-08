@@ -55,6 +55,7 @@ set(SIMPLEBLE_SRC
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/AdapterSimulator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/BackendSimulator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/LocalPeripheralSimulator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/PeripheralSimulator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationAdapter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/simulator/SimulationConnection.cpp
@@ -209,8 +210,6 @@ if(SIMPLEBLE_PLAIN)
     message(STATUS "Plain Flavor Requested")
 
     target_sources(simpleble PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/AdapterPlain.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/PeripheralPlain.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/BackendPlain.cpp)
 elseif(SIMPLEBLE_BACKEND_LINUX)
     message(STATUS "Linux Host Detected")
@@ -491,7 +490,7 @@ if(SIMPLEBLE_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_scheduler.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_simulation.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_threadrunner.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_peripheral_plain.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_plain.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_peripheral_dongl.cpp)
     set_target_properties(simpleble_test PROPERTIES
         CXX_VISIBILITY_PRESET hidden

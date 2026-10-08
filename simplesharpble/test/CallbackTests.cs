@@ -25,17 +25,21 @@ public sealed class CallbackTests
         IReadOnlyList<Peripheral>? peripherals = null;
         try
         {
-            await adapters[0].ScanForAsync(TimeSpan.Zero);
+            await adapters[0].ScanForAsync(TimeSpan.FromMilliseconds(250));
             peripherals = adapters[0].ScanGetResults();
             var peripheral = peripherals[0];
             peripheral.Connect();
+            const string service = "0000fff0-0000-1000-8000-00805f9b34fb";
+            const string characteristic = "0000fff1-0000-1000-8000-00805f9b34fb";
+            byte[] expected = [0, 255, 128, 1];
+            peripheral.WriteRequest(service, characteristic, expected);
             var received = Completion<byte[]>();
-            peripheral.Notify(GattTests.Uuid, GattTests.Uuid, data =>
+            peripheral.Notify(service, characteristic, data =>
             {
-                peripheral.Unsubscribe(GattTests.Uuid, GattTests.Uuid);
+                peripheral.Unsubscribe(service, characteristic);
                 received.TrySetResult(data);
             });
-            Assert.Equal("Hello from notify", System.Text.Encoding.UTF8.GetString(await received.Task.WaitAsync(TimeSpan.FromSeconds(8))));
+            Assert.Equal(expected, await received.Task.WaitAsync(TimeSpan.FromSeconds(8)));
             peripheral.Disconnect();
         }
         finally

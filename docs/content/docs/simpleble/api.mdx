@@ -945,7 +945,7 @@ For a walkthrough, see [Build a Simulation](./simulation/build-a-simulation). [T
 
 ### Events [!toc]
 
-The simulation calls these methods on the device's executor. Override the ones the device needs; the defaults serve stored values. A write whose handler returns `SUCCESS` stores the value afterwards, so handlers still see the previous value through `value()`. UUIDs passed to events are lowercase. If a handler for a read or write request throws, the exception is logged and the request is answered with `UNLIKELY_ERROR` (0x0E).
+The simulation calls these methods on the device's executor with lowercase UUIDs. Default read and write handlers use stored values. Overrides own storage and can call the base handler to keep the default behavior. If a handler for a read or write request throws, the exception is logged and the request is answered with `UNLIKELY_ERROR` (0x0E).
 
 <ApiMethod
   signature="virtual void on_connected(Connection connection)"
@@ -989,7 +989,7 @@ The simulation calls these methods on the device's executor. Override the ones t
     {"name":"characteristic","type":"const BluetoothUUID&"},
     {"name":"value","type":"const ByteArray&"}
   ]}
-  detailed="Called when the central writes a characteristic with a response. Return `SUCCESS` to store the value, or an [AttStatus](#simpleble-simulation-attstatus) error to reject it. Default: returns `SUCCESS`."
+  detailed="Called when the central writes a characteristic with a response. Default: stores the value and returns `SUCCESS`. Overrides own storage; call the base handler to store the incoming value, or return an [AttStatus](#simpleble-simulation-attstatus) error to reject it."
 />
 
 <ApiMethod
@@ -1000,7 +1000,7 @@ The simulation calls these methods on the device's executor. Override the ones t
     {"name":"characteristic","type":"const BluetoothUUID&"},
     {"name":"value","type":"const ByteArray&"}
   ]}
-  detailed="Called when the central writes a characteristic without a response. The value is stored after the handler returns. Default: does nothing."
+  detailed="Called when the central writes a characteristic without a response. Default: stores the value. Overrides own storage and can call the base handler to keep that behavior."
 />
 
 <ApiMethod
@@ -1060,7 +1060,7 @@ The simulation calls these methods on the device's executor. Override the ones t
     {"name":"descriptor","type":"const BluetoothUUID&"},
     {"name":"value","type":"const ByteArray&"}
   ]}
-  detailed="Called when the central writes a descriptor other than the Client Characteristic Configuration descriptor, which the simulation handles. Return `SUCCESS` to store the value, or an [AttStatus](#simpleble-simulation-attstatus) error to reject it. Default: returns `SUCCESS`."
+  detailed="Called when the central writes a descriptor other than the Client Characteristic Configuration descriptor, which the simulation handles. Default: stores the value and returns `SUCCESS`. Overrides own storage; call the base handler to store the incoming value, or return an [AttStatus](#simpleble-simulation-attstatus) error to reject it."
 />
 
 <ApiMethod

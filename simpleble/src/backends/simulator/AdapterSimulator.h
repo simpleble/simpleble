@@ -68,6 +68,7 @@ class AdapterSimulator : public AdapterBase, public std::enable_shared_from_this
 
     std::vector<std::shared_ptr<PeripheralBase>> get_paired_peripherals() override;
     std::vector<std::shared_ptr<PeripheralBase>> get_connected_peripherals() override;
+    std::shared_ptr<Local::PeripheralBase> create_local_peripheral() override;
 
     bool bluetooth_enabled() override;
 
