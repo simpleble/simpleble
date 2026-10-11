@@ -8,12 +8,12 @@
 **Build Bluetooth once. Ship it everywhere.**
 
 SimpleGoBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to Go on
-Windows, macOS, and Linux. Enumerate Bluetooth backends and adapters, check power
-state, control scanning, and receive power and scan callbacks through one API.
+Windows, macOS, and Linux. Discover and connect Bluetooth peripherals, read and
+write GATT values, and subscribe to notifications through one API.
 
 ## Why SimpleGoBLE
 
-- **One cross-platform API:** Keep your Bluetooth adapter logic consistent across desktop platforms.
+- **One cross-platform API:** Keep your Bluetooth client logic consistent across desktop platforms.
 - **Native underneath:** Use WinRT, CoreBluetooth, and BlueZ through SimpleBLE.
 
 ## Get started
@@ -118,10 +118,60 @@ Use `ScanStart` and `ScanStop` when your application controls scan timing.
 Power callbacks use `SetCallbackOnPowerOn` and `SetCallbackOnPowerOff`.
 Pass `nil` to a callback setter to clear it.
 
+After scanning, call `adapter.ScanGetResults()` to get peripherals. Use
+`SetCallbackOnScanFound` and `SetCallbackOnScanUpdated` for live discovery;
+close each peripheral handle passed to your handler when finished.
+
+## Connect and use GATT
+
+Read the battery level from a peripheral discovered during scanning:
+
+```go
+package main
+
+import (
+    "fmt"
+
+    ble "github.com/simpleble/simplegoble"
+)
+
+func readBattery(peripheral *ble.Peripheral) error {
+    if err := peripheral.Connect(); err != nil {
+        return err
+    }
+    defer peripheral.Disconnect()
+
+    value, err := peripheral.Read("180f", "2a19")
+    if err != nil {
+        return err
+    }
+    fmt.Printf("Battery value: %X\n", value)
+    return nil
+}
+```
+
+Use `Services()` to inspect characteristics, their capabilities, and descriptors.
+`Read`, `WriteRequest`, and `WriteCommand` access characteristic values;
+`ReadDescriptor` and `WriteDescriptor` access descriptors. UUIDs accept short
+4/8-digit Bluetooth identifiers or full 128-bit UUIDs.
+
+`Notify` and `Indicate` deliver Go-owned byte slices to your handler.
+`Unsubscribe` stops a subscription. `ManufacturerData` returns advertisement
+payloads indexed by company ID.
+
+Run the scan and read examples:
+
+```sh
+go run github.com/simpleble/simplegoble/examples/scan
+go run github.com/simpleble/simplegoble/examples/read ADDRESS 180f 2a19
+```
+
 For backend-specific enumeration, call `GetBackends()` and then
-`backend.Adapters()`. Close every backend and adapter you obtain when finished;
-each owns its native handle. Callbacks run serially on a Go worker and can call
-adapter methods. Keep handlers short. Methods are safe for concurrent use.
+`backend.Adapters()`. Close every backend, adapter, and peripheral handle when
+finished. Peripheral handles remain usable after the adapter closes. `Close`
+releases a handle; call `Disconnect` to end a connection. Callbacks run serially
+on each wrapper's Go worker and can call its methods. Keep handlers short.
+Methods are safe for concurrent use.
 
 ## Platforms
 

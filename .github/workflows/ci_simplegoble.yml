@@ -72,7 +72,9 @@ jobs:
           cp LICENSE.md "$package_dir/LICENSE"
           cp VERSION "$package_dir/VERSION"
           echo "$GITHUB_SHA" > "$package_dir/SOURCE_REVISION"
-          cp -R examples/simplegoble/list_adapters examples/simplegoble/list_backends "$package_dir/examples/"
+          for example in examples/simplegoble/*/; do
+            cp -R "${example%/}" "$package_dir/examples/"
+          done
           major=${VERSION%%.*}
           module=github.com/simpleble/simplegoble
           if (( major >= 2 )); then

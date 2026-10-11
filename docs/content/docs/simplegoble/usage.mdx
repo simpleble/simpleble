@@ -3,7 +3,7 @@ title: Usage
 description: Install and use the SimpleGoBLE Go binding.
 ---
 
-SimpleGoBLE exposes SimpleBLE's Bluetooth backend and adapter API to Go on
+SimpleGoBLE exposes SimpleBLE's Bluetooth client API to Go on
 Windows, macOS, and Linux, with support for amd64 and arm64.
 
 ## Install
@@ -87,9 +87,60 @@ adapter methods, including `Close`. Keep handlers short so later events can run.
 Native callback slots are shared across handles for the same adapter; the latest
 registration wins.
 
+## Discover peripherals
+
+After scanning, call `adapter.ScanGetResults()` to retrieve peripherals.
+`GetPairedPeripherals` and `GetConnectedPeripherals` enumerate the adapter's
+paired and connected devices. Each result owns an independent handle; close all
+of them when finished. A peripheral remains usable after its adapter closes.
+
+Use `SetCallbackOnScanFound(func(*ble.Peripheral))` and
+`SetCallbackOnScanUpdated(func(*ble.Peripheral))` for live advertisement events.
+Every invocation transfers a new peripheral handle to your handler, which must
+close it or retain it for later use. Pass `nil` to clear either callback.
+
+Peripheral methods expose `Identifier`, `Address`, `AddressType`, `RSSI`,
+`TxPower`, `IsConnectable`, and `ManufacturerData`. `Services()` returns advertised
+service data before connection and discovered GATT services after connection.
+All returned metadata and buffers are Go-owned and can be retained.
+
+## Connect and use GATT
+
+Use `Connect` and `Disconnect` to control the connection, `IsConnected` and
+`IsPaired` to check state, `Unpair` to remove pairing, and `MTU` to query the
+negotiated MTU. Register connection events with `SetCallbackOnConnected` and
+`SetCallbackOnDisconnected`.
+
+For a peripheral obtained during scanning, read its battery characteristic:
+
+```go
+func readBattery(peripheral *ble.Peripheral) ([]byte, error) {
+    if err := peripheral.Connect(); err != nil {
+        return nil, err
+    }
+    defer peripheral.Disconnect()
+    return peripheral.Read("180f", "2a19")
+}
+```
+
+`Services` includes characteristic capabilities and descriptor UUIDs. Use
+`Read`, `WriteRequest`, and `WriteCommand` for characteristics, and
+`ReadDescriptor` and `WriteDescriptor` for descriptors. UUID arguments accept
+4/8-digit Bluetooth identifiers or canonical 128-bit UUIDs, in either case.
+Empty writes are supported. Keep an input byte slice unchanged until the write
+returns.
+
+Subscribe using `Notify(service, characteristic, func([]byte))` or `Indicate`.
+Each event supplies a Go-owned slice that your handler can retain. Call
+`Unsubscribe` to stop the subscription. Handlers follow the same serial dispatch
+rules as adapter callbacks and may call peripheral methods, including `Close`.
+Connection and subscription state are shared by handles for the same device;
+the latest callback registration for a slot wins.
+
 Methods are safe for concurrent use. `Close` waits for native calls and discards
 queued callbacks; a handler already selected may finish after `Close` returns.
-Closing a handle does not change power or scan state.
+Closing a handle does not change power, scanning, or connection state. Call
+`Disconnect` and `Unsubscribe` explicitly to end those operations.
 
 ## Errors
 
