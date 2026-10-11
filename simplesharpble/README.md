@@ -29,7 +29,7 @@ Requirements:
 - .NET 10
 - Windows or glibc-based Linux (x64/ARM64), or macOS 14 or newer on Apple Silicon
 - Android 12 or newer (ARM64/x64)
-- iOS/iPadOS 15 or newer, the iOS simulator, and Mac Catalyst 15 or newer (ARM64)
+- iOS/iPadOS 15.8 or newer, the iOS simulator, and Mac Catalyst 15.8 or newer (ARM64)
 - On Linux, BlueZ and D-Bus; on Ubuntu, install them with `sudo apt-get install bluez libdbus-1-3`
 
 Add SimpleSharpBLE to your project from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/):

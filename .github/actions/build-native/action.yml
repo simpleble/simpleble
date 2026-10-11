@@ -1,5 +1,5 @@
 name: "Build Native Target"
-description: "Builds and installs a CMake target on Linux, Windows, macOS, iOS, or Android."
+description: "Builds and installs a CMake target on Linux, Windows, macOS, iOS, Mac Catalyst, or Android."
 
 inputs:
   source-dir:
@@ -21,7 +21,7 @@ inputs:
     description: "Number of parallel jobs to use for building (empty means default to CPU cores)"
     default: "" # Empty means default to CPU cores
   os:
-    description: "Operating system (e.g., linux, windows, macos, ios, android)"
+    description: "Operating system (linux, windows, macos, ios, iossimulator, maccatalyst, android)"
     required: true
   target-arch:
     description: "Target architecture (x64, aarch64, or x86). Defaults to x64."
@@ -82,27 +82,29 @@ runs:
 
           echo "CMAKE_OPTIONS=$_ARCH_FLAG -DCMAKE_OSX_DEPLOYMENT_TARGET=13 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           echo "SHELL=bash" >> $GITHUB_ENV
-        elif [ "${{ inputs.os }}" == "ios" ]; then
-          # Note: Basic iOS configuration. Assumes Xcode environment is set up correctly
-          # on the runner (especially for finding the correct SDK).
-          # Device vs Simulator builds might require CMAKE_OSX_SYSROOT or a specific CMake toolchain file
-          # for robust SDK and toolchain detection.
+        elif [[ "${{ inputs.os }}" == "ios" || "${{ inputs.os }}" == "iossimulator" || "${{ inputs.os }}" == "maccatalyst" ]]; then
           _ARCH_FLAG_VALUE=""
           if [ "${{ inputs.target-arch }}" == "aarch64" ]; then
-             _ARCH_FLAG_VALUE="arm64" # For iOS devices or simulators on Apple Silicon
+             _ARCH_FLAG_VALUE="arm64"
           elif [ "${{ inputs.target-arch }}" == "x64" ]; then
-             _ARCH_FLAG_VALUE="x86_64" # For iOS simulators on Intel
-          # elif [ "${{ inputs.target-arch }}" == "x86" ]; then
-          #    _ARCH_FLAG_VALUE="i386" # For older iOS simulators (less common now)
+             _ARCH_FLAG_VALUE="x86_64"
           fi
 
-          if [ -n "$_ARCH_FLAG_VALUE" ]; then
-            # Set CMake options required for iOS cross-compilation
-            echo "CMAKE_OPTIONS=-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=$_ARCH_FLAG_VALUE -DCMAKE_OSX_DEPLOYMENT_TARGET=15.8 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
-          else
-            echo "Unsupported target architecture for iOS: ${{ inputs.target-arch }}"
+          if [ -z "$_ARCH_FLAG_VALUE" ]; then
+            echo "Unsupported target architecture for ${{ inputs.os }}: ${{ inputs.target-arch }}"
             exit 1
           fi
+
+          if [ "${{ inputs.os }}" == "maccatalyst" ]; then
+            _PLATFORM_OPTIONS="-DCMAKE_SYSTEM_NAME=Darwin -DCMAKE_OSX_SYSROOT=macosx -DCMAKE_C_COMPILER_TARGET=$_ARCH_FLAG_VALUE-apple-ios15.8-macabi -DCMAKE_CXX_COMPILER_TARGET=$_ARCH_FLAG_VALUE-apple-ios15.8-macabi"
+          else
+            _SDK="iphoneos"
+            if [ "${{ inputs.os }}" == "iossimulator" ]; then
+              _SDK="iphonesimulator"
+            fi
+            _PLATFORM_OPTIONS="-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=$_SDK -DCMAKE_OSX_DEPLOYMENT_TARGET=15.8"
+          fi
+          echo "CMAKE_OPTIONS=$_PLATFORM_OPTIONS -DCMAKE_OSX_ARCHITECTURES=$_ARCH_FLAG_VALUE $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           echo "SHELL=bash" >> $GITHUB_ENV
         elif [ "${{ inputs.os }}" == "android" ]; then
           echo "CMAKE_OPTIONS=-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=31 -DCMAKE_ANDROID_ARCH_ABI=${{ inputs.target-arch }} $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV

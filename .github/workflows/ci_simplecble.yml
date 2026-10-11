@@ -18,7 +18,10 @@ jobs:
           - { runner-os: macos-15-intel, os: macos, architecture: x64 } # Containers are not required.
           - { runner-os: macos-15, os: macos, architecture: aarch64 } # Containers are not required.
           - { runner-os: macos-15, os: ios, architecture: aarch64 } # Containers are not required.
+          - { runner-os: macos-15, os: iossimulator, architecture: aarch64 }
+          - { runner-os: macos-15, os: maccatalyst, architecture: aarch64 }
           - { runner-os: windows-2022, os: windows, architecture: x64 } # Containers are not required.
+          - { runner-os: windows-2022, os: windows, architecture: aarch64 } # Go arm64 distribution.
           - { runner-os: windows-2022, os: windows, architecture: x86 } # Containers are not required.
           - { runner-os: ubuntu-22.04, os: android, architecture: armeabi-v7a }
           - { runner-os: ubuntu-22.04, os: android, architecture: arm64-v8a }
@@ -35,6 +38,21 @@ jobs:
       - name: Add Version Suffix
         uses: ./.github/actions/setup-version
 
+      - uses: actions/setup-java@v4
+        if: matrix.config.os == 'android'
+        with:
+          java-version: '17'
+          distribution: temurin
+      - uses: android-actions/setup-android@v4
+        if: matrix.config.os == 'android'
+      - name: Install Android NDK
+        if: matrix.config.os == 'android'
+        shell: bash
+        run: |
+          ndk_version=29.0.14206865
+          sdkmanager "ndk;$ndk_version"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$ndk_version" >> "$GITHUB_ENV"
+
       - name: Build SimpleCBLE Library (Static)
         uses: ./.github/actions/build-native
         with:
@@ -47,6 +65,7 @@ jobs:
           cmake-options: "-DBUILD_SHARED_LIBS=OFF"
 
       - name: Build SimpleCBLE Library (Shared)
+        if: matrix.config.os != 'iossimulator' && matrix.config.os != 'maccatalyst'
         uses: ./.github/actions/build-native
         with:
           source-dir: "$GITHUB_WORKSPACE/simplecble"

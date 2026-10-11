@@ -1,0 +1,110 @@
+---
+title: Usage
+description: Install and use the SimpleGoBLE Go binding.
+---
+
+SimpleGoBLE exposes SimpleBLE's Bluetooth backend and adapter API to Go on
+Windows, macOS, and Linux, with support for amd64 and arm64.
+
+## Install
+
+Use Go 1.25 or newer:
+
+```sh
+go get github.com/simpleble/simplegoble
+```
+
+Import `github.com/simpleble/simplegoble` in your application, then build:
+
+```sh
+go build ./...
+```
+
+## Platform requirements
+
+Linux uses BlueZ, D-Bus, and the system C++ runtime. Windows uses the Bluetooth
+stack and Microsoft C++ runtime. macOS apps need Bluetooth usage descriptions
+in `Info.plist`. Follow the platform's
+[Bluetooth permission setup](../fundamentals/permissions).
+
+SimpleGoBLE uses a writable user cache directory for runtime libraries.
+
+## List adapters
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    ble "github.com/simpleble/simplegoble"
+)
+
+func main() {
+    if err := run(); err != nil {
+        log.Fatal(err)
+    }
+}
+
+func run() error {
+    adapters, err := ble.GetAdapters()
+    if err != nil {
+        return err
+    }
+    defer func() {
+        for _, adapter := range adapters {
+            _ = adapter.Close()
+        }
+    }()
+    for _, adapter := range adapters {
+        name, err := adapter.Identifier()
+        if err != nil {
+            return err
+        }
+        fmt.Println(name)
+    }
+    return nil
+}
+```
+
+Use `GetBackends()` and `backend.Adapters()` for backend-specific enumeration.
+Close every returned backend and adapter. Adapters have independent lifetimes
+from their backend. Copies of a wrapper share ownership, so closing a copy closes
+the original as well.
+
+## Power and scan control
+
+Adapters provide `IsPowered`, `PowerOn`, `PowerOff`, `ScanStart`, `ScanStop`,
+`ScanIsActive`, and `ScanFor(time.Duration)`. Power control follows the platform's
+capabilities. `ScanFor` waits synchronously while other Go goroutines remain
+runnable. Use `ScanStart` and `ScanStop` when your application controls timing.
+
+Register power and scan events with `SetCallbackOnPowerOn`,
+`SetCallbackOnPowerOff`, `SetCallbackOnScanStart`, and `SetCallbackOnScanStop`.
+Pass `nil` to clear a callback. Handlers run serially on a Go worker and can call
+adapter methods, including `Close`. Keep handlers short so later events can run.
+Native callback slots are shared across handles for the same adapter; the latest
+registration wins.
+
+Methods are safe for concurrent use. `Close` waits for native calls and discards
+queued callbacks; a handler already selected may finish after `Close` returns.
+Closing a handle does not change power or scan state.
+
+## Errors
+
+Check classifications with `errors.Is(err, ble.OperationNotSupported)`. Use
+`errors.As` with `*ble.Error` to inspect the native error code and diagnostic
+message. Methods on closed or zero-value wrappers return `ble.ErrClosed`.
+
+See the [Go API reference](https://pkg.go.dev/github.com/simpleble/simplegoble)
+for method contracts and the [examples](./examples) for runnable applications.
+
+## Versions
+
+SimpleGoBLE uses SimpleBLE's stable `vX.Y.Z` and development `vX.Y.Z-devN` tags.
+Use `@main` for the latest development build; Go prefers stable releases for
+`@latest`. Each module includes `VERSION` and `SOURCE_REVISION`.
+
+For binding development and local builds, see the
+[contributor guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplegoble-publishing.md).

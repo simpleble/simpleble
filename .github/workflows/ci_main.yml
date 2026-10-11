@@ -121,8 +121,12 @@ jobs:
     uses: ./.github/workflows/ci_simplersble.yml
 
   simplesharpble:
-    needs: [smoketest]
+    needs: [simplecble]
     uses: ./.github/workflows/ci_simplesharpble.yml
+
+  simplegoble:
+    needs: [simplecble]
+    uses: ./.github/workflows/ci_simplegoble.yml
 
   linux-internals:
     needs: [smoketest, libraries]
@@ -132,7 +136,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     permissions:
       contents: write
@@ -142,7 +146,6 @@ jobs:
       - name: "Download all artifacts"
         uses: actions/download-artifact@v4
         with:
-          pattern: "!(simplesharpble-native-*)"
           path: artifacts
           merge-multiple: true
 
@@ -229,6 +232,62 @@ jobs:
         env:
           NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
         run: dotnet nuget push "packages/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
+
+  publish-simplegoble:
+    needs: [publish-release]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: ubuntu-22.04
+    concurrency:
+      group: simplegoble-distribution
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: simplegoble-module
+          path: go-package
+      - uses: actions/checkout@v4
+        with:
+          repository: simpleble/simplegoble
+          ref: main
+          path: simplegoble-distribution
+          fetch-depth: 0
+          ssh-key: ${{ secrets.SIMPLEGOBLE_DEPLOY_KEY }}
+
+      - name: Extract Go module
+        run: |
+          unzip -q go-package/*.zip -d "$RUNNER_TEMP/simplegoble-unpacked"
+          module_file=$(find "$RUNNER_TEMP/simplegoble-unpacked" -name go.mod)
+          test -f "$module_file"
+          echo "PACKAGE_DIR=$(dirname "$module_file")" >> "$GITHUB_ENV"
+
+      - name: Update distribution and verify immutable version
+        working-directory: simplegoble-distribution
+        run: |
+          version=$(cat "$PACKAGE_DIR/VERSION")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev[0-9]+)?$ ]]
+          major=${version%%.*}
+          module=github.com/simpleble/simplegoble
+          if (( major >= 2 )); then module="$module/v$major"; fi
+          test "$(head -n 1 "$PACKAGE_DIR/go.mod")" = "module $module"
+          test -z "$(git status --porcelain)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Only tracked generated files are removed; the checkout's Git metadata stays intact.
+          git ls-files -z | while IFS= read -r -d '' path; do rm -- "$path"; done
+          cp -R "$PACKAGE_DIR/." .
+          git add --all
+          tag="v$version"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            if [[ "$(git write-tree)" != "$(git rev-parse "$tag^{tree}")" ]]; then
+              echo "::error::$tag already exists with different contents; published Go versions are immutable."
+              exit 1
+            fi
+            echo "$tag already contains this module; no publication needed."
+          else
+            git commit -m "Publish SimpleGoBLE $tag"
+            git tag "$tag"
+            git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
+          fi
 
   publish-simpleaible:
     needs: [publish-release]

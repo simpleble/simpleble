@@ -1,7 +1,7 @@
 name: Build SimpleSharpBLE
 
 on:
-  workflow_dispatch:
+  # CI Main supplies the SimpleCBLE artifacts, including for manual runs.
   workflow_call:
 
 permissions:
@@ -12,202 +12,7 @@ defaults:
     shell: pwsh
 
 jobs:
-  build-windows:
-    runs-on: windows-2022
-    strategy:
-      fail-fast: false
-      matrix:
-        architecture: [x64, arm64]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: ./.github/actions/setup-version
-      - name: Build native libraries
-        run: |
-          $PSNativeCommandUseErrorActionPreference = $true
-          $architecture = '${{ matrix.architecture }}'
-          $platform = if ($architecture -eq 'arm64') { 'ARM64' } else { 'x64' }
-          cmake -S simplecble -B build_simplesharpble_windows -G "Visual Studio 17 2022" -A $platform -DBUILD_SHARED_LIBS=ON "-DCMAKE_CXX_FLAGS=/utf-8 /EHsc"
-          cmake --build build_simplesharpble_windows --config Release --parallel 4
-          $destination = "native/win-$architecture/native"
-          New-Item -ItemType Directory -Path $destination -Force | Out-Null
-          Copy-Item build_simplesharpble_windows/bin/Release/simpleble.dll, build_simplesharpble_windows/bin/Release/simplecble.dll -Destination $destination
-      - uses: actions/upload-artifact@v4
-        with:
-          name: simplesharpble-native-win-${{ matrix.architecture }}
-          path: native/
-          if-no-files-found: error
-
-  build-macos:
-    runs-on: macos-15
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: ./.github/actions/setup-version
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Build and stage CoreBluetooth libraries
-        run: |
-          cmake -S simplecble -B build_simplesharpble_macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DBUILD_SHARED_LIBS=ON
-          cmake --build build_simplesharpble_macos --parallel 4
-          cmake --install build_simplesharpble_macos --prefix "$PWD/build_simplesharpble_macos/install"
-          mkdir -p native/osx-arm64/native
-          # Install fixes rpaths; dereference both versioned and unversioned library names for NuGet.
-          cp -L build_simplesharpble_macos/install/lib/*.dylib native/osx-arm64/native/
-      - name: Build SimpleSharpBLE bindings
-        run: dotnet build simplesharpble -c Release "-p:NativeLibraryDirectory=$PWD/build_simplesharpble_macos/install/lib"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: simplesharpble-native-osx-arm64
-          path: native/
-          if-no-files-found: error
-
-  build-apple-mobile:
-    runs-on: macos-15
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - { rid: ios-arm64, system: iOS, sdk: iphoneos }
-          - { rid: iossimulator-arm64, system: iOS, sdk: iphonesimulator }
-          - { rid: maccatalyst-arm64, system: Darwin, sdk: macosx }
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: ./.github/actions/setup-version
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Build and stage Apple static libraries
-        run: |
-          options=()
-          if [[ '${{ matrix.config.rid }}' == 'maccatalyst-arm64' ]]; then
-            options+=(-DCMAKE_C_COMPILER_TARGET=arm64-apple-ios15.0-macabi -DCMAKE_CXX_COMPILER_TARGET=arm64-apple-ios15.0-macabi)
-          else
-            options+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0)
-          fi
-          cmake -S simplecble -B build_simplesharpble_apple \
-            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_SYSTEM_NAME=${{ matrix.config.system }} \
-            -DCMAKE_OSX_SYSROOT=${{ matrix.config.sdk }} -DCMAKE_OSX_ARCHITECTURES=arm64 "${options[@]}"
-          cmake --build build_simplesharpble_apple --parallel 4
-          mkdir -p native/${{ matrix.config.rid }}/native
-          cp build_simplesharpble_apple/lib/libsimpleble.a build_simplesharpble_apple/lib/libsimplecble.a native/${{ matrix.config.rid }}/native/
-      - name: Build SimpleSharpBLE static-link bindings
-        run: |
-          dotnet build simplesharpble -c Release -p:SimpleSharpBLEStaticLink=true
-          mkdir -p native/${{ matrix.config.rid }}/lib/net10.0
-          cp simplesharpble/bin/Release/net10.0/SimpleSharpBLE.dll native/${{ matrix.config.rid }}/lib/net10.0/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: simplesharpble-native-${{ matrix.config.rid }}
-          path: native/
-          if-no-files-found: error
-
-  build-linux:
-    runs-on: ${{ matrix.config.runner-os }}
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - { runner-os: ubuntu-22.04, architecture: x64, rid: linux-x64 }
-          - { runner-os: ubuntu-22.04-arm, architecture: aarch64, rid: linux-arm64 }
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: ./.github/actions/setup-version
-      - name: Install dependencies
-        run: |
-          sudo -H apt-get update -y
-          sudo -H apt-get install -y libdbus-1-dev
-      - name: Build BlueZ libraries
-        uses: ./.github/actions/build-native
-        with:
-          source-dir: "$GITHUB_WORKSPACE/simplecble"
-          build-dir: "$GITHUB_WORKSPACE/build_simplesharpble_linux"
-          install-prefix: "$GITHUB_WORKSPACE/build_simplesharpble_linux/install"
-          build-config: "Release"
-          os: "linux"
-          target-arch: "${{ matrix.config.architecture }}"
-          cmake-options: "-DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_LIBDIR=lib"
-          parallel-jobs: '4'
-          linux-use-system-dbus: 'true'
-      - name: Stage native libraries
-        run: |
-          mkdir -p native/${{ matrix.config.rid }}/native
-          # Install fixes rpaths; dereference the SONAME and unversioned links for NuGet.
-          cp -L build_simplesharpble_linux/install/lib/libsimpleble.so* build_simplesharpble_linux/install/lib/libsimplecble.so* native/${{ matrix.config.rid }}/native/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: simplesharpble-native-${{ matrix.config.rid }}
-          path: native/
-          if-no-files-found: error
-
-  build-android:
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - { abi: arm64-v8a, rid: android-arm64 }
-          - { abi: x86_64, rid: android-x64 }
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: ./.github/actions/setup-version
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: temurin
-      - uses: android-actions/setup-android@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - name: Install Android NDK
-        run: sdkmanager "ndk;29.0.14206865"
-      - name: Build and stage Android libraries
-        run: |
-          cmake -S simplecble -B build_simplesharpble_android -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
-            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/29.0.14206865/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=${{ matrix.config.abi }} -DANDROID_PLATFORM=android-31
-          cmake --build build_simplesharpble_android --parallel 4
-          cmake --install build_simplesharpble_android --strip --prefix "$PWD/build_simplesharpble_android/install"
-          mkdir -p native/${{ matrix.config.rid }}/native
-          cp build_simplesharpble_android/install/lib/*.so native/${{ matrix.config.rid }}/native/
-      - name: Build SimpleSharpBLE bindings
-        run: dotnet build simplesharpble -c Release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: simplesharpble-native-${{ matrix.config.rid }}
-          path: native/
-          if-no-files-found: error
-
   package:
-    needs: [build-windows, build-macos, build-apple-mobile, build-linux, build-android]
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -220,9 +25,40 @@ jobs:
           dotnet-version: '10.0.x'
       - uses: actions/download-artifact@v4
         with:
-          pattern: simplesharpble-native-*
-          path: native
+          pattern: 'libsimplecble_@(windows-@(x64|aarch64)|linux-@(x64|aarch64)|macos-aarch64|@(ios|iossimulator|maccatalyst)-aarch64|android-@(arm64-v8a|x86_64))'
+          path: artifacts
           merge-multiple: true
+      - name: Stage SimpleCBLE libraries
+        run: |
+          $targets = @(
+            @{ Artifact = 'windows-x64'; Rid = 'win-x64'; Libraries = 'shared/bin/*.dll' },
+            @{ Artifact = 'windows-aarch64'; Rid = 'win-arm64'; Libraries = 'shared/bin/*.dll' },
+            @{ Artifact = 'macos-aarch64'; Rid = 'osx-arm64'; Libraries = 'shared/lib/*.dylib' },
+            @{ Artifact = 'ios-aarch64'; Rid = 'ios-arm64'; Libraries = 'static/lib/*.a' },
+            @{ Artifact = 'iossimulator-aarch64'; Rid = 'iossimulator-arm64'; Libraries = 'static/lib/*.a' },
+            @{ Artifact = 'maccatalyst-aarch64'; Rid = 'maccatalyst-arm64'; Libraries = 'static/lib/*.a' },
+            @{ Artifact = 'android-arm64-v8a'; Rid = 'android-arm64'; Libraries = 'shared/lib/*.so' },
+            @{ Artifact = 'android-x86_64'; Rid = 'android-x64'; Libraries = 'shared/lib/*.so' },
+            @{ Artifact = 'linux-x64'; Rid = 'linux-x64'; Libraries = 'shared/lib/*.so*' },
+            @{ Artifact = 'linux-aarch64'; Rid = 'linux-arm64'; Libraries = 'shared/lib/*.so*' }
+          )
+          foreach ($target in $targets) {
+            $source = "$env:RUNNER_TEMP/simplecble-$($target.Artifact)"
+            Expand-Archive "artifacts/libsimplecble_$($target.Artifact).zip" -DestinationPath $source
+            $destination = "native/$($target.Rid)/native"
+            New-Item -ItemType Directory -Path $destination -Force | Out-Null
+            Copy-Item "$source/$($target.Libraries)" -Destination $destination
+          }
+      - name: Build Apple static-link bindings
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $output = "$env:RUNNER_TEMP/simplesharpble-static"
+          dotnet build simplesharpble -c Release -p:SimpleSharpBLEStaticLink=true -o $output
+          foreach ($rid in 'ios-arm64', 'iossimulator-arm64', 'maccatalyst-arm64') {
+            $destination = "native/$rid/lib/net10.0"
+            New-Item -ItemType Directory -Path $destination -Force | Out-Null
+            Copy-Item "$output/SimpleSharpBLE.dll" -Destination $destination
+          }
       - name: Pack native libraries
         run: dotnet pack simplesharpble -c Release "-p:NativeLibrariesDirectory=$pwd/native" -o simplesharpble/artifacts
       - name: Build examples
