@@ -11,69 +11,96 @@ import (
 // Keep C pointers opaque, use fixed-width C int/enum types, and pass actual Go
 // pointers for synchronous out parameters so purego keeps them alive.
 type NativeAPI struct {
-	Free                        func(unsafe.Pointer)
-	Version                     func() string
-	ErrorCode                   func(uintptr) uint32
-	ErrorMessage                func(uintptr) string
-	ErrorRelease                func(*uintptr)
-	BackendCount                func(*uintptr) uintptr
-	BackendGet                  func(uintptr, *uintptr) uintptr
-	BackendRelease              func(uintptr)
-	BackendIdentifier           func(uintptr, *uintptr) *byte
-	BackendEnabled              func(uintptr, *uintptr) bool
-	BackendAdapterCount         func(uintptr, *uintptr) uintptr
-	BackendAdapterGet           func(uintptr, uintptr, *uintptr) uintptr
-	AdapterCount                func(*uintptr) uintptr
-	AdapterGet                  func(uintptr, *uintptr) uintptr
-	AdapterRelease              func(uintptr)
-	AdapterEnabled              func(*uintptr) bool
-	AdapterIdentifier           func(uintptr, *uintptr) *byte
-	AdapterAddress              func(uintptr, *uintptr) *byte
-	AdapterPowerOn              func(uintptr, *uintptr)
-	AdapterPowerOff             func(uintptr, *uintptr)
-	AdapterPowered              func(uintptr, *uintptr) bool
-	AdapterScanStart            func(uintptr, *uintptr)
-	AdapterScanStop             func(uintptr, *uintptr)
-	AdapterScanFor              func(uintptr, int32, *uintptr)
-	AdapterScanActive           func(uintptr, *uintptr) bool
-	SetCallbacks                [4]func(uintptr, uintptr, uintptr)
-	AdapterScanCount            func(uintptr, *uintptr) uintptr
-	AdapterScanGet              func(uintptr, uintptr, *uintptr) uintptr
-	AdapterPairedCount          func(uintptr, *uintptr) uintptr
-	AdapterPairedGet            func(uintptr, uintptr, *uintptr) uintptr
-	AdapterConnectedCount       func(uintptr, *uintptr) uintptr
-	AdapterConnectedGet         func(uintptr, uintptr, *uintptr) uintptr
-	AdapterScanFound            func(uintptr, uintptr, uintptr)
-	AdapterScanUpdated          func(uintptr, uintptr, uintptr)
-	PeripheralRelease           func(uintptr)
-	PeripheralIdentifier        func(uintptr, *uintptr) *byte
-	PeripheralAddress           func(uintptr, *uintptr) *byte
-	PeripheralAddressType       func(uintptr, *uintptr) uint32
-	PeripheralRSSI              func(uintptr, *uintptr) int16
-	PeripheralTxPower           func(uintptr, *uintptr) int16
-	PeripheralMTU               func(uintptr, *uintptr) uint16
-	PeripheralConnect           func(uintptr, *uintptr)
-	PeripheralDisconnect        func(uintptr, *uintptr)
-	PeripheralConnected         func(uintptr, *uintptr) bool
-	PeripheralConnectable       func(uintptr, *uintptr) bool
-	PeripheralPaired            func(uintptr, *uintptr) bool
-	PeripheralUnpair            func(uintptr, *uintptr)
-	PeripheralServiceCount      func(uintptr, *uintptr) uintptr
-	PeripheralServiceGet        func(uintptr, uintptr, *Service, *uintptr)
-	ServiceRelease              func(*Service)
-	PeripheralManufacturerCount func(uintptr, *uintptr) uintptr
-	PeripheralManufacturerGet   func(uintptr, uintptr, *ManufacturerData, *uintptr)
-	ManufacturerRelease         func(*ManufacturerData)
-	PeripheralRead              func(uintptr, UUID, UUID, *uintptr, *uintptr) *byte
-	PeripheralReadDescriptor    func(uintptr, UUID, UUID, UUID, *uintptr, *uintptr) *byte
-	PeripheralWriteRequest      func(uintptr, UUID, UUID, *byte, uintptr, *uintptr)
-	PeripheralWriteCommand      func(uintptr, UUID, UUID, *byte, uintptr, *uintptr)
-	PeripheralWriteDescriptor   func(uintptr, UUID, UUID, UUID, *byte, uintptr, *uintptr)
-	PeripheralNotify            func(uintptr, UUID, UUID, uintptr, uintptr, *uintptr)
-	PeripheralIndicate          func(uintptr, UUID, UUID, uintptr, uintptr, *uintptr)
-	PeripheralUnsubscribe       func(uintptr, UUID, UUID, *uintptr)
-	PeripheralOnConnected       func(uintptr, uintptr, uintptr)
-	PeripheralOnDisconnected    func(uintptr, uintptr, uintptr)
+	Free                              func(unsafe.Pointer)
+	Version                           func() string
+	ErrorCode                         func(uintptr) uint32
+	ErrorMessage                      func(uintptr) string
+	ErrorRelease                      func(*uintptr)
+	BackendCount                      func(*uintptr) uintptr
+	BackendGet                        func(uintptr, *uintptr) uintptr
+	BackendRelease                    func(uintptr)
+	BackendIdentifier                 func(uintptr, *uintptr) *byte
+	BackendEnabled                    func(uintptr, *uintptr) bool
+	BackendAdapterCount               func(uintptr, *uintptr) uintptr
+	BackendAdapterGet                 func(uintptr, uintptr, *uintptr) uintptr
+	AdapterCount                      func(*uintptr) uintptr
+	AdapterGet                        func(uintptr, *uintptr) uintptr
+	AdapterRelease                    func(uintptr)
+	AdapterEnabled                    func(*uintptr) bool
+	AdapterIdentifier                 func(uintptr, *uintptr) *byte
+	AdapterAddress                    func(uintptr, *uintptr) *byte
+	AdapterPowerOn                    func(uintptr, *uintptr)
+	AdapterPowerOff                   func(uintptr, *uintptr)
+	AdapterPowered                    func(uintptr, *uintptr) bool
+	AdapterScanStart                  func(uintptr, *uintptr)
+	AdapterScanStop                   func(uintptr, *uintptr)
+	AdapterScanFor                    func(uintptr, int32, *uintptr)
+	AdapterScanActive                 func(uintptr, *uintptr) bool
+	SetCallbacks                      [4]func(uintptr, uintptr, uintptr)
+	AdapterScanCount                  func(uintptr, *uintptr) uintptr
+	AdapterScanGet                    func(uintptr, uintptr, *uintptr) uintptr
+	AdapterPairedCount                func(uintptr, *uintptr) uintptr
+	AdapterPairedGet                  func(uintptr, uintptr, *uintptr) uintptr
+	AdapterConnectedCount             func(uintptr, *uintptr) uintptr
+	AdapterConnectedGet               func(uintptr, uintptr, *uintptr) uintptr
+	AdapterScanFound                  func(uintptr, uintptr, uintptr)
+	AdapterScanUpdated                func(uintptr, uintptr, uintptr)
+	PeripheralRelease                 func(uintptr)
+	PeripheralIdentifier              func(uintptr, *uintptr) *byte
+	PeripheralAddress                 func(uintptr, *uintptr) *byte
+	PeripheralAddressType             func(uintptr, *uintptr) uint32
+	PeripheralRSSI                    func(uintptr, *uintptr) int16
+	PeripheralTxPower                 func(uintptr, *uintptr) int16
+	PeripheralMTU                     func(uintptr, *uintptr) uint16
+	PeripheralConnect                 func(uintptr, *uintptr)
+	PeripheralDisconnect              func(uintptr, *uintptr)
+	PeripheralConnected               func(uintptr, *uintptr) bool
+	PeripheralConnectable             func(uintptr, *uintptr) bool
+	PeripheralPaired                  func(uintptr, *uintptr) bool
+	PeripheralUnpair                  func(uintptr, *uintptr)
+	PeripheralServiceCount            func(uintptr, *uintptr) uintptr
+	PeripheralServiceGet              func(uintptr, uintptr, *Service, *uintptr)
+	ServiceRelease                    func(*Service)
+	PeripheralManufacturerCount       func(uintptr, *uintptr) uintptr
+	PeripheralManufacturerGet         func(uintptr, uintptr, *ManufacturerData, *uintptr)
+	ManufacturerRelease               func(*ManufacturerData)
+	PeripheralRead                    func(uintptr, UUID, UUID, *uintptr, *uintptr) *byte
+	PeripheralReadDescriptor          func(uintptr, UUID, UUID, UUID, *uintptr, *uintptr) *byte
+	PeripheralWriteRequest            func(uintptr, UUID, UUID, *byte, uintptr, *uintptr)
+	PeripheralWriteCommand            func(uintptr, UUID, UUID, *byte, uintptr, *uintptr)
+	PeripheralWriteDescriptor         func(uintptr, UUID, UUID, UUID, *byte, uintptr, *uintptr)
+	PeripheralNotify                  func(uintptr, UUID, UUID, uintptr, uintptr, *uintptr)
+	PeripheralIndicate                func(uintptr, UUID, UUID, uintptr, uintptr, *uintptr)
+	PeripheralUnsubscribe             func(uintptr, UUID, UUID, *uintptr)
+	PeripheralOnConnected             func(uintptr, uintptr, uintptr)
+	PeripheralOnDisconnected          func(uintptr, uintptr, uintptr)
+	AdapterCreateLocalPeripheral      func(uintptr, *uintptr) uintptr
+	LocalPeripheralRelease            func(uintptr)
+	LocalPeripheralAdvertiseService   func(uintptr, UUID, *uintptr)
+	LocalPeripheralAddService         func(uintptr, UUID, *uintptr) uintptr
+	LocalPeripheralServiceCount       func(uintptr, *uintptr) uintptr
+	LocalPeripheralServiceGet         func(uintptr, uintptr, *uintptr) uintptr
+	LocalPeripheralRemoveServices     func(uintptr, *uintptr)
+	LocalPeripheralStart              func(uintptr, *uintptr)
+	LocalPeripheralStop               func(uintptr, *uintptr)
+	LocalPeripheralStarted            func(uintptr, *uintptr) bool
+	LocalPeripheralAdvertising        func(uintptr, *uintptr) bool
+	LocalPeripheralOnConnected        func(uintptr, uintptr, uintptr)
+	LocalPeripheralOnDisconnected     func(uintptr, uintptr, uintptr)
+	LocalServiceRelease               func(uintptr)
+	LocalServiceUUID                  func(uintptr, *UUID, *uintptr)
+	LocalServiceAddCharacteristic     func(uintptr, UUID, uint32, *uintptr) uintptr
+	LocalServiceCharacteristicCount   func(uintptr, *uintptr) uintptr
+	LocalServiceCharacteristicGet     func(uintptr, uintptr, *uintptr) uintptr
+	LocalCharacteristicRelease        func(uintptr)
+	LocalCharacteristicUUID           func(uintptr, *UUID, *uintptr)
+	LocalCharacteristicCapabilities   func(uintptr, *uintptr) uint32
+	LocalCharacteristicValue          func(uintptr, *uintptr, *uintptr) *byte
+	LocalCharacteristicSetValue       func(uintptr, *byte, uintptr, *uintptr)
+	LocalCharacteristicOnRead         func(uintptr, uintptr, uintptr)
+	LocalCharacteristicOnWrite        func(uintptr, uintptr, uintptr)
+	LocalCharacteristicOnSubscribed   func(uintptr, uintptr, uintptr)
+	LocalCharacteristicOnUnsubscribed func(uintptr, uintptr, uintptr)
 }
 
 var loadedLibrary struct {
@@ -182,6 +209,33 @@ func Load(path string) error {
 		{"simpleble_peripheral_unsubscribe", &native.PeripheralUnsubscribe},
 		{"simpleble_peripheral_set_callback_on_connected", &native.PeripheralOnConnected},
 		{"simpleble_peripheral_set_callback_on_disconnected", &native.PeripheralOnDisconnected},
+		{"simpleble_adapter_create_local_peripheral", &native.AdapterCreateLocalPeripheral},
+		{"simpleble_local_peripheral_release_handle", &native.LocalPeripheralRelease},
+		{"simpleble_local_peripheral_add_advertised_service", &native.LocalPeripheralAdvertiseService},
+		{"simpleble_local_peripheral_add_service", &native.LocalPeripheralAddService},
+		{"simpleble_local_peripheral_services_count", &native.LocalPeripheralServiceCount},
+		{"simpleble_local_peripheral_services_get", &native.LocalPeripheralServiceGet},
+		{"simpleble_local_peripheral_remove_all_services", &native.LocalPeripheralRemoveServices},
+		{"simpleble_local_peripheral_start", &native.LocalPeripheralStart},
+		{"simpleble_local_peripheral_stop", &native.LocalPeripheralStop},
+		{"simpleble_local_peripheral_is_started", &native.LocalPeripheralStarted},
+		{"simpleble_local_peripheral_is_advertising", &native.LocalPeripheralAdvertising},
+		{"simpleble_local_peripheral_set_callback_on_client_connected", &native.LocalPeripheralOnConnected},
+		{"simpleble_local_peripheral_set_callback_on_client_disconnected", &native.LocalPeripheralOnDisconnected},
+		{"simpleble_local_service_release_handle", &native.LocalServiceRelease},
+		{"simpleble_local_service_uuid", &native.LocalServiceUUID},
+		{"simpleble_local_service_add_characteristic", &native.LocalServiceAddCharacteristic},
+		{"simpleble_local_service_characteristics_count", &native.LocalServiceCharacteristicCount},
+		{"simpleble_local_service_characteristics_get", &native.LocalServiceCharacteristicGet},
+		{"simpleble_local_characteristic_release_handle", &native.LocalCharacteristicRelease},
+		{"simpleble_local_characteristic_uuid", &native.LocalCharacteristicUUID},
+		{"simpleble_local_characteristic_capabilities", &native.LocalCharacteristicCapabilities},
+		{"simpleble_local_characteristic_value", &native.LocalCharacteristicValue},
+		{"simpleble_local_characteristic_set_value", &native.LocalCharacteristicSetValue},
+		{"simpleble_local_characteristic_set_callback_on_read", &native.LocalCharacteristicOnRead},
+		{"simpleble_local_characteristic_set_callback_on_write", &native.LocalCharacteristicOnWrite},
+		{"simpleble_local_characteristic_set_callback_on_subscribed", &native.LocalCharacteristicOnSubscribed},
+		{"simpleble_local_characteristic_set_callback_on_unsubscribed", &native.LocalCharacteristicOnUnsubscribed},
 	}
 	for _, binding := range bindings {
 		symbol, err := findSymbol(libraryHandle, binding.name)

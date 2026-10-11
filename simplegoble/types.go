@@ -28,3 +28,14 @@ type Characteristic struct {
 type Descriptor struct {
 	UUID string
 }
+
+// CharacteristicCapability contains local GATT capability flags; combine with bitwise OR.
+type CharacteristicCapability uint32
+
+const (
+	CapabilityRead CharacteristicCapability = 1 << iota
+	CapabilityWriteRequest
+	CapabilityWriteCommand
+	CapabilityNotify
+	CapabilityIndicate
+)
