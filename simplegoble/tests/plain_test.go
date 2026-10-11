@@ -48,7 +48,14 @@ func plainAdapter(t *testing.T) *simplegoble.Adapter {
 	// Drain setup events before a test installs its own callbacks. PLAIN looks
 	// up callback slots when the asynchronous event executes.
 	ready := make(chan struct{}, 1)
-	if err := a.SetCallbackOnScanStop(func() { ready <- struct{}{} }); err != nil {
+	// Several queued stop events may reach this temporary slot. Coalesce them
+	// so a duplicate cannot block the worker after the setup wait finishes.
+	if err := a.SetCallbackOnScanStop(func() {
+		select {
+		case ready <- struct{}{}:
+		default:
+		}
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.ScanStop(); err != nil {
