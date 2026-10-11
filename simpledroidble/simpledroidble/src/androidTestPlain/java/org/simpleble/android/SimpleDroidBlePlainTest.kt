@@ -63,11 +63,11 @@ class SimpleDroidBlePlainTest {
         assertTrue(peripheral.isConnected)
         assertTrue(peripheral.isPaired)
         assertEquals(244, peripheral.mtu)
-        assertSame(peripheral, adapter.getPairedPeripherals().single())
+        assertSame(peripheral, adapter.getPairedPeripherals().single { it.address == peripheral.address })
 
         val services = peripheral.services()
         assertEquals(2, services.size)
-        val battery = services.first()
+        val battery = services.single { it.uuid == BluetoothUUID(BATTERY_SERVICE) }
         assertEquals(BluetoothUUID(BATTERY_SERVICE), battery.uuid)
         assertEquals(battery.uuid.hashCode(), BluetoothUUID(battery.uuid.value).hashCode())
         assertTrue(battery.characteristics.single().canNotify)

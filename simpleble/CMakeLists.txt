@@ -99,6 +99,8 @@ set_target_properties(simpleble PROPERTIES
     DEBUG_POSTFIX "-debug")
 
 if(MSVC)
+    # fmt requires UTF-8 for all backends, including PLAIN.
+    target_compile_options(simpleble PRIVATE "/utf-8")
     # Avoid <experimental/coroutine> being triggered by winrt/base.h, which fails for MSVC 19.51+.
     set_target_properties(simpleble PROPERTIES CXX_STANDARD 20)
 endif()
@@ -309,8 +311,6 @@ elseif(SIMPLEBLE_BACKEND_WINDOWS)
         # /D_USE_MATH_DEFINES -> Specifies that the math.h header file should be included.
         list(APPEND PRIVATE_COMPILE_DEFINITIONS "/D_USE_MATH_DEFINES")
 
-        # /utf-8 -> Set source and executable character sets to utf-8. https://learn.microsoft.com/en-us/cpp/build/reference/utf-8-set-source-and-executable-character-sets-to-utf-8
-        list(APPEND PRIVATE_COMPILE_OPTIONS "/utf-8")
         # /Gd -> Use __cdecl as the default calling convention. https://docs.microsoft.com/en-us/cpp/cpp/cdecl
         list(APPEND PRIVATE_COMPILE_OPTIONS "/Gd")
         # /EHsc -> Use the standard C++ exception handling model. https://learn.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model
