@@ -71,3 +71,18 @@ func CloseAdapter(handle *Handle, callbacks *CallbackOwner) error {
 	}
 	return nil
 }
+
+func ClosePeripheral(handle *Handle, callbacks *CallbackOwner) error {
+	if handle == nil {
+		return nil
+	}
+	handle.Lock()
+	defer handle.Unlock()
+	if handle.NativeHandle != 0 {
+		// Native slots may now belong to another wrapper. Expire only our tokens.
+		callbacks.close()
+		handle.Native.PeripheralRelease(handle.NativeHandle)
+		handle.NativeHandle = 0
+	}
+	return nil
+}

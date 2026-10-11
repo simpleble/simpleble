@@ -136,6 +136,52 @@ func (a *Adapter) ScanFor(duration time.Duration) error {
 	})
 }
 
+// ScanGetResults returns independent owned handles for the current scan results.
+// Close each returned peripheral handle when finished.
+func (a *Adapter) ScanGetResults() ([]*Peripheral, error) {
+	if a.handle == nil {
+		return nil, ErrClosed
+	}
+	return a.peripherals(a.handle.Native.AdapterScanCount, a.handle.Native.AdapterScanGet)
+}
+
+// GetPairedPeripherals returns owned handles for paired devices.
+func (a *Adapter) GetPairedPeripherals() ([]*Peripheral, error) {
+	if a.handle == nil {
+		return nil, ErrClosed
+	}
+	return a.peripherals(a.handle.Native.AdapterPairedCount, a.handle.Native.AdapterPairedGet)
+}
+
+// GetConnectedPeripherals returns owned handles for connected devices.
+func (a *Adapter) GetConnectedPeripherals() ([]*Peripheral, error) {
+	if a.handle == nil {
+		return nil, ErrClosed
+	}
+	return a.peripherals(a.handle.Native.AdapterConnectedCount, a.handle.Native.AdapterConnectedGet)
+}
+
+func (a *Adapter) peripherals(count func(uintptr, *uintptr) uintptr, get func(uintptr, uintptr, *uintptr) uintptr) ([]*Peripheral, error) {
+	return bindings.Query(a.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) []*Peripheral {
+		length := count(nativeHandle, nativeError)
+		if *nativeError != 0 {
+			return nil
+		}
+		peripherals := make([]*Peripheral, 0, length)
+		for i := uintptr(0); i < length; i++ {
+			peripheralHandle := get(nativeHandle, i, nativeError)
+			if *nativeError != 0 {
+				for _, p := range peripherals {
+					_ = p.Close()
+				}
+				return nil
+			}
+			peripherals = append(peripherals, newPeripheral(native, peripheralHandle))
+		}
+		return peripherals
+	})
+}
+
 // SetCallbackOnPowerOn replaces the native power-on callback; nil clears it.
 // Callbacks run in order on this wrapper's Go worker and may call its methods
 // or Close. Return promptly; slow handlers delay later callbacks. Panics follow
@@ -161,4 +207,25 @@ func (a *Adapter) SetCallbackOnScanStart(fn func()) error {
 // Dispatch and ownership follow SetCallbackOnPowerOn.
 func (a *Adapter) SetCallbackOnScanStop(fn func()) error {
 	return bindings.SetCallback(a.handle, a.callbacks, bindings.ScanStop, fn)
+}
+
+// SetCallbackOnScanFound replaces the discovery callback; nil clears it.
+// Each invocation transfers an owned peripheral handle that the handler must
+// Close. Dispatch follows SetCallbackOnPowerOn. Retaining the handle is allowed.
+func (a *Adapter) SetCallbackOnScanFound(fn func(*Peripheral)) error {
+	return a.setPeripheralCallback(bindings.ScanFound, fn)
+}
+
+// SetCallbackOnScanUpdated replaces the advertisement update callback.
+// Each event transfers its own handle, following SetCallbackOnScanFound.
+func (a *Adapter) SetCallbackOnScanUpdated(fn func(*Peripheral)) error {
+	return a.setPeripheralCallback(bindings.ScanUpdated, fn)
+}
+
+func (a *Adapter) setPeripheralCallback(kind int, fn func(*Peripheral)) error {
+	var callback func(uintptr)
+	if fn != nil {
+		callback = func(nativeHandle uintptr) { fn(newPeripheral(a.handle.Native, nativeHandle)) }
+	}
+	return bindings.SetPeripheralCallback(a.handle, a.callbacks, kind, callback)
 }
