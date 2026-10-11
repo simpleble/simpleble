@@ -146,7 +146,7 @@ jobs:
         uses: ./.github/actions/setup-version
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 

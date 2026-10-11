@@ -65,7 +65,7 @@ jobs:
 
       - name: Set up QEMU
         if: matrix.config.os == 'linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
