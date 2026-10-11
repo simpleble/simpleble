@@ -18,6 +18,11 @@ const (
 	ScanFound
 	ScanUpdated
 	subscription
+	LocalConnected
+	LocalDisconnected
+	LocalSubscribed
+	LocalUnsubscribed
+	localWrite
 )
 
 type callbackKey struct {
@@ -30,6 +35,7 @@ type callbackKey struct {
 type CallbackPayload struct {
 	Peripheral uintptr
 	Data       []byte
+	Address    string
 }
 
 type callbackEntry struct {
@@ -245,6 +251,10 @@ func SetCallback(handle *Handle, callbacks *CallbackOwner, kind int, fn func()) 
 				native.PeripheralOnConnected(h, trampoline, token)
 			case Disconnected:
 				native.PeripheralOnDisconnected(h, trampoline, token)
+			case LocalSubscribed:
+				native.LocalCharacteristicOnSubscribed(h, trampoline, token)
+			case LocalUnsubscribed:
+				native.LocalCharacteristicOnUnsubscribed(h, trampoline, token)
 			default:
 				native.SetCallbacks[kind](h, trampoline, token)
 			}

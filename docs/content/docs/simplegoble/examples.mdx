@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Runnable Bluetooth client examples for SimpleGoBLE.
+description: Runnable Bluetooth client and GATT hosting examples for SimpleGoBLE.
 ---
 
 The [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplegoble)
@@ -10,6 +10,7 @@ live alongside the other SimpleBLE binding examples:
 - **list_backends**: Enumerate backends and list the adapters provided by each one.
 - **scan**: Discover peripherals and print their names, addresses, and signal strength.
 - **read**: Connect to a peripheral and read a GATT characteristic.
+- **peripheral**: Host a GATT service that echoes writes to subscribed clients.
 
 Run an example:
 
@@ -18,6 +19,7 @@ go run github.com/simpleble/simplegoble/examples/list_adapters
 go run github.com/simpleble/simplegoble/examples/list_backends
 go run github.com/simpleble/simplegoble/examples/scan
 go run github.com/simpleble/simplegoble/examples/read ADDRESS 180f 2a19
+go run github.com/simpleble/simplegoble/examples/peripheral
 ```
 
 For binding development, see the

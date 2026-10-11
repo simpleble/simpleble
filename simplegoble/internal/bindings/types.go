@@ -79,6 +79,17 @@ func CopyBytes(data *byte, length uintptr) []byte {
 	return append([]byte(nil), unsafe.Slice(data, length)...)
 }
 
+func CopyString(data *byte) string {
+	if data == nil {
+		return ""
+	}
+	var length int
+	for *(*byte)(unsafe.Add(unsafe.Pointer(data), length)) != 0 {
+		length++
+	}
+	return string(unsafe.Slice(data, length))
+}
+
 // Empty writes still need a non-NULL pointer under the SimpleCBLE contract.
 func InputBytes(data []byte) *byte {
 	if len(data) == 0 {

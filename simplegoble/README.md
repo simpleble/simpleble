@@ -9,11 +9,11 @@
 
 SimpleGoBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to Go on
 Windows, macOS, and Linux. Discover and connect Bluetooth peripherals, read and
-write GATT values, and subscribe to notifications through one API.
+write GATT values, subscribe to notifications, and host local GATT services through one API.
 
 ## Why SimpleGoBLE
 
-- **One cross-platform API:** Keep your Bluetooth client logic consistent across desktop platforms.
+- **One cross-platform API:** Keep your Bluetooth client and hosting logic consistent across desktop platforms.
 - **Native underneath:** Use WinRT, CoreBluetooth, and BlueZ through SimpleBLE.
 
 ## Get started
@@ -169,9 +169,61 @@ go run github.com/simpleble/simplegoble/examples/read ADDRESS 180f 2a19
 For backend-specific enumeration, call `GetBackends()` and then
 `backend.Adapters()`. Close every backend, adapter, and peripheral handle when
 finished. Peripheral handles remain usable after the adapter closes. `Close`
-releases a handle; call `Disconnect` to end a connection. Callbacks run serially
+releases a handle; call `Disconnect` to end a connection. Client callbacks run serially
 on each wrapper's Go worker and can call its methods. Keep handlers short.
 Methods are safe for concurrent use.
+
+## Host a GATT service
+
+Create a local peripheral from an adapter, add services and characteristics,
+then start advertising:
+
+```go
+func hostBattery(adapter *ble.Adapter, done <-chan struct{}) error {
+    host, err := adapter.CreateLocalPeripheral()
+    if err != nil {
+        return err
+    }
+    defer host.Close()
+    if err := host.AddAdvertisedService("180f"); err != nil {
+        return err
+    }
+    service, err := host.AddService("180f")
+    if err != nil {
+        return err
+    }
+    defer service.Close()
+    battery, err := service.AddCharacteristic("2a19", ble.CapabilityRead|ble.CapabilityNotify)
+    if err != nil {
+        return err
+    }
+    defer battery.Close()
+    if err := battery.SetValue([]byte{100}); err != nil {
+        return err
+    }
+    if err := host.Start(); err != nil {
+        return err
+    }
+    defer host.Stop()
+    <-done
+    return nil
+}
+```
+
+`SetValue` updates the stored characteristic value and publishes it to subscribers.
+Observe writes with `SetCallbackOnWrite` and clients with
+`SetCallbackOnClientConnected` and `SetCallbackOnClientDisconnected`.
+Configure services before `Start`; call `Stop` before changing the GATT layout.
+Close each local handle when finished. Hosting support follows the native backend.
+
+Run the echo server:
+
+```sh
+go run github.com/simpleble/simplegoble/examples/peripheral
+```
+
+See the [usage guide](https://docs.simpleble.org/simplegoble/usage) for dynamic
+reads, subscription callbacks, and handle ownership.
 
 ## Platforms
 

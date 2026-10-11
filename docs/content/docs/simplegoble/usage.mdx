@@ -3,7 +3,7 @@ title: Usage
 description: Install and use the SimpleGoBLE Go binding.
 ---
 
-SimpleGoBLE exposes SimpleBLE's Bluetooth client API to Go on
+SimpleGoBLE exposes SimpleBLE's Bluetooth client and GATT hosting APIs to Go on
 Windows, macOS, and Linux, with support for amd64 and arm64.
 
 ## Install
@@ -141,6 +141,55 @@ Methods are safe for concurrent use. `Close` waits for native calls and discards
 queued callbacks; a handler already selected may finish after `Close` returns.
 Closing a handle does not change power, scanning, or connection state. Call
 `Disconnect` and `Unsubscribe` explicitly to end those operations.
+
+## Host local GATT services
+
+Call `adapter.CreateLocalPeripheral()` to create a host. Add primary services
+with `host.AddService(uuid)` and characteristics with
+`service.AddCharacteristic(uuid, capabilities)`. Combine `CapabilityRead`,
+`CapabilityWriteRequest`, `CapabilityWriteCommand`, `CapabilityNotify`, and
+`CapabilityIndicate` using bitwise OR.
+
+Service UUIDs must be unique within a host, and characteristic UUIDs must be
+unique within a service.
+
+Add advertisement UUIDs with `AddAdvertisedService`. Configure the GATT layout
+before calling `Start`, which publishes services and starts advertising. Use
+`IsStarted` and `IsAdvertising` to inspect state, and `Stop` to end hosting.
+After stopping, use `RemoveAllServices` to rebuild the layout. Native backends
+report unsupported operations through the usual error classifications.
+
+`characteristic.SetValue([]byte)` updates the stored value and publishes to
+subscribed clients on a best-effort basis. `Value()` returns a Go-owned copy of
+the stored bytes. Empty values and binary data are supported.
+
+Register `SetCallbackOnWrite(func([]byte))` to observe incoming writes. The stored
+value is updated before the handler runs. Write handlers receive Go-owned bytes
+and may call `SetValue` to echo them to subscribers. `SetCallbackOnSubscribed`
+observes the first client subscribing; `SetCallbackOnUnsubscribed` observes the
+last client unsubscribing. Hosts expose `SetCallbackOnClientConnected` and
+`SetCallbackOnClientDisconnected`, passing a Go-owned client address or platform
+identifier. These event handlers follow the same serial dispatch rules as the
+client API and may call their wrapper's methods or `Close`.
+
+Use `SetCallbackOnRead(func() []byte)` for a dynamic read value. It runs
+synchronously on the native calling thread, so return promptly and use only
+application data: do not call BLE methods, change callback registrations, or
+close a handle from a read callback. Go copies the returned bytes. Pass `nil`
+to restore the stored value; `Value()` always reads stored bytes without calling
+the dynamic handler.
+
+Every local host, service, and characteristic returned by creation or enumeration
+owns a handle that must be closed. Copies of a wrapper share ownership;
+`Services()` and `Characteristics()` return independent handles. Closing a
+service or characteristic does not remove it from the hosted GATT layout.
+Closing a characteristic clears its dynamic read callback if it still owns the
+slot, preserves a replacement registered through another handle, and expires
+its event callbacks. Closing the host stops hosting. Stop the host and close
+all local handles when finished. Removing services invalidates their native
+configuration handles; subsequent operations report the native error.
+
+The [peripheral example](./examples) hosts a service that echoes incoming writes.
 
 ## Errors
 

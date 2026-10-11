@@ -86,3 +86,45 @@ func ClosePeripheral(handle *Handle, callbacks *CallbackOwner) error {
 	}
 	return nil
 }
+
+func CloseLocalPeripheral(handle *Handle, callbacks *CallbackOwner) error {
+	if handle == nil {
+		return nil
+	}
+	handle.Lock()
+	defer handle.Unlock()
+	if handle.NativeHandle != 0 {
+		callbacks.close()
+		handle.Native.LocalPeripheralRelease(handle.NativeHandle)
+		handle.NativeHandle = 0
+	}
+	return nil
+}
+
+func CloseLocalService(handle *Handle) error {
+	if handle == nil {
+		return nil
+	}
+	handle.Lock()
+	defer handle.Unlock()
+	if handle.NativeHandle != 0 {
+		handle.Native.LocalServiceRelease(handle.NativeHandle)
+		handle.NativeHandle = 0
+	}
+	return nil
+}
+
+func CloseLocalCharacteristic(handle *Handle, callbacks *CallbackOwner, reader *ReadCallback) error {
+	if handle == nil {
+		return nil
+	}
+	handle.Lock()
+	defer handle.Unlock()
+	if handle.NativeHandle != 0 {
+		callbacks.close()
+		reader.clear(handle)
+		handle.Native.LocalCharacteristicRelease(handle.NativeHandle)
+		handle.NativeHandle = 0
+	}
+	return nil
+}
