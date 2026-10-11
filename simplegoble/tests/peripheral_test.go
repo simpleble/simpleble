@@ -43,37 +43,43 @@ func plainPeripheral(t *testing.T, adapter *ble.Adapter) *ble.Peripheral {
 func TestPlainPeripheralDiscoveryAndOwnership(t *testing.T) {
 	a := plainAdapter(t)
 	p := plainPeripheral(t, a)
-	found, updated := make(chan *ble.Peripheral, 8), make(chan *ble.Peripheral, 8)
-	if err := a.SetCallbackOnScanFound(func(p *ble.Peripheral) { found <- p }); err != nil {
+	found, updated := make(chan *ble.Peripheral, 1), make(chan *ble.Peripheral, 1)
+	var foundSent, updatedSent bool
+	if err := a.SetCallbackOnScanFound(func(p *ble.Peripheral) {
+		if foundSent {
+			_ = p.Close()
+			return
+		}
+		foundSent = true
+		found <- p
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.SetCallbackOnScanUpdated(func(p *ble.Peripheral) { updated <- p }); err != nil {
+	if err := a.SetCallbackOnScanUpdated(func(p *ble.Peripheral) {
+		if updatedSent {
+			_ = p.Close()
+			return
+		}
+		updatedSent = true
+		updated <- p
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.ScanFor(250 * time.Millisecond); err != nil {
-		t.Fatal(err)
-	}
-	// A scan-stop event drains the same native and Go queues as discovery events.
-	barrier := make(chan struct{}, 1)
-	if err := a.SetCallbackOnScanStop(func() { barrier <- struct{}{} }); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.ScanStop(); err != nil {
-		t.Fatal(err)
-	}
-	receive(t, barrier)
-	if err := a.SetCallbackOnScanFound(nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SetCallbackOnScanUpdated(nil); err != nil {
+	if err := a.ScanStart(); err != nil {
 		t.Fatal(err)
 	}
 	peer := receive(t, found)
 	defer peer.Close()
 	update := receive(t, updated)
 	defer update.Close()
-	for len(updated) > 0 {
-		_ = (<-updated).Close()
+	if err := a.ScanStop(); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SetCallbackOnScanFound(nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SetCallbackOnScanUpdated(nil); err != nil {
+		t.Fatal(err)
 	}
 	if err := a.Close(); err != nil {
 		t.Fatal(err)
