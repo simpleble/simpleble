@@ -10,7 +10,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/prelude.cmake)
 project(
     simplebluez
     VERSION ${SIMPLEBLE_VERSION_BASE}
-    DESCRIPTION "A simple C++ wrapper around Bluez with a commercially-friendly licence."
+    DESCRIPTION "A simple C++ wrapper around Bluez."
     HOMEPAGE_URL "https://github.com/OpenBluetoothToolbox/SimpleBluez"
     LANGUAGES CXX
 )

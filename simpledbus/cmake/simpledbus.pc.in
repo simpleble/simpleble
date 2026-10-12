@@ -4,7 +4,7 @@ libdir=@CMAKE_INSTALL_FULL_LIBDIR@
 includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 
 Name: SimpleDBus
-Description: "A simple C++ wrapper around DBus with a commercially-friendly licence."
+Description: "A simple C++ wrapper around DBus."
 Version: @simpledbus_VERSION@
 License: BUSL-1.1
 Requires: dbus-1
