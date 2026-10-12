@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: pip install build
 
+      - name: Add License
+        run: cp LICENSE.md simpleaible/LICENSE.md
+
       - name: Build
         run: python3 -m build simpleaible
 

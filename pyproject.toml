@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=77",
     "scikit-build",
     "ninja; platform_system!='Windows'",
     "cmake>=3.21",
