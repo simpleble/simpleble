@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"testing"
-	"time"
 
 	ble "github.com/simpleble/simplegoble"
 )
@@ -20,7 +19,22 @@ const (
 
 func plainPeripheral(t *testing.T, adapter *ble.Adapter) *ble.Peripheral {
 	t.Helper()
-	if err := adapter.ScanFor(250 * time.Millisecond); err != nil {
+	found := make(chan struct{}, 1)
+	if err := adapter.SetCallbackOnScanFound(func(p *ble.Peripheral) {
+		_ = p.Close()
+		select {
+		case found <- struct{}{}:
+		default:
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer adapter.SetCallbackOnScanFound(nil)
+	if err := adapter.ScanStart(); err != nil {
+		t.Fatal(err)
+	}
+	receive(t, found)
+	if err := adapter.ScanStop(); err != nil {
 		t.Fatal(err)
 	}
 	peripherals, err := adapter.ScanGetResults()
