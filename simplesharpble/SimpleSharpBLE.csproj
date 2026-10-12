@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
     <!-- Apple mobile runtime assets import symbols from the statically linked app. -->
@@ -14,14 +15,17 @@
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
     <PackageVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-dev([0-9]+)$', '-dev.$1'))</PackageVersion>
     <_NativeLibraryMajorVersion>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^[0-9]+').Value)</_NativeLibraryMajorVersion>
-    <Description>.NET bindings for SimpleBLE.</Description>
+    <Description>C# and .NET bindings for the cross-platform SimpleBLE Bluetooth Low Energy library, for Windows, macOS, Linux, Android, iOS, and Mac Catalyst. Free for non-commercial use; commercial use requires a license.</Description>
     <IsPackable>true</IsPackable>
     <PackageId Condition="'$(PackageId)' == ''">SimpleSharpBLE</PackageId>
     <Authors>The California Open Source Company</Authors>
+    <!-- nuget.org rejects BUSL-1.1 as a license expression, so the license ships as a file. -->
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://docs.simpleble.org/simplesharpble/usage</PackageProjectUrl>
     <RepositoryUrl>https://github.com/simpleble/simpleble</RepositoryUrl>
-    <PackageTags>bluetooth;ble;simpleble</PackageTags>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>bluetooth;ble;bluetooth-low-energy;gatt;simpleble;windows;macos;linux;android;ios;maui</PackageTags>
     <_NativeRuntimeIdentifier>$(RuntimeIdentifier)</_NativeRuntimeIdentifier>
     <_NativeRuntimeIdentifier Condition="'$(_NativeRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</_NativeRuntimeIdentifier>
   </PropertyGroup>

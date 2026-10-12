@@ -3,6 +3,7 @@ using SimpleSharpBLE.Internal.Interop;
 
 namespace SimpleSharpBLE.Local;
 
+/// <summary>A service in a local GATT host.</summary>
 public sealed class Service : IDisposable
 {
     private readonly NativeHandle handle;
@@ -12,6 +13,7 @@ public sealed class Service : IDisposable
         handle = new(pointer, HandleKind.LocalService);
         this.children = children;
     }
+    /// <summary>The service UUID.</summary>
     public string Uuid
     {
         get
@@ -21,6 +23,7 @@ public sealed class Service : IDisposable
             return uuid.ToString();
         }
     }
+    /// <summary>Returns wrappers for the service's characteristics. Dispose each one.</summary>
     public IReadOnlyList<Characteristic> Characteristics
     {
         get
@@ -39,6 +42,7 @@ public sealed class Service : IDisposable
             }
         }
     }
+    /// <summary>Adds a characteristic. Call before Start; dispose the returned wrapper.</summary>
     public Characteristic AddCharacteristic(string uuid, CharacteristicCapability capabilities)
     {
         if (capabilities == 0 || ((uint)capabilities & ~31u) != 0) throw new ArgumentOutOfRangeException(nameof(capabilities));
@@ -49,5 +53,6 @@ public sealed class Service : IDisposable
             return new(characteristic, children.Add(value.ToString()));
         }
     }
+    /// <summary>Releases this wrapper. The service stays hosted.</summary>
     public void Dispose() => handle.Dispose();
 }

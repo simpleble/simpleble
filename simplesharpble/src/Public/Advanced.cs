@@ -5,8 +5,10 @@ using SimpleSharpBLE.Internal.Interop;
 
 namespace SimpleSharpBLE;
 
+/// <summary>Platform- and backend-specific APIs. Platform methods throw PlatformNotSupportedException on other platforms.</summary>
 public static class Advanced
 {
+    /// <summary>Pairing callbacks for peripherals reached through a Dongl adapter. Register them before connecting.</summary>
     public static class Dongl
     {
         private static readonly NativeMethods.PairCallback request = Request;
@@ -37,6 +39,7 @@ public static class Advanced
             peripheral.callbacks.Set("pair-request", callback is null ? null : _ => callback(), (h, id) =>
                 NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_advanced_dongl_set_passkey_request_callback(h, id == 0 ? null : request, id, ref e); return 0; }));
         }
+        /// <summary>Receives the six-digit passkey to show to the user. Pass null to unregister.</summary>
         public static void SetPasskeyDisplayCallback(Peripheral peripheral, Action<string>? callback)
         {
             if (peripheral is null) throw new ArgumentNullException(nameof(peripheral));
@@ -52,6 +55,7 @@ public static class Advanced
         }
     }
 
+    /// <summary>Android initialization.</summary>
     public static class Android
     {
         /// <summary>
@@ -78,34 +82,42 @@ public static class Advanced
             NativeCall.Invoke(NativeMethods.simpleble_backend_get_count);
         }
     }
+    /// <summary>macOS CoreBluetooth extensions.</summary>
     public static class MacOS
     {
+        /// <summary>Sets the local name advertised by a local peripheral, or null to remove the override. Call before Start.</summary>
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
             Require(Utils.OperatingSystem == NativeOperatingSystem.MacOS);
             SetName(peripheral, name, NativeMethods.simpleble_advanced_macos_set_advertisement_local_name);
         }
+        /// <summary>Returns already-known peripherals by CoreBluetooth identifier without scanning. Unknown identifiers are skipped; dispose each result.</summary>
         public static IReadOnlyList<Peripheral> RetrieveCachedPeripherals(Adapter adapter, IEnumerable<string> identifiers)
         {
             Require(Utils.OperatingSystem == NativeOperatingSystem.MacOS);
             return Retrieve(adapter, identifiers, NativeMethods.simpleble_advanced_macos_retrieve_cached_peripheral);
         }
     }
+    /// <summary>iOS, iPadOS, and Mac Catalyst CoreBluetooth extensions.</summary>
     public static class IOS
     {
+        /// <summary>Sets the local name advertised by a local peripheral, or null to remove the override. Call before Start.</summary>
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
             Require(Utils.OperatingSystem == NativeOperatingSystem.IOS);
             SetName(peripheral, name, NativeMethods.simpleble_advanced_ios_set_advertisement_local_name);
         }
+        /// <summary>Returns already-known peripherals by CoreBluetooth identifier without scanning. Unknown identifiers are skipped; dispose each result.</summary>
         public static IReadOnlyList<Peripheral> RetrieveCachedPeripherals(Adapter adapter, IEnumerable<string> identifiers)
         {
             Require(Utils.OperatingSystem == NativeOperatingSystem.IOS);
             return Retrieve(adapter, identifiers, NativeMethods.simpleble_advanced_ios_retrieve_cached_peripheral);
         }
     }
+    /// <summary>Linux BlueZ extensions.</summary>
     public static class Linux
     {
+        /// <summary>Sets the local name advertised by a local peripheral, or null to remove the override. Call before Start.</summary>
         public static void SetAdvertisementLocalName(Local.Peripheral peripheral, string? name)
         {
             Require(Utils.OperatingSystem == NativeOperatingSystem.Linux);

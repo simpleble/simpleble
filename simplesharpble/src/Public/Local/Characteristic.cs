@@ -3,14 +3,30 @@ using SimpleSharpBLE.Internal.Interop;
 
 namespace SimpleSharpBLE.Local;
 
+/// <summary>Operations a local characteristic offers to clients. Combine with bitwise OR.</summary>
 [Flags]
-public enum CharacteristicCapability { Read = 1, WriteRequest = 2, WriteCommand = 4, Notify = 8, Indicate = 16 }
+public enum CharacteristicCapability
+{
+    /// <summary>Clients can read the value.</summary>
+    Read = 1,
+    /// <summary>Clients can write with acknowledgement.</summary>
+    WriteRequest = 2,
+    /// <summary>Clients can write without acknowledgement.</summary>
+    WriteCommand = 4,
+    /// <summary>Clients can subscribe to notifications.</summary>
+    Notify = 8,
+    /// <summary>Clients can subscribe to indications.</summary>
+    Indicate = 16,
+}
 
+/// <summary>Carries a value written by a client.</summary>
 public sealed class ValueEventArgs(byte[] value) : EventArgs
 {
+    /// <summary>A copy of the written bytes.</summary>
     public byte[] Value { get; } = value;
 }
 
+/// <summary>A characteristic in a local GATT service.</summary>
 public sealed class Characteristic : IDisposable
 {
     internal readonly NativeHandle handle;
@@ -26,6 +42,7 @@ public sealed class Characteristic : IDisposable
         handle = new(pointer, HandleKind.LocalCharacteristic);
         callbacks = new(handle);
     }
+    /// <summary>The characteristic UUID.</summary>
     public string Uuid
     {
         get
@@ -35,7 +52,9 @@ public sealed class Characteristic : IDisposable
             return uuid.ToString();
         }
     }
+    /// <summary>The operations offered to clients.</summary>
     public CharacteristicCapability Capabilities => (CharacteristicCapability)handle.Query(NativeMethods.simpleble_local_characteristic_capabilities);
+    /// <summary>The stored value. Setting it publishes to notify or indicate subscribers on a best-effort basis.</summary>
     public byte[] Value
     {
         get
@@ -70,6 +89,7 @@ public sealed class Characteristic : IDisposable
             }
         }
     }
+    /// <summary>Raised after a client writes; Value is already updated. Handlers run on a worker thread.</summary>
     public event EventHandler<ValueEventArgs> Written
     {
         add { LocalReadRegistration.CheckMutation(); lock (eventGate) SetWritten(written + value); }
@@ -82,11 +102,13 @@ public sealed class Characteristic : IDisposable
             (h, id) => NativeMethods.simpleble_local_characteristic_set_callback_on_write(h, id == 0 ? null : NativeCallbacks.OnValue, id));
         written = handlers;
     }
+    /// <summary>Raised when the first client subscribes. Handlers run on a worker thread.</summary>
     public event EventHandler Subscribed
     {
         add { LocalReadRegistration.CheckMutation(); lock (eventGate) SetSubscription(true, subscribed + value); }
         remove { LocalReadRegistration.CheckMutation(); lock (eventGate) SetSubscription(true, subscribed - value); }
     }
+    /// <summary>Raised when the last client unsubscribes. Handlers run on a worker thread.</summary>
     public event EventHandler Unsubscribed
     {
         add { LocalReadRegistration.CheckMutation(); lock (eventGate) SetSubscription(false, unsubscribed + value); }
@@ -102,6 +124,7 @@ public sealed class Characteristic : IDisposable
         });
         if (subscribe) subscribed = handlers; else unsubscribed = handlers;
     }
+    /// <summary>Releases this wrapper, its read handler, and its event registrations. The characteristic stays hosted.</summary>
     public void Dispose()
     {
         LocalReadRegistration.CheckMutation();
