@@ -11,7 +11,7 @@ project(
     simplebluez
     VERSION ${SIMPLEBLE_VERSION_BASE}
     DESCRIPTION "A simple C++ wrapper around Bluez."
-    HOMEPAGE_URL "https://github.com/OpenBluetoothToolbox/SimpleBluez"
+    HOMEPAGE_URL "https://github.com/simpleble/simpleble"
     LANGUAGES CXX
 )
 
