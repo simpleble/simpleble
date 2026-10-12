@@ -5,12 +5,10 @@
 **Licensor:** The California Open Source Company LLC
 
 **Licensed Work:** SimpleBLE and the companion libraries, language bindings and tools that the
-Licensor distributes under this License, such as SimpleBluez, SimpleDBus, SimpleCBLE, SimplePyBLE,
-SimpleRsBLE, SimpleJavaBLE, SimpleDroidBLE, SimpleDroidBridge, SimpleSharpBLE, SimpleGoBLE and
-SimpleAIBLE, in source or binary form and however obtained, including from
-https://github.com/simpleble/simpleble, from the Licensor's other repositories, or from package
-registries. Third-party components distributed with the Licensed Work remain under the licenses stated
-in their own files.
+Licensor distributes under this License, in source or binary form and however obtained, including
+from https://github.com/simpleble/simpleble, from the Licensor's other repositories, or from package
+registries. The Licensed Work is (c) The California Open Source Company LLC. Third-party components
+distributed with the Licensed Work remain under the licenses stated in their own files.
 
 **Additional Use Grant:** You may make production use of the Licensed Work, provided your use is
 Non-Commercial.
