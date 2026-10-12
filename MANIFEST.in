@@ -232,14 +232,12 @@ include simpleble/src/backends/macos/PeripheralMac.h
 include simpleble/src/backends/macos/PeripheralMac.mm
 include simpleble/src/backends/macos/Utils.h
 include simpleble/src/backends/macos/Utils.mm
-include simpleble/src/backends/plain/AdapterPlain.cpp
-include simpleble/src/backends/plain/AdapterPlain.h
 include simpleble/src/backends/plain/BackendPlain.cpp
-include simpleble/src/backends/plain/PeripheralPlain.cpp
-include simpleble/src/backends/plain/PeripheralPlain.h
 include simpleble/src/backends/simulator/AdapterSimulator.cpp
 include simpleble/src/backends/simulator/AdapterSimulator.h
 include simpleble/src/backends/simulator/BackendSimulator.cpp
+include simpleble/src/backends/simulator/LocalPeripheralSimulator.cpp
+include simpleble/src/backends/simulator/LocalPeripheralSimulator.h
 include simpleble/src/backends/simulator/PeripheralSimulator.cpp
 include simpleble/src/backends/simulator/PeripheralSimulator.h
 include simpleble/src/backends/simulator/SimulationAdapter.cpp
@@ -409,6 +407,7 @@ prune simpleble/test
 prune simplebluez/test
 prune simpledbus/test
 prune simpledroidbridge
+prune simplegoble
 prune simplejavable
 prune simplepyble/test
 prune simplersble
