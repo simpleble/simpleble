@@ -1,0 +1,224 @@
+---
+title: Migrating from pc-ble-driver
+description: Move from pc-ble-driver and pc-ble-driver-py to SimpleBLE with a Dongl, keeping a dedicated USB radio and replacing the event dispatcher with blocking calls.
+---
+
+Nordic archived [pc-ble-driver](https://github.com/NordicSemiconductor/pc-ble-driver) and [pc-ble-driver-py](https://github.com/NordicSemiconductor/pc-ble-driver-py) in 2024, with no successor planned. If your production tests or desktop tools depend on them, SimpleBLE with a [Dongl](../dongl) keeps the dedicated USB radio and replaces the event dispatcher with blocking calls. We maintain the library and the Dongl firmware together.
+
+This guide maps pc-ble-driver-py and the pc-ble-driver C API onto SimpleBLE, then walks through Python production tests, applications that talk to several devices, pairing, and C API integrations.
+
+## From events to blocking calls
+
+A pc-ble-driver application opens the transport, configures and enables the SoftDevice, and then starts each GAP and GATT procedure itself: scanning, connecting, service and characteristic discovery, and CCCD writes. An event dispatcher matches each response to its request by connection handle and attribute handle.
+
+With a Dongl, the firmware runs those procedures and SimpleBLE's calls block until they finish. `connect()` returns after the link is up, the MTU is exchanged, and services are discovered. `read()` returns the value or raises an error. You address characteristics by service and characteristic UUID, and connection and attribute handles never appear in your code.
+
+## Switch to a Dongl
+
+1. **Plug in a Dongl.** To evaluate with the nRF52840 Dongle or DK you already have, [flash it with the Dongl firmware](../dongl#update-the-firmware).
+2. **Install SimpleBLE 1.2.0 or later:** `pip install --upgrade simplepyble` for Python, the [SimpleSharpBLE](../simplesharpble/usage) NuGet package for C#, or a [source build](../installation) for C++ and C.
+3. **Select the Dongl in code.** Enable the Dongl backend before any other SimpleBLE call and take the adapters from the `Dongl` backend. [Select a Dongl](../dongl#select-a-dongl) shows it in C++, C, Python, and C#.
+
+Your code no longer names a serial port or a baud rate. SimpleBLE finds Dongls by their USB vendor and product IDs, and the same code runs on the computer's built-in Bluetooth when you select a native adapter instead.
+
+## API mapping
+
+| Task | pc-ble-driver-py | SimplePyBLE with a Dongl |
+| --- | --- | --- |
+| Hardware | An nRF5 board with connectivity firmware for the SoftDevice API version the library was built for | A Dongl |
+| Open the board | `BLEDriver(serial_port, baud_rate)`, `BLEAdapter(driver)`, `driver.open()` | Set `config.dongl.use_dongl_backend`, then call the `Dongl` backend's `adapters()` |
+| Configure the stack | `ble_cfg_set()`, `ble_enable()` | Not needed; the firmware configures itself |
+| Scan | `ble_gap_scan_start()` with `BLEGapScanParams`, then `on_gap_evt_adv_report` | `scan_for(ms)` and `scan_get_results()`, or `scan_start()` with `set_callback_on_scan_found()` |
+| Connect | `adapter.connect(peer_addr)`, then `on_gap_evt_connected` | `peripheral.connect()` |
+| Discover services | `adapter.service_discovery(conn_handle)` | Done by `connect()`; list with `peripheral.services()` |
+| MTU | `adapter.att_mtu_exchange(conn_handle, mtu)` | Negotiated by the Dongl; read with `peripheral.mtu()` |
+| Read | `adapter.read_req(conn_handle, uuid)` returns `(status, data)` | `peripheral.read(service, characteristic)` returns `bytes` and raises on failure |
+| Write | `adapter.write_req(...)` / `adapter.write_cmd(...)` | `peripheral.write_request(...)` / `peripheral.write_command(...)` |
+| Notifications | `adapter.enable_notification(conn_handle, uuid)`, then `on_notification` | `peripheral.notify(service, characteristic, callback)` |
+| Pair and bond | `adapter.authenticate()` with `bond`, `lesc`, and `io_caps` | Started by the device; see [Pairing and bonding](#pairing-and-bonding) |
+| Disconnect | `adapter.disconnect(conn_handle)` | `peripheral.disconnect()` |
+| Close | `driver.close()` | Release the SimpleBLE objects |
+
+SimpleBLE runs callbacks on its own threads. Keep them short and pass longer work to a thread of your own; see [Concurrency](../fundamentals/concurrency). The C API mapping is in [Driving the Dongl from your own application](#driving-the-dongl-from-your-own-application).
+
+## Production test in Python
+
+A typical pc-ble-driver-py production test finds the device under test by its MAC address, connects, reads one characteristic, and disconnects.
+
+**pc-ble-driver-py** (outline of the event-driven flow):
+
+```python
+from pc_ble_driver_py import config
+config.__conn_ic_id__ = "NRF52"
+from pc_ble_driver_py.ble_driver import BLEDriver, BLEGapScanParams
+from pc_ble_driver_py.ble_adapter import BLEAdapter
+
+driver = BLEDriver(serial_port="COM7", auto_flash=False, baud_rate=1000000)
+adapter = BLEAdapter(driver)
+adapter.observer_register(tester)  # tester implements on_gap_evt_adv_report, on_gap_evt_connected, ...
+driver.observer_register(tester)
+driver.open()
+# ble_cfg_set() and ble_enable() for the SoftDevice on the board
+driver.ble_gap_scan_start(scan_params=BLEGapScanParams(interval_ms=200, window_ms=150, timeout_s=5))
+
+# on_gap_evt_adv_report(): if peer_addr is the device under test, call adapter.connect(peer_addr)
+# on_gap_evt_connected(): pass conn_handle back to the test thread
+conn_handle = tester.connected.get(timeout=10)
+adapter.service_discovery(conn_handle)
+status, value = adapter.read_req(conn_handle, firmware_revision_uuid)
+adapter.disconnect(conn_handle)
+driver.close()
+```
+
+**SimplePyBLE with a Dongl:**
+
+```python
+import sys
+import threading
+
+import simplepyble
+
+DEVICE_ADDRESS = "C4:2B:91:0E:5A:17"
+DEVICE_INFORMATION = "0000180a-0000-1000-8000-00805f9b34fb"
+FIRMWARE_REVISION = "00002a26-0000-1000-8000-00805f9b34fb"
+
+simplepyble.config.dongl.use_dongl_backend = True
+
+dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
+adapters = dongl.adapters()
+if not adapters:
+    sys.exit("No Dongl found.")
+adapter = adapters[0]
+
+found = threading.Event()
+
+
+def on_found(peripheral):
+    if peripheral.address() == DEVICE_ADDRESS:
+        found.set()
+
+
+adapter.set_callback_on_scan_found(on_found)
+adapter.scan_start()
+found.wait(timeout=10)
+adapter.scan_stop()
+
+device = next((p for p in adapter.scan_get_results() if p.address() == DEVICE_ADDRESS), None)
+if device is None:
+    sys.exit(f"{DEVICE_ADDRESS} not found.")
+
+device.connect()
+try:
+    print("Firmware:", device.read(DEVICE_INFORMATION, FIRMWARE_REVISION).decode())
+finally:
+    device.disconnect()
+```
+
+The script scans until the device appears, then stops. `connect()` and `read()` raise an exception on failure rather than returning status codes, and an unhandled exception fails the test. Because the Dongl reports real MAC addresses on macOS as well as Windows, the same script runs on both. Write `DEVICE_ADDRESS` in uppercase, as the Dongl reports it.
+
+## Several devices at once
+
+With pc-ble-driver, the events of every connection arrive in one dispatcher, which routes them by `conn_handle` to the code that handles each device.
+
+With SimpleBLE, each device is a `Peripheral` with its own blocking calls, and each can run in its own thread with straight-line code: scan, connect, read, disconnect. To add radios, plug in more Dongls; each one is another adapter. [Use several Dongls](../dongl#use-several-dongls) has complete programs in C++, C, Python, and C#. Tell Dongls apart by `adapter.address()`, which stays the same across restarts and USB ports, rather than by serial port name.
+
+For a Windows application, use [SimpleSharpBLE](../simplesharpble/usage) from NuGet, or link the C++ library, which builds as a static library by default. Using several Dongls from C# requires SimpleBLE 1.2.1 or later. Each Dongl unit includes a commercial license to use SimpleBLE through the Dongl backend; [Dongl Licenses](https://www.simpleble.org/dongl-licenses) has the full terms.
+
+## Pairing and bonding
+
+A pc-ble-driver-py test calls `adapter.authenticate(conn_handle, role, bond=True, lesc=True, io_caps=...)` after connecting and then answers the security events the SoftDevice raises.
+
+With a Dongl, the device under test starts pairing by sending a security request, and the Dongl runs LE Secure Connections and bonding. Your code only answers passkey or numeric-comparison requests, through a callback registered before `connect()`:
+
+```cpp
+#include <simpleble/Advanced.h>
+
+SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, [](const std::string& passkey) {
+    std::cout << "Does the device show " << passkey << "? [y/N] " << std::flush;
+    std::string answer;
+    std::getline(std::cin, answer);
+    return answer == "y";
+});
+
+peripheral.connect();
+```
+
+The C and C# versions, and the passkey callbacks, are in [Pairing and bonding](../dongl#pairing-and-bonding).
+
+Bonds are stored on the Dongl and persist across script runs, power cycles, and computers. SimplePyBLE can list and remove them:
+
+```python
+for peripheral in adapter.get_paired_peripherals():
+    print("Bonded:", peripheral.address())
+
+if device.is_paired():
+    device.unpair()  # Remove the bond so the Dongl is ready for the next unit.
+```
+
+On a production line, unpair each unit after its test so that bonds don't accumulate on the Dongl.
+
+## Driving the Dongl from your own application
+
+If your application calls pc-ble-driver's C API, from C, C++, or any tool that loads C libraries, use [SimpleCBLE](../simplecble/usage), SimpleBLE's C API.
+
+| Task | pc-ble-driver (C) | SimpleCBLE with a Dongl |
+| --- | --- | --- |
+| Open the board | `sd_rpc_physical_layer_create_uart` → `sd_rpc_data_link_layer_create_bt_three_wire` → `sd_rpc_transport_layer_create` → `sd_rpc_adapter_create` → `sd_rpc_open` | `simpleble_config_dongl_set_use_dongl_backend`, then `simpleble_backend_get_adapters_handle` on the `Dongl` backend |
+| Configure the stack | `sd_ble_cfg_set`, `sd_ble_enable` | Not needed |
+| Scan | `sd_ble_gap_scan_start`, then `BLE_GAP_EVT_ADV_REPORT` | `simpleble_adapter_scan_for`, then `simpleble_adapter_scan_get_results_handle` |
+| Connect and discover | `sd_ble_gap_connect`, `sd_ble_gattc_primary_services_discover`, `sd_ble_gattc_characteristics_discover`, `sd_ble_gattc_descriptors_discover` | `simpleble_peripheral_connect` |
+| MTU | `sd_ble_gattc_exchange_mtu_request` | `simpleble_peripheral_mtu` |
+| Read | `sd_ble_gattc_read`, then `BLE_GATTC_EVT_READ_RSP` | `simpleble_peripheral_read` |
+| Write | `sd_ble_gattc_write` | `simpleble_peripheral_write_request` / `simpleble_peripheral_write_command` |
+| Notifications | `sd_ble_gattc_write` to the CCCD, then `BLE_GATTC_EVT_HVX` | `simpleble_peripheral_notify` |
+| Pair and bond | `sd_ble_gap_authenticate` and the `BLE_GAP_EVT_*` security events | `simpleble_advanced_dongl_set_*_callback`, then connect |
+| Disconnect | `sd_ble_gap_disconnect` | `simpleble_peripheral_disconnect` |
+| Close | `sd_rpc_close` | `simpleble_adapter_release_handle` |
+
+With pc-ble-driver, every step after `sd_rpc_open()` is a request whose result arrives later in your event dispatcher. With SimpleCBLE, select the adapter as in [Select a Dongl](../dongl#select-a-dongl), scan as in the [scan recipe](../recipes/scan), then connect and read with blocking calls. Each call reports failure through an owned error object:
+
+```c
+static bool confirm_passkey(simpleble_peripheral_t peripheral, const char* passkey, void* userdata) {
+    printf("Does the device show %s? [y/N] ", passkey);
+    fflush(stdout);
+    return getchar() == 'y';
+}
+
+bool read_firmware_revision(simpleble_peripheral_t peripheral) {
+    simpleble_uuid_t service = {"0000180a-0000-1000-8000-00805f9b34fb"};
+    simpleble_uuid_t characteristic = {"00002a26-0000-1000-8000-00805f9b34fb"};
+    simpleble_error_t* error = NULL;
+
+    simpleble_advanced_dongl_set_numeric_comparison_callback(peripheral, confirm_passkey, NULL, &error);
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        simpleble_error_release(&error);
+        return false;
+    }
+
+    size_t length = 0;
+    uint8_t* value = simpleble_peripheral_read(peripheral, service, characteristic, &length, &error);
+    bool success = error == NULL;
+    if (success) {
+        printf("Firmware: %.*s\n", (int)length, value ? (const char*)value : "");
+    } else {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+    }
+    simpleble_free(value);
+
+    simpleble_peripheral_disconnect(peripheral, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        success = false;
+    }
+    simpleble_error_release(&error);
+    return success;
+}
+```
+
+The [C tutorial](../simplecble/tutorial) covers handle ownership and cleanup.
+
+## Licensing
+
+SimpleBLE is source-available under the Business Source License 1.1 and free for non-commercial use; commercial licenses are described in [Licensing](../licensing). The Dongl firmware has its own [license terms](https://www.simpleble.org/dongl-licenses).

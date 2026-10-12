@@ -1,0 +1,518 @@
+---
+title: Dongl Adapter
+description: Bluetooth that behaves the same on every computer, from a USB adapter made for SimpleBLE.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+A Dongl is a USB Bluetooth adapter made for SimpleBLE. Plug one in and your application no longer depends on the computer's Bluetooth: the stack runs on the Dongl, in firmware we develop together with the library, and it behaves the same on every Windows PC and Mac.
+
+The design is deliberately simple. SimpleBLE talks to the Dongl over USB through a small protocol of its own, and with fewer parts between your code and the radio, there is less that can go wrong.
+
+<Callout type="info" title="Just received a Dongl?">
+The [Dongl QuickStart](https://simpleble.org/dongl/quickstart) installs SimplePyBLE, runs a first scan, and points you to the examples to try next.
+</Callout>
+
+## Why use a Dongl
+
+- Windows and macOS give an application one built-in radio. Each Dongl is another adapter, and you can [plug in several](#use-several-dongls).
+- On macOS, CoreBluetooth hides the device's MAC address behind an identifier that only that Mac recognizes (see [Platform Notes](./simpleble/platform_notes#peripheral-identifiers-uuids)). A Dongl reports the real address and address type on macOS and Windows alike, and a Mac test station can match devices by the address printed on their label.
+- Test stations running the same firmware release behave the same, regardless of the computer or OS version.
+- A Dongl needs only a USB port. It works on computers without Bluetooth hardware and with the built-in Bluetooth turned off.
+- Pairing happens without the operating system, and no system dialog appears; your application answers passkey and numeric-comparison requests itself. Bonds live on the Dongl. They survive power cycles, travel with it to another computer, and can be removed from code. See [Pairing and bonding](#pairing-and-bonding).
+
+## What you need
+
+| Component | Requirement |
+| --- | --- |
+| Firmware | N-Series v0.1.0 |
+| Host | Windows or macOS, over USB |
+| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later |
+
+The firmware acts as a BLE central. It supports scanning with scan responses and service data, connections, reads and writes, notifications and indications, descriptors, MTU reporting, and pairing with bonding. Reads return values of up to 512 bytes.
+
+## Select a Dongl
+
+The Dongl backend is off by default. Enable it before any other SimpleBLE call, then take the adapters from the backend whose identifier is `Dongl`. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address.
+
+<Tabs items={["C++", "C", "Python", "C#"]}>
+<Tab value="C++">
+
+```cpp
+#include <simpleble/Backend.h>
+#include <simpleble/SimpleBLE.h>
+
+SimpleBLE::Config::Dongl::use_dongl_backend = true;
+
+std::vector<SimpleBLE::Adapter> dongls;
+for (auto& backend : SimpleBLE::Backend::get_backends()) {
+    if (backend.identifier() == "Dongl") {
+        dongls = backend.adapters();
+    }
+}
+if (dongls.empty()) {
+    std::cerr << "No Dongl found." << std::endl;
+    return EXIT_FAILURE;
+}
+
+SimpleBLE::Adapter adapter = dongls[0];
+std::cout << adapter.identifier() << " [" << adapter.address() << "]" << std::endl;
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+simpleble_config_dongl_set_use_dongl_backend(true);
+
+simpleble_error_t* error = NULL;
+simpleble_adapter_t adapter = NULL;
+size_t backend_count = simpleble_backend_get_count(&error);
+for (size_t i = 0; i < backend_count && !error && !adapter; i++) {
+    simpleble_backend_t backend = simpleble_backend_get_handle(i, &error);
+    if (error) break;
+
+    char* identifier = simpleble_backend_identifier(backend, &error);
+    if (identifier && strcmp(identifier, "Dongl") == 0 && simpleble_backend_get_adapters_count(backend, &error) > 0) {
+        adapter = simpleble_backend_get_adapters_handle(backend, 0, &error);
+    }
+    simpleble_free(identifier);
+    simpleble_backend_release_handle(backend);
+}
+if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+simpleble_error_release(&error);
+
+// Use the adapter, then release it with simpleble_adapter_release_handle(adapter).
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+simplepyble.config.dongl.use_dongl_backend = True
+
+dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
+adapters = dongl.adapters()
+if not adapters:
+    raise SystemExit("No Dongl found.")
+
+adapter = adapters[0]
+print(adapter.identifier(), adapter.address())
+```
+
+</Tab>
+<Tab value="C#">
+
+```csharp
+using SimpleSharpBLE;
+
+Config.Dongl.UseDonglBackend = true;
+
+IReadOnlyList<Adapter> adapters = [];
+foreach (var backend in Backend.GetBackends())
+{
+    using (backend)
+    {
+        if (backend.Identifier == "Dongl") adapters = backend.Adapters;
+    }
+}
+if (adapters.Count == 0)
+{
+    Console.WriteLine("No Dongl found.");
+    return;
+}
+
+var adapter = adapters[0];
+Console.WriteLine($"{adapter.Identifier} [{adapter.Address}]");
+```
+
+</Tab>
+</Tabs>
+
+A Dongl adapter works like any other SimpleBLE adapter, and the [recipes](./recipes/scan) apply unchanged.
+
+## Use several Dongls
+
+Each Dongl is a separate adapter with its own radio. Plug in as many as your setup needs, for example one per test fixture, and drive each from its own thread. `address()` identifies a unit across restarts and USB ports. Using several Dongls from C or C# requires SimpleBLE 1.2.1 or later.
+
+The programs below check three devices in parallel, one per Dongl.
+
+<Tabs items={["C++", "C", "Python", "C#"]}>
+<Tab value="C++">
+
+```cpp
+#include <iostream>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <simpleble/Backend.h>
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    SimpleBLE::Config::Dongl::use_dongl_backend = true;
+
+    const std::string service = "0000180a-0000-1000-8000-00805f9b34fb";         // Device Information
+    const std::string characteristic = "00002a26-0000-1000-8000-00805f9b34fb";  // Firmware Revision String
+    const std::vector<std::string> targets = {"C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"};
+
+    std::vector<SimpleBLE::Adapter> dongls;
+    for (auto& backend : SimpleBLE::Backend::get_backends()) {
+        if (backend.identifier() == "Dongl") {
+            dongls = backend.adapters();
+        }
+    }
+    if (dongls.size() < targets.size()) {
+        std::cerr << "Found " << dongls.size() << " Dongls, need " << targets.size() << "." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::vector<std::string> results(targets.size(), "not found");
+    std::vector<std::thread> workers;
+    for (size_t i = 0; i < targets.size(); i++) {
+        workers.emplace_back([&, i, adapter = dongls[i]]() mutable {
+            try {
+                adapter.scan_for(5000);
+                for (auto& peripheral : adapter.scan_get_results()) {
+                    if (peripheral.address() != targets[i]) continue;
+
+                    peripheral.connect();
+                    results[i] = std::string(peripheral.read(service, characteristic));
+                    peripheral.disconnect();
+                    break;
+                }
+            } catch (const std::exception& e) {
+                results[i] = e.what();
+            }
+        });
+    }
+    for (auto& worker : workers) {
+        worker.join();
+    }
+
+    for (size_t i = 0; i < targets.size(); i++) {
+        std::cout << targets[i] << " via " << dongls[i].address() << ": " << results[i] << std::endl;
+    }
+    return EXIT_SUCCESS;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <simplecble/simplecble.h>
+
+#define TARGET_COUNT 3
+
+static const char* targets[TARGET_COUNT] = {"C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"};
+
+typedef struct {
+    simpleble_adapter_t adapter;
+    const char* target;
+    char result[64];
+} job_t;
+
+static void* check(void* arg) {
+    job_t* job = arg;
+    simpleble_uuid_t service = {"0000180a-0000-1000-8000-00805f9b34fb"};         // Device Information
+    simpleble_uuid_t characteristic = {"00002a26-0000-1000-8000-00805f9b34fb"};  // Firmware Revision String
+    simpleble_error_t* error = NULL;
+    snprintf(job->result, sizeof(job->result), "not found");
+
+    simpleble_adapter_scan_for(job->adapter, 5000, &error);
+    size_t count = error ? 0 : simpleble_adapter_scan_get_results_count(job->adapter, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(job->adapter, i, &error);
+        if (error) break;
+
+        char* address = simpleble_peripheral_address(peripheral, &error);
+        bool match = address && strcmp(address, job->target) == 0;
+        simpleble_free(address);
+        if (match) {
+            simpleble_peripheral_connect(peripheral, &error);
+            if (!error) {
+                size_t length = 0;
+                uint8_t* data = simpleble_peripheral_read(peripheral, service, characteristic, &length, &error);
+                if (!error) snprintf(job->result, sizeof(job->result), "%.*s", (int)length, data ? (char*)data : "");
+                simpleble_free(data);
+
+                simpleble_error_t* disconnect_error = NULL;
+                simpleble_peripheral_disconnect(peripheral, &disconnect_error);
+                simpleble_error_release(&disconnect_error);
+            }
+        }
+        simpleble_peripheral_release_handle(peripheral);
+        if (match) break;
+    }
+    if (error) snprintf(job->result, sizeof(job->result), "%s", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    return NULL;
+}
+
+int main(void) {
+    simpleble_config_dongl_set_use_dongl_backend(true);
+
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_t dongls[TARGET_COUNT] = {NULL};
+    size_t dongl_count = 0;
+    size_t backend_count = simpleble_backend_get_count(&error);
+    for (size_t i = 0; i < backend_count && !error; i++) {
+        simpleble_backend_t backend = simpleble_backend_get_handle(i, &error);
+        if (error) break;
+
+        char* identifier = simpleble_backend_identifier(backend, &error);
+        if (identifier && strcmp(identifier, "Dongl") == 0) {
+            size_t count = simpleble_backend_get_adapters_count(backend, &error);
+            for (size_t j = 0; j < count && dongl_count < TARGET_COUNT && !error; j++) {
+                dongls[dongl_count] = simpleble_backend_get_adapters_handle(backend, j, &error);
+                if (!error) dongl_count++;
+            }
+        }
+        simpleble_free(identifier);
+        simpleble_backend_release_handle(backend);
+    }
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+
+    int status = EXIT_FAILURE;
+    if (dongl_count < TARGET_COUNT) {
+        fprintf(stderr, "Found %zu Dongls, need %d.\n", dongl_count, TARGET_COUNT);
+    } else {
+        job_t jobs[TARGET_COUNT];
+        pthread_t workers[TARGET_COUNT];
+        for (size_t i = 0; i < TARGET_COUNT; i++) {
+            jobs[i] = (job_t){.adapter = dongls[i], .target = targets[i]};
+            pthread_create(&workers[i], NULL, check, &jobs[i]);
+        }
+        for (size_t i = 0; i < TARGET_COUNT; i++) {
+            pthread_join(workers[i], NULL);
+        }
+
+        for (size_t i = 0; i < TARGET_COUNT; i++) {
+            char* address = simpleble_adapter_address(dongls[i], &error);
+            printf("%s via %s: %s\n", targets[i], address ? address : "?", jobs[i].result);
+            simpleble_free(address);
+        }
+        simpleble_error_release(&error);
+        status = EXIT_SUCCESS;
+    }
+
+    for (size_t i = 0; i < dongl_count; i++) {
+        simpleble_adapter_release_handle(dongls[i]);
+    }
+    return status;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import threading
+
+import simplepyble
+
+SERVICE = "0000180a-0000-1000-8000-00805f9b34fb"         # Device Information
+CHARACTERISTIC = "00002a26-0000-1000-8000-00805f9b34fb"  # Firmware Revision String
+TARGETS = ["C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"]
+
+simplepyble.config.dongl.use_dongl_backend = True
+
+dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
+adapters = dongl.adapters()
+if len(adapters) < len(TARGETS):
+    raise SystemExit(f"Found {len(adapters)} Dongls, need {len(TARGETS)}.")
+
+
+def check(adapter, address):
+    adapter.scan_for(5000)
+    peripheral = next((p for p in adapter.scan_get_results() if p.address() == address), None)
+    if peripheral is None:
+        print(f"{address}: not found by {adapter.address()}")
+        return
+
+    peripheral.connect()
+    try:
+        print(f"{address}: {peripheral.read(SERVICE, CHARACTERISTIC).decode()}")
+    finally:
+        peripheral.disconnect()
+
+
+workers = [threading.Thread(target=check, args=pair) for pair in zip(adapters, TARGETS)]
+for worker in workers:
+    worker.start()
+for worker in workers:
+    worker.join()
+```
+
+</Tab>
+<Tab value="C#">
+
+```csharp
+using System.Text;
+using SimpleSharpBLE;
+
+const string Service = "0000180a-0000-1000-8000-00805f9b34fb";         // Device Information
+const string Characteristic = "00002a26-0000-1000-8000-00805f9b34fb";  // Firmware Revision String
+string[] targets = ["C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"];
+
+Config.Dongl.UseDonglBackend = true;
+
+IReadOnlyList<Adapter> adapters = [];
+foreach (var backend in Backend.GetBackends())
+{
+    using (backend)
+    {
+        if (backend.Identifier == "Dongl") adapters = backend.Adapters;
+    }
+}
+
+try
+{
+    if (adapters.Count < targets.Length)
+    {
+        Console.WriteLine($"Found {adapters.Count} Dongls, need {targets.Length}.");
+        return;
+    }
+
+    string[] results = await Task.WhenAll(targets.Select((address, i) => Check(adapters[i], address)));
+    for (int i = 0; i < targets.Length; i++)
+    {
+        Console.WriteLine($"{targets[i]} via {adapters[i].Address}: {results[i]}");
+    }
+}
+finally
+{
+    foreach (var adapter in adapters) adapter.Dispose();
+}
+
+async Task<string> Check(Adapter adapter, string address)
+{
+    try
+    {
+        await adapter.ScanForAsync(TimeSpan.FromSeconds(5));
+        var peripherals = adapter.ScanGetResults();
+        try
+        {
+            var peripheral = peripherals.FirstOrDefault(p => p.Address == address);
+            if (peripheral is null) return "not found";
+
+            await peripheral.ConnectAsync();
+            try
+            {
+                return Encoding.UTF8.GetString(await peripheral.ReadAsync(Service, Characteristic));
+            }
+            finally
+            {
+                await peripheral.DisconnectAsync();
+            }
+        }
+        finally
+        {
+            foreach (var p in peripherals) p.Dispose();
+        }
+    }
+    catch (Exception e)
+    {
+        return e.Message;
+    }
+}
+```
+
+</Tab>
+</Tabs>
+
+Dongl addresses are uppercase, as in `C4:2B:91:0E:5A:17`; write target addresses the same way.
+
+SimplePyBLE releases the GIL during blocking calls, which lets the Python threads scan and connect in parallel. The C example uses POSIX threads; on Windows, create the workers with C11 `thrd_create` or `_beginthreadex` instead.
+
+## Pairing and bonding
+
+Pairing starts when the device sends a security request. The Dongl then pairs with it, using LE Secure Connections when the device supports them, and stores the bond. If the user needs to enter or confirm a number, the Dongl asks your application through a callback. When a bonded device reconnects, the Dongl encrypts the link with the stored keys instead of pairing again.
+
+Register the callbacks your device needs before `connect()`, since pairing can start as soon as the link is up:
+
+- **Passkey entry** (`set_passkey_request_callback`): the device shows a passkey; return the six digits the user typed, or reject.
+- **Passkey display** (`set_passkey_display_callback`): show the passkey so the user can type it on the device.
+- **Numeric comparison** (`set_numeric_comparison_callback`): return true only if the device shows the same six digits.
+
+In C these are `simpleble_advanced_dongl_set_*_callback`; in C#, `Advanced.Dongl.Set*Callback`. Callbacks run on a worker thread and can block while the user answers. A request with no callback registered is rejected.
+
+<Tabs items={["C++", "C", "C#"]}>
+<Tab value="C++">
+
+```cpp
+#include <simpleble/Advanced.h>
+
+SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, [](const std::string& passkey) {
+    std::cout << "Does the device show " << passkey << "? [y/N] " << std::flush;
+    std::string answer;
+    std::getline(std::cin, answer);
+    return answer == "y";
+});
+
+peripheral.connect();
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+static bool confirm_passkey(simpleble_peripheral_t handle, const char* passkey, void* userdata) {
+    printf("Does the device show %s? [y/N] ", passkey);
+    fflush(stdout);
+    return getchar() == 'y';
+}
+
+simpleble_advanced_dongl_set_numeric_comparison_callback(peripheral, confirm_passkey, NULL, &error);
+if (!error) simpleble_peripheral_connect(peripheral, &error);
+```
+
+</Tab>
+<Tab value="C#">
+
+```csharp
+Advanced.Dongl.SetNumericComparisonCallback(peripheral, passkey =>
+{
+    Console.Write($"Does the device show {passkey}? [y/N] ");
+    return Console.ReadLine()?.Trim() == "y";
+});
+
+peripheral.Connect();
+```
+
+</Tab>
+</Tabs>
+
+Bonds are stored on the Dongl, not on the computer:
+
+- `adapter.get_paired_peripherals()` lists the devices bonded to that Dongl.
+- `peripheral.is_paired()` checks one device.
+- `peripheral.unpair()` deletes its bond from the Dongl.
+
+## Update the firmware
+
+Dongls ship with the firmware installed. To update one, download the firmware package from the [Dongl page](https://simpleble.org/dongl), switch the Dongl into its bootloader, and program `app_dfu.zip` with Nordic's `nrfutil`:
+
+```bash
+python3 -m pip install pyusb
+python3 trigger_bootloader.py
+nrfutil nrf5sdk-tools dfu usb-serial -pkg app_dfu.zip -p <serial-port>
+```
+
+With several Dongls connected, `python3 trigger_bootloader.py --list` shows them and `--serial` picks one. The package README describes the other update packages.
+
+For evaluation, the firmware also runs on Nordic's nRF52840 Dongle and DK: program `mbr_sd_bootloader_app.hex` from the package over SWD.
+
+## Licensing
+
+The N-Series firmware is free for non-commercial prototyping, testing, and validation. Commercial use needs a [license](https://www.simpleble.org/dongl-licenses). Dongl hardware includes a commercial license to use SimpleBLE through the Dongl backend with that unit. SimpleBLE itself is source-available under the Business Source License 1.1; see [Licensing](./licensing).

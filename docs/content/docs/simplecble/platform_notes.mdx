@@ -27,7 +27,7 @@ Provide the application's Java VM and application context before creating a loca
 
 ## Dongl pairing
 
-Register pairing callbacks before connecting. Passkey entry writes six decimal digits plus a NUL terminator into the supplied seven-byte buffer and returns true; return false to reject pairing. Preserve leading zeroes.
+How the Dongl pairs and stores bonds is described in [Pairing and bonding](../dongl#pairing-and-bonding). Register pairing callbacks before connecting. Passkey entry writes six decimal digits plus a NUL terminator into the supplied seven-byte buffer and returns true; return false to reject pairing. Preserve leading zeroes.
 
 Display and comparison callbacks receive a borrowed six-digit string. Numeric comparison returns true only when the user confirms the peer shows the same number. A missing entry or comparison callback rejects that request. These callbacks run on an internal worker thread and can obtain user input there.
 

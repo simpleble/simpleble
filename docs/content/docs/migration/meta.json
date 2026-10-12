@@ -2,6 +2,7 @@
   "title": "Migration Guides",
   "pages": [
     "from-bleak",
-    "from-noble"
+    "from-noble",
+    "from-pc-ble-driver"
   ]
 }
