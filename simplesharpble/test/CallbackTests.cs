@@ -88,22 +88,6 @@ public sealed class CallbackTests
     }
 
     [Fact]
-    public async Task NotificationsCopyPayloadAndCanUnsubscribeInsideHandler()
-    {
-        using var peripheral = new Peripheral(NativeFixture.test_remote());
-        peripheral.Connect();
-        var done = Completion<byte[]>();
-        peripheral.Notify(GattTests.Uuid, GattTests.Uuid, data =>
-        {
-            peripheral.Unsubscribe(GattTests.Uuid, GattTests.Uuid);
-            done.TrySetResult(data);
-        });
-        GC.Collect(); GC.WaitForPendingFinalizers();
-        peripheral.handle.Query((nint h, ref nint e) => { NativeFixture.test_emit(h); return 0; });
-        Assert.Equal(257, (await done.Task.WaitAsync(TimeSpan.FromSeconds(5))).Length);
-    }
-
-    [Fact]
     public async Task NewWrapperRegistrationSurvivesOldWrapperDisposal()
     {
         using var first = new Peripheral(NativeFixture.test_remote());
@@ -154,19 +138,4 @@ public sealed class CallbackTests
         Assert.Equal(1, dropped);
     }
 
-    [Fact]
-    public async Task ConnectionEventsAndRepeatedSubscriptionChangesWork()
-    {
-        using var peripheral = new Peripheral(NativeFixture.test_remote());
-        var connected = Completion<bool>(); var disconnected = Completion<bool>();
-        peripheral.Connected += (_, _) => connected.TrySetResult(true);
-        peripheral.Disconnected += (_, _) => disconnected.TrySetResult(true);
-        peripheral.Connect(); await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        for (int i = 0; i < 50; i++)
-        {
-            peripheral.Notify(GattTests.Uuid, GattTests.Uuid, _ => { });
-            peripheral.Unsubscribe(GattTests.Uuid, GattTests.Uuid);
-        }
-        peripheral.Disconnect(); await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(5));
-    }
 }

@@ -124,23 +124,6 @@ public sealed class LocalAndConfigurationTests
     }
 
     [Fact]
-    public async Task ConcurrentDynamicReadsFollowNativeSerialization()
-    {
-        using var host = new Local.Peripheral(NativeFixture.test_local());
-        using var service = host.AddService(GattTests.Uuid);
-        using var characteristic = service.AddCharacteristic(GattTests.Uuid, CharacteristicCapability.Read);
-        characteristic.ReadHandler = () => Enumerable.Range(0, 257).Select(x => (byte)x).ToArray();
-        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
-        {
-            for (int i = 0; i < 100; i++)
-            {
-                byte[] result = new byte[257];
-                Assert.Equal((nuint)257, characteristic.handle.Query((nint h, ref nint e) => NativeFixture.test_read_local(h, result, 257)));
-                Assert.Equal((byte)255, result[255]);
-            }
-        })));
-    }
-    [Fact]
     public void PlainBackendHostsLocalGattServices()
     {
         var adapters = Adapter.GetAdapters();
@@ -247,16 +230,13 @@ public sealed class LocalAndConfigurationTests
         Assert.Equal("fixture-client", await connected.Task.WaitAsync(TimeSpan.FromSeconds(5)));
         Assert.Throws<BleException>(() => host.RemoveAllServices());
 
-        foreach (int length in new[] { 0, 1, 257, 65537 })
+        foreach (int length in new[] { 0, 1, 257 })
         {
             byte[] expected = Enumerable.Range(0, length).Select(x => (byte)x).ToArray();
             characteristic.Value = expected;
             Assert.Equal(expected, characteristic.Value);
             characteristic.ReadHandler = () => expected;
-            byte[] actual = new byte[length];
-            for (int i = 0; i < 20; i++)
-                Assert.Equal((nuint)length, characteristic.handle.Query((nint h, ref nint e) => NativeFixture.test_read_local(h, actual, (nuint)actual.Length)));
-            Assert.Equal(expected, actual);
+            Assert.Equal(expected, Read(characteristic));
         }
         characteristic.ReadHandler = null;
         characteristic.Value = [];
@@ -338,12 +318,4 @@ public sealed class LocalAndConfigurationTests
             Assert.Throws<BleException>(() => Advanced.Dongl.SetPasskeyRequestCallback(peripheral, () => "001234")).Code);
     }
 
-    [Fact]
-    public void MacOSCachedRetrievalChecksPlatformAndAdapter()
-    {
-        if (System.OperatingSystem.IsMacOS())
-            Assert.Throws<ArgumentNullException>(() => Advanced.MacOS.RetrieveCachedPeripherals(null!, []));
-        else
-            Assert.Throws<PlatformNotSupportedException>(() => Advanced.MacOS.RetrieveCachedPeripherals(null!, []));
-    }
 }

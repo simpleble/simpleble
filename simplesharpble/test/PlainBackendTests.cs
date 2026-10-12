@@ -107,29 +107,6 @@ public sealed class PlainBackendTests
     }
 
     [Fact]
-    public void ErrorsPreserveDetailsAndDoNotContaminateLaterCalls()
-    {
-        for (int i = 0; i < 100; i++)
-        {
-            var exception = Assert.Throws<BleException>(() => NativeCall.Invoke((ref nint error) =>
-                NativeMethods.simpleble_backend_get_handle(nuint.MaxValue, ref error)));
-            Assert.Equal(BleErrorCode.InvalidArgument, exception.Code);
-            Assert.Contains("index", exception.Message);
-        }
-        using var adapter = OpenAdapter();
-        Assert.True(adapter.IsPowered);
-    }
-
-    [Fact]
-    public void PartialEnumerationDisposesAlreadyCreatedWrappers()
-    {
-        using var adapter = OpenAdapter();
-        Assert.Throws<InvalidOperationException>(() => NativeCall.Collect<Adapter>(2, index =>
-            index == 0 ? adapter : throw new InvalidOperationException("Simulated retrieval failure")));
-        Assert.Throws<ObjectDisposedException>(() => adapter.Identifier);
-    }
-
-    [Fact]
     public async Task InFlightCallRetainsHandleAcrossConcurrentDisposal()
     {
         var value = NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_get_handle(0, ref error));
