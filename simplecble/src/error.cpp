@@ -17,6 +17,7 @@ static_assert(static_cast<int32_t>(SimpleBLE::ErrorCode::WINRT_ACCESS_DENIED) ==
 static_assert(static_cast<int32_t>(SimpleBLE::ErrorCode::WINRT_EXCEPTION) == SIMPLEBLE_ERROR_WINRT_EXCEPTION);
 static_assert(static_cast<int32_t>(SimpleBLE::ErrorCode::CORE_BLUETOOTH_EXCEPTION) == SIMPLEBLE_ERROR_CORE_BLUETOOTH_EXCEPTION);
 static_assert(static_cast<int32_t>(SimpleBLE::ErrorCode::UNCLASSIFIED_EXCEPTION) == SIMPLEBLE_ERROR_UNCLASSIFIED_EXCEPTION);
+static_assert(static_cast<int32_t>(SimpleBLE::ErrorCode::ADAPTER_IN_USE) == SIMPLEBLE_ERROR_ADAPTER_IN_USE);
 // clang-format on
 
 simpleble_err_t simpleble_error_code(const simpleble_error_t* error) {

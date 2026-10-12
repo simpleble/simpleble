@@ -19,6 +19,7 @@
 #include <vector>
 
 #include <fmt/core.h>
+#include <simpleble/Exceptions.h>
 
 #include "LoggingInternal.h"
 
@@ -57,7 +58,8 @@ using ScopedIOObject = ScopedResource<io_object_t, IOReleaser>;
 UsbHelperApple::UsbHelperApple(const std::string& device_path) : UsbHelperImpl(device_path) {
         // Open and configure the serial port
         if (!_open_serial_port()) {
-            throw std::runtime_error("Failed to open serial port: " + _device_path);
+            if (errno == EBUSY) throw Exception::AdapterInUse(_device_path);
+            throw std::runtime_error("Failed to open serial port " + _device_path + ": " + strerror(errno));
         }
 
         _running = true;
@@ -73,6 +75,10 @@ UsbHelperApple::~UsbHelperApple() {
 }
 
 void UsbHelperApple::tx(const kvn::bytearray& data) {
+    if (!_running) {
+        throw std::runtime_error("Serial port reader for " + _device_path + " is not running");
+    }
+
     const ssize_t written = write(_serial_fd, data.data(), data.size());
     if (written != data.size()) {
         throw std::runtime_error("Failed to write to serial port: " + std::string(strerror(errno)));
@@ -138,8 +144,12 @@ bool UsbHelperApple::_open_serial_port() {
     // Open the serial port in non-blocking mode
     _serial_fd = open(_device_path.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (_serial_fd < 0) {
-        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to open serial port {}: {}", _device_path, strerror(errno)));
         return false;
+    }
+
+    // Prevent other processes from opening the port while we hold it, as they would take bytes meant for us.
+    if (ioctl(_serial_fd, TIOCEXCL) == -1) {
+        SIMPLEBLE_LOG_WARN(fmt::format("Failed to get exclusive access to {}: {}", _device_path, strerror(errno)));
     }
 
     // Configure the serial port
@@ -234,8 +244,9 @@ void UsbHelperApple::_run() {
                     kvn::bytearray data(buffer, bytes_read);
                     _rx_callback(data);
                 } else if (bytes_read == 0) {
-                    // End of file (device disconnected)
-                    SIMPLEBLE_LOG_WARN(fmt::format("Serial port disconnected: {}", _device_path));
+                    // NOTE: With VMIN and VTIME set to 0, an empty read means another process took the data.
+                    // Unplugging the device fails with ENXIO instead.
+                    SIMPLEBLE_LOG_ERROR(fmt::format("Another process is reading from serial port {}", _device_path));
                     break;
                 } else {
                     // Error reading from serial port
@@ -258,6 +269,9 @@ void UsbHelperApple::_run() {
             }
         }
     }
+
+    // Mark the reader as stopped, so that any further transmission fails right away.
+    _running = false;
 }
 
 

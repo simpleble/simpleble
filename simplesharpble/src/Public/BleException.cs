@@ -31,6 +31,8 @@ public enum BleErrorCode
     CoreBluetoothException = 12,
     /// <summary>Any other native failure.</summary>
     UnclassifiedException = 13,
+    /// <summary>Another process holds the adapter.</summary>
+    AdapterInUse = 14,
 }
 
 /// <summary>A native BLE operation failed. Code preserves the native failure category.</summary>

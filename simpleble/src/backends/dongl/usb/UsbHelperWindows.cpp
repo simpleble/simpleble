@@ -20,6 +20,8 @@
 #include <system_error>
 #include <vector>
 
+#include <simpleble/Exceptions.h>
+
 #include "LoggingInternal.h"
 
 namespace SimpleBLE {
@@ -175,6 +177,10 @@ std::wstring get_port_name(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_inf
 UsbHelperWindows::UsbHelperWindows(const std::string& device_path) : UsbHelperImpl(device_path) {
     if (!_open_serial_port()) {
         const DWORD error = GetLastError();
+        // NOTE: Windows reports a port opened by another process as access denied.
+        if (error == ERROR_ACCESS_DENIED || error == ERROR_SHARING_VIOLATION) {
+            throw Exception::AdapterInUse(_device_path);
+        }
         throw std::system_error(static_cast<int>(error), std::system_category(),
                                 "Failed to open serial port " + _device_path);
     }

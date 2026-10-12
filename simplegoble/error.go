@@ -24,6 +24,7 @@ const (
 	WinRTException             = bindings.WinRTException
 	CoreBluetoothException     = bindings.CoreBluetoothException
 	UnclassifiedException      = bindings.UnclassifiedException
+	AdapterInUse               = bindings.AdapterInUse
 )
 
 // Error is a native SimpleBLE failure. Message is copied before releasing the
