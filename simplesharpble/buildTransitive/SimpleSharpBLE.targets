@@ -9,8 +9,13 @@
   </ItemGroup>
   <Target Name="CheckSimpleSharpBLEApplePlatform" BeforeTargets="PrepareForBuild"
           Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
-    <Error Condition="$([MSBuild]::VersionLessThan('$(SupportedOSPlatformVersion)', '15.0'))"
-           Text="SimpleSharpBLE requires iOS or Mac Catalyst 15.0 or newer. Set SupportedOSPlatformVersion to 15.0 or higher." />
+    <PropertyGroup>
+      <!-- The static libraries target iOS 15.8 (build-native); the first Mac Catalyst version at or above it is 16.0. -->
+      <_SimpleSharpBLEMinimumOSVersion Condition="'$(TargetPlatformIdentifier)' == 'ios'">15.8</_SimpleSharpBLEMinimumOSVersion>
+      <_SimpleSharpBLEMinimumOSVersion Condition="'$(TargetPlatformIdentifier)' == 'maccatalyst'">16.0</_SimpleSharpBLEMinimumOSVersion>
+    </PropertyGroup>
+    <Error Condition="$([MSBuild]::VersionLessThan('$(SupportedOSPlatformVersion)', '$(_SimpleSharpBLEMinimumOSVersion)'))"
+           Text="SimpleSharpBLE requires iOS 15.8 or Mac Catalyst 16.0 or newer. Set SupportedOSPlatformVersion to $(_SimpleSharpBLEMinimumOSVersion) or higher." />
     <ItemGroup>
       <_SimpleSharpBLEUnsupportedAppleRuntime Include="$(RuntimeIdentifiers);$(RuntimeIdentifier)" Exclude="ios-arm64;iossimulator-arm64;maccatalyst-arm64" />
     </ItemGroup>

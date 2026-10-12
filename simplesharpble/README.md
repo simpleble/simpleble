@@ -29,7 +29,7 @@ Requirements:
 - .NET 10
 - Windows or glibc-based Linux (x64/ARM64), or macOS 14 or newer on Apple Silicon
 - Android 12 or newer (ARM64/x64)
-- iOS/iPadOS 15.8 or newer, the iOS simulator, and Mac Catalyst 15.8 or newer (ARM64)
+- iOS/iPadOS 15.8 or newer, the iOS simulator, and Mac Catalyst 16.0 or newer (ARM64)
 - On Linux, BlueZ and D-Bus; on Ubuntu, install them with `sudo apt-get install bluez libdbus-1-3`
 
 Add SimpleSharpBLE to your project from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/):
@@ -78,7 +78,8 @@ finally
 }
 ```
 
-See the [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble)
+See the [SimpleSharpBLE documentation](https://docs.simpleble.org/simplesharpble/usage) for the
+full API guide and platform setup, and the [code examples](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble)
 on GitHub for connect, read/write, notify, and peripheral hosting flows.
 
 Blocking GATT calls also have `Async` counterparts. Cancellation prevents queued work
@@ -99,8 +100,9 @@ Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointe
 See the [Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
 for the manifest, runtime permissions, and scanning off the UI thread.
 
-On iOS/iPadOS and Mac Catalyst, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`
-and run blocking BLE operations off the UI thread. Sandboxed Catalyst apps also need the
+On iOS/iPadOS and Mac Catalyst, set `SupportedOSPlatformVersion` to at least 15.8 (iOS) or 16.0
+(Mac Catalyst), add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`, and run blocking
+BLE operations off the UI thread. Sandboxed Catalyst apps also need the
 `com.apple.security.device.bluetooth` entitlement. Native libraries link automatically;
 `Advanced.IOS` applies to both iOS and Catalyst.
 

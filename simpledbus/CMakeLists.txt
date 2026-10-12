@@ -10,8 +10,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/prelude.cmake)
 project(
     simpledbus
     VERSION ${SIMPLEBLE_VERSION_BASE}
-    DESCRIPTION "A simple C++ wrapper around DBus with a commercially-friendly licence."
-    HOMEPAGE_URL "https://github.com/OpenBluetoothToolbox/SimpleDBus"
+    DESCRIPTION "A simple C++ wrapper around DBus."
+    HOMEPAGE_URL "https://github.com/simpleble/simpleble"
     LANGUAGES CXX
 )
 

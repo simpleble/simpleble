@@ -17,3 +17,7 @@ target_include_directories(simplesharpble_test_native PRIVATE
     "${REPO_ROOT}/simpleble/src" "${REPO_ROOT}/dependencies/internal/include"
     "${REPO_ROOT}/dependencies/external")
 target_link_libraries(simplesharpble_test_native PRIVATE simplecble simpleble)
+if(MSVC)
+    # The fixture includes simpleble headers that use fmt, which requires UTF-8.
+    target_compile_options(simplesharpble_test_native PRIVATE "/utf-8")
+endif()

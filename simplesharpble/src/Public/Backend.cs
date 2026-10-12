@@ -9,7 +9,9 @@ public sealed class Backend : IDisposable
     private readonly NativeHandle handle;
     internal Backend(nint value) => handle = new(value, HandleKind.Backend);
 
+    /// <summary>The backend name, such as WinRT, CoreBluetooth, SimpleBluez, Android, or Dongl.</summary>
     public string Identifier => NativeCall.String(handle.Query(NativeMethods.simpleble_backend_identifier));
+    /// <summary>Whether this backend reports Bluetooth as enabled.</summary>
     public bool IsBluetoothEnabled => handle.Query(NativeMethods.simpleble_backend_is_bluetooth_enabled);
 
     /// <summary>Initializes available backends. Dispose each returned backend.</summary>
@@ -24,5 +26,6 @@ public sealed class Backend : IDisposable
         index => new Adapter(handle.Query((nint value, ref nint error) =>
             NativeMethods.simpleble_backend_get_adapters_handle(value, index, ref error))));
 
+    /// <summary>Releases this wrapper.</summary>
     public void Dispose() => handle.Dispose();
 }

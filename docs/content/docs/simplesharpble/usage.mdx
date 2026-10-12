@@ -1,50 +1,38 @@
 ---
 title: Usage
-description: Install SimpleSharpBLE and scan for nearby Bluetooth devices.
+description: Install SimpleSharpBLE and use SimpleBLE from C# and .NET.
 ---
 
-SimpleSharpBLE provides C# and .NET bindings for SimpleBLE on Windows, macOS, Linux, Android,
-iOS/iPadOS, and Mac Catalyst.
+SimpleSharpBLE exposes SimpleBLE's Bluetooth client and GATT hosting APIs to C#
+and .NET 10 on Windows, macOS, Linux, Android, iOS/iPadOS, and Mac Catalyst.
+One NuGet package carries the native libraries for every supported platform.
 
 ## Install from NuGet
 
-Add [SimpleSharpBLE](https://www.nuget.org/packages/SimpleSharpBLE/) to your .NET 10 project:
+Add [SimpleSharpBLE](https://www.nuget.org/packages/SimpleSharpBLE/) to a .NET 10 project:
 
 ```sh
 dotnet add package SimpleSharpBLE
 ```
 
-Supported platforms:
+The package targets `net10.0` and ships XML documentation for IntelliSense.
+Development builds from `main` are published as prereleases; add `--prerelease`
+to try one.
 
-- Windows or glibc-based Linux (x64/ARM64), or macOS 14 or newer on Apple Silicon
-- Android 12 or newer (ARM64/x64)
-- iOS/iPadOS 15.8 or newer, the iOS simulator, and Mac Catalyst 15.8 or newer (ARM64)
+## Platform support
 
-On Ubuntu, install BlueZ and D-Bus:
+| Platform | Runtimes | Requirements |
+| --- | --- | --- |
+| Windows 10 or newer | `win-x64`, `win-arm64` | Bluetooth enabled in system settings |
+| Linux with glibc | `linux-x64`, `linux-arm64` | BlueZ and D-Bus |
+| macOS 14 or newer | `osx-arm64` | Bluetooth permission |
+| Android 12 or newer | `android-arm64`, `android-x64` | Nearby devices permission |
+| iOS/iPadOS 15.8 or newer | `ios-arm64`, `iossimulator-arm64` | `NSBluetoothAlwaysUsageDescription` |
+| Mac Catalyst 16.0 or newer | `maccatalyst-arm64` | `NSBluetoothAlwaysUsageDescription` |
 
-```sh
-sudo apt-get install bluez libdbus-1-3
-```
+Intel Macs and 32-bit platforms are not included in the package.
 
-On Android, target Android 12 or newer (`SupportedOSPlatformVersion` >= `31.0`)
-and select `android-arm64` and/or `android-x64` runtimes. Declare and request
-`BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` permissions (`BLUETOOTH_ADVERTISE` for
-peripheral hosting), enable Bluetooth, then initialize on the application thread:
-
-```csharp
-Java.Lang.JavaSystem.LoadLibrary("simpleble");
-SimpleSharpBLE.Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointer,
-    Android.App.Application.Context.Handle);
-```
-
-Run blocking operations off the UI thread. The
-[Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
-includes the manifest and runtime permission handling.
-
-On iOS/iPadOS and Mac Catalyst, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`
-and run blocking BLE operations off the UI thread. Sandboxed Catalyst apps also need the
-`com.apple.security.device.bluetooth` entitlement. Native libraries link automatically;
-`SimpleSharpBLE.Advanced.IOS` applies to both iOS and Catalyst.
+See [Platform notes](#platform-notes) for per-OS setup.
 
 ## First scan
 
@@ -74,13 +62,325 @@ finally
 }
 ```
 
-## Async, NativeAOT, and MAUI
+## Ownership and disposal
 
-Blocking GATT calls also have `Async` counterparts. Cancellation prevents queued work
-from starting; operations already in native code complete normally. Keep write buffers
-unchanged until the returned task completes.
+Adapters, backends, peripherals, and local GATT objects wrap native handles.
+Dispose every object a method returns, including list entries you do not use and
+the `Peripheral` delivered with each `ScanFound` or `ScanUpdated` event. Each
+wrapper owns its handle independently: a peripheral stays usable after its
+adapter is disposed, and an adapter after its backend.
 
-The bindings support trimming and NativeAOT. In MAUI, use the same API and platform
-setup above; dispatch UI updates from callbacks with `MainThread.BeginInvokeOnMainThread`.
+Disposing a wrapper releases it and its event registrations. It does not stop a
+scan, disconnect, unsubscribe, or stop a local host; call `ScanStop`,
+`Disconnect`, `Unsubscribe`, or `Stop` first. A call that is already running
+in native code finishes before the handle is released; later calls throw
+`ObjectDisposedException`.
 
-See [Examples](./examples) for connections, reads, writes, notifications, and peripheral hosting.
+## Choose an adapter
+
+`Adapter.GetAdapters()` returns the adapters of every active backend.
+To choose a backend, enumerate backends and use their adapters:
+
+```csharp
+var backends = Backend.GetBackends();
+try
+{
+    foreach (var backend in backends)
+    {
+        Console.WriteLine($"{backend.Identifier}: Bluetooth enabled = {backend.IsBluetoothEnabled}");
+        foreach (var adapter in backend.Adapters)
+        {
+            using (adapter) Console.WriteLine($"  {adapter.Identifier} [{adapter.Address}]");
+        }
+    }
+}
+finally
+{
+    foreach (var backend in backends) backend.Dispose();
+}
+```
+
+Backend identifiers are `WinRT`, `CoreBluetooth`, `SimpleBluez`, `Android`, and
+`Dongl`. `Adapter.IsBluetoothEnabled` reports whether any active backend has
+Bluetooth enabled. `PowerOn` and `PowerOff` request power changes where the
+platform allows it, and `IsPowered`, `PoweredOn`, and `PoweredOff` report the
+adapter's state.
+
+### Dongl
+
+The [Dongl](https://www.simpleble.org/dongl) USB adapter has its own backend on
+Windows, macOS, and Linux. Enable it before the first enumeration, then select
+it by identifier:
+
+```csharp
+Config.Dongl.UseDonglBackend = true;
+
+var backends = Backend.GetBackends();
+try
+{
+    var dongl = backends.FirstOrDefault(b => b.Identifier == "Dongl");
+    var adapters = dongl?.Adapters ?? [];
+    // Use and dispose the Dongl adapters like any other adapter.
+}
+finally
+{
+    foreach (var backend in backends) backend.Dispose();
+}
+```
+
+With the backend enabled, `Adapter.GetAdapters()` also includes Dongl adapters.
+For pairing through a Dongl, register `Advanced.Dongl.SetPasskeyRequestCallback`,
+`SetPasskeyDisplayCallback`, or `SetNumericComparisonCallback` on the peripheral
+before connecting. These callbacks run synchronously on a native pairing worker;
+return `null` or `false` to reject pairing.
+
+## Scan
+
+`ScanFor(TimeSpan)` scans synchronously and `ScanForAsync` runs the same scan on
+a worker. `ScanStart` and `ScanStop` let your application control timing, and
+`ScanIsActive` reports the state. `ScanStarted` and `ScanStopped` follow the
+scan; `ScanFound` reports the first advertisement from each device and
+`ScanUpdated` the later ones.
+
+After a scan, `ScanGetResults()` returns the peripherals seen.
+`GetPairedPeripherals()` and `GetConnectedPeripherals()` list devices known to
+the system, where the backend supports it.
+
+A peripheral exposes `Identifier` (the advertised name), `Address`,
+`AddressType`, `Rssi`, `TxPower` (`short.MinValue` when not advertised),
+`IsConnectable`, `ManufacturerData` keyed by company identifier, and `Services`.
+Before connection, `Services` holds advertised service UUIDs and service data.
+On macOS and iOS, `Address` is a CoreBluetooth identifier rather than the
+Bluetooth address.
+
+## Connect, read, and write
+
+```csharp
+const string battery = "180f";
+const string level = "2a19";
+
+peripheral.Connect();
+try
+{
+    Console.WriteLine($"MTU {peripheral.Mtu}");
+    foreach (var service in peripheral.Services)
+    {
+        foreach (var characteristic in service.Characteristics)
+            Console.WriteLine($"{service.Uuid} {characteristic.Uuid} {string.Join(",", characteristic.Capabilities)}");
+    }
+    byte[] value = peripheral.Read(battery, level);
+    Console.WriteLine($"Battery: {value[0]}%");
+}
+finally
+{
+    peripheral.Disconnect();
+}
+```
+
+`Connect` blocks until the link is up and services are discovered. After
+connection, `Services` returns discovered services with their characteristics,
+capabilities, and descriptors as managed snapshots that remain valid after the
+peripheral is disposed. UUID arguments accept 16-bit and 32-bit short forms or
+full 128-bit UUIDs, in either case.
+
+Use `Read`, `WriteRequest` (acknowledged), and `WriteCommand` (unacknowledged)
+for characteristics, and the `Read` and `Write` overloads that take a descriptor
+UUID for descriptors. `IsConnected`, `IsPaired`, `Unpair`, and the `Connected`
+and `Disconnected` events cover connection state. `Disconnected` is also raised
+when the link drops unexpectedly.
+
+## Notifications and indications
+
+```csharp
+peripheral.Notify("180f", "2a19", data => Console.WriteLine($"Battery: {data[0]}%"));
+// ...
+peripheral.Unsubscribe("180f", "2a19");
+```
+
+`Indicate` works the same way for indications. A new subscription replaces the
+previous callback for that characteristic. Each callback receives its own copy of
+the payload.
+
+## Callbacks and threading
+
+Events and subscription callbacks run on the .NET thread pool after the native
+callback has returned. Callbacks for one object run one at a time, in the order
+the native library reported them, so a handler can call other SimpleSharpBLE
+methods, including blocking ones and `Unsubscribe` or `Dispose`. A slow handler
+delays later events for the same object.
+
+An exception thrown by a handler does not reach native code. It is raised
+through `CallbackErrors.Unhandled`, or written to `Trace` when that event has no
+handlers. In UI apps, marshal updates to the UI thread, for example with
+`MainThread.BeginInvokeOnMainThread` in MAUI.
+
+The exceptions to this model are `Local.Characteristic.ReadHandler` and the Dongl
+pairing callbacks, which run synchronously on a native thread and must return
+promptly.
+
+## Async methods
+
+Blocking operations have `Async` counterparts: `ScanForAsync`, `ConnectAsync`,
+`DisconnectAsync`, `ReadAsync`, `WriteRequestAsync`, `WriteCommandAsync`,
+`WriteAsync`, `NotifyAsync`, `IndicateAsync`, and `UnsubscribeAsync`.
+
+```csharp
+await peripheral.ConnectAsync();
+byte[] value = await peripheral.ReadAsync("180f", "2a19");
+await peripheral.DisconnectAsync();
+```
+
+These methods run the blocking call on a worker thread. A cancellation token
+prevents queued work from starting; once the native call starts, it runs to
+completion. Keep a write buffer unchanged until its task completes.
+
+## Errors
+
+Native failures throw `BleException`. Its `Code` property is a `BleErrorCode`,
+such as `PeripheralNotConnected`, `GattServiceNotFound`,
+`GattCharacteristicNotFound`, `OperationNotSupported`, or `OperationFailed`,
+and its message carries the native details. Invalid arguments throw the usual
+`ArgumentException` types before reaching native code, and platform-specific
+APIs called on another platform throw `PlatformNotSupportedException`.
+
+```csharp
+try
+{
+    byte[] value = peripheral.Read("180f", "2a19");
+}
+catch (BleException error) when (error.Code == BleErrorCode.PeripheralNotConnected)
+{
+    // Reconnect and retry.
+}
+```
+
+## Host a GATT service
+
+`Adapter.CreateLocalPeripheral()` creates a local GATT host. Configure services,
+characteristics, and advertised UUIDs before calling `Start`:
+
+```csharp
+const string serviceUuid = "12345678-1234-5678-1234-56789abcdef0";
+
+using var host = adapter.CreateLocalPeripheral();
+using var service = host.AddService(serviceUuid);
+using var characteristic = service.AddCharacteristic("12345678-1234-5678-1234-56789abcdef1",
+    SimpleSharpBLE.Local.CharacteristicCapability.Read |
+    SimpleSharpBLE.Local.CharacteristicCapability.WriteRequest |
+    SimpleSharpBLE.Local.CharacteristicCapability.Notify);
+characteristic.Value = "hello"u8.ToArray();
+characteristic.Written += (_, e) => characteristic.Value = e.Value; // Echo to subscribers.
+host.AddAdvertisedService(serviceUuid);
+host.Start();
+// ...
+host.Stop();
+```
+
+Setting `Value` stores the bytes and publishes them to notify or indicate
+subscribers on a best-effort basis. `Written` runs after a client write has
+updated `Value`. `Subscribed` reports the first subscriber and `Unsubscribed`
+the last. `ClientConnected` and `ClientDisconnected` report clients by address;
+CoreBluetooth does not report connections, so on macOS and iOS these events
+follow a client's first and last subscription instead.
+
+Set `ReadHandler` to compute read values on demand. It runs synchronously on the
+native thread, so return quickly and do not call SimpleSharpBLE from it. Set it
+to `null` to serve the stored `Value` again.
+
+`IsStarted` and `IsAdvertising` report the host state. After `Stop`,
+`RemoveAllServices` clears the layout so you can rebuild it. Disposing a service
+or characteristic wrapper does not remove it from the host. On Linux,
+`Advanced.Linux.SetAdvertisementLocalName` sets the advertised name; macOS and iOS
+have equivalents under `Advanced.MacOS` and `Advanced.IOS`.
+
+## Configuration and logging
+
+`Config` holds process-wide backend options. Set them before the first
+enumeration. For example, `Config.SimpleBluez.ConnectionTimeout` changes the
+Linux connection timeout, `Config.Android.ConnectionPriority` requests a
+connection priority after each Android connection, and `Config.ResetAll()`
+restores the defaults.
+
+`Logging.Level` sets the native log level. `Logging.SetCallback` forwards log
+entries to your code on a worker thread, `Logging.LogDefaultStdout()` writes
+them to standard output, and `Logging.LogDefaultFile(path)` appends them to a
+file.
+
+```csharp
+Logging.Level = LogLevel.Debug;
+Logging.SetCallback(entry => Console.WriteLine($"[{entry.Level}] {entry.Module}: {entry.Message}"));
+```
+
+## Trimming, NativeAOT, and MAUI
+
+The binding is trimming and NativeAOT compatible and produces no trim or AOT
+warnings. A NativeAOT app needs no extra configuration; publish it as usual:
+
+```sh
+dotnet publish -c Release -r linux-x64 -p:PublishAot=true
+```
+
+The native libraries are copied next to the executable. Self-contained and
+trimmed publishing work the same way.
+
+In MAUI, reference the package from the app project and follow the platform
+setup below for each target. The package selects the native libraries for
+Android, iOS, and Mac Catalyst automatically.
+
+## Platform notes
+
+### Windows
+
+Windows needs no manifest entries for Bluetooth, but Bluetooth must be enabled in
+system settings. Pairing requests show a system prompt.
+
+### Linux
+
+SimpleSharpBLE uses BlueZ over D-Bus. On Ubuntu, install the runtime packages:
+
+```sh
+sudo apt-get install bluez libdbus-1-3
+```
+
+The user needs access to the system Bluetooth service, which most desktop
+distributions grant by default. `Config.SimpleBluez.ConnectionTimeout` and
+`DisconnectionTimeout` adjust how long BlueZ operations wait.
+
+### macOS
+
+A console app run from a terminal uses the terminal's Bluetooth permission;
+grant it under **System Settings > Privacy & Security > Bluetooth**. An app
+bundle needs `NSBluetoothAlwaysUsageDescription` in its `Info.plist`. Without
+it, macOS terminates the process on the first Bluetooth access. See
+[Bluetooth Permissions](../fundamentals/permissions).
+
+### Android
+
+Target Android 12 or newer (`SupportedOSPlatformVersion` 31.0 or higher) with
+the `android-arm64` and/or `android-x64` runtimes. The package adds its Java
+bridge classes and ProGuard rules to the app. Declare and request
+`BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` (and `BLUETOOTH_ADVERTISE` to host
+services), enable Bluetooth, then initialize once on the application thread:
+
+```csharp
+Java.Lang.JavaSystem.LoadLibrary("simpleble");
+SimpleSharpBLE.Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointer,
+    Android.App.Application.Context.Handle);
+```
+
+Run blocking operations off the UI thread. The
+[Android scan example](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
+includes the manifest and runtime permission handling.
+
+### iOS, iPadOS, and Mac Catalyst
+
+Set `SupportedOSPlatformVersion` to 15.8 or higher for iOS and 16.0 or higher
+for Mac Catalyst; the build reports an error for lower values. Supported runtimes
+are `ios-arm64`, `iossimulator-arm64`, and `maccatalyst-arm64`. Add
+`NSBluetoothAlwaysUsageDescription` to `Info.plist`, and give sandboxed Catalyst
+apps the `com.apple.security.device.bluetooth` entitlement. The native libraries
+link statically and automatically. Run blocking BLE operations off the UI thread.
+`Advanced.IOS` applies to both iOS and Mac Catalyst, and `Utils.OperatingSystem`
+reports `IOS` on both.
+
+See [Examples](./examples) for complete programs.

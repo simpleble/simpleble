@@ -10,6 +10,7 @@ readme = "simplersble/README.md"
 repository = "https://github.com/simpleble/simpleble"
 
 include = [
+    "/LICENSE.md",
     "/VERSION",
     "/cmake",
     "/dependencies",

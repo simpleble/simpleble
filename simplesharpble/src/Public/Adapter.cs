@@ -14,10 +14,15 @@ public sealed class Adapter : IDisposable
         callbacks = new(handle);
     }
 
+    /// <summary>The platform's name for the adapter, such as hci0 on Linux.</summary>
     public string Identifier => NativeCall.String(handle.Query(NativeMethods.simpleble_adapter_identifier));
+    /// <summary>The adapter's Bluetooth address, as reported by the platform.</summary>
     public string Address => NativeCall.String(handle.Query(NativeMethods.simpleble_adapter_address));
+    /// <summary>Whether the adapter radio is powered on.</summary>
     public bool IsPowered => handle.Query(NativeMethods.simpleble_adapter_is_powered);
+    /// <summary>Whether a scan started by this adapter is running.</summary>
     public bool ScanIsActive => handle.Query(NativeMethods.simpleble_adapter_scan_is_active);
+    /// <summary>Whether any active backend reports Bluetooth as enabled. Initializes the backends.</summary>
     public static bool IsBluetoothEnabled => NativeCall.Invoke(NativeMethods.simpleble_adapter_is_bluetooth_enabled);
 
     /// <summary>Initializes backends and adapters. Dispose every returned adapter.</summary>
@@ -30,9 +35,12 @@ public sealed class Adapter : IDisposable
     public void PowerOn() => handle.Execute(NativeMethods.simpleble_adapter_power_on);
     /// <summary>Requests power off. Unsupported native backends may do nothing.</summary>
     public void PowerOff() => handle.Execute(NativeMethods.simpleble_adapter_power_off);
+    /// <summary>Starts scanning without blocking. Results arrive through ScanFound and ScanUpdated.</summary>
     public void ScanStart() => handle.Execute(NativeMethods.simpleble_adapter_scan_start);
+    /// <summary>Stops a scan started with ScanStart.</summary>
     public void ScanStop() => handle.Execute(NativeMethods.simpleble_adapter_scan_stop);
 
+    /// <summary>Creates a local GATT host on this adapter. Dispose the returned host after stopping it.</summary>
     public Local.Peripheral CreateLocalPeripheral() => new(handle.Query(NativeMethods.simpleble_adapter_create_local_peripheral));
 
     /// <summary>Scans synchronously. Positive fractional milliseconds round up.</summary>
@@ -72,6 +80,7 @@ public sealed class Adapter : IDisposable
 
     private readonly object eventGate = new();
     private EventHandler? power_on;
+    /// <summary>Raised when the adapter powers on. Handlers run on a worker thread.</summary>
     public event EventHandler PoweredOn
     {
         add { lock (eventGate) SetPowerOn(power_on + value); }
@@ -85,6 +94,7 @@ public sealed class Adapter : IDisposable
     }
 
     private EventHandler? power_off;
+    /// <summary>Raised when the adapter powers off. Handlers run on a worker thread.</summary>
     public event EventHandler PoweredOff
     {
         add { lock (eventGate) SetPowerOff(power_off + value); }
@@ -98,6 +108,7 @@ public sealed class Adapter : IDisposable
     }
 
     private EventHandler? scan_start;
+    /// <summary>Raised when a scan starts. Handlers run on a worker thread.</summary>
     public event EventHandler ScanStarted
     {
         add { lock (eventGate) SetScanStart(scan_start + value); }
@@ -111,6 +122,7 @@ public sealed class Adapter : IDisposable
     }
 
     private EventHandler? scan_stop;
+    /// <summary>Raised when a scan stops. Handlers run on a worker thread.</summary>
     public event EventHandler ScanStopped
     {
         add { lock (eventGate) SetScanStop(scan_stop + value); }
@@ -124,6 +136,7 @@ public sealed class Adapter : IDisposable
     }
 
     private EventHandler<PeripheralEventArgs>? scan_found;
+    /// <summary>Raised the first time a scan sees a peripheral. Dispose the event's peripheral after use.</summary>
     public event EventHandler<PeripheralEventArgs> ScanFound
     {
         add { lock (eventGate) SetScanFound(scan_found + value); }
@@ -138,6 +151,7 @@ public sealed class Adapter : IDisposable
     }
 
     private EventHandler<PeripheralEventArgs>? scan_updated;
+    /// <summary>Raised when a known peripheral advertises again. Dispose the event's peripheral after use.</summary>
     public event EventHandler<PeripheralEventArgs> ScanUpdated
     {
         add { lock (eventGate) SetScanUpdated(scan_updated + value); }
@@ -151,6 +165,7 @@ public sealed class Adapter : IDisposable
         scan_updated = handlers;
     }
 
+    /// <summary>Releases this wrapper and its event registrations.</summary>
     public void Dispose()
     {
         callbacks.Dispose();

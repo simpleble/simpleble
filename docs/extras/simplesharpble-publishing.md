@@ -14,14 +14,21 @@ The .NET project reads that file directly and converts the package suffix to
 `-dev.N`, so NuGet sorts development builds numerically. Stable versions are
 unchanged. Continue using the repository's usual version bump and release process.
 
-CI publishes the built `SimpleSharpBLE-nuget` artifact, with the managed
-assembly, Windows x64/ARM64 native DLLs, Apple Silicon macOS native libraries,
-and Linux x64/ARM64 native libraries. Platform builds feed one packaging job.
-Linux builds use the shared `build-native` action on Ubuntu 22.04 with system
-D-Bus. Installed `.so` files, including their versioned SONAME filenames, are
-copied into `runtimes/linux-x64/native` and `runtimes/linux-arm64/native`.
-Repeated pushes of an existing version are skipped. `SimpleSharpBLE.Plain`
-is available for local development.
+CI publishes the built `SimpleSharpBLE-nuget` artifact. It contains the managed
+assembly with its XML documentation and the native libraries for Windows
+x64/ARM64, Apple Silicon macOS, Linux x64/ARM64, and Android ARM64/x64 under
+`runtimes/`, plus static libraries for iOS, the iOS simulator, and Mac Catalyst
+under `buildTransitive/apple/`. The packaging job reuses the SimpleCBLE
+artifacts from `ci_simplecble.yml`; installed Linux `.so` files keep their
+versioned SONAME filenames. Repeated pushes of an existing version are skipped.
+`SimpleSharpBLE.Plain` is available for local development.
+
+To check a package locally, stage the native libraries in the same layout as
+the CI `Stage SimpleCBLE libraries` step and pack with
+`-p:NativeLibrariesDirectory=<staging directory>`. Pass a throwaway
+`-p:PackageVersion` and restore consumers with a scratch `NUGET_PACKAGES`
+directory, so the local package never shadows a published version in the
+global NuGet cache.
 
 ## Install a development version
 

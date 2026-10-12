@@ -129,6 +129,12 @@ class SIMPLEBLE_EXPORT CoreBluetoothException : public BaseException {
     std::unique_ptr<Error> make_error() const override;
 };
 
+class SIMPLEBLE_EXPORT AdapterInUse : public BaseException {
+  public:
+    AdapterInUse(const std::string& adapter);
+    std::unique_ptr<Error> make_error() const override;
+};
+
 }  // namespace Exception
 
 }  // namespace SimpleBLE

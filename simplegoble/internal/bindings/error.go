@@ -27,6 +27,7 @@ const (
 	WinRTException
 	CoreBluetoothException
 	UnclassifiedException
+	AdapterInUse
 )
 
 func (c ErrorCode) Error() string {
@@ -34,7 +35,7 @@ func (c ErrorCode) Error() string {
 		"invalid backend reference", "peripheral not connected", "GATT service not found",
 		"GATT characteristic not found", "GATT descriptor not found", "operation not supported",
 		"operation failed", "WinRT access denied", "WinRT exception", "CoreBluetooth exception",
-		"unclassified exception"}
+		"unclassified exception", "adapter in use"}
 	if uint32(c) < uint32(len(names)) {
 		return "simplegoble: " + names[c]
 	}

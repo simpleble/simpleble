@@ -62,6 +62,9 @@ enum class ErrorCode : int32_t {
      * Covers BaseException, other standard exceptions, and non-standard exceptions;
      * the message is preserved when available. */
     UNCLASSIFIED_EXCEPTION = 13,
+
+    /** @brief The adapter is held by another process, such as a Dongl whose serial port another program has open. */
+    ADAPTER_IN_USE = 14,
 };
 
 }  // namespace SimpleBLE

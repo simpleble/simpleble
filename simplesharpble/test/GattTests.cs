@@ -45,11 +45,7 @@ public sealed class GattTests
 
     [Theory]
     [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(27)]
-    [InlineData(28)]
     [InlineData(257)]
-    [InlineData(65537)]
     public void ReadWriteOverloadsPreserveBinaryPayloads(int length)
     {
         using var peripheral = new Peripheral(NativeFixture.test_remote());

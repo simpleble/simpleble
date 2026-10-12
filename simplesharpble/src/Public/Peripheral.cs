@@ -16,23 +16,34 @@ public sealed class Peripheral : IDisposable
         callbacks = new(handle);
     }
 
+    /// <summary>The advertised device name, or an empty string if none was received.</summary>
     public string Identifier => NativeCall.String(handle.Query(NativeMethods.simpleble_peripheral_identifier));
+    /// <summary>The device address. On macOS and iOS this is a platform-assigned identifier, not the Bluetooth address.</summary>
     public string Address => NativeCall.String(handle.Query(NativeMethods.simpleble_peripheral_address));
+    /// <summary>Whether the address is public or random, when the platform reports it.</summary>
     public BluetoothAddressType AddressType => handle.Query(NativeMethods.simpleble_peripheral_address_type);
+    /// <summary>The most recent received signal strength, in dBm.</summary>
     public short Rssi => handle.Query(NativeMethods.simpleble_peripheral_rssi);
     /// <summary>Advertised transmit power in dBm, or short.MinValue when absent, as in C++.</summary>
     public short TxPower => handle.Query(NativeMethods.simpleble_peripheral_tx_power);
+    /// <summary>The negotiated ATT MTU while connected.</summary>
     public ushort Mtu => handle.Query(NativeMethods.simpleble_peripheral_mtu);
+    /// <summary>Whether the device is connected.</summary>
     public bool IsConnected => handle.Query(NativeMethods.simpleble_peripheral_is_connected);
+    /// <summary>Whether the device's advertisements accept connections. BlueZ does not report this, so Linux estimates it.</summary>
     public bool IsConnectable => handle.Query(NativeMethods.simpleble_peripheral_is_connectable);
+    /// <summary>Whether the device is paired with this host.</summary>
     public bool IsPaired => handle.Query(NativeMethods.simpleble_peripheral_is_paired);
 
+    /// <summary>Connects and discovers services. Blocks until the connection completes or fails.</summary>
     public void Connect() => handle.Execute(NativeMethods.simpleble_peripheral_connect);
+    /// <summary>Disconnects from the device. Blocks until the disconnection completes or fails.</summary>
     public void Disconnect() => handle.Execute(NativeMethods.simpleble_peripheral_disconnect);
     /// <summary>Runs Connect on a worker. Cancellation only applies before the operation starts.</summary>
     public Task ConnectAsync(CancellationToken cancellationToken = default) => Task.Run(Connect, cancellationToken);
     /// <summary>Runs Disconnect on a worker. Cancellation only applies before the operation starts.</summary>
     public Task DisconnectAsync(CancellationToken cancellationToken = default) => Task.Run(Disconnect, cancellationToken);
+    /// <summary>Removes the pairing with this device, where the platform supports it.</summary>
     public void Unpair() => handle.Execute(NativeMethods.simpleble_peripheral_unpair);
 
     /// <summary>Advertised services while disconnected, discovered GATT services while connected.</summary>
@@ -61,6 +72,7 @@ public sealed class Peripheral : IDisposable
         }
     }
 
+    /// <summary>The latest manufacturer-specific advertisement data, keyed by company identifier.</summary>
     public IReadOnlyDictionary<ushort, byte[]> ManufacturerData
     {
         get
@@ -81,7 +93,9 @@ public sealed class Peripheral : IDisposable
         }
     }
 
+    /// <summary>Reads a characteristic value.</summary>
     public byte[] Read(string service, string characteristic) => ReadCore(service, characteristic, null);
+    /// <summary>Reads a descriptor value.</summary>
     public byte[] Read(string service, string characteristic, string descriptor)
     {
         if (descriptor is null) throw new ArgumentNullException(nameof(descriptor));
@@ -110,8 +124,11 @@ public sealed class Peripheral : IDisposable
         finally { NativeMethods.simpleble_free(data); }
     }
 
+    /// <summary>Writes a characteristic value and waits for the device's acknowledgement.</summary>
     public void WriteRequest(string service, string characteristic, byte[] data) => WriteCore(service, characteristic, null, data, true);
+    /// <summary>Writes a characteristic value without acknowledgement.</summary>
     public void WriteCommand(string service, string characteristic, byte[] data) => WriteCore(service, characteristic, null, data, false);
+    /// <summary>Writes a descriptor value.</summary>
     public void Write(string service, string characteristic, string descriptor, byte[] data)
     {
         if (descriptor is null) throw new ArgumentNullException(nameof(descriptor));
@@ -144,11 +161,13 @@ public sealed class Peripheral : IDisposable
 
     private readonly object eventGate = new();
     private EventHandler? connected, disconnected;
+    /// <summary>Raised when the device connects. Handlers run on a worker thread.</summary>
     public event EventHandler Connected
     {
         add { lock (eventGate) { SetConnectionEvent(true, connected + value); } }
         remove { lock (eventGate) { SetConnectionEvent(true, connected - value); } }
     }
+    /// <summary>Raised when the device disconnects, including unexpected link loss. Handlers run on a worker thread.</summary>
     public event EventHandler Disconnected
     {
         add { lock (eventGate) { SetConnectionEvent(false, disconnected + value); } }
@@ -165,7 +184,9 @@ public sealed class Peripheral : IDisposable
         if (connect) connected = handlers; else disconnected = handlers;
     }
 
+    /// <summary>Subscribes to notifications, replacing any callback for the characteristic. The callback runs on a worker thread.</summary>
     public void Notify(string service, string characteristic, Action<byte[]> callback) => Subscribe(service, characteristic, callback, false);
+    /// <summary>Subscribes to indications, replacing any callback for the characteristic. The callback runs on a worker thread.</summary>
     public void Indicate(string service, string characteristic, Action<byte[]> callback) => Subscribe(service, characteristic, callback, true);
 
     /// <summary>Completes when the notification subscription is installed. Cancellation only applies before starting.</summary>
@@ -203,6 +224,7 @@ public sealed class Peripheral : IDisposable
     public Task UnsubscribeAsync(string service, string characteristic, CancellationToken cancellationToken = default) =>
         Task.Run(() => Unsubscribe(service, characteristic), cancellationToken);
 
+    /// <summary>Releases this wrapper and its callback registrations. Does not disconnect or unsubscribe.</summary>
     public void Dispose()
     {
         callbacks.Dispose();

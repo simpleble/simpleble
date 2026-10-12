@@ -9,6 +9,30 @@ follow the C++ examples, with one file-based C# app per use case.
 The [Android scan app](https://github.com/simpleble/simpleble/tree/main/examples/simplesharpble-android)
 demonstrates Android initialization, runtime permissions, and background scanning.
 
+## Run an example
+
+Each example is a single `.cs` file that .NET 10 runs directly. To run one
+against the published package, copy it and replace its first line,
+`#:project ../../simplesharpble`, with a package reference:
+
+```csharp
+#:package SimpleSharpBLE@1.2.*
+```
+
+Then run it with `dotnet run scan.cs`.
+
+To run the examples against the repository sources instead, build the native
+libraries and pass their directory to `dotnet run`:
+
+```sh
+cmake -S simplecble -B build_simplecble -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib
+cmake --build build_simplecble --config Release --parallel
+cmake --install build_simplecble --config Release --prefix "$PWD/build_simplecble/install"
+dotnet run examples/simplesharpble/scan.cs -p:NativeLibraryDirectory="$PWD/build_simplecble/install/lib"
+```
+
+On Windows, the DLLs are in `build_simplecble/install/bin`.
+
 ## Central
 
 | Example | Demonstrates |

@@ -96,3 +96,10 @@ std::unique_ptr<Error> CoreBluetoothException::make_error() const {
     return std::make_unique<Error>(ErrorCode::CORE_BLUETOOTH_EXCEPTION,
                                    std::make_unique<CoreBluetoothException>(*this));
 }
+
+AdapterInUse::AdapterInUse(const std::string& adapter)
+    : BaseException("Adapter " + adapter + " is in use by another process.") {}
+
+std::unique_ptr<Error> AdapterInUse::make_error() const {
+    return std::make_unique<Error>(ErrorCode::ADAPTER_IN_USE, std::make_unique<AdapterInUse>(*this));
+}
