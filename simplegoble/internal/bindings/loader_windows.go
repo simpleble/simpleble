@@ -7,7 +7,9 @@ import (
 	"unsafe"
 )
 
-var loadLibraryEx = syscall.NewLazyDLL("kernel32.dll").NewProc("LoadLibraryExW")
+var kernel32 = syscall.NewLazyDLL("kernel32.dll")
+var loadLibraryEx = kernel32.NewProc("LoadLibraryExW")
+var getCurrentThreadID = kernel32.NewProc("GetCurrentThreadId")
 
 func openLibrary(path string) (uintptr, error) {
 	nativePath, err := syscall.UTF16PtrFromString(path)
@@ -29,3 +31,9 @@ func findSymbol(libraryHandle uintptr, name string) (uintptr, error) {
 	return syscall.GetProcAddress(syscall.Handle(libraryHandle), name)
 }
 func closeLibrary(libraryHandle uintptr) { _ = syscall.FreeLibrary(syscall.Handle(libraryHandle)) }
+
+// currentThread identifies the native thread; Go has no thread-local storage.
+func currentThread() uintptr {
+	id, _, _ := getCurrentThreadID.Call()
+	return id
+}

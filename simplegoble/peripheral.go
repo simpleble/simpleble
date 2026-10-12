@@ -14,7 +14,8 @@ type Peripheral struct {
 }
 
 func newPeripheral(native *bindings.NativeAPI, nativeHandle uintptr) *Peripheral {
-	return &Peripheral{handle: &bindings.Handle{Native: native, NativeHandle: nativeHandle}, callbacks: &bindings.CallbackOwner{}}
+	callbacks := &bindings.CallbackOwner{}
+	return &Peripheral{handle: bindings.NewPeripheral(native, nativeHandle, callbacks), callbacks: callbacks}
 }
 
 // Initialized reports whether the handle is open.

@@ -10,12 +10,37 @@ import (
 type LocalPeripheral struct {
 	handle    *bindings.Handle
 	callbacks *bindings.CallbackOwner
-	state     *localPeripheralState
+	state     *localChildren[localChildren[bindings.ReadCallback]]
 }
 
-type localPeripheralState struct {
+// localChildren keeps Go state for local GATT children, which have no stable
+// native identity. OS backends list them in insertion order and do not reject
+// repeated UUIDs; the simulator sorts them by UUID and rejects repeats. A UUID
+// plus its occurrence among same-UUID siblings identifies a child on both.
+type localChildren[T any] struct {
 	sync.Mutex
-	services map[string]*localServiceState
+	byUUID map[string][]*T
+}
+
+// add returns state for a child just added with uuid.
+func (c *localChildren[T]) add(uuid string) *T {
+	if c.byUUID == nil {
+		c.byUUID = make(map[string][]*T)
+	}
+	state := new(T)
+	c.byUUID[uuid] = append(c.byUUID[uuid], state)
+	return state
+}
+
+// at returns state for the next enumerated child with uuid; seen counts the
+// same-UUID siblings this enumeration has already returned.
+func (c *localChildren[T]) at(uuid string, seen map[string]int) *T {
+	n := seen[uuid]
+	seen[uuid]++
+	for len(c.byUUID[uuid]) <= n {
+		c.add(uuid)
+	}
+	return c.byUUID[uuid][n]
 }
 
 // CreateLocalPeripheral creates an owned GATT host. Configure it before Start.
@@ -25,8 +50,8 @@ func (a *Adapter) CreateLocalPeripheral() (*LocalPeripheral, error) {
 		if *nativeError != 0 {
 			return nil
 		}
-		return &LocalPeripheral{handle: &bindings.Handle{Native: native, NativeHandle: host},
-			callbacks: &bindings.CallbackOwner{}, state: &localPeripheralState{services: make(map[string]*localServiceState)}}
+		return &LocalPeripheral{handle: bindings.NewLocalPeripheral(native, host),
+			callbacks: &bindings.CallbackOwner{}, state: &localChildren[localChildren[bindings.ReadCallback]]{}}
 	})
 }
 
@@ -49,7 +74,7 @@ func (p *LocalPeripheral) AddAdvertisedService(value string) error {
 }
 
 // AddService adds a primary GATT service before Start and returns an owned handle.
-// Service UUIDs must be unique within the host.
+// Whether a host accepts repeated service UUIDs depends on the backend.
 func (p *LocalPeripheral) AddService(value string) (*LocalService, error) {
 	uuid, err := bindings.NewUUID(value)
 	if err != nil {
@@ -60,17 +85,12 @@ func (p *LocalPeripheral) AddService(value string) (*LocalService, error) {
 	}
 	p.state.Lock()
 	defer p.state.Unlock()
-	if p.state.services[uuid.String()] != nil {
-		return nil, &bindings.Error{Code: bindings.InvalidArgument, Message: "duplicate local service UUID"}
-	}
 	return bindings.Query(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) *LocalService {
 		handle := native.LocalPeripheralAddService(nativeHandle, uuid, nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
-		state := &localServiceState{readers: make(map[string]*bindings.ReadCallback)}
-		p.state.services[uuid.String()] = state
-		return newLocalService(native, handle, state)
+		return newLocalService(native, handle, p.state.add(uuid.String()))
 	})
 }
 
@@ -87,6 +107,7 @@ func (p *LocalPeripheral) Services() ([]*LocalService, error) {
 			return nil
 		}
 		services := make([]*LocalService, 0, count)
+		seen := make(map[string]int)
 		for i := uintptr(0); i < count; i++ {
 			handle := native.LocalPeripheralServiceGet(nativeHandle, i, nativeError)
 			var uuid bindings.UUID
@@ -100,12 +121,7 @@ func (p *LocalPeripheral) Services() ([]*LocalService, error) {
 				}
 				return nil
 			}
-			state := p.state.services[uuid.String()]
-			if state == nil {
-				state = &localServiceState{readers: make(map[string]*bindings.ReadCallback)}
-				p.state.services[uuid.String()] = state
-			}
-			services = append(services, newLocalService(native, handle, state))
+			services = append(services, newLocalService(native, handle, p.state.at(uuid.String(), seen)))
 		}
 		return services
 	})
@@ -122,7 +138,7 @@ func (p *LocalPeripheral) RemoveAllServices() error {
 		native.LocalPeripheralRemoveServices(nativeHandle, nativeError)
 	})
 	if err == nil {
-		clear(p.state.services)
+		p.state.byUUID = nil
 	}
 	return err
 }

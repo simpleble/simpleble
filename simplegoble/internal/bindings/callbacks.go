@@ -39,10 +39,11 @@ type CallbackPayload struct {
 }
 
 type callbackEntry struct {
-	owner *CallbackOwner
-	key   callbackKey
-	token uintptr
-	fn    func(CallbackPayload)
+	owner  *CallbackOwner
+	key    callbackKey
+	token  uintptr
+	fn     func(CallbackPayload)
+	handle *Handle // Keeps a wrapper with registered callbacks reachable.
 }
 
 type callbackEvent struct {
@@ -210,7 +211,7 @@ func setCallback(handle *Handle, callbacks *CallbackOwner, key callbackKey, fn f
 		}
 		callbacks.mu.Unlock()
 		callbackRegistry.Lock()
-		callbackRegistry.entries[token] = callbackEntry{callbacks, key, token, fn}
+		callbackRegistry.entries[token] = callbackEntry{callbacks, key, token, fn, handle}
 		callbackRegistry.Unlock()
 	} else {
 		trampoline = 0

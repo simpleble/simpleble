@@ -55,6 +55,41 @@ var readRegistry = struct {
 	entries map[uintptr]*readEntry
 }{entries: make(map[uintptr]*readEntry)}
 
+// Threads running a read handler. Handlers run synchronously on the native thread
+// that requested the read, which SimpleSharpBLE tracks with a thread-static flag.
+var readingThreads = struct {
+	sync.Mutex
+	ids map[uintptr]bool
+}{ids: make(map[uintptr]bool)}
+
+// enterRead marks thread as running a read handler; false means a nested read.
+func enterRead(thread uintptr) bool {
+	readingThreads.Lock()
+	defer readingThreads.Unlock()
+	if readingThreads.ids[thread] {
+		return false
+	}
+	readingThreads.ids[thread] = true
+	return true
+}
+
+func exitRead(thread uintptr) {
+	readingThreads.Lock()
+	delete(readingThreads.ids, thread)
+	readingThreads.Unlock()
+}
+
+// The native slot would replace the callback that is running and strand its
+// pinned buffer, so a read handler cannot replace or close a read handler.
+func checkReadMutation() error {
+	readingThreads.Lock()
+	defer readingThreads.Unlock()
+	if readingThreads.ids[currentThread()] {
+		return &Error{Code: OperationNotSupported, Message: "cannot replace or close a read handler from a read callback"}
+	}
+	return nil
+}
+
 var localReadTrampoline = purego.NewCallback(func(_ uintptr, length *uintptr, token uintptr) uintptr {
 	*length = 0
 	readRegistry.RLock()
@@ -63,6 +98,11 @@ var localReadTrampoline = purego.NewCallback(func(_ uintptr, length *uintptr, to
 	if entry == nil {
 		return 0
 	}
+	thread := currentThread()
+	if !enterRead(thread) {
+		return 0
+	}
+	defer exitRead(thread)
 	// The native read slot serializes reads and includes the subsequent copy.
 	// Its borrowed buffer must stay pinned until the next read or slot removal.
 	entry.pin.Unpin()
@@ -105,6 +145,9 @@ func (reader *ReadCallback) clear(handle *Handle) {
 }
 
 func SetLocalReadCallback(handle *Handle, reader *ReadCallback, fn func() []byte) error {
+	if err := checkReadMutation(); err != nil {
+		return err
+	}
 	if handle == nil {
 		return ErrClosed
 	}

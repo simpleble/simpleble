@@ -170,6 +170,66 @@ public sealed class LocalAndConfigurationTests
     }
 
     [Fact]
+    public async Task PlainHostAliasesFollowUuidsNotPositions()
+    {
+        var adapters = Adapter.GetAdapters();
+        try
+        {
+            using var host = adapters[0].CreateLocalPeripheral();
+            using var service = host.AddService(GattTests.Uuid);
+            using var characteristic = service.AddCharacteristic(GattTests.Uuid, CharacteristicCapability.Read);
+            characteristic.Value = [9];
+            // PLAIN lists services by UUID, so this one moves ahead of the first.
+            using var first = host.AddService("00000001-0000-1000-8000-00805f9b34fb");
+            characteristic.ReadHandler = () => [1];
+            var services = host.Services;
+            var aliases = services.Single(s => s.Uuid == GattTests.Uuid).Characteristics;
+            try
+            {
+                aliases.Single().ReadHandler = () => [2];
+                // Disposing the original must not clear the alias's replacement handler.
+                characteristic.Dispose();
+                host.Start();
+                var found = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                EventHandler<PeripheralEventArgs> onFound = (_, args) =>
+                {
+                    try
+                    {
+                        if (args.Peripheral.Identifier == "Plain Adapter Peripheral") found.TrySetResult();
+                    }
+                    finally { args.Peripheral.Dispose(); }
+                };
+                adapters[0].ScanFound += onFound;
+                try
+                {
+                    adapters[0].ScanStart();
+                    await found.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                finally
+                {
+                    adapters[0].ScanStop();
+                    adapters[0].ScanFound -= onFound;
+                }
+                var peers = adapters[0].ScanGetResults();
+                try
+                {
+                    var peer = Assert.Single(peers, p => p.Identifier == "Plain Adapter Peripheral");
+                    peer.Connect();
+                    Assert.Equal(new byte[] { 2 }, peer.Read(GattTests.Uuid, GattTests.Uuid));
+                    host.Stop();
+                }
+                finally { foreach (var peer in peers) peer.Dispose(); }
+            }
+            finally
+            {
+                foreach (var alias in aliases) alias.Dispose();
+                foreach (var alias in services) alias.Dispose();
+            }
+        }
+        finally { foreach (var adapter in adapters) adapter.Dispose(); }
+    }
+
+    [Fact]
     public async Task LocalHostAndDynamicReadResultsRoundTripThroughCAbi()
     {
         using var host = new Local.Peripheral(NativeFixture.test_local());

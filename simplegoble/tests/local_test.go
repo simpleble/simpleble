@@ -5,6 +5,7 @@ import (
 	"errors"
 	"runtime"
 	"testing"
+	"time"
 
 	ble "github.com/simpleble/simplegoble"
 )
@@ -108,11 +109,12 @@ func TestPlainLocalConfigurationAndValueOwnership(t *testing.T) {
 	if _, err := host.AddService("180f\x00"); !errors.Is(err, ble.InvalidArgument) {
 		t.Fatal(err)
 	}
-	if _, err := host.AddService(hostService); !errors.Is(err, ble.InvalidArgument) {
-		t.Fatalf("duplicate service = %v", err)
+	// Repeated UUIDs follow the native backend; PLAIN rejects them.
+	if _, err := host.AddService(hostService); !errors.Is(err, ble.OperationFailed) {
+		t.Fatalf("repeated service = %v", err)
 	}
-	if _, err := service.AddCharacteristic(hostValue, ble.CapabilityRead); !errors.Is(err, ble.InvalidArgument) {
-		t.Fatalf("duplicate characteristic = %v", err)
+	if _, err := service.AddCharacteristic(hostValue, ble.CapabilityRead); !errors.Is(err, ble.OperationFailed) {
+		t.Fatalf("repeated characteristic = %v", err)
 	}
 	if err := host.Start(); err != nil {
 		t.Fatal(err)
@@ -239,6 +241,81 @@ func TestPlainLocalReadCallbacksAndIndependentHandles(t *testing.T) {
 	}
 	if data, err := p.Read(hostService, hostValue); err != nil || !bytes.Equal(data, stored) {
 		t.Fatalf("close did not restore stored read: %v, %v", data, err)
+	}
+}
+
+func TestPlainLocalAliasesFollowUUIDsNotPositions(t *testing.T) {
+	a, host, _, c := plainHost(t)
+	// PLAIN lists services by UUID, so this one moves ahead of hostService.
+	first, err := host.AddService("0000aaaa-0000-1000-8000-00805f9b34fb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	if err := c.SetCallbackOnRead(func() []byte { return []byte{1} }); err != nil {
+		t.Fatal(err)
+	}
+	services, err := host.Services()
+	if err != nil || len(services) != 2 {
+		t.Fatalf("services = %v, %v", services, err)
+	}
+	var alias *ble.LocalCharacteristic
+	for _, service := range services {
+		defer service.Close()
+		if uuid, err := service.UUID(); err != nil || uuid != hostService {
+			continue
+		}
+		characteristics, err := service.Characteristics()
+		if err != nil || len(characteristics) != 1 {
+			t.Fatalf("characteristics = %v, %v", characteristics, err)
+		}
+		alias = characteristics[0]
+		defer alias.Close()
+	}
+	if alias == nil {
+		t.Fatal("hosted service was not enumerated")
+	}
+	if err := alias.SetCallbackOnRead(func() []byte { return []byte{2} }); err != nil {
+		t.Fatal(err)
+	}
+	// Closing the original must not clear the alias's replacement read callback.
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	p := connectHost(t, a, host)
+	if data, err := p.Read(hostService, hostValue); err != nil || !bytes.Equal(data, []byte{2}) {
+		t.Fatalf("alias read = %v, %v", data, err)
+	}
+}
+
+func TestPlainLocalReadHandlerCannotReplaceOrCloseItself(t *testing.T) {
+	a, host, _, c := plainHost(t)
+	rejected := make(chan error, 4)
+	if err := c.SetCallbackOnRead(func() []byte {
+		rejected <- c.SetCallbackOnRead(func() []byte { return []byte{2} })
+		rejected <- c.Close()
+		return []byte{1}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	p := connectHost(t, a, host)
+	for range 2 {
+		if data, err := p.Read(hostService, hostValue); err != nil || !bytes.Equal(data, []byte{1}) {
+			t.Fatalf("read = %v, %v", data, err)
+		}
+		for range 2 {
+			if err := receive(t, rejected); !errors.Is(err, ble.OperationNotSupported) {
+				t.Fatalf("change from read handler = %v", err)
+			}
+		}
+	}
+	if !c.Initialized() {
+		t.Fatal("read handler closed its characteristic")
+	}
+	// A stranded pinned buffer panics when the collector finalizes it.
+	for range 5 {
+		runtime.GC()
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

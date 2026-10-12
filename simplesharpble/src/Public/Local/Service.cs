@@ -26,8 +26,17 @@ public sealed class Service : IDisposable
         get
         {
             lock (children)
-                return NativeCall.Collect(handle.Query(NativeMethods.simpleble_local_service_characteristics_count),
-                    index => new Characteristic(handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_service_characteristics_get(h, index, ref e)), children.At(index)));
+            {
+                var seen = new Dictionary<string, int>();
+                return NativeCall.Collect(handle.Query(NativeMethods.simpleble_local_service_characteristics_count), index =>
+                {
+                    nint characteristic = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_service_characteristics_get(h, index, ref e));
+                    NativeUuid uuid = default;
+                    try { NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_local_characteristic_uuid(characteristic, out uuid, ref e); return 0; }); }
+                    catch { NativeMethods.simpleble_local_characteristic_release_handle(characteristic); throw; }
+                    return new Characteristic(characteristic, children.At(uuid.ToString(), seen));
+                });
+            }
         }
     }
     public Characteristic AddCharacteristic(string uuid, CharacteristicCapability capabilities)
@@ -36,8 +45,8 @@ public sealed class Service : IDisposable
         var value = new NativeUuid(uuid);
         lock (children)
         {
-            var state = children.At(handle.Query(NativeMethods.simpleble_local_service_characteristics_count));
-            return new(handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_service_add_characteristic(h, value, (uint)capabilities, ref e)), state);
+            nint characteristic = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_service_add_characteristic(h, value, (uint)capabilities, ref e));
+            return new(characteristic, children.Add(value.ToString()));
         }
     }
     public void Dispose() => handle.Dispose();

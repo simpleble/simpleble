@@ -14,8 +14,9 @@ type LocalCharacteristic struct {
 }
 
 func newLocalCharacteristic(native *bindings.NativeAPI, nativeHandle uintptr, reader *bindings.ReadCallback) *LocalCharacteristic {
-	return &LocalCharacteristic{handle: &bindings.Handle{Native: native, NativeHandle: nativeHandle},
-		callbacks: &bindings.CallbackOwner{}, reader: reader}
+	callbacks := &bindings.CallbackOwner{}
+	return &LocalCharacteristic{handle: bindings.NewLocalCharacteristic(native, nativeHandle, callbacks),
+		callbacks: callbacks, reader: reader}
 }
 
 // Initialized reports whether the handle is open.
@@ -23,7 +24,8 @@ func (c *LocalCharacteristic) Initialized() bool { return c.handle.Initialized()
 
 // Close expires this wrapper's callbacks and releases its handle. A read callback
 // still owned by this wrapper is cleared; a replacement on another handle is kept.
-// Close does not remove the characteristic from its service.
+// Close does not remove the characteristic from its service, and it returns
+// OperationNotSupported when called from a read callback.
 func (c *LocalCharacteristic) Close() error {
 	return bindings.CloseLocalCharacteristic(c.handle, c.callbacks, c.reader)
 }
@@ -64,8 +66,10 @@ func (c *LocalCharacteristic) SetValue(data []byte) error {
 
 // SetCallbackOnRead supplies a dynamic read value; nil restores the stored value.
 // Unlike event handlers, it runs synchronously on the native calling thread.
-// Return promptly and do not call BLE methods, change registrations, or Close
-// from this callback. The returned bytes are copied by Go and can contain zeros.
+// Return promptly and do not call BLE methods from this callback. Replacing a read
+// handler or closing a characteristic from it returns OperationNotSupported, and
+// a nested dynamic read returns no data. The returned bytes are copied by Go and
+// can contain zeros.
 func (c *LocalCharacteristic) SetCallbackOnRead(fn func() []byte) error {
 	return bindings.SetLocalReadCallback(c.handle, c.reader, fn)
 }

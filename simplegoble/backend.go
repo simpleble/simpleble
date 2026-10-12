@@ -26,7 +26,7 @@ func GetBackends() ([]*Backend, error) {
 			}
 			return nil, err
 		}
-		backends = append(backends, &Backend{handle: &bindings.Handle{Native: native, NativeHandle: nativeHandle}})
+		backends = append(backends, &Backend{handle: bindings.NewBackend(native, nativeHandle)})
 	}
 	return backends, nil
 }

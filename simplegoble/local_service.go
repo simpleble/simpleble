@@ -1,24 +1,15 @@
 package simplegoble
 
-import (
-	"sync"
-
-	"github.com/simpleble/simplegoble/internal/bindings"
-)
+import "github.com/simpleble/simplegoble/internal/bindings"
 
 // LocalService is an owned local GATT service handle.
 type LocalService struct {
 	handle *bindings.Handle
-	state  *localServiceState
+	state  *localChildren[bindings.ReadCallback]
 }
 
-type localServiceState struct {
-	sync.Mutex
-	readers map[string]*bindings.ReadCallback
-}
-
-func newLocalService(native *bindings.NativeAPI, nativeHandle uintptr, state *localServiceState) *LocalService {
-	return &LocalService{handle: &bindings.Handle{Native: native, NativeHandle: nativeHandle}, state: state}
+func newLocalService(native *bindings.NativeAPI, nativeHandle uintptr, state *localChildren[bindings.ReadCallback]) *LocalService {
+	return &LocalService{handle: bindings.NewLocalService(native, nativeHandle), state: state}
 }
 
 // Initialized reports whether the handle is open.
@@ -38,7 +29,7 @@ func (s *LocalService) UUID() (string, error) {
 
 // AddCharacteristic adds a characteristic before the host starts.
 // Combine capabilities with bitwise OR. Close the returned handle when finished.
-// Characteristic UUIDs must be unique within the service.
+// Whether a service accepts repeated characteristic UUIDs depends on the backend.
 func (s *LocalService) AddCharacteristic(value string, capabilities CharacteristicCapability) (*LocalCharacteristic, error) {
 	uuid, err := bindings.NewUUID(value)
 	if err != nil {
@@ -49,17 +40,12 @@ func (s *LocalService) AddCharacteristic(value string, capabilities Characterist
 	}
 	s.state.Lock()
 	defer s.state.Unlock()
-	if s.state.readers[uuid.String()] != nil {
-		return nil, &bindings.Error{Code: bindings.InvalidArgument, Message: "duplicate local characteristic UUID"}
-	}
 	return bindings.Query(s.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) *LocalCharacteristic {
 		handle := native.LocalServiceAddCharacteristic(nativeHandle, uuid, uint32(capabilities), nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
-		reader := &bindings.ReadCallback{}
-		s.state.readers[uuid.String()] = reader
-		return newLocalCharacteristic(native, handle, reader)
+		return newLocalCharacteristic(native, handle, s.state.add(uuid.String()))
 	})
 }
 
@@ -76,6 +62,7 @@ func (s *LocalService) Characteristics() ([]*LocalCharacteristic, error) {
 			return nil
 		}
 		characteristics := make([]*LocalCharacteristic, 0, count)
+		seen := make(map[string]int)
 		for i := uintptr(0); i < count; i++ {
 			handle := native.LocalServiceCharacteristicGet(nativeHandle, i, nativeError)
 			var uuid bindings.UUID
@@ -89,12 +76,7 @@ func (s *LocalService) Characteristics() ([]*LocalCharacteristic, error) {
 				}
 				return nil
 			}
-			reader := s.state.readers[uuid.String()]
-			if reader == nil {
-				reader = &bindings.ReadCallback{}
-				s.state.readers[uuid.String()] = reader
-			}
-			characteristics = append(characteristics, newLocalCharacteristic(native, handle, reader))
+			characteristics = append(characteristics, newLocalCharacteristic(native, handle, s.state.at(uuid.String(), seen)))
 		}
 		return characteristics
 	})

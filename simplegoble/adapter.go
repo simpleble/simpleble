@@ -14,7 +14,8 @@ type Adapter struct {
 }
 
 func newAdapter(native *bindings.NativeAPI, nativeHandle uintptr) *Adapter {
-	return &Adapter{handle: &bindings.Handle{Native: native, NativeHandle: nativeHandle}, callbacks: &bindings.CallbackOwner{}}
+	callbacks := &bindings.CallbackOwner{}
+	return &Adapter{handle: bindings.NewAdapter(native, nativeHandle, callbacks), callbacks: callbacks}
 }
 
 // GetAdapters initializes backends and returns their adapters. Close all handles.

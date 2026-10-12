@@ -39,8 +39,8 @@ public sealed class Peripheral : IDisposable
         var value = new NativeUuid(uuid);
         lock (children)
         {
-            var state = children.At(handle.Query(NativeMethods.simpleble_local_peripheral_services_count));
-            return new(handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_add_service(h, value, ref e)), state);
+            nint service = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_add_service(h, value, ref e));
+            return new(service, children.Add(value.ToString()));
         }
     }
     public IReadOnlyList<Service> Services
@@ -48,8 +48,17 @@ public sealed class Peripheral : IDisposable
         get
         {
             lock (children)
-                return NativeCall.Collect(handle.Query(NativeMethods.simpleble_local_peripheral_services_count),
-                    index => new Service(handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_services_get(h, index, ref e)), children.At(index)));
+            {
+                var seen = new Dictionary<string, int>();
+                return NativeCall.Collect(handle.Query(NativeMethods.simpleble_local_peripheral_services_count), index =>
+                {
+                    nint service = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_services_get(h, index, ref e));
+                    NativeUuid uuid = default;
+                    try { NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_local_service_uuid(service, out uuid, ref e); return 0; }); }
+                    catch { NativeMethods.simpleble_local_service_release_handle(service); throw; }
+                    return new Service(service, children.At(uuid.ToString(), seen));
+                });
+            }
         }
     }
     public bool IsStarted => handle.Query(NativeMethods.simpleble_local_peripheral_is_started);
