@@ -265,8 +265,10 @@ void PeripheralWindows::_observe_session(const std::shared_ptr<RunState>& run, c
             return;
         }
         const auto existing = run->client_sessions.find(key);
-        if (existing != run->client_sessions.end() &&
-            winrt::get_abi(existing->second.session) == winrt::get_abi(session)) {
+        // NOTE: Windows creates a new GattSession object for every request coming from the same client.
+        // Replacing (and closing) the tracked session breaks notifications, so we keep the original one
+        // until it gets closed.
+        if (existing != run->client_sessions.end() && !_is_session_closed(existing->second.session)) {
             return;
         }
         if (existing == run->client_sessions.end()) {
@@ -439,6 +441,14 @@ std::pair<std::string, BluetoothAddress> PeripheralWindows::_session_identity(co
         return {device_id, address};
     }
     return {device_id, device_id};
+}
+
+bool PeripheralWindows::_is_session_closed(const GattSession& session) noexcept {
+    try {
+        return !session || session.SessionStatus() == GattSessionStatus::Closed;
+    } catch (...) {
+        return true;
+    }
 }
 
 }  // namespace SimpleBLE::Local

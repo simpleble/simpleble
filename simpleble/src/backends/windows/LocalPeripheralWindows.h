@@ -81,6 +81,7 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     std::exception_ptr _stop_advertising() noexcept;
     void _clear_client_sessions(const std::shared_ptr<RunState>& run) noexcept;
     static std::pair<std::string, BluetoothAddress> _session_identity(const GattSession& session);
+    static bool _is_session_closed(const GattSession& session) noexcept;
 };
 
 }  // namespace SimpleBLE::Local
