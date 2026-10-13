@@ -41,7 +41,7 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
     // Without the Dongl, none of its connections exist anymore.
     _serial_protocol->set_lost_callback([this]() {
         for (auto& [address, peripheral] : this->peripherals_) {
-            peripheral->notify_disconnected();
+            peripheral->notify_lost();
         }
     });
 

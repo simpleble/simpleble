@@ -93,11 +93,12 @@ void PeripheralDongl::connect() {
     {
         std::unique_lock<std::mutex> lock(connection_mutex_);
         // Waiting past the Dongl's own deadline means the Dongl stopped responding. Don't resend the command.
-        const bool reported = connection_cv_.wait_for(lock, CONNECT_TIMEOUT + CONNECT_RESULT_MARGIN,
-                                                      [this]() { return _connect_result.has_value(); });
+        connection_cv_.wait_for(lock, CONNECT_TIMEOUT + CONNECT_RESULT_MARGIN,
+                                [this]() { return _connect_result.has_value() || _lost; });
         _connect_pending = false;
-        if (!reported) {
+        if (!_connect_result.has_value()) {
             _conn_handle = BLE_CONN_HANDLE_INVALID;
+            if (_lost) throw Exception::OperationFailed("Lost the connection to the Dongl");
             throw Exception::OperationFailed("Dongl did not report the connection result");
         }
         result = *_connect_result;
@@ -464,6 +465,17 @@ void PeripheralDongl::notify_disconnected() {
     if (notify) {
         SAFE_CALLBACK_CALL(this->_callback_on_disconnected);
     }
+}
+
+void PeripheralDongl::notify_lost() {
+    // The Dongl can't report the result of a pending connection anymore, so wake up connect().
+    {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        _lost = true;
+    }
+    connection_cv_.notify_all();
+
+    notify_disconnected();
 }
 
 void PeripheralDongl::notify_service_discovered(simpleble_ServiceDiscoveredEvt const& evt) {

@@ -77,6 +77,7 @@ class PeripheralDongl : public PeripheralBase {
     void update_advertising_data(Dongl::advertising_data_t advertising_data);
     void notify_connected(uint16_t conn_handle);
     void notify_disconnected();
+    void notify_lost();
     void notify_service_discovered(simpleble_ServiceDiscoveredEvt const& service_discovered_evt);
     void notify_characteristic_discovered(simpleble_CharacteristicDiscoveredEvt const& characteristic_discovered_evt);
     void notify_descriptor_discovered(simpleble_DescriptorDiscoveredEvt const& descriptor_discovered_evt);
@@ -154,6 +155,7 @@ class PeripheralDongl : public PeripheralBase {
     std::vector<ServiceDefinition> _services;
     std::optional<simpleble_ConnectCompleteEvt> _connect_result;
     bool _connect_pending = false;  // Guarded by connection_mutex_.
+    bool _lost = false;             // Guarded by connection_mutex_.
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;
 
