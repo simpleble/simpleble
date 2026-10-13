@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleBLE) Added the `AdapterInUse` exception and `ADAPTER_IN_USE` error code.
 - (SimplePyBLE) Added local peripheral hosting.
 - (SimplePyBLE) Added Dongl pairing callbacks.
+- (SimpleRsBLE) Added local peripheral hosting.
+- (SimpleRsBLE) Added configuration and backend enumeration, including Dongl selection.
+- (SimpleRsBLE) Added Dongl pairing callbacks.
 
 **Changed**
 
@@ -40,6 +43,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleJavaBLE) Fixed programs aborting at exit on macOS.
 - (SimpleJavaBLE) Fixed building with GCC 15.
 - (SimplePyBLE) Fixed `asyncio` deprecation warnings on Python 3.14.
+- (SimpleRsBLE) Fixed linking on macOS and in Windows debug builds.
+- (SimpleRsBLE) Fixed a use-after-free when a notification arrived after its peripheral was dropped.
 
 **Removed**
 

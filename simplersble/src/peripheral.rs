@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::mem;
+use std::panic::{self, AssertUnwindSafe};
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
@@ -23,11 +24,43 @@ pub enum ValueChangedEvent {
     ValueUpdated(Vec<u8>),
 }
 
+pub(crate) type PasskeyRequestCallback = Arc<dyn Fn() -> Option<String> + Send + Sync>;
+pub(crate) type PasskeyDisplayCallback = Arc<dyn Fn(&str) + Send + Sync>;
+pub(crate) type NumericComparisonCallback = Arc<dyn Fn(&str) -> bool + Send + Sync>;
+
 pub struct InnerPeripheral {
     internal: cxx::UniquePtr<ffi::RustyPeripheral>,
 
     on_connection_event: broadcast::Sender<ConnectionEvent>,
     on_characteristic_update_map: Mutex<HashMap<String, broadcast::Sender<ValueChangedEvent>>>,
+
+    // NOTE: Pairing callbacks run on a native worker thread while `connect()` might be holding
+    // the `Peripheral` lock, so they have locks of their own.
+    passkey_request_callback: Mutex<Option<PasskeyRequestCallback>>,
+    passkey_display_callback: Mutex<Option<PasskeyDisplayCallback>>,
+    numeric_comparison_callback: Mutex<Option<NumericComparisonCallback>>,
+}
+
+// Stores `callback` and then registers or clears the native callback.
+// If the native call fails, the previous callback is put back.
+fn replace_pairing_callback<T>(
+    slot: &Mutex<Option<T>>,
+    callback: Option<T>,
+    register: impl FnOnce(bool) -> Result<(), cxx::Exception>,
+) -> Result<(), Error> {
+    let enabled = callback.is_some();
+    let previous = mem::replace(&mut *slot.lock().unwrap(), callback);
+
+    if let Err(e) = register(enabled) {
+        *slot.lock().unwrap() = previous;
+        return Err(Error::from_cxx_exception(e));
+    }
+
+    Ok(())
+}
+
+fn current_callback<T: Clone>(slot: &Mutex<Option<T>>) -> Option<T> {
+    slot.lock().unwrap_or_else(PoisonError::into_inner).clone()
 }
 
 impl InnerPeripheral {
@@ -38,6 +71,9 @@ impl InnerPeripheral {
             internal: cxx::UniquePtr::<ffi::RustyPeripheral>::null(),
             on_connection_event: event_sender,
             on_characteristic_update_map: Mutex::new(HashMap::new()),
+            passkey_request_callback: Mutex::new(None),
+            passkey_display_callback: Mutex::new(None),
+            numeric_comparison_callback: Mutex::new(None),
         };
 
         let mut this_boxed = Box::pin(this);
@@ -249,6 +285,27 @@ impl InnerPeripheral {
             .map_err(Error::from_cxx_exception)
     }
 
+    pub(crate) fn set_passkey_request_callback(&self, callback: Option<PasskeyRequestCallback>) -> Result<(), Error> {
+        replace_pairing_callback(&self.passkey_request_callback, callback, |enabled| {
+            self.internal.dongl_set_passkey_request_callback(enabled)
+        })
+    }
+
+    pub(crate) fn set_passkey_display_callback(&self, callback: Option<PasskeyDisplayCallback>) -> Result<(), Error> {
+        replace_pairing_callback(&self.passkey_display_callback, callback, |enabled| {
+            self.internal.dongl_set_passkey_display_callback(enabled)
+        })
+    }
+
+    pub(crate) fn set_numeric_comparison_callback(
+        &self,
+        callback: Option<NumericComparisonCallback>,
+    ) -> Result<(), Error> {
+        replace_pairing_callback(&self.numeric_comparison_callback, callback, |enabled| {
+            self.internal.dongl_set_numeric_comparison_callback(enabled)
+        })
+    }
+
     pub fn on_callback_connected(&self) {
         // TODO: Review how to handle errors here.
         let _ = self.on_connection_event.send(ConnectionEvent::Connected);
@@ -271,6 +328,41 @@ impl InnerPeripheral {
             // TODO: Review how to handle errors here.
             let _ = cb.send(ValueChangedEvent::ValueUpdated(data.clone()));
         }
+    }
+
+    // The pairing request is rejected if there's no callback or the callback panics.
+    // NOTE: A panic must never unwind into C++.
+
+    pub(crate) fn on_callback_passkey_request(&self, passkey: &mut String) -> bool {
+        let Some(callback) = current_callback(&self.passkey_request_callback) else {
+            return false;
+        };
+
+        match panic::catch_unwind(AssertUnwindSafe(|| callback())) {
+            Ok(Some(value)) => {
+                *passkey = value;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn on_callback_passkey_display(&self, passkey: &[u8]) {
+        let Some(callback) = current_callback(&self.passkey_display_callback) else {
+            return;
+        };
+
+        let passkey = String::from_utf8_lossy(passkey);
+        let _ = panic::catch_unwind(AssertUnwindSafe(|| callback(&passkey)));
+    }
+
+    pub(crate) fn on_callback_numeric_comparison(&self, passkey: &[u8]) -> bool {
+        let Some(callback) = current_callback(&self.numeric_comparison_callback) else {
+            return false;
+        };
+
+        let passkey = String::from_utf8_lossy(passkey);
+        panic::catch_unwind(AssertUnwindSafe(|| callback(&passkey))).unwrap_or(false)
     }
 }
 
@@ -413,6 +505,23 @@ impl Peripheral {
     pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
         BroadcastStream::new(self.inner.lock().unwrap().on_connection_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
+    }
+}
+
+impl Peripheral {
+    pub(crate) fn set_passkey_request_callback(&self, callback: Option<PasskeyRequestCallback>) -> Result<(), Error> {
+        self.inner.lock().unwrap().set_passkey_request_callback(callback)
+    }
+
+    pub(crate) fn set_passkey_display_callback(&self, callback: Option<PasskeyDisplayCallback>) -> Result<(), Error> {
+        self.inner.lock().unwrap().set_passkey_display_callback(callback)
+    }
+
+    pub(crate) fn set_numeric_comparison_callback(
+        &self,
+        callback: Option<NumericComparisonCallback>,
+    ) -> Result<(), Error> {
+        self.inner.lock().unwrap().set_numeric_comparison_callback(callback)
     }
 }
 

@@ -1,5 +1,7 @@
 use std::fmt;
 
+use super::ffi;
+
 #[derive(Debug, Clone)]
 pub struct Error {
     msg: String,
@@ -25,13 +27,41 @@ pub enum BluetoothAddressType {
     Unspecified,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CharacteristicCapability {
     Read,
     WriteRequest,
     WriteCommand,
     Notify,
     Indicate,
+}
+
+impl CharacteristicCapability {
+    const ALL: [CharacteristicCapability; 5] = [
+        CharacteristicCapability::Read,
+        CharacteristicCapability::WriteRequest,
+        CharacteristicCapability::WriteCommand,
+        CharacteristicCapability::Notify,
+        CharacteristicCapability::Indicate,
+    ];
+
+    fn bit(self) -> u8 {
+        match self {
+            CharacteristicCapability::Read => ffi::RustyCharacteristicCapability::READ.repr,
+            CharacteristicCapability::WriteRequest => ffi::RustyCharacteristicCapability::WRITE_REQUEST.repr,
+            CharacteristicCapability::WriteCommand => ffi::RustyCharacteristicCapability::WRITE_COMMAND.repr,
+            CharacteristicCapability::Notify => ffi::RustyCharacteristicCapability::NOTIFY.repr,
+            CharacteristicCapability::Indicate => ffi::RustyCharacteristicCapability::INDICATE.repr,
+        }
+    }
+
+    pub(crate) fn to_mask(capabilities: &[CharacteristicCapability]) -> u8 {
+        capabilities.iter().fold(0, |mask, capability| mask | capability.bit())
+    }
+
+    pub(crate) fn from_mask(mask: u8) -> Vec<CharacteristicCapability> {
+        Self::ALL.into_iter().filter(|capability| mask & capability.bit() != 0).collect()
+    }
 }
 
 impl std::error::Error for Error {}

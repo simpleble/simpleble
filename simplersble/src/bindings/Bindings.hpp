@@ -2,7 +2,11 @@
 
 #include "rust/cxx.h"
 #include "simpleble/Adapter.h"
+#include "simpleble/Backend.h"
 #include "simpleble/Peripheral.h"
+#include "simpleble/local/Characteristic.h"
+#include "simpleble/local/Peripheral.h"
+#include "simpleble/local/Service.h"
 
 #include <cstdint>
 #include <iostream>
@@ -13,6 +17,8 @@ namespace SimpleRsBLE {
 
 struct InnerAdapter;
 struct InnerPeripheral;
+struct InnerLocalPeripheral;
+struct InnerLocalCharacteristic;
 
 };  // namespace SimpleRsBLE
 
@@ -24,9 +30,59 @@ struct RustyServiceWrapper;
 struct RustyCharacteristicWrapper;
 struct RustyDescriptorWrapper;
 struct RustyManufacturerDataWrapper;
+struct RustyBackendWrapper;
+
+class RustyLocalPeripheral;
+class RustyLocalService;
+class RustyLocalCharacteristic;
 
 rust::Vec<Bindings::RustyAdapterWrapper> RustyAdapter_get_adapters();
 bool RustyAdapter_bluetooth_enabled();
+
+rust::Vec<Bindings::RustyBackendWrapper> RustyBackend_get_backends();
+
+void RustyConfig_reset_all();
+
+void RustyConfig_simplebluez_reset();
+bool RustyConfig_simplebluez_use_system_bus();
+void RustyConfig_simplebluez_set_use_system_bus(bool enabled);
+uint64_t RustyConfig_simplebluez_connection_timeout_ns();
+void RustyConfig_simplebluez_set_connection_timeout_ns(uint64_t timeout_ns);
+uint64_t RustyConfig_simplebluez_disconnection_timeout_ns();
+void RustyConfig_simplebluez_set_disconnection_timeout_ns(uint64_t timeout_ns);
+
+void RustyConfig_winrt_reset();
+bool RustyConfig_winrt_experimental_use_own_mta_apartment();
+void RustyConfig_winrt_set_experimental_use_own_mta_apartment(bool enabled);
+bool RustyConfig_winrt_experimental_reinitialize_winrt_apartment_on_main_thread();
+void RustyConfig_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread(bool enabled);
+bool RustyConfig_winrt_use_deferred_disconnect();
+void RustyConfig_winrt_set_use_deferred_disconnect(bool enabled);
+
+void RustyConfig_corebluetooth_reset();
+
+void RustyConfig_dongl_reset();
+bool RustyConfig_dongl_use_dongl_backend();
+void RustyConfig_dongl_set_use_dongl_backend(bool enabled);
+bool RustyConfig_dongl_auto_update();
+void RustyConfig_dongl_set_auto_update(bool enabled);
+bool RustyConfig_dongl_force_update();
+void RustyConfig_dongl_set_force_update(bool enabled);
+
+class RustyBackend {
+  public:
+    RustyBackend() = default;
+    virtual ~RustyBackend() = default;
+
+    RustyBackend(SimpleBLE::Backend backend) : _internal(new SimpleBLE::Backend(std::move(backend))) {}
+
+    rust::String identifier() const;
+    bool bluetooth_enabled() const;
+    rust::Vec<Bindings::RustyAdapterWrapper> adapters() const;
+
+  private:
+    std::unique_ptr<SimpleBLE::Backend> _internal;
+};
 
 class RustyAdapter {
   public:
@@ -54,6 +110,11 @@ class RustyAdapter {
 
     rust::Vec<Bindings::RustyPeripheralWrapper> get_paired_peripherals() const;
     rust::Vec<Bindings::RustyPeripheralWrapper> get_connected_peripherals() const;
+
+    std::unique_ptr<Bindings::RustyLocalPeripheral> create_local_peripheral() const;
+
+    rust::Vec<Bindings::RustyPeripheralWrapper> macos_retrieve_cached_peripherals(
+        rust::Vec<rust::String> const& identifiers) const;
 
   private:
     // NOTE: All internal properties need to be handled as pointers,
@@ -108,6 +169,10 @@ class RustyPeripheral {
     void write_descriptor(rust::String const& service, rust::String const& characteristic,
                           rust::String const& descriptor, rust::Vec<uint8_t> const& data) const;
 
+    void dongl_set_passkey_request_callback(bool enabled) const;
+    void dongl_set_passkey_display_callback(bool enabled) const;
+    void dongl_set_numeric_comparison_callback(bool enabled) const;
+
   private:
     // NOTE: All internal properties need to be handled as pointers,
     // allowing the calls to RustyPeripheral to always be const.
@@ -115,7 +180,19 @@ class RustyPeripheral {
     // important to be careful when handling these.
     std::unique_ptr<SimpleBLE::Peripheral> _internal;
     mutable SimpleRsBLE::InnerPeripheral* _peripheral = nullptr;
-    mutable std::mutex _peripheral_mutex;
+
+    // NOTE: Notify and indicate callbacks cannot be cleared in unlink() and can outlive this object,
+    // so they reach the InnerPeripheral(Rust) through this shared back-pointer instead.
+    struct ValueCallbackTarget {
+        std::mutex mutex;
+        SimpleRsBLE::InnerPeripheral* peripheral = nullptr;
+    };
+    std::shared_ptr<ValueCallbackTarget> _value_callback_target = std::make_shared<ValueCallbackTarget>();
+
+    // Pairing callbacks registered by this wrapper, so that unlink() knows which ones to clear.
+    mutable bool _dongl_passkey_request = false;
+    mutable bool _dongl_passkey_display = false;
+    mutable bool _dongl_numeric_comparison = false;
 };
 
 class RustyService {
@@ -184,6 +261,70 @@ class RustyDescriptor {
     // This might require us to store pointers to pointers, so it's
     // important to be careful when handling these.
     std::shared_ptr<SimpleBLE::Descriptor> _internal;
+};
+
+class RustyLocalPeripheral {
+  public:
+    RustyLocalPeripheral() = default;
+    virtual ~RustyLocalPeripheral() { _internal.reset(); }
+
+    RustyLocalPeripheral(SimpleBLE::Local::Peripheral peripheral)
+        : _internal(new SimpleBLE::Local::Peripheral(std::move(peripheral))) {}
+
+    void link(SimpleRsBLE::InnerLocalPeripheral const& target) const;
+    void unlink() const;
+
+    void add_advertised_service(rust::Str uuid) const;
+    std::unique_ptr<Bindings::RustyLocalService> add_service(rust::Str uuid) const;
+    void remove_all_services() const;
+
+    void start() const;
+    void stop() const;
+    bool is_started() const;
+    bool is_advertising() const;
+
+    void macos_set_advertisement_local_name(bool has_local_name, rust::Str local_name) const;
+    void linux_set_advertisement_local_name(bool has_local_name, rust::Str local_name) const;
+
+  private:
+    std::unique_ptr<SimpleBLE::Local::Peripheral> _internal;
+    mutable SimpleRsBLE::InnerLocalPeripheral const* _peripheral = nullptr;
+};
+
+class RustyLocalService {
+  public:
+    RustyLocalService() = default;
+    virtual ~RustyLocalService() = default;
+
+    RustyLocalService(SimpleBLE::Local::Service service) : _internal(new SimpleBLE::Local::Service(std::move(service))) {}
+
+    rust::String uuid() const;
+    std::unique_ptr<Bindings::RustyLocalCharacteristic> add_characteristic(rust::Str uuid, uint8_t capabilities) const;
+
+  private:
+    std::unique_ptr<SimpleBLE::Local::Service> _internal;
+};
+
+class RustyLocalCharacteristic {
+  public:
+    RustyLocalCharacteristic() = default;
+    virtual ~RustyLocalCharacteristic() { _internal.reset(); }
+
+    RustyLocalCharacteristic(SimpleBLE::Local::Characteristic characteristic)
+        : _internal(new SimpleBLE::Local::Characteristic(std::move(characteristic))) {}
+
+    void link(SimpleRsBLE::InnerLocalCharacteristic const& target) const;
+    void unlink() const;
+
+    rust::String uuid() const;
+    uint8_t capabilities() const;
+    rust::Vec<uint8_t> value() const;
+    void set_value(rust::Slice<const uint8_t> value) const;
+    void set_read_callback_enabled(bool enabled) const;
+
+  private:
+    std::unique_ptr<SimpleBLE::Local::Characteristic> _internal;
+    mutable SimpleRsBLE::InnerLocalCharacteristic const* _characteristic = nullptr;
 };
 
 };  // namespace Bindings

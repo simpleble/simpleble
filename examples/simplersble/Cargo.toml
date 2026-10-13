@@ -15,6 +15,12 @@ name = "connect"
 [[bin]]
 name = "notify"
 
+[[bin]]
+name = "peripheral"
+
+[[bin]]
+name = "dongl"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"

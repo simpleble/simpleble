@@ -4,9 +4,17 @@ pub mod peripheral;
 pub mod service;
 pub mod characteristic;
 pub mod descriptor;
+pub mod backend;
+pub mod config;
+pub mod advanced;
+pub mod local_peripheral;
+pub mod local_service;
+pub mod local_characteristic;
 
 use adapter::InnerAdapter;
 use peripheral::InnerPeripheral;
+use local_peripheral::InnerLocalPeripheral;
+use local_characteristic::InnerLocalCharacteristic;
 
 pub use types::{Error, BluetoothAddressType, CharacteristicCapability};
 pub use adapter::Adapter;
@@ -18,6 +26,12 @@ pub use peripheral::ValueChangedEvent;
 pub use service::Service;
 pub use characteristic::Characteristic;
 pub use descriptor::Descriptor;
+pub use backend::Backend;
+pub use local_peripheral::LocalPeripheral;
+pub use local_peripheral::ClientEvent;
+pub use local_service::LocalService;
+pub use local_characteristic::LocalCharacteristic;
+pub use local_characteristic::LocalCharacteristicEvent;
 
 #[cxx::bridge]
 mod ffi {
@@ -52,6 +66,11 @@ mod ffi {
         internal: UniquePtr<RustyDescriptor>,
     }
 
+    #[namespace = "Bindings"]
+    struct RustyBackendWrapper {
+        internal: UniquePtr<RustyBackend>,
+    }
+
     // ----------------------------------------------------------------------------------
 
     #[namespace = "Bindings"]
@@ -66,6 +85,17 @@ mod ffi {
         PUBLIC,
         RANDOM,
         UNSPECIFIED,
+    }
+
+    // Bit values used to pass a set of local characteristic capabilities as a mask.
+    #[namespace = "Bindings"]
+    #[repr(u8)]
+    enum RustyCharacteristicCapability {
+        READ = 1,
+        WRITE_REQUEST = 2,
+        WRITE_COMMAND = 4,
+        NOTIFY = 8,
+        INDICATE = 16,
     }
 
     // ----------------------------------------------------------------------------------
@@ -91,6 +121,21 @@ mod ffi {
             Characteristic: &String,
             data: &Vec<u8>,
         );
+        pub fn on_callback_passkey_request(self: &InnerPeripheral, passkey: &mut String) -> bool;
+        pub fn on_callback_passkey_display(self: &InnerPeripheral, passkey: &[u8]);
+        pub fn on_callback_numeric_comparison(self: &InnerPeripheral, passkey: &[u8]) -> bool;
+
+        type InnerLocalPeripheral;
+
+        pub fn on_callback_client_connected(self: &InnerLocalPeripheral, address: &[u8]);
+        pub fn on_callback_client_disconnected(self: &InnerLocalPeripheral, address: &[u8]);
+
+        type InnerLocalCharacteristic;
+
+        pub fn on_callback_read(self: &InnerLocalCharacteristic) -> Vec<u8>;
+        pub fn on_callback_written(self: &InnerLocalCharacteristic, value: &[u8]);
+        pub fn on_callback_subscribed(self: &InnerLocalCharacteristic);
+        pub fn on_callback_unsubscribed(self: &InnerLocalCharacteristic);
     }
 
     unsafe extern "C++" {
@@ -114,6 +159,18 @@ mod ffi {
         #[namespace = "Bindings"]
         type RustyDescriptor;
 
+        #[namespace = "Bindings"]
+        type RustyBackend;
+
+        #[namespace = "Bindings"]
+        type RustyLocalPeripheral;
+
+        #[namespace = "Bindings"]
+        type RustyLocalService;
+
+        #[namespace = "Bindings"]
+        type RustyLocalCharacteristic;
+
         // Common functions
 
         #[namespace = "Bindings"]
@@ -121,6 +178,68 @@ mod ffi {
 
         #[namespace = "Bindings"]
         fn RustyAdapter_get_adapters() -> Result<Vec<RustyAdapterWrapper>>;
+
+        #[namespace = "Bindings"]
+        fn RustyBackend_get_backends() -> Result<Vec<RustyBackendWrapper>>;
+
+        // Config functions
+
+        #[namespace = "Bindings"]
+        fn RustyConfig_reset_all();
+
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_reset();
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_use_system_bus() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_set_use_system_bus(enabled: bool);
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_connection_timeout_ns() -> u64;
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_set_connection_timeout_ns(timeout_ns: u64);
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_disconnection_timeout_ns() -> u64;
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_set_disconnection_timeout_ns(timeout_ns: u64);
+
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_reset();
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_experimental_use_own_mta_apartment() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_set_experimental_use_own_mta_apartment(enabled: bool);
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_experimental_reinitialize_winrt_apartment_on_main_thread() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread(enabled: bool);
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_use_deferred_disconnect() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_winrt_set_use_deferred_disconnect(enabled: bool);
+
+        #[namespace = "Bindings"]
+        fn RustyConfig_corebluetooth_reset();
+
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_reset();
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_use_dongl_backend() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_set_use_dongl_backend(enabled: bool);
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_auto_update() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_set_auto_update(enabled: bool);
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_force_update() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_dongl_set_force_update(enabled: bool);
+
+        // RustyBackend functions
+
+        fn identifier(self: &RustyBackend) -> String;
+        fn bluetooth_enabled(self: &RustyBackend) -> Result<bool>;
+        fn adapters(self: &RustyBackend) -> Result<Vec<RustyAdapterWrapper>>;
 
         // RustyAdapter functions
 
@@ -143,6 +262,14 @@ mod ffi {
 
         fn get_paired_peripherals(self: &RustyAdapter) -> Result<Vec<RustyPeripheralWrapper>>;
         fn get_connected_peripherals(self: &RustyAdapter) -> Result<Vec<RustyPeripheralWrapper>>;
+
+        fn create_local_peripheral(self: &RustyAdapter) -> Result<UniquePtr<RustyLocalPeripheral>>;
+
+        #[cfg(any(target_os = "macos", doc))]
+        fn macos_retrieve_cached_peripherals(
+            self: &RustyAdapter,
+            identifiers: &Vec<String>,
+        ) -> Result<Vec<RustyPeripheralWrapper>>;
 
         // RustyPeripheral functions
 
@@ -211,6 +338,10 @@ mod ffi {
             data: &Vec<u8>,
         ) -> Result<()>;
 
+        fn dongl_set_passkey_request_callback(self: &RustyPeripheral, enabled: bool) -> Result<()>;
+        fn dongl_set_passkey_display_callback(self: &RustyPeripheral, enabled: bool) -> Result<()>;
+        fn dongl_set_numeric_comparison_callback(self: &RustyPeripheral, enabled: bool) -> Result<()>;
+
         // RustyService functions
 
         fn initialized(self: &RustyService) -> bool;
@@ -235,6 +366,53 @@ mod ffi {
 
         fn initialized(self: &RustyDescriptor) -> bool;
         fn uuid(self: &RustyDescriptor) -> String;
+
+        // RustyLocalPeripheral functions
+
+        fn link(self: &RustyLocalPeripheral, target: &InnerLocalPeripheral) -> Result<()>;
+        fn unlink(self: &RustyLocalPeripheral) -> Result<()>;
+
+        fn add_advertised_service(self: &RustyLocalPeripheral, uuid: &str) -> Result<()>;
+        fn add_service(self: &RustyLocalPeripheral, uuid: &str) -> Result<UniquePtr<RustyLocalService>>;
+        fn remove_all_services(self: &RustyLocalPeripheral) -> Result<()>;
+
+        fn start(self: &RustyLocalPeripheral) -> Result<()>;
+        fn stop(self: &RustyLocalPeripheral) -> Result<()>;
+        fn is_started(self: &RustyLocalPeripheral) -> Result<bool>;
+        fn is_advertising(self: &RustyLocalPeripheral) -> Result<bool>;
+
+        #[cfg(any(target_os = "macos", doc))]
+        fn macos_set_advertisement_local_name(
+            self: &RustyLocalPeripheral,
+            has_local_name: bool,
+            local_name: &str,
+        ) -> Result<()>;
+        #[cfg(any(target_os = "linux", doc))]
+        fn linux_set_advertisement_local_name(
+            self: &RustyLocalPeripheral,
+            has_local_name: bool,
+            local_name: &str,
+        ) -> Result<()>;
+
+        // RustyLocalService functions
+
+        fn uuid(self: &RustyLocalService) -> Result<String>;
+        fn add_characteristic(
+            self: &RustyLocalService,
+            uuid: &str,
+            capabilities: u8,
+        ) -> Result<UniquePtr<RustyLocalCharacteristic>>;
+
+        // RustyLocalCharacteristic functions
+
+        fn link(self: &RustyLocalCharacteristic, target: &InnerLocalCharacteristic) -> Result<()>;
+        fn unlink(self: &RustyLocalCharacteristic) -> Result<()>;
+
+        fn uuid(self: &RustyLocalCharacteristic) -> Result<String>;
+        fn capabilities(self: &RustyLocalCharacteristic) -> Result<u8>;
+        fn value(self: &RustyLocalCharacteristic) -> Result<Vec<u8>>;
+        fn set_value(self: &RustyLocalCharacteristic, value: &[u8]) -> Result<()>;
+        fn set_read_callback_enabled(self: &RustyLocalCharacteristic, enabled: bool) -> Result<()>;
     }
 }
 

@@ -7,6 +7,8 @@ use tokio_stream::wrappers::BroadcastStream;
 use futures::{Stream, TryStreamExt};
 
 use super::ffi;
+use crate::local_peripheral::InnerLocalPeripheral;
+use crate::local_peripheral::LocalPeripheral;
 use crate::peripheral::InnerPeripheral;
 use crate::peripheral::Peripheral;
 use crate::types::Error;
@@ -46,7 +48,7 @@ impl InnerAdapter {
         Ok(adapters)
     }
 
-    fn new(wrapper: &mut ffi::RustyAdapterWrapper) -> Pin<Box<Self>> {
+    pub(crate) fn new(wrapper: &mut ffi::RustyAdapterWrapper) -> Pin<Box<Self>> {
         let (scan_event_sender, _) = broadcast::channel(128);
         let (power_event_sender, _) = broadcast::channel(128);
 
@@ -136,6 +138,26 @@ impl InnerAdapter {
         }
 
         return Ok(peripherals);
+    }
+
+    pub fn create_local_peripheral(&self) -> Result<LocalPeripheral, Error> {
+        let internal = self.internal.create_local_peripheral().map_err(Error::from_cxx_exception)?;
+        Ok(InnerLocalPeripheral::new(internal)?.into())
+    }
+
+    #[cfg(any(target_os = "macos", doc))]
+    pub(crate) fn macos_retrieve_cached_peripherals(&self, identifiers: &Vec<String>) -> Result<Vec<Peripheral>, Error> {
+        let mut raw_peripheral_list = self
+            .internal
+            .macos_retrieve_cached_peripherals(identifiers)
+            .map_err(Error::from_cxx_exception)?;
+
+        let mut peripherals = Vec::<Peripheral>::new();
+        for peripheral_wrapper in raw_peripheral_list.iter_mut() {
+            peripherals.push(InnerPeripheral::new(peripheral_wrapper).into());
+        }
+
+        Ok(peripherals)
     }
 
     pub fn on_callback_scan_start(&self) {
@@ -252,6 +274,19 @@ impl Adapter {
 
     pub fn get_connected_peripherals(&self) -> Result<Vec<Peripheral>, Error> {
         self.inner.lock().unwrap().get_connected_peripherals()
+    }
+
+    /// Creates a local peripheral that hosts GATT services on this adapter.
+    ///
+    /// Configure its services, characteristics and advertised service UUIDs, then call
+    /// [`LocalPeripheral::start`] to start advertising.
+    pub fn create_local_peripheral(&self) -> Result<LocalPeripheral, Error> {
+        self.inner.lock().unwrap().create_local_peripheral()
+    }
+
+    #[cfg(any(target_os = "macos", doc))]
+    pub(crate) fn macos_retrieve_cached_peripherals(&self, identifiers: &Vec<String>) -> Result<Vec<Peripheral>, Error> {
+        self.inner.lock().unwrap().macos_retrieve_cached_peripherals(identifiers)
     }
 
     pub fn on_scan_event(&self) -> impl Stream<Item = Result<ScanEvent, Error>> {

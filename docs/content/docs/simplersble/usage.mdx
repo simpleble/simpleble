@@ -58,3 +58,104 @@ async fn main() {
 ```
 
 For event streams and notification examples, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleRsBLE Examples](./examples).
+
+## Configure backends
+
+`simplersble::config` holds process-wide settings, grouped by backend: `simplebluez` (Linux), `winrt` (Windows), `corebluetooth` (macOS), and `dongl`. Set them at startup, before the first `Backend::get_backends()` or `Adapter::get_adapters()` call; changes made afterwards may not take effect.
+
+```rust
+use std::time::Duration;
+
+simplersble::config::simplebluez::set_connection_timeout(Duration::from_secs(5));
+```
+
+Each setting has a getter and a setter, such as `use_system_bus()` and `set_use_system_bus()`; timeouts use `std::time::Duration`. Each backend module has a `reset()` that restores its defaults, and `config::reset_all()` restores them all.
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Enable its backend before any other SimpleRsBLE call, then take the adapters from the backend whose identifier is `Dongl`:
+
+```rust
+simplersble::config::dongl::set_use_dongl_backend(true);
+
+let adapters = simplersble::Backend::get_backends()
+    .unwrap()
+    .into_iter()
+    .find(|backend| backend.identifier() == "Dongl")
+    .map(|backend| backend.adapters().unwrap())
+    .unwrap_or_default();
+if adapters.is_empty() {
+    println!("No Dongl found.");
+    return;
+}
+```
+
+A Dongl adapter works like any other adapter. Pairing through it happens without the operating system, so your application answers pairing requests. Register the callbacks your device needs with `simplersble::advanced::dongl` before `connect()`:
+
+- `set_passkey_request_callback` takes an `Fn() -> Option<String>`: return the six digits the user typed, or `None` to reject.
+- `set_passkey_display_callback` takes an `Fn(&str)`: show the passkey so the user can type it on the device.
+- `set_numeric_comparison_callback` takes an `Fn(&str) -> bool`: return `true` only if the device shows the same six digits.
+
+```rust
+use std::io::Write;
+
+simplersble::advanced::dongl::set_numeric_comparison_callback(&peripheral, |passkey| {
+    print!("Does the device show {}? [y/N] ", passkey);
+    std::io::stdout().flush().unwrap();
+    let mut answer = String::new();
+    std::io::stdin().read_line(&mut answer).unwrap();
+    answer.trim() == "y"
+})
+.unwrap();
+
+peripheral.connect().unwrap();
+```
+
+The callbacks run synchronously on a SimpleBLE worker thread, possibly while `connect()` is still running, and can block while the user answers. A request without a callback, or whose callback panics, is rejected. A callback stays registered until you clear it with the matching `clear_*_callback()` or drop the last clone of the `Peripheral`. Peripherals of other adapters return an error.
+
+## Host a local peripheral
+
+`adapter.create_local_peripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Add advertised service UUIDs, services, and characteristics, then call `start()`; the layout cannot change while started.
+
+```rust
+use futures::stream::StreamExt;
+use simplersble::{CharacteristicCapability, LocalCharacteristicEvent};
+
+let peripheral = adapter.create_local_peripheral().unwrap();
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0").unwrap();
+
+let service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0").unwrap();
+let characteristic = service
+    .add_characteristic(
+        "12345678-1234-5678-1234-56789abcdef1",
+        &[CharacteristicCapability::Read, CharacteristicCapability::WriteRequest, CharacteristicCapability::Notify],
+    )
+    .unwrap();
+characteristic.set_value(b"ready").unwrap();
+
+let mut events = characteristic.on_event();
+let echo = characteristic.clone();
+tokio::spawn(async move {
+    while let Some(Ok(event)) = events.next().await {
+        if let LocalCharacteristicEvent::Written(value) = event {
+            // Echo the written value to subscribed clients.
+            echo.set_value(&value).unwrap();
+        }
+    }
+});
+
+peripheral.start().unwrap();
+```
+
+`set_value()` updates the stored value and publishes it to subscribed clients when the characteristic has the `Notify` or `Indicate` capability. `characteristic.on_event()` streams `Written(value)`, `Subscribed`, and `Unsubscribed` events; the stored value is updated before `Written` is delivered. `peripheral.on_client_event()` streams `ClientEvent::Connected(address)` and `ClientEvent::Disconnected(address)`.
+
+To compute values on demand, `characteristic.set_callback_on_read()` takes an `Fn() -> Vec<u8>` that answers client reads instead of the stored value, until `clear_callback_on_read()`. It runs synchronously on a native thread while the client waits, so return promptly and do not call blocking BLE operations from it.
+
+Clones of a `LocalPeripheral`, `LocalService`, or `LocalCharacteristic` refer to the same object. Dropping the last clone of the `LocalPeripheral` stops it.
+
+## Platform-specific features
+
+`simplersble::advanced` exposes features of a single platform:
+
+- On macOS and Linux, `advanced::macos::set_advertisement_local_name(&peripheral, Some("Name"))` and `advanced::linux::set_advertisement_local_name(...)` set the local name in a local peripheral's advertisement before `start()`. `None` removes it. This changes only the advertisement, not the system Bluetooth name.
+- On macOS, `advanced::macos::retrieve_cached_peripherals(&adapter, &identifiers)` returns peripherals that CoreBluetooth already knows, by the identifiers `address()` returned earlier, without scanning. Unknown identifiers are skipped, and a returned peripheral may be out of range.

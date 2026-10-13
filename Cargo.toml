@@ -17,7 +17,9 @@ include = [
     "/simpleble",
     "/simplebluez",
     "/simpledbus",
-    "/simplersble",
+    "/simplersble/README.md",
+    "/simplersble/build.rs",
+    "/simplersble/src",
 ]
 
 build = "simplersble/build.rs"
@@ -25,6 +27,11 @@ links = "simpleble"
 
 [lib]
 path = "simplersble/src/lib.rs"
+
+# Runs against the simulated backend: SIMPLERSBLE_PLAIN=1 cargo test
+[[test]]
+name = "plain"
+path = "simplersble/tests/plain.rs"
 
 [dependencies]
 cxx = "1.0"

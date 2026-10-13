@@ -55,3 +55,27 @@ jobs:
 
       - name: Compile SimpleBLE
         run: cargo build ${{ matrix.build-type-cmd }}
+
+  plain:
+    runs-on: ${{ matrix.runner-os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner-os: [ubuntu-22.04, macos-15, windows-2022]
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Setup CMake (macOS)
+        if: runner.os == 'macOS'
+        uses: ./.github/actions/setup-cmake
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # SIMPLERSBLE_PLAIN builds SimpleBLE with the simulated backend, so the tests need no Bluetooth hardware.
+      - name: Test SimpleRsBLE PLAIN backend
+        env:
+          SIMPLERSBLE_PLAIN: 1
+        run: cargo test -- --test-threads=1
