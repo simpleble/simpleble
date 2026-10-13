@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
 import simplepyble
 
+_active_adapters: weakref.WeakSet[Any] = weakref.WeakSet()
 _active_peripherals: weakref.WeakSet[Any] = weakref.WeakSet()
 _active_local_peripherals: weakref.WeakSet[Any] = weakref.WeakSet()
 
@@ -56,23 +57,12 @@ def _wait_on_loop(loop: asyncio.AbstractEventLoop, callback: Callable[..., Any],
         raise RuntimeError("Event loop did not run the callback in time") from None
 
 def _global_cleanup():
-    # Clear all adapters known to SimpleBLE
-    try:
-        for a in simplepyble.Adapter.get_adapters():
-            a.set_callback_on_scan_start(None)
-            a.set_callback_on_scan_stop(None)
-            a.set_callback_on_scan_found(None)
-            a.set_callback_on_scan_updated(None)
-            a.set_callback_on_power_on(None)
-            a.set_callback_on_power_off(None)
-            try:
-                if a.scan_is_active():
-                    a.scan_stop()
-            except:
-                pass
-    except:
-        pass
-        
+    # Clear the adapters we handed out.
+    # NOTE: We don't enumerate adapters here, as that would start every backend during exit,
+    # and macOS kills processes without Bluetooth permission as soon as CoreBluetooth starts.
+    for a in list(_active_adapters):
+        a._clear_all_callbacks_sync()
+
     # Clear peripherals that we tracked via aio.Peripheral
     for p in list(_active_peripherals):
         try:
@@ -452,6 +442,7 @@ class LocalPeripheral:
 class Adapter:
     def __init__(self, internal_adapter: simplepyble.Adapter):
         self._internal = internal_adapter
+        _active_adapters.add(self)
 
     @classmethod
     def get_adapters(cls) -> list['Adapter']:
