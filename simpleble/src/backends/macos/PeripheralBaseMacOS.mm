@@ -684,9 +684,7 @@ static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
             payload = SimpleBLE::ByteArray((const char*)characteristic.value.bytes, characteristic.value.length);
         }
 
-        if (valueChangedCallback) {
-            valueChangedCallback(std::move(payload));
-        }
+        SAFE_CALLBACK_CALL(valueChangedCallback, std::move(payload));
 
     } else {
         // If the characteristic is not notifying, then this is a response to a read request.

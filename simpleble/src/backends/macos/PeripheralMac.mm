@@ -246,7 +246,7 @@ void PeripheralMac::delegate_did_disconnect(void* opaque_error) {
     [internal delegateDidDisconnect:error];
 
     // If the user manually disconnects the peripheral, don't call the callback at this point.
-    if (callback_on_disconnected_ && !manual_disconnect_triggered_) {
-        callback_on_disconnected_();
+    if (!manual_disconnect_triggered_) {
+        SAFE_CALLBACK_CALL(this->callback_on_disconnected_);
     }
 }
