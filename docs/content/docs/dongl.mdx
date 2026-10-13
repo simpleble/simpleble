@@ -28,7 +28,7 @@ The [Dongl QuickStart](https://simpleble.org/dongl/quickstart) installs SimplePy
 | --- | --- |
 | Firmware | N-Series v0.1.0 |
 | Host | Windows or macOS, over USB |
-| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later |
+| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), and Rust ([SimpleRsBLE](./simplersble/usage)), version 1.2.1 or later |
 
 The firmware acts as a BLE central. It supports scanning with scan responses and service data, connections, reads and writes, notifications and indications, descriptors, MTU reporting, and pairing with bonding. Reads return values of up to 512 bytes.
 
@@ -36,7 +36,7 @@ The firmware acts as a BLE central. It supports scanning with scan responses and
 
 The Dongl backend is off by default. Enable it before any other SimpleBLE call, then take the adapters from the backend whose identifier is `Dongl`. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address.
 
-<Tabs items={["C++", "C", "Python", "C#"]}>
+<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust"]}>
 <Tab value="C++">
 
 ```cpp
@@ -127,6 +127,95 @@ if (adapters.Count == 0)
 
 var adapter = adapters[0];
 Console.WriteLine($"{adapter.Identifier} [{adapter.Address}]");
+```
+
+</Tab>
+<Tab value="Go">
+
+```go
+import ble "github.com/simpleble/simplegoble"
+
+if err := ble.Config.Dongl.SetUseDonglBackend(true); err != nil {
+    return err
+}
+
+backends, err := ble.GetBackends()
+if err != nil {
+    return err
+}
+defer func() {
+    for _, backend := range backends {
+        _ = backend.Close()
+    }
+}()
+var adapters []*ble.Adapter // Close each adapter when finished.
+for _, backend := range backends {
+    name, err := backend.Identifier()
+    if err != nil {
+        return err
+    }
+    if name == "Dongl" {
+        if adapters, err = backend.Adapters(); err != nil {
+            return err
+        }
+    }
+}
+if len(adapters) == 0 {
+    return errors.New("no Dongl found")
+}
+
+adapter := adapters[0]
+name, _ := adapter.Identifier()
+address, _ := adapter.Address()
+fmt.Printf("%s [%s]\n", name, address)
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.Backend;
+import org.simplejavable.Config;
+
+Config.Dongl.setUseDonglBackend(true);
+
+List<Adapter> adapters = new ArrayList<>();
+for (Backend backend : Backend.getBackends()) {
+    if (backend.getIdentifier().equals("Dongl")) {
+        adapters = backend.getAdapters();
+    }
+}
+if (adapters.isEmpty()) {
+    System.err.println("No Dongl found.");
+    return;
+}
+
+Adapter adapter = adapters.get(0);
+System.out.println(adapter.getIdentifier() + " [" + adapter.getAddress() + "]");
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use simplersble::{config, Backend};
+
+config::dongl::set_use_dongl_backend(true);
+
+let adapters = Backend::get_backends()
+    .unwrap()
+    .into_iter()
+    .find(|backend| backend.identifier() == "Dongl")
+    .map(|backend| backend.adapters().unwrap())
+    .unwrap_or_default();
+if adapters.is_empty() {
+    println!("No Dongl found.");
+    return;
+}
+
+let adapter = &adapters[0];
+println!("{} [{}]", adapter.identifier().unwrap(), adapter.address().unwrap());
 ```
 
 </Tab>
@@ -445,9 +534,18 @@ Register the callbacks your device needs before `connect()`, since pairing can s
 - **Passkey display** (`set_passkey_display_callback`): show the passkey so the user can type it on the device.
 - **Numeric comparison** (`set_numeric_comparison_callback`): return true only if the device shows the same six digits.
 
-In C these are `simpleble_advanced_dongl_set_*_callback`; in C#, `Advanced.Dongl.Set*Callback`. Callbacks run on a worker thread and can block while the user answers. A request with no callback registered is rejected.
+Callbacks run on a worker thread and can block while the user answers. A request with no callback registered is rejected. The bindings name them as follows.
 
-<Tabs items={["C++", "C", "C#"]}>
+| Language | Callbacks |
+| --- | --- |
+| C | `simpleble_advanced_dongl_set_*_callback` |
+| C# | `Advanced.Dongl.Set*Callback` |
+| Python | `simplepyble.advanced.dongl.set_*_callback` |
+| Java | `Advanced.Dongl.set*Callback` |
+| Go | `Peripheral.SetCallbackOnPasskeyRequest`, `SetCallbackOnPasskeyDisplay`, `SetCallbackOnNumericComparison` |
+| Rust | `simplersble::advanced::dongl::set_*_callback` |
+
+<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust"]}>
 <Tab value="C++">
 
 ```cpp
@@ -478,6 +576,21 @@ if (!error) simpleble_peripheral_connect(peripheral, &error);
 ```
 
 </Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+def confirm(passkey):
+    answer = input(f"Does the device show {passkey}? [y/N] ")
+    return answer == "y"
+
+simplepyble.advanced.dongl.set_numeric_comparison_callback(peripheral, confirm)
+
+peripheral.connect()
+```
+
+</Tab>
 <Tab value="C#">
 
 ```csharp
@@ -488,6 +601,55 @@ Advanced.Dongl.SetNumericComparisonCallback(peripheral, passkey =>
 });
 
 peripheral.Connect();
+```
+
+</Tab>
+<Tab value="Go">
+
+```go
+err := peripheral.SetCallbackOnNumericComparison(func(passkey string) bool {
+    fmt.Printf("Does the device show %s? [y/N] ", passkey)
+    answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+    return strings.TrimSpace(answer) == "y"
+})
+if err != nil {
+    return err
+}
+
+if err := peripheral.Connect(); err != nil {
+    return err
+}
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+Advanced.Dongl.setNumericComparisonCallback(peripheral, passkey -> {
+    System.out.print("Does the device show " + passkey + "? [y/N] ");
+    return new Scanner(System.in).nextLine().trim().equals("y");
+});
+
+peripheral.connect();
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::io::Write;
+use simplersble::advanced;
+
+advanced::dongl::set_numeric_comparison_callback(&peripheral, |passkey| {
+    print!("Does the device show {}? [y/N] ", passkey);
+    std::io::stdout().flush().unwrap();
+    let mut answer = String::new();
+    std::io::stdin().read_line(&mut answer).unwrap();
+    answer.trim() == "y"
+})
+.unwrap();
+
+peripheral.connect().unwrap();
 ```
 
 </Tab>

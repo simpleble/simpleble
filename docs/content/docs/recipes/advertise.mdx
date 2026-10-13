@@ -4,13 +4,14 @@ description: Host a local BLE peripheral and advertise a GATT service so nearby 
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
 Advertising is how this host is found. A local peripheral serves GATT, sends advertisements, and waits for a central to connect.
 
 `SimpleBLE::Peripheral` is a remote device. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from an `Adapter`, the same object used to scan.
 
 <Callout type="info" title="Available on all supported platforms">
-The C++ API can host a local peripheral on every supported platform. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE exposes the same flow directly in Kotlin.
+SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`.
 </Callout>
 
 ## Flow
@@ -23,6 +24,9 @@ The C++ API can host a local peripheral on every supported platform. Native Andr
 6. Call `start()`, keep the process alive, then `stop()`.
 
 ## Advertise a readable characteristic
+
+<Tabs items={["C++", "Python", "Java", "Rust", "Android"]}>
+<Tab value="C++">
 
 ```cpp
 auto adapters = SimpleBLE::Adapter::get_adapters();
@@ -52,6 +56,161 @@ peripheral.set_callback_on_client_connected(
 peripheral.start();
 ```
 
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+Capability = simplepyble.LocalCharacteristicCapability
+
+adapters = simplepyble.Adapter.get_adapters()
+adapter = adapters[0]
+peripheral = adapter.create_local_peripheral()
+
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0")
+
+service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0")
+characteristic = service.add_characteristic(
+    "12345678-1234-5678-1234-56789abcdef1",
+    [Capability.READ, Capability.WRITE_REQUEST, Capability.NOTIFY],
+)
+characteristic.set_value(b"ready")
+
+def on_write(value):
+    # Echo the written value to subscribed clients.
+    characteristic.set_value(value)
+
+characteristic.set_callback_on_write(on_write)
+
+peripheral.set_callback_on_client_connected(
+    lambda address: print(f"Client connected: {address}"))
+
+peripheral.start()
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+List<Adapter> adapters = Adapter.getAdapters();
+Adapter adapter = adapters.get(0);
+LocalPeripheral peripheral = adapter.createLocalPeripheral();
+
+peripheral.addAdvertisedService(new BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"));
+
+LocalService service = peripheral.addService(new BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"));
+LocalCharacteristic characteristic = service.addCharacteristic(
+    new BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
+    LocalCharacteristicCapability.READ,
+    LocalCharacteristicCapability.WRITE_REQUEST,
+    LocalCharacteristicCapability.NOTIFY);
+characteristic.setValue("ready".getBytes(StandardCharsets.UTF_8));
+
+characteristic.setEventListener(new LocalCharacteristic.EventListener() {
+    @Override
+    public void onWrite(byte[] value) {
+        // Echo the written value to subscribed clients.
+        characteristic.setValue(value);
+    }
+});
+
+peripheral.setEventListener(new LocalPeripheral.EventListener() {
+    @Override
+    public void onClientConnected(BluetoothAddress address) {
+        System.out.println("Client connected: " + address);
+    }
+});
+
+peripheral.start();
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use futures::stream::StreamExt;
+use simplersble::{Adapter, CharacteristicCapability, ClientEvent, LocalCharacteristicEvent};
+
+let adapter = Adapter::get_adapters().unwrap().remove(0);
+let peripheral = adapter.create_local_peripheral().unwrap();
+
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0").unwrap();
+
+let service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0").unwrap();
+let characteristic = service
+    .add_characteristic(
+        "12345678-1234-5678-1234-56789abcdef1",
+        &[
+            CharacteristicCapability::Read,
+            CharacteristicCapability::WriteRequest,
+            CharacteristicCapability::Notify,
+        ],
+    )
+    .unwrap();
+characteristic.set_value(b"ready").unwrap();
+
+let mut characteristic_events = characteristic.on_event();
+let echo = characteristic.clone();
+tokio::spawn(async move {
+    while let Some(Ok(event)) = characteristic_events.next().await {
+        if let LocalCharacteristicEvent::Written(value) = event {
+            // Echo the written value to subscribed clients.
+            echo.set_value(&value).unwrap();
+        }
+    }
+});
+
+let mut client_events = peripheral.on_client_event();
+tokio::spawn(async move {
+    while let Some(Ok(event)) = client_events.next().await {
+        if let ClientEvent::Connected(address) = event {
+            println!("Client connected: {}", address);
+        }
+    }
+});
+
+peripheral.start().unwrap();
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+val peripheral = adapter.createLocalPeripheral(applicationContext)
+
+peripheral.addAdvertisedService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+
+val characteristic = peripheral
+    .addService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+    .addCharacteristic(
+        BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
+        LocalCharacteristicCapability.Read,
+        LocalCharacteristicCapability.WriteRequest,
+        LocalCharacteristicCapability.Notify
+    )
+characteristic.value = "ready".encodeToByteArray()
+
+characteristic.setWriteHandler { value ->
+    // Echo the written value to subscribed clients.
+    characteristic.value = value
+}
+
+lifecycleScope.launch {
+    peripheral.onClientConnected.collect { address ->
+        Log.d("SimpleBLE", "Client connected: $address")
+    }
+}
+
+lifecycleScope.launch {
+    peripheral.start()
+}
+```
+
+</Tab>
+</Tabs>
+
 Configure services, characteristics, and advertising before `start()`. While started, update data with `set_value()` rather than rebuilding the GATT table. `set_value()` also publishes the latest value to subscribed clients when the characteristic has `NOTIFY` or `INDICATE` capability.
 
 SimpleBLE permits the same adapter to scan while the local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time.
@@ -63,11 +222,11 @@ SimpleCBLE provides the same local-hosting flow through owned local peripheral, 
 ## Practical notes
 
 - Keep the process alive after `start()`. Advertising stops when the object is destroyed or `stop()` is called.
-- Pass capabilities as a `std::set` (an initializer list is enough). Each characteristic needs at least one capability.
+- Each characteristic needs at least one capability. In C++, pass them as a `std::set` (an initializer list is enough).
 - On Linux, BlueZ must be running and the process must have D-Bus access, as with scanning.
 - On macOS, CoreBluetooth reports client connection and disconnection callbacks when the client first subscribes and finally unsubscribes.
 - On Windows, the adapter and driver must support the peripheral role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. Windows controls the advertised Bluetooth name.
 - On Android, SimpleBLE includes the adapter's system Bluetooth name. Android's public advertising API cannot set an arbitrary per-advertisement name.
-- Linux, macOS, and iOS callers that need a platform-specific advertised name can use `set_advertisement_local_name()` from the corresponding `SimpleBLE::Advanced` platform namespace before `start()`.
+- Linux, macOS, and iOS callers that need a platform-specific advertised name can use `set_advertisement_local_name()` from the corresponding `SimpleBLE::Advanced` platform namespace, or its binding equivalent, before `start()`.
 
 For the full C++ walkthrough, see [Advertise, Serve, Publish](../simpleble/peripheral/advertise-serve-publish). For scanning from the other side of the link, see [Scan](./scan).
