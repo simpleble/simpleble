@@ -34,7 +34,7 @@ The firmware acts as a BLE central. It supports scanning with scan responses and
 
 ## Select a Dongl
 
-The Dongl backend is off by default. Enable it before any other SimpleBLE call, then take the adapters from the backend whose identifier is `Dongl`. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address.
+The Dongl backend is off by default. Enable it before any other SimpleBLE call, then take the adapters from the backend whose identifier is `Dongl`. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
 
 <Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust"]}>
 <Tab value="C++">

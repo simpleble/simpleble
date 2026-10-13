@@ -8,6 +8,13 @@ namespace SimpleBLE {
 namespace Dongl {
 namespace USB {
 
+// A Dongl found on the system, described without opening its port.
+struct DonglDevice {
+    std::string path;     // Serial port to open, such as /dev/ttyACM0 or \\.\COM6.
+    std::string serial;   // USB serial number, which is the Dongl's Bluetooth address without separators.
+    std::string product;  // USB product name, such as "Dongl N-Series".
+};
+
 class UsbHelperImpl {
   public:
     UsbHelperImpl(const std::string& device_path) : _device_path(device_path) {}

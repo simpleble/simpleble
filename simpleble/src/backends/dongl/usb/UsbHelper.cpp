@@ -40,7 +40,7 @@ void UsbHelper::set_lost_callback(std::function<void()> callback) {
     _impl->set_lost_callback(std::move(callback));
 }
 
-std::vector<std::string> UsbHelper::get_dongl_devices() {
+std::vector<DonglDevice> UsbHelper::get_dongl_devices() {
 #if SIMPLEBLE_BACKEND_LINUX
     return UsbHelperLinux::get_dongl_devices();
 #elif SIMPLEBLE_BACKEND_WINDOWS

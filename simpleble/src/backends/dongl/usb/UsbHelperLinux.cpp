@@ -15,7 +15,9 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <stdexcept>
+#include <string>
 
 #include <simpleble/Exceptions.h>
 
@@ -38,11 +40,19 @@ bool read_hex_uint16(const std::filesystem::path& path, uint16_t& value) {
     return true;
 }
 
-bool is_dongl_tty(const std::filesystem::path& tty_path) {
+std::string read_line(const std::filesystem::path& path) {
+    std::ifstream stream(path);
+    std::string line;
+    std::getline(stream, line);
+    return line;
+}
+
+// Returns the sysfs directory of the USB device behind a tty, if that device is a Dongl.
+std::optional<std::filesystem::path> dongl_usb_device(const std::filesystem::path& tty_path) {
     std::error_code error;
     auto current_path = std::filesystem::canonical(tty_path / "device", error);
     if (error) {
-        return false;
+        return std::nullopt;
     }
 
     while (current_path != current_path.root_path()) {
@@ -50,13 +60,16 @@ bool is_dongl_tty(const std::filesystem::path& tty_path) {
         uint16_t product_id;
         if (read_hex_uint16(current_path / "idVendor", vendor_id) &&
             read_hex_uint16(current_path / "idProduct", product_id)) {
-            return vendor_id == UsbHelperImpl::DONGL_VENDOR_ID && product_id == UsbHelperImpl::DONGL_PRODUCT_ID;
+            if (vendor_id == UsbHelperImpl::DONGL_VENDOR_ID && product_id == UsbHelperImpl::DONGL_PRODUCT_ID) {
+                return current_path;
+            }
+            return std::nullopt;
         }
 
         current_path = current_path.parent_path();
     }
 
-    return false;
+    return std::nullopt;
 }
 
 }  // namespace
@@ -138,21 +151,26 @@ void UsbHelperLinux::set_rx_callback(std::function<void(const kvn::bytearray&)> 
     _rx_callback.load(callback);
 }
 
-std::vector<std::string> UsbHelperLinux::get_dongl_devices() {
-    std::vector<std::string> dongl_devices;
+std::vector<DonglDevice> UsbHelperLinux::get_dongl_devices() {
+    std::vector<DonglDevice> dongl_devices;
     std::error_code error;
 
     for (const auto& entry : std::filesystem::directory_iterator("/sys/class/tty", error)) {
-        if (is_dongl_tty(entry.path())) {
-            const auto device_path = std::filesystem::path("/dev") / entry.path().filename();
-            if (std::filesystem::exists(device_path, error) && !error) {
-                dongl_devices.push_back(device_path.string());
-            }
-            error.clear();
+        const auto usb_device = dongl_usb_device(entry.path());
+        if (!usb_device.has_value()) {
+            continue;
         }
+
+        const auto device_path = std::filesystem::path("/dev") / entry.path().filename();
+        if (std::filesystem::exists(device_path, error) && !error) {
+            dongl_devices.push_back(
+                {device_path.string(), read_line(*usb_device / "serial"), read_line(*usb_device / "product")});
+        }
+        error.clear();
     }
 
-    std::sort(dongl_devices.begin(), dongl_devices.end());
+    std::sort(dongl_devices.begin(), dongl_devices.end(),
+              [](const DonglDevice& a, const DonglDevice& b) { return a.path < b.path; });
     return dongl_devices;
 }
 

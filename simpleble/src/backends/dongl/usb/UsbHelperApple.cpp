@@ -89,8 +89,20 @@ void UsbHelperApple::set_rx_callback(std::function<void(const kvn::bytearray&)> 
     _rx_callback.load(callback);
 }
 
-std::vector<std::string> UsbHelperApple::get_dongl_devices() {
-    std::vector<std::string> dongle_devices;
+// Returns a string property of the USB device above a serial service, or an empty string.
+static std::string usb_string_property(io_service_t service, CFStringRef key) {
+    ScopedCFRef value(IORegistryEntrySearchCFProperty(service, kIOServicePlane, key, kCFAllocatorDefault,
+                                                      kIORegistryIterateParents | kIORegistryIterateRecursively));
+    char buffer[256];
+    if (!value || CFGetTypeID(value.get()) != CFStringGetTypeID() ||
+        !CFStringGetCString((CFStringRef)value.get(), buffer, sizeof(buffer), kCFStringEncodingUTF8)) {
+        return {};
+    }
+    return buffer;
+}
+
+std::vector<DonglDevice> UsbHelperApple::get_dongl_devices() {
+    std::vector<DonglDevice> dongle_devices;
 
     io_iterator_t raw_iterator = 0;
     if (IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching(kIOSerialBSDServiceValue), &raw_iterator) !=
@@ -134,7 +146,8 @@ std::vector<std::string> UsbHelperApple::get_dongl_devices() {
         CFNumberGetValue((CFNumberRef)pidCF.get(), kCFNumberSInt16Type, &pid);
 
         if (vid == UsbHelperImpl::DONGL_VENDOR_ID && pid == UsbHelperImpl::DONGL_PRODUCT_ID) {
-            dongle_devices.push_back(path);
+            dongle_devices.push_back({path, usb_string_property(raw_service, CFSTR(kUSBSerialNumberString)),
+                                      usb_string_property(raw_service, CFSTR(kUSBProductString))});
         }
     }
     return dongle_devices;

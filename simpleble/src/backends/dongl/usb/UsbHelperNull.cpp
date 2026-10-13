@@ -14,7 +14,7 @@ void UsbHelperNull::set_rx_callback(std::function<void(const kvn::bytearray&)> c
     _rx_callback.load(callback);
 }
 
-std::vector<std::string> UsbHelperNull::get_dongl_devices() { return {}; }
+std::vector<DonglDevice> UsbHelperNull::get_dongl_devices() { return {}; }
 
 }  // namespace USB
 }  // namespace Dongl

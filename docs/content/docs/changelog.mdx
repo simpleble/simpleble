@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleRsBLE) Included the license file in the crate.
 - (SimpleBLE) Declared the BUSL-1.1 license in pkg-config files.
 - (SimpleJavaBLE) Unsupported operations throw `UnsupportedOperationException`.
+- (Dongl) Listing adapters no longer opens Dongls. Each Dongl opens on its first operation.
 
 **Fixed**
 
@@ -45,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed a Dongl held by another process breaking the whole adapter list.
 - (Dongl) Fixed every command taking up to several seconds on Windows.
 - (Dongl) Fixed an unplugged Dongl leaving its peripherals connected and commands waiting for a timeout.
+- (Dongl) Fixed Bluetooth being reported as enabled without a Dongl plugged in.
 - (Windows) Fixed local peripheral notifications failing after a client write.
 - (MacOS) Fixed exceptions thrown by disconnection and notification callbacks crashing the program.
 - (SimpleJavaBLE) Fixed several Dongls appearing as one adapter.

@@ -21,7 +21,7 @@ SimpleBLE reports errors by throwing exceptions. All library-defined exceptions 
 | `OperationFailed` | The operation was attempted but did not complete successfully | Timeouts, stack-level errors, connection failures, mutating a local peripheral while it is started |
 | `WinRTException` | A WinRT API call failed (Windows only) | Carries the WinRT error code and message |
 | `CoreBluetoothException` | A CoreBluetooth operation failed (macOS/iOS only) | Carries the `NSError` description |
-| `AdapterInUse` | Another process holds the adapter | A Dongl whose serial port another program has open. The Dongl backend leaves such Dongls out of its adapter list |
+| `AdapterInUse` | Another process holds the adapter | A Dongl whose serial port another program has open. Such a Dongl is still listed, and its first operation raises this error |
 
 ### Recoverable vs. fatal
 

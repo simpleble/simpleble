@@ -7,6 +7,10 @@
 
 #include <setupapi.h>
 
+#include <initguid.h>
+
+#include <devpkey.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -165,6 +169,47 @@ bool is_dongl_device(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
     return false;
 }
 
+std::wstring get_string_property(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info, const DEVPROPKEY& key) {
+    DEVPROPTYPE property_type = 0;
+    DWORD required_size = 0;
+    SetupDiGetDevicePropertyW(device_info_set, &device_info, &key, &property_type, nullptr, 0, &required_size, 0);
+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER || required_size == 0) {
+        return {};
+    }
+
+    std::vector<BYTE> buffer(required_size);
+    if (!SetupDiGetDevicePropertyW(device_info_set, &device_info, &key, &property_type, buffer.data(),
+                                   static_cast<DWORD>(buffer.size()), nullptr, 0) ||
+        property_type != DEVPROP_TYPE_STRING) {
+        return {};
+    }
+    return reinterpret_cast<const wchar_t*>(buffer.data());
+}
+
+std::string to_utf8(std::wstring_view text) {
+    if (text.empty()) {
+        return {};
+    }
+
+    const int size = WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0,
+                                         nullptr, nullptr);
+    std::string result(static_cast<size_t>(size), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), result.data(), size, nullptr,
+                        nullptr);
+    return result;
+}
+
+// The serial port is a function of the Dongl's USB device, whose instance ID ends with the USB serial number,
+// as in USB\VID_3918&PID_0001\F994D61716DB.
+std::string get_usb_serial(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
+    const std::wstring parent = get_string_property(device_info_set, device_info, DEVPKEY_Device_Parent);
+    const size_t separator = parent.find_last_of(L'\\');
+    if (separator == std::wstring::npos) {
+        return {};
+    }
+    return to_utf8(std::wstring_view(parent).substr(separator + 1));
+}
+
 std::wstring get_port_name(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
     ScopedRegistryKey key(
         SetupDiOpenDevRegKey(device_info_set, &device_info, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_QUERY_VALUE));
@@ -260,8 +305,8 @@ void UsbHelperWindows::set_rx_callback(std::function<void(const kvn::bytearray&)
     _rx_callback.load(callback);
 }
 
-std::vector<std::string> UsbHelperWindows::get_dongl_devices() {
-    std::vector<std::string> dongl_devices;
+std::vector<DonglDevice> UsbHelperWindows::get_dongl_devices() {
+    std::vector<DonglDevice> dongl_devices;
     ScopedDeviceInfoSet device_info_set(SetupDiGetClassDevsW(&PORTS_DEVICE_CLASS, nullptr, nullptr, DIGCF_PRESENT));
     if (device_info_set.get() == INVALID_HANDLE_VALUE) {
         return dongl_devices;
@@ -281,11 +326,16 @@ std::vector<std::string> UsbHelperWindows::get_dongl_devices() {
         if (!device_path.has_value()) {
             continue;
         }
-        dongl_devices.push_back(*device_path);
+        dongl_devices.push_back(
+            {*device_path, get_usb_serial(device_info_set.get(), device_info),
+             to_utf8(get_string_property(device_info_set.get(), device_info, DEVPKEY_Device_BusReportedDeviceDesc))});
     }
 
-    std::sort(dongl_devices.begin(), dongl_devices.end());
-    dongl_devices.erase(std::unique(dongl_devices.begin(), dongl_devices.end()), dongl_devices.end());
+    std::sort(dongl_devices.begin(), dongl_devices.end(),
+              [](const DonglDevice& a, const DonglDevice& b) { return a.path < b.path; });
+    dongl_devices.erase(std::unique(dongl_devices.begin(), dongl_devices.end(),
+                                    [](const DonglDevice& a, const DonglDevice& b) { return a.path == b.path; }),
+                        dongl_devices.end());
     return dongl_devices;
 }
 

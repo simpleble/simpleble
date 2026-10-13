@@ -34,27 +34,20 @@ std::shared_ptr<BackendBase> BACKEND_DONGL() { return BackendDongl::get(); }
 
 std::string BackendDongl::identifier() const noexcept { return "Dongl"; }
 
-bool BackendDongl::bluetooth_enabled() { return true; }
+bool BackendDongl::bluetooth_enabled() { return !Dongl::USB::UsbHelper::get_dongl_devices().empty(); }
 
 bool BackendDongl::is_active() { return Config::Dongl::use_dongl_backend; }
 
 SharedPtrVector<AdapterBase> BackendDongl::adapters() {
     SharedPtrVector<AdapterBase> adapters;
     std::scoped_lock lock(adapters_mutex_);
-    for (const auto& device_path : Dongl::USB::UsbHelper::get_dongl_devices()) {
-        auto adapter = adapters_[device_path].lock();
+    // NOTE: Listing doesn't open any port. Each adapter opens its Dongl on first use, which is also when
+    // a Dongl held by another process gets reported as in use.
+    for (const auto& device : Dongl::USB::UsbHelper::get_dongl_devices()) {
+        auto adapter = adapters_[device.path].lock();
         if (!adapter) {
-            try {
-                adapter = std::make_shared<AdapterDongl>(device_path);
-            } catch (const Exception::AdapterInUse&) {
-                // Skip Dongls held by other processes, so that the rest remain available.
-                SIMPLEBLE_LOG_WARN(fmt::format("Skipping Dongl in use by another process: {}", device_path));
-                continue;
-            } catch (const std::exception& e) {
-                SIMPLEBLE_LOG_ERROR(fmt::format("Failed to open Dongl {}: {}", device_path, e.what()));
-                throw;
-            }
-            adapters_[device_path] = adapter;
+            adapter = std::make_shared<AdapterDongl>(device);
+            adapters_[device.path] = adapter;
         }
         adapters.push_back(adapter);
     }

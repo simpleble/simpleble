@@ -14,7 +14,7 @@ class UsbHelperNull : public UsbHelperImpl {
     void tx(const kvn::bytearray& data);
     void set_rx_callback(std::function<void(const kvn::bytearray&)> callback);
 
-    static std::vector<std::string> get_dongl_devices();
+    static std::vector<DonglDevice> get_dongl_devices();
 };
 
 }  // namespace USB

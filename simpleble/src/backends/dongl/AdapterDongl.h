@@ -10,12 +10,14 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "AdvertisingData.h"
 #include "PeripheralDongl.h"
 #include "serial/Protocol.h"
+#include "usb/UsbHelper.h"
 
 namespace SimpleBLE {
 
@@ -24,7 +26,7 @@ namespace SimpleBLE {
  */
 class AdapterDongl : public AdapterBase {
   public:
-    AdapterDongl(const std::string& device_path);
+    AdapterDongl(const Dongl::USB::DonglDevice& device);
     virtual ~AdapterDongl();
 
     virtual void* underlying() const override;
@@ -47,12 +49,16 @@ class AdapterDongl : public AdapterBase {
     virtual bool bluetooth_enabled() override;
 
   private:
+    void _open();
+
     void _check_for_updates(uint32_t current_version);
     void _update_firmware();
     void _scan_received_callback(Dongl::advertising_data_t data);
     void _on_simpleble_event(const simpleble_Event& event);
 
-    std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;
+    std::string _device_path;
+    std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;  // Set by _open() under _open_mutex.
+    std::mutex _open_mutex;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralDongl>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralDongl>> seen_peripherals_;
 
