@@ -3,6 +3,7 @@
 #include <jni.h>
 
 #include <mutex>
+#include <stdexcept>
 
 namespace SimpleJNI {
 
@@ -11,8 +12,10 @@ class VM {
   public:
     // TODO: Make the VM class transparent to the JavaVM pointer.
     static JavaVM* jvm(JavaVM* jvm_override = nullptr) {
-        static std::mutex mutex;  // Function-local for tied lifecycle
-        static VM instance;       // Function-local for lazy init and auto-cleanup
+        // NOTE: These are never destroyed on purpose, as static GlobalRef and WeakRef objects
+        // call this function from their destructors during exit.
+        static std::mutex& mutex = *new std::mutex();
+        static VM& instance = *new VM();
 
         std::scoped_lock lock(mutex);  // Lock entire access for safety
         if (jvm_override != nullptr) {
