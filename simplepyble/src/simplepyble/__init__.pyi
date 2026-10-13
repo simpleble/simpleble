@@ -4,7 +4,7 @@ Type stubs for SimplePyBLE - Python bindings for SimpleBLE
 This module provides Bluetooth Low Energy (BLE) functionality for Python.
 """
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional, Set, Union
 from enum import Enum
 
 __version__: str
@@ -388,9 +388,246 @@ class Peripheral:
     def set_callback_on_disconnected(self, callback: Optional[Callable[[], None]]) -> None:
         """
         Set the callback to be called when the peripheral disconnects.
-        
+
         Args:
             callback: Callback function to call on disconnection
+        """
+        ...
+
+class LocalCharacteristicCapability(Enum):
+    """Capability of a local characteristic."""
+    READ = ...
+    WRITE_REQUEST = ...
+    WRITE_COMMAND = ...
+    NOTIFY = ...
+    INDICATE = ...
+
+class LocalCharacteristic:
+    """
+    Represents a characteristic hosted by a local peripheral.
+
+    Callbacks run on a SimpleBLE thread and should return promptly. Pass None
+    to unregister a callback. If a callback raises, the exception is logged to
+    the ``simplepyble`` logger.
+    """
+
+    def initialized(self) -> bool:
+        """Check if the local characteristic is initialized."""
+        ...
+
+    def uuid(self) -> str:
+        """
+        Get the UUID of the local characteristic.
+
+        Returns:
+            str: The characteristic UUID
+        """
+        ...
+
+    def capabilities(self) -> Set[LocalCharacteristicCapability]:
+        """
+        Get the capabilities of the local characteristic.
+
+        Returns:
+            Set[LocalCharacteristicCapability]: The characteristic capabilities
+        """
+        ...
+
+    def value(self) -> bytes:
+        """
+        Get the current value of the local characteristic.
+
+        Returns:
+            bytes: The characteristic value
+        """
+        ...
+
+    def set_value(self, value: Union[bytes, bytearray, memoryview]) -> None:
+        """
+        Update the value of the local characteristic.
+
+        If the characteristic has the NOTIFY or INDICATE capability, the new
+        value is published to subscribed clients on a best-effort basis.
+
+        Args:
+            value: The new value
+        """
+        ...
+
+    def set_callback_on_read(self, callback: Optional[Callable[[], bytes]]) -> None:
+        """
+        Set the callback that supplies the value for client reads.
+
+        Without a read callback, reads return value(). If the callback raises
+        or returns something other than a bytes-like object, the error is
+        logged and the client receives an error (BlueZ serves the stored value
+        instead).
+
+        Args:
+            callback: Callback function returning the value to serve
+        """
+        ...
+
+    def set_callback_on_write(self, callback: Optional[Callable[[bytes], None]]) -> None:
+        """
+        Set the callback to be called when a client writes the characteristic.
+
+        The written value is stored before the callback runs. Calling
+        set_value() from the callback publishes the value to subscribed clients.
+
+        Args:
+            callback: Callback function receiving the written value
+        """
+        ...
+
+    def set_callback_on_subscribed(self, callback: Optional[Callable[[], None]]) -> None:
+        """
+        Set the callback to be called when the first client subscribes.
+
+        Args:
+            callback: Callback function to call on subscription
+        """
+        ...
+
+    def set_callback_on_unsubscribed(self, callback: Optional[Callable[[], None]]) -> None:
+        """
+        Set the callback to be called when the last client unsubscribes.
+
+        Args:
+            callback: Callback function to call on unsubscription
+        """
+        ...
+
+class LocalService:
+    """Represents a primary GATT service hosted by a local peripheral."""
+
+    def initialized(self) -> bool:
+        """Check if the local service is initialized."""
+        ...
+
+    def uuid(self) -> str:
+        """
+        Get the UUID of the local service.
+
+        Returns:
+            str: The service UUID
+        """
+        ...
+
+    def add_characteristic(
+        self, uuid: str, capabilities: Iterable[LocalCharacteristicCapability]
+    ) -> LocalCharacteristic:
+        """
+        Add a characteristic to the local service.
+
+        Args:
+            uuid: The characteristic UUID
+            capabilities: At least one capability of the characteristic
+
+        Returns:
+            LocalCharacteristic: The new characteristic
+        """
+        ...
+
+    def characteristics(self) -> List[LocalCharacteristic]:
+        """
+        Get the characteristics of the local service.
+
+        Returns:
+            List[LocalCharacteristic]: List of characteristics
+        """
+        ...
+
+class LocalPeripheral:
+    """
+    Represents a BLE peripheral hosted by this process.
+
+    Configure advertised services, services, and characteristics before
+    start(); they cannot change while started. Advertising stops when stop()
+    is called or the object is destroyed.
+    """
+
+    def initialized(self) -> bool:
+        """Check if the local peripheral is initialized."""
+        ...
+
+    def add_advertised_service(self, service_uuids: Union[str, List[str]]) -> None:
+        """
+        Add one or more service UUIDs to the advertisement.
+
+        Args:
+            service_uuids: A service UUID or a list of service UUIDs
+        """
+        ...
+
+    def add_service(self, uuid: str) -> LocalService:
+        """
+        Add a primary GATT service.
+
+        Args:
+            uuid: The service UUID
+
+        Returns:
+            LocalService: The new service
+        """
+        ...
+
+    def services(self) -> List[LocalService]:
+        """
+        Get the services of the local peripheral.
+
+        Returns:
+            List[LocalService]: List of services
+        """
+        ...
+
+    def remove_all_services(self) -> None:
+        """Remove all services from the local peripheral."""
+        ...
+
+    def start(self) -> None:
+        """Publish services and start advertising."""
+        ...
+
+    def stop(self) -> None:
+        """Stop advertising and hosting the services."""
+        ...
+
+    def is_started(self) -> bool:
+        """
+        Check if the local peripheral is started.
+
+        Returns:
+            bool: True if started, False otherwise
+        """
+        ...
+
+    def is_advertising(self) -> bool:
+        """
+        Check if the local peripheral is advertising.
+
+        Returns:
+            bool: True if advertising, False otherwise
+        """
+        ...
+
+    def set_callback_on_client_connected(self, callback: Optional[Callable[[str], None]]) -> None:
+        """
+        Set the callback to be called when a client connects.
+
+        Args:
+            callback: Callback function receiving the client address, or a
+                platform-specific identifier where the address is unavailable
+        """
+        ...
+
+    def set_callback_on_client_disconnected(self, callback: Optional[Callable[[str], None]]) -> None:
+        """
+        Set the callback to be called when a client disconnects.
+
+        Args:
+            callback: Callback function receiving the client address, or a
+                platform-specific identifier where the address is unavailable
         """
         ...
 
@@ -553,6 +790,15 @@ class Adapter:
         """Get all connected peripherals."""
         ...
 
+    def create_local_peripheral(self) -> LocalPeripheral:
+        """
+        Create a local peripheral hosted by this adapter.
+
+        Returns:
+            LocalPeripheral: The new local peripheral
+        """
+        ...
+
 class Backend:
     """Represents a SimpleBLE backend."""
 
@@ -682,14 +928,101 @@ config: _Config
 class _AdvancedMacOS:
     """Advanced CoreBluetooth APIs."""
 
+    def set_advertisement_local_name(self, peripheral: LocalPeripheral, local_name: Optional[str]) -> None:
+        """
+        Set the local name included in the peripheral's advertisement.
+
+        This changes only the advertisement payload, not the system Bluetooth
+        name. Call before start().
+
+        Args:
+            peripheral: The local peripheral
+            local_name: The advertised name, or None to remove the override
+        """
+        ...
+
     def retrieve_cached_peripherals(self, adapter: Adapter, identifiers: List[str]) -> List[Peripheral]:
         """Retrieve peripherals that CoreBluetooth can resolve from its system cache."""
+        ...
+
+class _AdvancedLinux:
+    """Advanced BlueZ APIs."""
+
+    def set_advertisement_local_name(self, peripheral: LocalPeripheral, local_name: Optional[str]) -> None:
+        """
+        Set the local name included in the peripheral's BlueZ advertisement.
+
+        This changes only the advertisement payload, not the adapter alias.
+        Call before start().
+
+        Args:
+            peripheral: The local peripheral
+            local_name: The advertised name, or None to remove the override
+        """
+        ...
+
+class _AdvancedDongl:
+    """
+    Pairing callbacks for peripherals reached through a Dongl adapter.
+
+    Register them before connect(), since pairing can start as soon as the
+    link is up. Callbacks run on a SimpleBLE worker thread and may block while
+    the user answers. Passing None unregisters a callback. A request with no
+    callback, or whose callback raises, is rejected. Registering on a
+    peripheral from another backend raises RuntimeError.
+    """
+
+    def set_passkey_request_callback(
+        self, peripheral: Peripheral, callback: Optional[Callable[[], Optional[str]]]
+    ) -> None:
+        """
+        Register a callback for entering a passkey requested by the peer.
+
+        Args:
+            peripheral: The peripheral to pair with
+            callback: Callback function returning the passkey as a str of
+                exactly six decimal digits, including leading zeroes, or None
+                to reject pairing. Any other result rejects pairing.
+        """
+        ...
+
+    def set_passkey_display_callback(
+        self, peripheral: Peripheral, callback: Optional[Callable[[str], None]]
+    ) -> None:
+        """
+        Register a callback for a passkey that the peer must enter.
+
+        Args:
+            peripheral: The peripheral to pair with
+            callback: Callback function receiving the six-digit passkey to show
+        """
+        ...
+
+    def set_numeric_comparison_callback(
+        self, peripheral: Peripheral, callback: Optional[Callable[[str], bool]]
+    ) -> None:
+        """
+        Register a callback for numeric comparison during pairing.
+
+        Args:
+            peripheral: The peripheral to pair with
+            callback: Callback function receiving the six-digit number and
+                returning True only if the peer shows the same number. Any
+                other result rejects pairing.
+        """
         ...
 
 class _Advanced:
     """Platform-specific advanced SimpleBLE APIs."""
 
+    dongl: _AdvancedDongl
+    """Available on every platform."""
+
     macos: _AdvancedMacOS
+    """Available on macOS."""
+
+    linux: _AdvancedLinux
+    """Available on Linux."""
 
 advanced: _Advanced
 

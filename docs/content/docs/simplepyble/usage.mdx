@@ -28,6 +28,59 @@ cd <path-to-simpleble>/simplepyble
 pip install .
 ```
 
+## Host a GATT service
+
+`Adapter.create_local_peripheral()` creates a local GATT host. Configure advertised services, services, and characteristics before calling `start()`; they cannot change while started.
+
+```python
+import simplepyble
+from simplepyble import LocalCharacteristicCapability as Capability
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+peripheral = adapter.create_local_peripheral()
+peripheral.add_advertised_service("12345678-1234-5678-1234-56789abcdef0")
+
+service = peripheral.add_service("12345678-1234-5678-1234-56789abcdef0")
+characteristic = service.add_characteristic(
+    "12345678-1234-5678-1234-56789abcdef1",
+    [Capability.READ, Capability.WRITE_REQUEST, Capability.NOTIFY],
+)
+characteristic.set_value(b"ready")
+
+def on_write(value):
+    characteristic.set_value(value)  # Echo to subscribed clients.
+
+characteristic.set_callback_on_write(on_write)
+peripheral.set_callback_on_client_connected(lambda address: print(f"Client connected: {address}"))
+
+peripheral.start()
+# ...
+characteristic.set_callback_on_write(None)
+peripheral.stop()
+```
+
+`set_value()` stores the bytes and publishes them to clients subscribed to a `NOTIFY` or `INDICATE` characteristic on a best-effort basis. The write callback runs after a client write has updated `value()`. The subscribed callback reports the first subscriber and the unsubscribed callback the last. Client callbacks receive the client's address; CoreBluetooth does not report connections, so on macOS they follow a client's first and last subscription instead.
+
+`set_callback_on_read()` computes read values on demand and must return a bytes-like object. If it raises, the exception is logged to the `simplepyble` logger and the client receives an error; BlueZ serves the stored value instead. Callbacks run on a SimpleBLE thread and should return promptly. A registered callback stays alive until it is replaced or unregistered with `None`, so unregister callbacks that refer to their own characteristic or peripheral.
+
+On macOS and Linux, `simplepyble.advanced.macos.set_advertisement_local_name()` and `simplepyble.advanced.linux.set_advertisement_local_name()` set the advertised name before `start()`. See the [Advertise recipe](../recipes/advertise) for platform notes.
+
+## Dongl pairing
+
+When connecting through a [Dongl](../dongl#pairing-and-bonding), your application answers pairing requests. Register the callbacks your device needs in `simplepyble.advanced.dongl` before `connect()`, since pairing can start as soon as the link is up:
+
+```python
+import simplepyble
+
+def confirm(passkey):
+    return input(f"Does the device show {passkey}? [y/N] ") == "y"
+
+simplepyble.advanced.dongl.set_numeric_comparison_callback(peripheral, confirm)
+peripheral.connect()
+```
+
+`set_passkey_request_callback()` returns the six digits the user typed as a `str`, including leading zeroes, or `None` to reject. `set_passkey_display_callback()` receives the passkey to show to the user. `set_numeric_comparison_callback()` returns `True` only if the device shows the same number. These callbacks run on a SimpleBLE worker thread and may block while the user answers. A request without a callback, with an invalid answer, or whose callback raises is rejected. Pass `None` to unregister a callback. Registering a callback on a peripheral from another backend raises `RuntimeError`.
+
 ## Asynchronous API
 
 SimplePyBLE provides an asynchronous API via the `simplepyble.aio` module. This module is designed to work with `asyncio` and provides a more idiomatic way to handle asynchronous operations in Python.
@@ -55,3 +108,17 @@ if __name__ == "__main__":
 ```
 
 All blocking calls from the synchronous API are available as coroutines in the `aio` module, and callbacks can be either regular functions or coroutines. For more examples, check out the [Examples](./examples) section.
+
+Local hosting and Dongl pairing work the same way: `LocalPeripheral.start()`, `stop()`, and `LocalCharacteristic.set_value()` are coroutines, and callbacks run on the event loop that registered them. Read and pairing callbacks return their result to the Bluetooth stack, which waits for the event loop to run them, so keep the loop responsive. Leaving `async with` on a local peripheral clears its callbacks and stops it.
+
+```python
+from simplepyble import aio
+
+async def confirm(passkey):
+    answer = await asyncio.to_thread(input, f"Does the device show {passkey}? [y/N] ")
+    return answer == "y"
+
+async with peripheral:
+    aio.advanced.dongl.set_numeric_comparison_callback(peripheral, confirm)
+    await peripheral.connect()
+```

@@ -63,7 +63,7 @@ Scan for nearby devices: ::
         state = "connectable" if peripheral.is_connectable() else "not connectable"
         print(f"- {peripheral.identifier()} [{peripheral.address()}] {state}")
 
-See the `code examples`_ on GitHub for connect, read/write, and notify flows.
+See the `code examples`_ on GitHub for connect, read/write, notify, local peripheral hosting, and Dongl pairing flows.
 
 Asynchronous Support
 --------------------

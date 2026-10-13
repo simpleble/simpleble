@@ -393,6 +393,7 @@ include simplepyble/src/wrap_backend.cpp
 include simplepyble/src/wrap_characteristic.cpp
 include simplepyble/src/wrap_config.cpp
 include simplepyble/src/wrap_descriptor.cpp
+include simplepyble/src/wrap_local.cpp
 include simplepyble/src/wrap_logging.cpp
 include simplepyble/src/wrap_peripheral.cpp
 include simplepyble/src/wrap_service.cpp

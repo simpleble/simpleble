@@ -94,6 +94,10 @@ constexpr auto kDocsAdapterGetConnectedPeripherals = R"pbdoc(
     Get all connected peripherals
 )pbdoc";
 
+constexpr auto kDocsAdapterCreateLocalPeripheral = R"pbdoc(
+    Create a local peripheral hosted by this adapter
+)pbdoc";
+
 void wrap_adapter(py::module& m) {
     // TODO: Add __str__ and __repr__ methods
     py::class_<SimpleBLE::Adapter>(m, "Adapter")
@@ -117,5 +121,6 @@ void wrap_adapter(py::module& m) {
         .def("set_callback_on_power_on", &SimpleBLE::Adapter::set_callback_on_power_on, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnPowerOn)
         .def("set_callback_on_power_off", &SimpleBLE::Adapter::set_callback_on_power_off, py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsAdapterSetCallbackOnPowerOff)
         .def("get_paired_peripherals", &SimpleBLE::Adapter::get_paired_peripherals, kDocsAdapterGetPairedPeripherals)
-        .def("get_connected_peripherals", &SimpleBLE::Adapter::get_connected_peripherals, kDocsAdapterGetConnectedPeripherals);
+        .def("get_connected_peripherals", &SimpleBLE::Adapter::get_connected_peripherals, kDocsAdapterGetConnectedPeripherals)
+        .def("create_local_peripheral", &SimpleBLE::Adapter::create_local_peripheral, py::call_guard<py::gil_scoped_release>(), kDocsAdapterCreateLocalPeripheral);
 }
