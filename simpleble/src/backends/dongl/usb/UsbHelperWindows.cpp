@@ -52,6 +52,23 @@ class ScopedDeviceInfoSet {
     HDEVINFO handle_;
 };
 
+class ScopedEvent {
+  public:
+    ScopedEvent() : handle_(CreateEventW(nullptr, TRUE, FALSE, nullptr)) {}
+    ScopedEvent(const ScopedEvent&) = delete;
+    ScopedEvent& operator=(const ScopedEvent&) = delete;
+    ~ScopedEvent() {
+        if (handle_ != nullptr) {
+            CloseHandle(handle_);
+        }
+    }
+
+    HANDLE get() const { return handle_; }
+
+  private:
+    HANDLE handle_;
+};
+
 class ScopedRegistryKey {
   public:
     explicit ScopedRegistryKey(HKEY key) : key_(key) {}
@@ -220,8 +237,14 @@ void UsbHelperWindows::tx(const kvn::bytearray& data) {
         const DWORD requested = static_cast<DWORD>(
             std::min(remaining, static_cast<size_t>(std::numeric_limits<DWORD>::max())));
 
+        ScopedEvent write_event;
+        OVERLAPPED overlapped{};
+        overlapped.hEvent = write_event.get();
         DWORD bytes_written = 0;
-        if (!WriteFile(serial_handle, data.data() + offset, requested, &bytes_written, nullptr)) {
+        if (write_event.get() == nullptr ||
+            (!WriteFile(serial_handle, data.data() + offset, requested, nullptr, &overlapped) &&
+             GetLastError() != ERROR_IO_PENDING) ||
+            !GetOverlappedResult(serial_handle, &overlapped, &bytes_written, TRUE)) {
             const DWORD error = GetLastError();
             throw std::system_error(static_cast<int>(error), std::system_category(),
                                     "Failed to write to serial port " + _device_path);
@@ -267,8 +290,10 @@ std::vector<std::string> UsbHelperWindows::get_dongl_devices() {
 }
 
 bool UsbHelperWindows::_open_serial_port() {
+    // NOTE: Windows makes synchronous reads and writes on the same handle wait for each other, which kept
+    // every command waiting behind the reader thread for up to seconds. With overlapped I/O they run independently.
     HANDLE serial_handle = CreateFileA(_device_path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
-                                       FILE_ATTRIBUTE_NORMAL, nullptr);
+                                       FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, nullptr);
     if (serial_handle == INVALID_HANDLE_VALUE) {
         return false;
     }
@@ -346,14 +371,26 @@ void UsbHelperWindows::_configure_serial_port() {
 void UsbHelperWindows::_run() {
     char buffer[256];
 
+    ScopedEvent read_event;
+    if (read_event.get() == nullptr) {
+        _running = false;
+        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to create a read event for serial port {}", _device_path));
+        return;
+    }
+
     while (_running) {
         if (!_running || _serial_handle == nullptr) {
             break;
         }
         HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
 
+        // The serial timeouts end each read after at most READ_TIMEOUT_MS, so the loop can notice it should stop.
+        OVERLAPPED overlapped{};
+        overlapped.hEvent = read_event.get();
         DWORD bytes_read = 0;
-        if (!ReadFile(serial_handle, buffer, sizeof(buffer), &bytes_read, nullptr)) {
+        if ((!ReadFile(serial_handle, buffer, sizeof(buffer), nullptr, &overlapped) &&
+             GetLastError() != ERROR_IO_PENDING) ||
+            !GetOverlappedResult(serial_handle, &overlapped, &bytes_read, TRUE)) {
             const DWORD read_error = GetLastError();
             _running = false;
             const std::error_code error(static_cast<int>(read_error), std::system_category());
