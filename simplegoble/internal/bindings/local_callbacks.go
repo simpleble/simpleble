@@ -8,11 +8,6 @@ import (
 	"github.com/ebitengine/purego"
 )
 
-var localAddressTrampoline = purego.NewCallback(func(_ uintptr, address *byte, token uintptr) uintptr {
-	dispatchCallback(token, CallbackPayload{Address: CopyString(address)}, nil)
-	return 0
-})
-
 var localWriteTrampoline = purego.NewCallback(func(_ uintptr, data *byte, length, token uintptr) uintptr {
 	dispatchCallback(token, CallbackPayload{Data: CopyBytes(data, length)}, nil)
 	return 0
@@ -21,9 +16,9 @@ var localWriteTrampoline = purego.NewCallback(func(_ uintptr, data *byte, length
 func SetLocalAddressCallback(handle *Handle, callbacks *CallbackOwner, kind int, fn func(string)) error {
 	var invoke func(CallbackPayload)
 	if fn != nil {
-		invoke = func(payload CallbackPayload) { fn(payload.Address) }
+		invoke = func(payload CallbackPayload) { fn(payload.Text) }
 	}
-	return setCallback(handle, callbacks, callbackKey{kind: kind}, invoke, localAddressTrampoline,
+	return setCallback(handle, callbacks, callbackKey{kind: kind}, invoke, textTrampoline,
 		func(native *NativeAPI, h, trampoline, token uintptr, _ *uintptr) {
 			if kind == LocalConnected {
 				native.LocalPeripheralOnConnected(h, trampoline, token)

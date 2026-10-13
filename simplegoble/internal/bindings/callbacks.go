@@ -23,6 +23,9 @@ const (
 	LocalSubscribed
 	LocalUnsubscribed
 	localWrite
+	passkeyRequest
+	passkeyDisplay
+	numericComparison
 )
 
 type callbackKey struct {
@@ -31,11 +34,13 @@ type callbackKey struct {
 }
 
 // CallbackPayload has Go-owned data; Peripheral transfers an owned C handle.
-// Signal callbacks leave both fields empty.
+// Signal callbacks leave all fields empty, and pairing handlers write their answer
+// to reply.
 type CallbackPayload struct {
 	Peripheral uintptr
 	Data       []byte
-	Address    string
+	Text       string
+	reply      *pairingReply
 }
 
 type callbackEntry struct {
@@ -71,6 +76,12 @@ var peripheralTrampoline = purego.NewCallback(func(_ uintptr, peripheral, token 
 		panic(err) // A native callback can only run after successful library loading.
 	}
 	dispatchCallback(token, CallbackPayload{Peripheral: peripheral}, func() { native.PeripheralRelease(peripheral) })
+	return 0
+})
+
+// Used by both local client addresses and Dongl passkeys, as they share the same C signature.
+var textTrampoline = purego.NewCallback(func(_ uintptr, text *byte, token uintptr) uintptr {
+	dispatchCallback(token, CallbackPayload{Text: CopyString(text)}, nil)
 	return 0
 })
 

@@ -79,6 +79,94 @@ replacement for `Close`. A handle with registered callbacks stays alive until
 they are cleared or it is closed, and a local host is only released by `Close`
 because releasing it stops hosting.
 
+## Configure backends
+
+`ble.Config` holds process-wide settings, grouped by backend: `SimpleBluez`
+(Linux), `WinRT` (Windows), `CoreBluetooth` (macOS), and `Dongl`. Set them at
+startup, before the first `GetBackends`, `GetAdapters`, or `BluetoothEnabled`
+call; changes after a backend starts may not take effect.
+
+```go
+if err := ble.Config.SimpleBluez.SetConnectionTimeout(5 * time.Second); err != nil {
+    return err
+}
+```
+
+Each setting has a getter and a setter, such as `UseSystemBus` and
+`SetUseSystemBus`; timeouts use `time.Duration`. `Reset` restores one backend's
+defaults, and `ble.Config.ResetAll()` restores them all. Configuration is not
+synchronized, so set it before other goroutines use SimpleGoBLE.
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Enable its
+backend before any other SimpleGoBLE call, then take the adapters from the
+backend whose identifier is `Dongl`:
+
+```go
+if err := ble.Config.Dongl.SetUseDonglBackend(true); err != nil {
+    return err
+}
+backends, err := ble.GetBackends()
+if err != nil {
+    return err
+}
+defer func() {
+    for _, backend := range backends {
+        _ = backend.Close()
+    }
+}()
+var adapters []*ble.Adapter // Close each adapter when finished.
+for _, backend := range backends {
+    name, err := backend.Identifier()
+    if err != nil {
+        return err
+    }
+    if name == "Dongl" {
+        if adapters, err = backend.Adapters(); err != nil {
+            return err
+        }
+    }
+}
+if len(adapters) == 0 {
+    return errors.New("no Dongl found")
+}
+```
+
+A Dongl adapter works like any other adapter. Pairing through it happens
+without the operating system, so your application answers pairing requests.
+Register the callbacks your device needs on the peripheral before `Connect`:
+
+- `SetCallbackOnPasskeyRequest(func() (string, bool))`: return the six digits
+  the user typed and `true`, or `false` to reject.
+- `SetCallbackOnPasskeyDisplay(func(string))`: show the passkey so the user can
+  type it on the device.
+- `SetCallbackOnNumericComparison(func(string) bool)`: return `true` only if
+  the device shows the same six digits.
+
+```go
+if err := peripheral.SetCallbackOnNumericComparison(func(passkey string) bool {
+    fmt.Printf("Does the device show %s? [y/N] ", passkey)
+    answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+    return strings.TrimSpace(answer) == "y"
+}); err != nil {
+    return err
+}
+if err := peripheral.Connect(); err != nil {
+    return err
+}
+```
+
+Passkey request and numeric comparison handlers run synchronously on
+SimpleBLE's pairing thread and can block while the user answers. Do not call BLE
+methods, including `Close`, from them. A missing handler, a panic, or a passkey
+other than six ASCII digits rejects pairing. The display handler follows the
+usual serial dispatch rules. Pass `nil` to clear a callback. Peripherals of
+other adapters return `OperationNotSupported`.
+
+The [dongl example](./examples) scans with a Dongl and answers pairing requests
+from the terminal.
+
 ## Power and scan control
 
 Adapters provide `IsPowered`, `PowerOn`, `PowerOff`, `ScanStart`, `ScanStop`,
@@ -104,6 +192,11 @@ Use `SetCallbackOnScanFound(func(*ble.Peripheral))` and
 `SetCallbackOnScanUpdated(func(*ble.Peripheral))` for live advertisement events.
 Every invocation transfers a new peripheral handle to your handler, which must
 close it or retain it for later use. Pass `nil` to clear either callback.
+
+On macOS, `adapter.RetrieveCachedPeripherals(identifiers)` returns peripherals
+that CoreBluetooth already knows, by the identifiers `Address` returned earlier,
+without scanning. Unknown identifiers are skipped, and a returned peripheral may
+be out of range. Other platforms return `OperationNotSupported`.
 
 Peripheral methods expose `Identifier`, `Address`, `AddressType`, `RSSI`,
 `TxPower`, `IsConnectable`, and `ManufacturerData`. `Services()` returns advertised
@@ -165,6 +258,11 @@ before calling `Start`, which publishes services and starts advertising. Use
 `IsStarted` and `IsAdvertising` to inspect state, and `Stop` to end hosting.
 After stopping, use `RemoveAllServices` to rebuild the layout. Native backends
 report unsupported operations through the usual error classifications.
+
+On macOS and Linux, `host.SetAdvertisementLocalName(name)` sets the local name
+in the advertisement before `Start`, and `ClearAdvertisementLocalName` removes
+it. This changes only the advertisement, not the system Bluetooth name. Other
+platforms return `OperationNotSupported`.
 
 `characteristic.SetValue([]byte)` updates the stored value and publishes to
 subscribed clients on a best-effort basis. `Value()` returns a Go-owned copy of

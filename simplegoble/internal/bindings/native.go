@@ -2,6 +2,7 @@ package bindings
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"unsafe"
 
@@ -101,6 +102,34 @@ type NativeAPI struct {
 	LocalCharacteristicOnWrite        func(uintptr, uintptr, uintptr)
 	LocalCharacteristicOnSubscribed   func(uintptr, uintptr, uintptr)
 	LocalCharacteristicOnUnsubscribed func(uintptr, uintptr, uintptr)
+	ConfigResetAll                    func()
+	ConfigBluezReset                  func()
+	ConfigBluezSystemBus              func() bool
+	ConfigBluezSetSystemBus           func(bool)
+	ConfigBluezConnectTimeout         func() int64
+	ConfigBluezSetConnectTimeout      func(int64)
+	ConfigBluezDisconnectTimeout      func() int64
+	ConfigBluezSetDisconnectTimeout   func(int64)
+	ConfigWinRTReset                  func()
+	ConfigWinRTOwnMTA                 func() bool
+	ConfigWinRTSetOwnMTA              func(bool)
+	ConfigWinRTReinitialize           func() bool
+	ConfigWinRTSetReinitialize        func(bool)
+	ConfigWinRTDeferredDisconnect     func() bool
+	ConfigWinRTSetDeferredDisconnect  func(bool)
+	ConfigCoreBluetoothReset          func()
+	ConfigDonglReset                  func()
+	ConfigDonglBackend                func() bool
+	ConfigDonglSetBackend             func(bool)
+	ConfigDonglAutoUpdate             func() bool
+	ConfigDonglSetAutoUpdate          func(bool)
+	ConfigDonglForceUpdate            func() bool
+	ConfigDonglSetForceUpdate         func(bool)
+	DonglPasskeyRequest               func(uintptr, uintptr, uintptr, *uintptr)
+	DonglPasskeyDisplay               func(uintptr, uintptr, uintptr, *uintptr)
+	DonglNumericComparison            func(uintptr, uintptr, uintptr, *uintptr)
+	SetAdvertisementLocalName         func(uintptr, *byte, *uintptr) // Optional; see Load.
+	RetrieveCachedPeripheral          func(uintptr, *byte, *uintptr) uintptr
 }
 
 var loadedLibrary struct {
@@ -236,6 +265,32 @@ func Load(path string) error {
 		{"simpleble_local_characteristic_set_callback_on_write", &native.LocalCharacteristicOnWrite},
 		{"simpleble_local_characteristic_set_callback_on_subscribed", &native.LocalCharacteristicOnSubscribed},
 		{"simpleble_local_characteristic_set_callback_on_unsubscribed", &native.LocalCharacteristicOnUnsubscribed},
+		{"simpleble_config_reset_all", &native.ConfigResetAll},
+		{"simpleble_config_simplebluez_reset", &native.ConfigBluezReset},
+		{"simpleble_config_simplebluez_get_use_system_bus", &native.ConfigBluezSystemBus},
+		{"simpleble_config_simplebluez_set_use_system_bus", &native.ConfigBluezSetSystemBus},
+		{"simpleble_config_simplebluez_get_connection_timeout_ms", &native.ConfigBluezConnectTimeout},
+		{"simpleble_config_simplebluez_set_connection_timeout_ms", &native.ConfigBluezSetConnectTimeout},
+		{"simpleble_config_simplebluez_get_disconnection_timeout_ms", &native.ConfigBluezDisconnectTimeout},
+		{"simpleble_config_simplebluez_set_disconnection_timeout_ms", &native.ConfigBluezSetDisconnectTimeout},
+		{"simpleble_config_winrt_reset", &native.ConfigWinRTReset},
+		{"simpleble_config_winrt_get_experimental_use_own_mta_apartment", &native.ConfigWinRTOwnMTA},
+		{"simpleble_config_winrt_set_experimental_use_own_mta_apartment", &native.ConfigWinRTSetOwnMTA},
+		{"simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread", &native.ConfigWinRTReinitialize},
+		{"simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread", &native.ConfigWinRTSetReinitialize},
+		{"simpleble_config_winrt_get_use_deferred_disconnect", &native.ConfigWinRTDeferredDisconnect},
+		{"simpleble_config_winrt_set_use_deferred_disconnect", &native.ConfigWinRTSetDeferredDisconnect},
+		{"simpleble_config_corebluetooth_reset", &native.ConfigCoreBluetoothReset},
+		{"simpleble_config_dongl_reset", &native.ConfigDonglReset},
+		{"simpleble_config_dongl_get_use_dongl_backend", &native.ConfigDonglBackend},
+		{"simpleble_config_dongl_set_use_dongl_backend", &native.ConfigDonglSetBackend},
+		{"simpleble_config_dongl_get_auto_update", &native.ConfigDonglAutoUpdate},
+		{"simpleble_config_dongl_set_auto_update", &native.ConfigDonglSetAutoUpdate},
+		{"simpleble_config_dongl_get_force_update", &native.ConfigDonglForceUpdate},
+		{"simpleble_config_dongl_set_force_update", &native.ConfigDonglSetForceUpdate},
+		{"simpleble_advanced_dongl_set_passkey_request_callback", &native.DonglPasskeyRequest},
+		{"simpleble_advanced_dongl_set_passkey_display_callback", &native.DonglPasskeyDisplay},
+		{"simpleble_advanced_dongl_set_numeric_comparison_callback", &native.DonglNumericComparison},
 	}
 	for _, binding := range bindings {
 		symbol, err := findSymbol(libraryHandle, binding.name)
@@ -244,6 +299,21 @@ func Load(path string) error {
 			return fmt.Errorf("simplegoble: incompatible SimpleCBLE library %q: %s: %w", path, binding.name, err)
 		}
 		purego.RegisterFunc(binding.target, symbol)
+	}
+	// NOTE: Platform functions only exist in libraries built with that platform's
+	// backend, so a missing symbol just leaves its function nil.
+	if platform := map[string]string{"darwin": "macos", "linux": "linux"}[runtime.GOOS]; platform != "" {
+		for _, binding := range []struct {
+			name   string
+			target any
+		}{
+			{"simpleble_advanced_" + platform + "_set_advertisement_local_name", &native.SetAdvertisementLocalName},
+			{"simpleble_advanced_" + platform + "_retrieve_cached_peripheral", &native.RetrieveCachedPeripheral},
+		} {
+			if symbol, err := findSymbol(libraryHandle, binding.name); err == nil {
+				purego.RegisterFunc(binding.target, symbol)
+			}
+		}
 	}
 	loadedLibrary.api, loadedLibrary.path = native, path
 	return nil

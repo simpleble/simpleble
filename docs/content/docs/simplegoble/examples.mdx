@@ -11,6 +11,7 @@ live alongside the other SimpleBLE binding examples:
 - **scan**: Discover peripherals and print their names, addresses, and signal strength.
 - **read**: Connect to a peripheral and read a GATT characteristic.
 - **peripheral**: Host a GATT service that echoes writes to subscribed clients.
+- **dongl**: Scan with a Dongl adapter, then optionally connect and answer pairing requests.
 
 Run an example:
 
@@ -20,6 +21,7 @@ go run github.com/simpleble/simplegoble/examples/list_backends
 go run github.com/simpleble/simplegoble/examples/scan
 go run github.com/simpleble/simplegoble/examples/read ADDRESS 180f 2a19
 go run github.com/simpleble/simplegoble/examples/peripheral
+go run github.com/simpleble/simplegoble/examples/dongl [ADDRESS]
 ```
 
 For binding development, see the

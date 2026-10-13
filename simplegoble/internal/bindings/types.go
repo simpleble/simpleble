@@ -90,6 +90,16 @@ func CopyString(data *byte) string {
 	return string(unsafe.Slice(data, length))
 }
 
+// CString returns a NUL-terminated copy of value for a synchronous native call.
+func CString(value string) (*byte, error) {
+	if strings.IndexByte(value, 0) >= 0 {
+		return nil, &Error{Code: InvalidArgument, Message: "string contains NUL"}
+	}
+	data := make([]byte, len(value)+1)
+	copy(data, value)
+	return &data[0], nil
+}
+
 // Empty writes still need a non-NULL pointer under the SimpleCBLE contract.
 func InputBytes(data []byte) *byte {
 	if len(data) == 0 {

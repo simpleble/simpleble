@@ -225,6 +225,48 @@ go run github.com/simpleble/simplegoble/examples/peripheral
 See the [usage guide](https://docs.simpleble.org/simplegoble/usage) for dynamic
 reads, subscription callbacks, and handle ownership.
 
+## Use a Dongl
+
+A [Dongl](https://docs.simpleble.org/dongl) is a USB Bluetooth adapter made for
+SimpleBLE. Enable its backend before any other SimpleGoBLE call, then use the
+adapters of the backend whose identifier is `Dongl`:
+
+```go
+func donglAdapters() ([]*ble.Adapter, error) {
+    if err := ble.Config.Dongl.SetUseDonglBackend(true); err != nil {
+        return nil, err
+    }
+    backends, err := ble.GetBackends()
+    if err != nil {
+        return nil, err
+    }
+    defer func() {
+        for _, backend := range backends {
+            _ = backend.Close()
+        }
+    }()
+    for _, backend := range backends {
+        name, err := backend.Identifier()
+        if err != nil {
+            return nil, err
+        }
+        if name == "Dongl" {
+            return backend.Adapters()
+        }
+    }
+    return nil, nil
+}
+```
+
+`ble.Config` also holds the BlueZ and WinRT backend settings. Pairing through a
+Dongl happens without the operating system: register
+`SetCallbackOnPasskeyRequest`, `SetCallbackOnPasskeyDisplay`, or
+`SetCallbackOnNumericComparison` on the peripheral before `Connect`.
+
+```sh
+go run github.com/simpleble/simplegoble/examples/dongl [ADDRESS]
+```
+
 ## Platforms
 
 SimpleGoBLE supports Windows, macOS, and Linux on amd64 and arm64.

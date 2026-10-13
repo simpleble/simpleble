@@ -10,4 +10,7 @@
 // Copies of a Go wrapper share ownership; closing any copy closes them all.
 // Methods are safe for concurrent use, and Close waits for native calls on
 // that wrapper.
+//
+// Set backend options, such as enabling Dongl adapters, through Config before
+// the first GetBackends, GetAdapters, or BluetoothEnabled call.
 package simplegoble
