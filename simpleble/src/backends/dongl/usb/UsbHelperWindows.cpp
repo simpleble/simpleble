@@ -375,6 +375,7 @@ void UsbHelperWindows::_run() {
     if (read_event.get() == nullptr) {
         _running = false;
         SIMPLEBLE_LOG_ERROR(fmt::format("Failed to create a read event for serial port {}", _device_path));
+        _lost_callback();
         return;
     }
 
@@ -395,6 +396,7 @@ void UsbHelperWindows::_run() {
             _running = false;
             const std::error_code error(static_cast<int>(read_error), std::system_category());
             SIMPLEBLE_LOG_ERROR(fmt::format("Error reading from serial port {}: {}", _device_path, error.message()));
+            _lost_callback();
             break;
         }
         if (bytes_read > 0) {

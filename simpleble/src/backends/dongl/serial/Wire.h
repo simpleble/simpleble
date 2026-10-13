@@ -84,6 +84,13 @@ public:
      */
     void set_error_callback(ErrorCallback callback);
 
+    /**
+     * @brief Sets the callback for when the port stops working, for example when the Dongl gets unplugged.
+     *
+     * @param callback Function to call once the port is lost.
+     */
+    void set_lost_callback(std::function<void()> callback);
+
 private:
     /**
      * @brief Processes a single incoming byte through the protocol state machine.

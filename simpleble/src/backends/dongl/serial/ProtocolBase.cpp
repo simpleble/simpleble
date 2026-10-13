@@ -45,6 +45,28 @@ ProtocolBase::ProtocolBase(const std::string& device_path) : _wire(std::make_uni
     _wire->set_error_callback([this](const Wire::Error& error) {
         SIMPLEBLE_LOG_WARN(fmt::format("Dongl wire error: {}", static_cast<int>(error)));
     });
+
+    _wire->set_lost_callback([this]() {
+        SIMPLEBLE_LOG_ERROR("Lost the connection to the Dongl");
+
+        // A pending exchange will never get its response, so wake it up.
+        {
+            std::lock_guard<std::mutex> lock(_pending_mutex);
+            _lost = true;
+        }
+        _response_cv.notify_all();
+
+        std::lock_guard<std::mutex> lock(_event_mutex);
+        if (_lost_callback) {
+            try {
+                _lost_callback();
+            } catch (const std::exception& e) {
+                SIMPLEBLE_LOG_ERROR(fmt::format("Dongl lost handler failed: {}", e.what()));
+            } catch (...) {
+                SIMPLEBLE_LOG_ERROR("Dongl lost handler failed with an unknown exception");
+            }
+        }
+    });
 }
 
 ProtocolBase::~ProtocolBase() {
@@ -61,6 +83,8 @@ dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::millis
     // Clear any previous response and send the command
     {
         std::unique_lock<std::mutex> lock(_pending_mutex);
+        if (_lost) throw std::runtime_error("Lost the connection to the Dongl");
+
         _pending_response.reset();  // Ensure it's empty to indicate we're waiting
         _expected_id = command.id;
     }
@@ -83,15 +107,17 @@ dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::millis
         throw;
     }
 
-    // Wait for the response
+    // Wait for the response, unless the port gets lost in the meantime
     {
         std::unique_lock<std::mutex> lock(_pending_mutex);
-        const bool received = _response_cv.wait_for(lock, timeout, [this]() { return _pending_response.has_value(); });
+        _response_cv.wait_for(lock, timeout, [this]() { return _pending_response.has_value() || _lost; });
         _expected_id.reset();
-        if (received) {
+        if (_pending_response.has_value()) {
             dongl_Response response = *_pending_response;
             _pending_response.reset();
             return response;
+        } else if (_lost) {
+            throw std::runtime_error("Lost the connection to the Dongl");
         } else {
             // Timeout occurred, reset pending state
             _pending_response.reset();
@@ -103,4 +129,9 @@ dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::millis
 void ProtocolBase::set_event_callback(std::function<void(const dongl_Event&)> callback) {
     std::lock_guard<std::mutex> lock(_event_mutex);
     _event_callback = std::move(callback);
+}
+
+void ProtocolBase::set_lost_callback(std::function<void()> callback) {
+    std::lock_guard<std::mutex> lock(_event_mutex);
+    _lost_callback = std::move(callback);
 }

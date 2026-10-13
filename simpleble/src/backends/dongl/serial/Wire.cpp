@@ -63,6 +63,10 @@ void Wire::set_error_callback(ErrorCallback callback) {
     _error_callback = std::move(callback);
 }
 
+void Wire::set_lost_callback(std::function<void()> callback) {
+    _usb_helper->set_lost_callback(std::move(callback));
+}
+
 void Wire::process_byte(uint8_t byte) {
     switch (_state) {
         case State::IDLE:

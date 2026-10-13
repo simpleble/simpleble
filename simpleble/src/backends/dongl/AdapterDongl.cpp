@@ -38,6 +38,13 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
         }
     });
 
+    // Without the Dongl, none of its connections exist anymore.
+    _serial_protocol->set_lost_callback([this]() {
+        for (auto& [address, peripheral] : this->peripherals_) {
+            peripheral->notify_disconnected();
+        }
+    });
+
     auto response_whoami = _serial_protocol->basic_whoami();
     _identifier = std::string(response_whoami.identifier);
     _address = std::string(response_whoami.mac_address);
@@ -53,8 +60,9 @@ AdapterDongl::AdapterDongl(const std::string& device_path)
 }
 
 AdapterDongl::~AdapterDongl() {
-    // Detach the serial callback before destroying the peripheral maps it uses.
+    // Detach the serial callbacks before destroying the peripheral maps they use.
     _serial_protocol->set_event_callback({});
+    _serial_protocol->set_lost_callback({});
     seen_peripherals_.clear();
     peripherals_.clear();
     _serial_protocol.reset();

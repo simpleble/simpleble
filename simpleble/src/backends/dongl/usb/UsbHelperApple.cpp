@@ -247,12 +247,14 @@ void UsbHelperApple::_run() {
                     // NOTE: With VMIN and VTIME set to 0, an empty read means another process took the data.
                     // Unplugging the device fails with ENXIO instead.
                     SIMPLEBLE_LOG_ERROR(fmt::format("Another process is reading from serial port {}", _device_path));
+                    _lost_callback();
                     break;
                 } else {
                     // Error reading from serial port
                     if (errno != EAGAIN && errno != EWOULDBLOCK) {
                         SIMPLEBLE_LOG_ERROR(
                             fmt::format("Error reading from serial port {}: {}", _device_path, strerror(errno)));
+                        _lost_callback();
                         break;
                     }
                 }
@@ -265,6 +267,7 @@ void UsbHelperApple::_run() {
             if (errno != EINTR) {
                 SIMPLEBLE_LOG_ERROR(
                     fmt::format("Error waiting on serial port {}: {}", _device_path, strerror(errno)));
+                _lost_callback();
                 break;
             }
         }

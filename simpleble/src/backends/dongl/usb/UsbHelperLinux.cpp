@@ -241,11 +241,13 @@ void UsbHelperLinux::_run() {
             _running = false;
             SIMPLEBLE_LOG_ERROR(
                 fmt::format("Error polling serial port {}: {}", _device_path, std::strerror(poll_error)));
+            _lost_callback();
             break;
         }
         if (descriptor.revents & (POLLERR | POLLHUP | POLLNVAL)) {
             _running = false;
             SIMPLEBLE_LOG_WARN(fmt::format("Serial port disconnected: {}", _device_path));
+            _lost_callback();
             break;
         }
         if (!(descriptor.revents & POLLIN)) {
@@ -271,6 +273,7 @@ void UsbHelperLinux::_run() {
             _running = false;
             SIMPLEBLE_LOG_ERROR(
                 fmt::format("Error reading from serial port {}: {}", _device_path, std::strerror(read_error)));
+            _lost_callback();
             break;
         }
     }
