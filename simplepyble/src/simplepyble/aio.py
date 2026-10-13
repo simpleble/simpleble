@@ -1,5 +1,6 @@
 import asyncio
 import atexit
+import inspect
 import weakref
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -166,7 +167,7 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
         def wrapper(payload: bytes):
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(payload), loop)
             else:
                 loop.call_soon_threadsafe(callback, payload)
@@ -181,7 +182,7 @@ class Peripheral:
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
         def wrapper(payload: bytes):
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(payload), loop)
             else:
                 loop.call_soon_threadsafe(callback, payload)
@@ -206,7 +207,7 @@ class Peripheral:
             return
         loop = asyncio.get_running_loop()
         def wrapper():
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(), loop)
             else:
                 loop.call_soon_threadsafe(callback)
@@ -218,7 +219,7 @@ class Peripheral:
             return
         loop = asyncio.get_running_loop()
         def wrapper():
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(), loop)
             else:
                 loop.call_soon_threadsafe(callback)
@@ -306,7 +307,7 @@ class Adapter:
             return
         loop = asyncio.get_running_loop()
         def wrapper():
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(), loop)
             else:
                 loop.call_soon_threadsafe(callback)
@@ -318,7 +319,7 @@ class Adapter:
             return
         loop = asyncio.get_running_loop()
         def wrapper():
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(), loop)
             else:
                 loop.call_soon_threadsafe(callback)
@@ -332,7 +333,7 @@ class Adapter:
         def wrapper(peripheral: simplepyble.Peripheral):
             # Wrap the peripheral before passing it to the callback
             wrapped_peripheral = Peripheral(peripheral)
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(wrapped_peripheral), loop)
             else:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
@@ -346,7 +347,7 @@ class Adapter:
         def wrapper(peripheral: simplepyble.Peripheral):
             # Wrap the peripheral before passing it to the callback
             wrapped_peripheral = Peripheral(peripheral)
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(wrapped_peripheral), loop)
             else:
                 loop.call_soon_threadsafe(callback, wrapped_peripheral)
@@ -358,7 +359,7 @@ class Adapter:
             return
         loop = asyncio.get_running_loop()
         def wrapper():
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(), loop)
             else:
                 loop.call_soon_threadsafe(callback)
@@ -370,7 +371,7 @@ class Adapter:
             return
         loop = asyncio.get_running_loop()
         def wrapper():
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 asyncio.run_coroutine_threadsafe(callback(), loop)
             else:
                 loop.call_soon_threadsafe(callback)
