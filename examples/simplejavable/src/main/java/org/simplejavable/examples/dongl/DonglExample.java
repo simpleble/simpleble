@@ -3,7 +3,6 @@ package org.simplejavable.examples.dongl;
 import org.simplejavable.Adapter;
 import org.simplejavable.Advanced;
 import org.simplejavable.Backend;
-import org.simplejavable.Config;
 import org.simplejavable.Peripheral;
 import org.simplejavable.Service;
 import org.simplejavable.examples.common.Utils;
@@ -15,9 +14,6 @@ import java.util.Scanner;
 
 public class DonglExample {
     public static void main(String[] args) {
-        // The Dongl backend is off by default. Enable it before any other SimpleJavaBLE call.
-        Config.Dongl.setUseDonglBackend(true);
-
         List<Adapter> dongls = new ArrayList<>();
         for (Backend backend : Backend.getBackends()) {
             if (backend.getIdentifier().equals("Dongl")) {

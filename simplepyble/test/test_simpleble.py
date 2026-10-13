@@ -53,7 +53,7 @@ def test_configuration_parity():
             simplepyble.config.android.connection_priority_request
             == simplepyble.AndroidConnectionPriority.DISABLED
         )
-        assert simplepyble.config.dongl.use_dongl_backend is False
+        assert simplepyble.config.dongl.use_dongl_backend is True
         assert simplepyble.config.dongl.auto_update is False
         assert simplepyble.config.dongl.force_update is False
 
@@ -61,7 +61,7 @@ def test_configuration_parity():
         simplepyble.config.simplebluez.connection_timeout_ms = 1234
         simplepyble.config.simplebluez.disconnection_timeout_ms = 5678
         simplepyble.config.android.connection_priority_request = simplepyble.AndroidConnectionPriority.HIGH
-        simplepyble.config.dongl.use_dongl_backend = True
+        simplepyble.config.dongl.use_dongl_backend = False
         simplepyble.config.dongl.auto_update = True
         simplepyble.config.dongl.force_update = True
 
@@ -69,7 +69,7 @@ def test_configuration_parity():
         assert simplepyble.config.simplebluez.connection_timeout_ms == 1234
         assert simplepyble.config.simplebluez.disconnection_timeout_ms == 5678
         assert simplepyble.config.android.connection_priority_request == simplepyble.AndroidConnectionPriority.HIGH
-        assert simplepyble.config.dongl.use_dongl_backend is True
+        assert simplepyble.config.dongl.use_dongl_backend is False
         assert simplepyble.config.dongl.auto_update is True
         assert simplepyble.config.dongl.force_update is True
     finally:

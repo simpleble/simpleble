@@ -56,7 +56,7 @@ namespace Dongl {
     extern SIMPLEBLE_EXPORT bool auto_update;
     extern SIMPLEBLE_EXPORT bool force_update;
     static void reset() {
-        use_dongl_backend = false;
+        use_dongl_backend = true;
         auto_update = false;
         force_update = false;
     }

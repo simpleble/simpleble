@@ -23,7 +23,7 @@ class ConfigTest {
         Config.WinRT.setExperimentalUseOwnMtaApartment(false);
         Config.WinRT.setExperimentalReinitializeWinrtApartmentOnMainThread(true);
         Config.WinRT.setUseDeferredDisconnect(false);
-        Config.Dongl.setUseDonglBackend(true);
+        Config.Dongl.setUseDonglBackend(false);
         Config.Dongl.setAutoUpdate(true);
         Config.Dongl.setForceUpdate(true);
 
@@ -33,7 +33,7 @@ class ConfigTest {
         assertFalse(Config.WinRT.getExperimentalUseOwnMtaApartment());
         assertTrue(Config.WinRT.getExperimentalReinitializeWinrtApartmentOnMainThread());
         assertFalse(Config.WinRT.getUseDeferredDisconnect());
-        assertTrue(Config.Dongl.getUseDonglBackend());
+        assertFalse(Config.Dongl.getUseDonglBackend());
         assertTrue(Config.Dongl.getAutoUpdate());
         assertTrue(Config.Dongl.getForceUpdate());
 
@@ -41,6 +41,6 @@ class ConfigTest {
         assertTrue(Config.SimpleBluez.getUseSystemBus());
         assertEquals(Duration.ofSeconds(2), Config.SimpleBluez.getConnectionTimeout());
         assertTrue(Config.WinRT.getUseDeferredDisconnect());
-        assertFalse(Config.Dongl.getUseDonglBackend());
+        assertTrue(Config.Dongl.getUseDonglBackend());
     }
 }

@@ -19,7 +19,7 @@ type Configuration struct {
 }
 
 // Config is the process-wide native configuration, for example
-// ble.Config.Dongl.SetUseDonglBackend(true).
+// ble.Config.Dongl.SetUseDonglBackend(false).
 var Config Configuration
 
 // SimpleBluezConfig configures the Linux BlueZ backend.
@@ -173,13 +173,13 @@ func (DonglConfig) Reset() error {
 }
 
 // UseDonglBackend reports whether enumeration includes the Dongl backend.
-// Defaults to false.
+// Defaults to true.
 func (DonglConfig) UseDonglBackend() (bool, error) {
 	return configValue(func(native *bindings.NativeAPI) bool { return native.ConfigDonglBackend() })
 }
 
-// SetUseDonglBackend adds the Dongl backend, whose identifier is "Dongl", and
-// its USB adapters to enumeration.
+// SetUseDonglBackend includes or leaves out the Dongl backend, whose identifier
+// is "Dongl", and its USB adapters.
 func (DonglConfig) SetUseDonglBackend(enabled bool) error {
 	return configure(func(native *bindings.NativeAPI) { native.ConfigDonglSetBackend(enabled) })
 }

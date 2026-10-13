@@ -17,7 +17,7 @@ With a Dongl, the firmware runs those procedures and SimpleBLE's calls block unt
 
 1. **Plug in a Dongl.** To evaluate with the nRF52840 Dongle or DK you already have, [flash it with the Dongl firmware](../dongl#update-the-firmware).
 2. **Install SimpleBLE 1.2.0 or later:** `pip install --upgrade simplepyble` for Python, the [SimpleSharpBLE](../simplesharpble/usage) NuGet package for C#, or a [source build](../installation) for C++ and C.
-3. **Select the Dongl in code.** Enable the Dongl backend before any other SimpleBLE call and take the adapters from the `Dongl` backend. [Select a Dongl](../dongl#select-a-dongl) shows it in C++, C, Python, and C#.
+3. **Select the Dongl in code.** Take the adapters from the `Dongl` backend. SimpleBLE 1.2.1 includes that backend by default; with 1.2.0, enable it before any other SimpleBLE call. [Select a Dongl](../dongl#select-a-dongl) shows it in every supported language.
 
 Your code no longer names a serial port or a baud rate. SimpleBLE finds Dongls by their USB vendor and product IDs, and the same code runs on the computer's built-in Bluetooth when you select a native adapter instead.
 
@@ -26,7 +26,7 @@ Your code no longer names a serial port or a baud rate. SimpleBLE finds Dongls b
 | Task | pc-ble-driver-py | SimplePyBLE with a Dongl |
 | --- | --- | --- |
 | Hardware | An nRF5 board with connectivity firmware for the SoftDevice API version the library was built for | A Dongl |
-| Open the board | `BLEDriver(serial_port, baud_rate)`, `BLEAdapter(driver)`, `driver.open()` | Set `config.dongl.use_dongl_backend`, then call the `Dongl` backend's `adapters()` |
+| Open the board | `BLEDriver(serial_port, baud_rate)`, `BLEAdapter(driver)`, `driver.open()` | Call the `Dongl` backend's `adapters()` |
 | Configure the stack | `ble_cfg_set()`, `ble_enable()` | Not needed; the firmware configures itself |
 | Scan | `ble_gap_scan_start()` with `BLEGapScanParams`, then `on_gap_evt_adv_report` | `scan_for(ms)` and `scan_get_results()`, or `scan_start()` with `set_callback_on_scan_found()` |
 | Connect | `adapter.connect(peer_addr)`, then `on_gap_evt_connected` | `peripheral.connect()` |
@@ -81,8 +81,6 @@ import simplepyble
 DEVICE_ADDRESS = "C4:2B:91:0E:5A:17"
 DEVICE_INFORMATION = "0000180a-0000-1000-8000-00805f9b34fb"
 FIRMWARE_REVISION = "00002a26-0000-1000-8000-00805f9b34fb"
-
-simplepyble.config.dongl.use_dongl_backend = True
 
 dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
 adapters = dongl.adapters()
@@ -163,7 +161,7 @@ If your application calls pc-ble-driver's C API, from C, C++, or any tool that l
 
 | Task | pc-ble-driver (C) | SimpleCBLE with a Dongl |
 | --- | --- | --- |
-| Open the board | `sd_rpc_physical_layer_create_uart` → `sd_rpc_data_link_layer_create_bt_three_wire` → `sd_rpc_transport_layer_create` → `sd_rpc_adapter_create` → `sd_rpc_open` | `simpleble_config_dongl_set_use_dongl_backend`, then `simpleble_backend_get_adapters_handle` on the `Dongl` backend |
+| Open the board | `sd_rpc_physical_layer_create_uart` → `sd_rpc_data_link_layer_create_bt_three_wire` → `sd_rpc_transport_layer_create` → `sd_rpc_adapter_create` → `sd_rpc_open` | `simpleble_backend_get_adapters_handle` on the `Dongl` backend |
 | Configure the stack | `sd_ble_cfg_set`, `sd_ble_enable` | Not needed |
 | Scan | `sd_ble_gap_scan_start`, then `BLE_GAP_EVT_ADV_REPORT` | `simpleble_adapter_scan_for`, then `simpleble_adapter_scan_get_results_handle` |
 | Connect and discover | `sd_ble_gap_connect`, `sd_ble_gattc_primary_services_discover`, `sd_ble_gattc_characteristics_discover`, `sd_ble_gattc_descriptors_discover` | `simpleble_peripheral_connect` |

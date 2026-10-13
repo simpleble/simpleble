@@ -48,11 +48,11 @@ TEST(ConfigTest, WinRTConfigCanBeSetFromC) {
 TEST(ConfigTest, DonglConfigCanBeSetFromC) {
     simpleble_config_dongl_reset();
 
-    simpleble_config_dongl_set_use_dongl_backend(true);
+    simpleble_config_dongl_set_use_dongl_backend(false);
     simpleble_config_dongl_set_auto_update(true);
     simpleble_config_dongl_set_force_update(true);
 
-    EXPECT_TRUE(simpleble_config_dongl_get_use_dongl_backend());
+    EXPECT_FALSE(simpleble_config_dongl_get_use_dongl_backend());
     EXPECT_TRUE(simpleble_config_dongl_get_auto_update());
     EXPECT_TRUE(simpleble_config_dongl_get_force_update());
 

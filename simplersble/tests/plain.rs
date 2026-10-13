@@ -103,7 +103,7 @@ async fn config_round_trip() {
     config::winrt::set_experimental_use_own_mta_apartment(false);
     config::winrt::set_experimental_reinitialize_winrt_apartment_on_main_thread(true);
     config::winrt::set_use_deferred_disconnect(false);
-    config::dongl::set_use_dongl_backend(true);
+    config::dongl::set_use_dongl_backend(false);
     config::dongl::set_auto_update(true);
     config::dongl::set_force_update(true);
 
@@ -115,7 +115,7 @@ async fn config_round_trip() {
     assert!(!own_mta_apartment);
     assert!(config::winrt::experimental_reinitialize_winrt_apartment_on_main_thread());
     assert!(!config::winrt::use_deferred_disconnect());
-    assert!(config::dongl::use_dongl_backend());
+    assert!(!config::dongl::use_dongl_backend());
     assert!(config::dongl::auto_update());
     assert!(config::dongl::force_update());
 
@@ -123,7 +123,7 @@ async fn config_round_trip() {
     assert!(config::simplebluez::use_system_bus());
     assert_eq!(config::simplebluez::connection_timeout(), Duration::from_secs(2));
     assert!(config::winrt::use_deferred_disconnect());
-    assert!(!config::dongl::use_dongl_backend());
+    assert!(config::dongl::use_dongl_backend());
 }
 
 #[tokio::test]

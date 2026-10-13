@@ -178,7 +178,7 @@ public final class Config {
         }
 
         /**
-         * Checks whether the Dongl backend, and its USB adapters, take part in enumeration. Defaults to false.
+         * Checks whether the Dongl backend, and its USB adapters, take part in enumeration. Defaults to true.
          * @return True if the Dongl backend is enabled.
          */
         public static boolean getUseDonglBackend() {
@@ -186,7 +186,7 @@ public final class Config {
         }
 
         /**
-         * Enables or disables the Dongl backend. Enable it before the first enumeration.
+         * Enables or disables the Dongl backend. Change it before the first enumeration.
          * @param value True to enable the Dongl backend.
          */
         public static void setUseDonglBackend(boolean value) {

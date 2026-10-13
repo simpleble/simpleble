@@ -99,14 +99,11 @@ synchronized, so set it before other goroutines use SimpleGoBLE.
 
 ## Use a Dongl
 
-A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Enable its
-backend before any other SimpleGoBLE call, then take the adapters from the
-backend whose identifier is `Dongl`:
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Its backend
+is on by default; take the adapters from the backend whose identifier is
+`Dongl`:
 
 ```go
-if err := ble.Config.Dongl.SetUseDonglBackend(true); err != nil {
-    return err
-}
 backends, err := ble.GetBackends()
 if err != nil {
     return err

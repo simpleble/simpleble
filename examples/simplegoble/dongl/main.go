@@ -25,10 +25,6 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	// Enable the Dongl backend before any other SimpleGoBLE call.
-	if err := ble.Config.Dongl.SetUseDonglBackend(true); err != nil {
-		return err
-	}
 	adapters, err := donglAdapters()
 	if err != nil {
 		return err

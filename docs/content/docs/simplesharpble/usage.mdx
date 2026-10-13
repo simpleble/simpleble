@@ -109,12 +109,10 @@ adapter's state.
 ### Dongl
 
 The [Dongl](https://www.simpleble.org/dongl) USB adapter has its own backend on
-Windows, macOS, and Linux. Enable it before the first enumeration, then select
-it by identifier:
+Windows, macOS, and Linux. From SimpleSharpBLE 1.2.1 it's on by default; with
+1.2.0, enable it before the first enumeration. Then select it by identifier:
 
 ```csharp
-Config.Dongl.UseDonglBackend = true;
-
 var backends = Backend.GetBackends();
 try
 {

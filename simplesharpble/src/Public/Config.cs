@@ -118,7 +118,7 @@ public static class Config
     {
         /// <summary>Restores the Dongl defaults.</summary>
         public static void Reset() => NativeMethods.simpleble_config_dongl_reset();
-        /// <summary>Adds the Dongl backend, and its USB adapters, to enumeration. Defaults to false.</summary>
+        /// <summary>Includes the Dongl backend, and its USB adapters, in enumeration. Defaults to true.</summary>
         public static bool UseDonglBackend
         {
             get => NativeMethods.simpleble_config_dongl_get_use_dongl_backend();

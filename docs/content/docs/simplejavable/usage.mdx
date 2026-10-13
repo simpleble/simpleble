@@ -100,12 +100,10 @@ attached across enumerations.
 
 ### Dongl
 
-The [Dongl](../dongl) USB adapter has its own backend. Enable it before the first
-enumeration, then select it by identifier:
+The [Dongl](../dongl) USB adapter has its own backend, which is on by default.
+Select it by identifier:
 
 ```java
-Config.Dongl.setUseDonglBackend(true);
-
 List<Adapter> dongls = new ArrayList<>();
 for (Backend backend : Backend.getBackends()) {
     if (backend.getIdentifier().equals("Dongl")) {

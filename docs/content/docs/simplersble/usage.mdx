@@ -73,11 +73,9 @@ Each setting has a getter and a setter, such as `use_system_bus()` and `set_use_
 
 ## Use a Dongl
 
-A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Enable its backend before any other SimpleRsBLE call, then take the adapters from the backend whose identifier is `Dongl`:
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Its backend is on by default; take the adapters from the backend whose identifier is `Dongl`:
 
 ```rust
-simplersble::config::dongl::set_use_dongl_backend(true);
-
 let adapters = simplersble::Backend::get_backends()
     .unwrap()
     .into_iter()

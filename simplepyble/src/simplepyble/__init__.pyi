@@ -880,7 +880,7 @@ class _DonglConfig:
     """SimpleBLE Dongl configuration options."""
 
     use_dongl_backend: bool
-    """Enable the SimpleBLE Dongl backend."""
+    """Include the SimpleBLE Dongl backend. Defaults to True."""
 
     auto_update: bool
     """Automatically update SimpleBLE Dongl firmware."""

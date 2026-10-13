@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use simplersble::{advanced, config, Adapter, Backend, Peripheral};
+use simplersble::{advanced, Adapter, Backend, Peripheral};
 
 // Asks a question on the terminal and returns the trimmed answer.
 fn ask(question: &str) -> String {
@@ -42,9 +42,6 @@ fn register_pairing_callbacks(peripheral: &Peripheral) {
 }
 
 fn main() {
-    // Enable the Dongl backend before any other SimpleRsBLE call.
-    config::dongl::set_use_dongl_backend(true);
-
     let adapters = dongl_adapters();
     if adapters.is_empty() {
         eprintln!("No Dongl found.");

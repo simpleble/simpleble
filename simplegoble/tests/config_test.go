@@ -27,7 +27,7 @@ func TestPlainConfiguration(t *testing.T) {
 		{"ExperimentalReinitializeWinRTApartmentOnMainThread", config.WinRT.ExperimentalReinitializeWinRTApartmentOnMainThread,
 			config.WinRT.SetExperimentalReinitializeWinRTApartmentOnMainThread, false},
 		{"UseDeferredDisconnect", config.WinRT.UseDeferredDisconnect, config.WinRT.SetUseDeferredDisconnect, true},
-		{"UseDonglBackend", config.Dongl.UseDonglBackend, config.Dongl.SetUseDonglBackend, false},
+		{"UseDonglBackend", config.Dongl.UseDonglBackend, config.Dongl.SetUseDonglBackend, true},
 		{"AutoUpdate", config.Dongl.AutoUpdate, config.Dongl.SetAutoUpdate, false},
 		{"ForceUpdate", config.Dongl.ForceUpdate, config.Dongl.SetForceUpdate, false},
 	}

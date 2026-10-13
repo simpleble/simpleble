@@ -24,7 +24,7 @@ pub struct Backend {
 impl Backend {
     /// Returns the available backends, initializing them if needed.
     ///
-    /// Set the [configuration](crate::config) first, for example to enable the Dongl backend.
+    /// Set the [configuration](crate::config) first, for example to leave out the Dongl backend.
     pub fn get_backends() -> Result<Vec<Backend>, Error> {
         let mut raw_backend_list = ffi::RustyBackend_get_backends().map_err(Error::from_cxx_exception)?;
 

@@ -233,9 +233,6 @@ adapters of the backend whose identifier is `Dongl`:
 
 ```go
 func donglAdapters() ([]*ble.Adapter, error) {
-    if err := ble.Config.Dongl.SetUseDonglBackend(true); err != nil {
-        return nil, err
-    }
     backends, err := ble.GetBackends()
     if err != nil {
         return nil, err

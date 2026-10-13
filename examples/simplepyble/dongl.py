@@ -1,9 +1,6 @@
 import simplepyble
 
 if __name__ == "__main__":
-    # Enable the Dongl backend before any other SimpleBLE call.
-    simplepyble.config.dongl.use_dongl_backend = True
-
     adapters = []
     for backend in simplepyble.Backend.get_backends():
         if backend.identifier() == "Dongl":

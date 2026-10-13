@@ -6,7 +6,7 @@
 //! effect.
 //!
 //! ```no_run
-//! simplersble::config::dongl::set_use_dongl_backend(true);
+//! simplersble::config::dongl::set_use_dongl_backend(false);
 //! let backends = simplersble::Backend::get_backends().unwrap();
 //! ```
 
@@ -129,7 +129,7 @@ pub mod dongl {
         locked(ffi::RustyConfig_dongl_reset)
     }
 
-    /// Whether to look for Dongl adapters. Defaults to `false`.
+    /// Whether to look for Dongl adapters. Defaults to `true`.
     ///
     /// When enabled, the backend whose identifier is `"Dongl"` provides one adapter per Dongl.
     pub fn use_dongl_backend() -> bool {
