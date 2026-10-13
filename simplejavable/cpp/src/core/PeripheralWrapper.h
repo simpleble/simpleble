@@ -1,5 +1,9 @@
 #pragma once
 #include <simpleble/SimpleBLE.h>
+
+#include <cstdint>
+#include <memory>
+
 #include "org/simplejavable/PeripheralCallback.h"
 
 class PeripheralWrapper {
@@ -9,11 +13,16 @@ class PeripheralWrapper {
     SimpleBLE::Peripheral& get();
     const SimpleBLE::Peripheral& get() const;
 
-    void setCallback(Org::SimpleJavaBLE::PeripheralCallback& callback);
+    void setCallback(jobject callback);
 
-    size_t getHash();
+    // Registers or removes the Dongl pairing callbacks, which forward to the Java callback.
+    void setPasskeyRequestCallback(bool enabled);
+    void setPasskeyDisplayCallback(bool enabled);
+    void setNumericComparisonCallback(bool enabled);
+
+    static int64_t getHash(SimpleBLE::Peripheral& peripheral);
 
   private:
     SimpleBLE::Peripheral _peripheral;
-    Org::SimpleJavaBLE::PeripheralCallback _callback;
+    std::shared_ptr<Org::SimpleJavaBLE::PeripheralCallback> _callback;
 };

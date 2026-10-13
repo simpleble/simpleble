@@ -32,6 +32,8 @@ add_library(
     src/org/simplejavable/AdapterCallback.cpp
     src/org/simplejavable/PeripheralCallback.cpp
     src/org/simplejavable/DataCallback.cpp
+    src/org/simplejavable/LocalCharacteristicCallback.cpp
+    src/org/simplejavable/LocalPeripheralCallback.cpp
     src/org/simplejavable/Service.cpp
     src/org/simplejavable/Characteristic.cpp
     src/org/simplejavable/Descriptor.cpp

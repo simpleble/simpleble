@@ -39,6 +39,18 @@ ASCII-armored private key. `ORG_GRADLE_PROJECT_signingInMemoryKeyId` is optional
 Recommended GitHub secret names are `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY`, and
 `MAVEN_SIGNING_PASSWORD`.
 
+## Tests
+
+The JUnit tests run against a native library built with the [PLAIN backend](./plain-backend.md) and are skipped
+unless `-PtestNativeLibPath` points at its directory:
+
+```bash
+cmake -S simplejavable/cpp -B build_simplejavable_plain -DSIMPLEBLE_PLAIN=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build_simplejavable_plain --parallel 4
+utils/gradle/gradlew -p simplejavable/java test \
+  -PtestNativeLibPath=$PWD/build_simplejavable_plain/lib
+```
+
 ## Verification
 
 From the repository root, publish to the local Maven cache without contacting Central or requiring credentials if

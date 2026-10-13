@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleBLE) Added the `AdapterInUse` exception and `ADAPTER_IN_USE` error code.
 - (SimplePyBLE) Added local peripheral hosting.
 - (SimplePyBLE) Added Dongl pairing callbacks.
+- (SimpleJavaBLE) Added local peripheral hosting.
+- (SimpleJavaBLE) Added configuration and backend enumeration, including Dongl selection.
+- (SimpleJavaBLE) Added Dongl pairing callbacks.
 - (SimpleRsBLE) Added local peripheral hosting.
 - (SimpleRsBLE) Added configuration and backend enumeration, including Dongl selection.
 - (SimpleRsBLE) Added Dongl pairing callbacks.
@@ -30,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleAIBLE) Declared the BUSL-1.1 license in package metadata and included the license file.
 - (SimpleRsBLE) Included the license file in the crate.
 - (SimpleBLE) Declared the BUSL-1.1 license in pkg-config files.
+- (SimpleJavaBLE) Unsupported operations throw `UnsupportedOperationException`.
 
 **Fixed**
 
@@ -40,6 +44,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed another program opening a Dongl's port on macOS and Linux silently breaking its adapter.
 - (Dongl) Fixed a Dongl held by another process breaking the whole adapter list.
 - (Windows) Fixed local peripheral notifications failing after a client write.
+- (SimpleJavaBLE) Fixed several Dongls appearing as one adapter.
+- (SimpleJavaBLE) Fixed adapter listeners stopping after adapters were enumerated again.
+- (SimpleJavaBLE) Fixed races between scan callbacks and other calls.
 - (SimpleJavaBLE) Fixed programs aborting at exit on macOS.
 - (SimpleJavaBLE) Fixed building with GCC 15.
 - (SimplePyBLE) Fixed `asyncio` deprecation warnings on Python 3.14.

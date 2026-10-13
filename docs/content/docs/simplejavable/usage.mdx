@@ -78,3 +78,137 @@ public class ScanExample {
 ```
 
 For a fuller walkthrough, see [Quickstart](../quickstart) and the [SimpleJavaBLE Examples](./examples).
+
+## Choose an adapter
+
+`Adapter.getAdapters()` returns the adapters of every active backend. To choose
+a backend, enumerate backends and use their adapters:
+
+```java
+for (Backend backend : Backend.getBackends()) {
+    System.out.println(backend.getIdentifier() + ": Bluetooth enabled = " + backend.isBluetoothEnabled());
+    for (Adapter adapter : backend.getAdapters()) {
+        System.out.println("  " + adapter.getIdentifier() + " [" + adapter.getAddress() + "]");
+    }
+}
+```
+
+Backend identifiers are `SimpleBluez`, `WinRT`, `CoreBluetooth`, and `Dongl`.
+Every enumeration returns the same `Adapter` object for the same adapter, whether
+it comes from `Adapter.getAdapters()` or from a backend, so event listeners stay
+attached across enumerations.
+
+### Dongl
+
+The [Dongl](../dongl) USB adapter has its own backend. Enable it before the first
+enumeration, then select it by identifier:
+
+```java
+Config.Dongl.setUseDonglBackend(true);
+
+List<Adapter> dongls = new ArrayList<>();
+for (Backend backend : Backend.getBackends()) {
+    if (backend.getIdentifier().equals("Dongl")) {
+        dongls = backend.getAdapters();
+    }
+}
+```
+
+With the backend enabled, `Adapter.getAdapters()` also includes Dongl adapters.
+Each Dongl is a separate adapter, and `getAddress()` tells them apart.
+
+For pairing through a Dongl, register the callbacks your device needs on the
+peripheral before connecting, since pairing can start as soon as the link is up:
+
+```java
+Advanced.Dongl.setNumericComparisonCallback(peripheral, passkey -> {
+    System.out.print("Does the device show " + passkey + "? [y/N] ");
+    return new Scanner(System.in).nextLine().trim().equals("y");
+});
+
+peripheral.connect();
+```
+
+`setPasskeyRequestCallback` takes a `Supplier<String>` that returns the six digits
+the device shows, or `null` to reject. `setPasskeyDisplayCallback` takes a
+`Consumer<String>` that shows a passkey for the user to type on the device. These
+callbacks run on a worker thread while `connect()` blocks, so they can wait for the
+user's answer. A request without a callback, or whose callback throws, is rejected.
+Pass `null` to unregister a callback. Peripherals of other backends throw
+`UnsupportedOperationException`.
+
+## Callbacks and threading
+
+Event listeners, notification callbacks, read handlers, and pairing callbacks run
+on native threads. Return promptly and hand longer work to your own executor.
+Exceptions thrown by a callback are logged. A read handler that throws serves the
+stored value instead.
+
+## Errors
+
+Native failures throw `RuntimeException` with the native message. Operations that
+the backend or platform does not support throw `UnsupportedOperationException`.
+
+## Host a GATT service
+
+`Adapter.createLocalPeripheral()` creates a local GATT host. Configure services,
+characteristics, and advertised UUIDs before calling `start()`:
+
+```java
+BluetoothUUID serviceUuid = new BluetoothUUID("12345678-1234-5678-1234-56789abcdef0");
+
+LocalPeripheral host = adapter.createLocalPeripheral();
+host.addAdvertisedService(serviceUuid);
+
+LocalService service = host.addService(serviceUuid);
+LocalCharacteristic characteristic = service.addCharacteristic(
+    new BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
+    LocalCharacteristicCapability.READ, LocalCharacteristicCapability.WRITE_REQUEST,
+    LocalCharacteristicCapability.NOTIFY);
+characteristic.setValue("ready".getBytes(StandardCharsets.UTF_8));
+
+characteristic.setEventListener(new LocalCharacteristic.EventListener() {
+    @Override
+    public void onWrite(byte[] value) {
+        characteristic.setValue(value); // Echo to subscribers.
+    }
+});
+
+host.start();
+// ...
+host.stop();
+```
+
+`setValue()` stores the bytes and publishes them to notify or indicate subscribers
+on a best-effort basis. `onWrite` runs after a client write has updated the stored
+value. `onSubscribed` reports the first subscriber and `onUnsubscribed` the last.
+`LocalPeripheral.EventListener` reports clients connecting and disconnecting;
+CoreBluetooth does not report connections, so on macOS these events follow a
+client's first and last subscription instead.
+
+`setReadHandler()` takes a `Supplier<byte[]>` that computes each read on demand. It
+runs synchronously on a native thread, so return quickly. If it returns `null` or
+throws, the client reads the stored value. Pass `null` to serve the stored value
+again.
+
+`isStarted()` and `isAdvertising()` report the host state. The configuration cannot
+change while started. After `stop()`, `removeAllServices()` clears the layout so you
+can rebuild it.
+
+## Platform-specific APIs
+
+`Advanced` holds APIs for a single platform. They throw
+`UnsupportedOperationException` on other platforms.
+
+- `Advanced.Linux.setAdvertisementLocalName()` and
+  `Advanced.MacOS.setAdvertisementLocalName()` set the name in a local peripheral's
+  advertisement. Call them before `start()`, and pass `null` to remove the name.
+- `Advanced.MacOS.retrieveCachedPeripherals()` returns peripherals that CoreBluetooth
+  already knows, by identifier, without scanning.
+
+## Configuration
+
+`Config` holds process-wide backend options. Set them before the first enumeration.
+For example, `Config.SimpleBluez.setConnectionTimeout(Duration.ofSeconds(5))`
+changes how long a Linux connection attempt waits, and `Config.resetAll()` restores
+the defaults.

@@ -3,6 +3,9 @@ package org.simplejavable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 
 /**
@@ -11,7 +14,12 @@ import java.util.concurrent.CompletableFuture;
 public class Peripheral {
     private final long instanceId;
     private final long adapterId;
-    private EventListener eventListener;
+    private volatile EventListener eventListener;
+
+    // Dongl pairing callbacks, set through Advanced.Dongl.
+    volatile Supplier<String> passkeyRequestCallback;
+    volatile Consumer<String> passkeyDisplayCallback;
+    volatile Predicate<String> numericComparisonCallback;
 
     Peripheral(long newAdapterId, long newInstanceId) {
         this.instanceId = newInstanceId;
@@ -33,7 +41,35 @@ public class Peripheral {
                 eventListener.onDisconnected();
             }
         }
+
+        @Override
+        public String onPasskeyRequest() {
+            Supplier<String> callback = passkeyRequestCallback;
+            return callback != null ? callback.get() : null;
+        }
+
+        @Override
+        public void onPasskeyDisplay(String passkey) {
+            Consumer<String> callback = passkeyDisplayCallback;
+            if (callback != null) {
+                callback.accept(passkey);
+            }
+        }
+
+        @Override
+        public boolean onNumericComparison(String passkey) {
+            Predicate<String> callback = numericComparisonCallback;
+            return callback != null && callback.test(passkey);
+        }
     };
+
+    long getAdapterId() {
+        return adapterId;
+    }
+
+    long getInstanceId() {
+        return instanceId;
+    }
 
     /**
      * Sets the event listener for peripheral events (e.g., connected, disconnected).
@@ -352,6 +388,9 @@ public class Peripheral {
     private interface Callback {
         void onConnected();
         void onDisconnected();
+        String onPasskeyRequest();
+        void onPasskeyDisplay(String passkey);
+        boolean onNumericComparison(String passkey);
     }
 
     public interface EventListener {

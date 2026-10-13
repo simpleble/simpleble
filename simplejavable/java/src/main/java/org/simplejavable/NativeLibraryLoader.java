@@ -26,6 +26,23 @@ public class NativeLibraryLoader {
 
     private static final String NATIVE_FOLDER = "/native";
 
+    private static boolean loaded = false;
+
+    /**
+     * Loads the SimpleJavaBLE native library once. Every class with native methods calls this from its static
+     * initializer, so that any of them, such as {@link Config}, can be the first one used.
+     */
+    static synchronized void ensureLoaded() {
+        if (loaded) return;
+
+        try {
+            loadLibrary("simplejavable");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load native library", e);
+        }
+        loaded = true;
+    }
+
     public static void loadLibrary(String libraryName) throws IOException {
         String osName = getOperatingSystem();
         String archName = getArchitecture();

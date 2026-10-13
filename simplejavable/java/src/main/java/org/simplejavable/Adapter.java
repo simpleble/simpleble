@@ -1,6 +1,5 @@
 package org.simplejavable;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Represents a physical Bluetooth adapter on the host system.
  */
 public class Adapter {
-    private EventListener eventListener;
+    // One wrapper per native adapter, so listeners and peripheral wrappers survive later enumerations.
+    private static final Map<Long, Adapter> adapterCache = new ConcurrentHashMap<>();
+
+    private volatile EventListener eventListener;
     private final long instanceId;
     private final Map<Long, Peripheral> peripheralCache = new ConcurrentHashMap<>();
 
@@ -150,8 +152,26 @@ public class Adapter {
         return peripherals;
     }
 
-    private Peripheral getPeripheral(long peripheralId) {
+    /**
+     * Creates a local peripheral that hosts GATT services and advertises through this adapter.
+     * <p>
+     * Configure its services and advertised service UUIDs, then call {@link LocalPeripheral#start()}.
+     * @return A new LocalPeripheral.
+     */
+    public LocalPeripheral createLocalPeripheral() {
+        return new LocalPeripheral(nativeAdapterCreateLocalPeripheral(instanceId));
+    }
+
+    Peripheral getPeripheral(long peripheralId) {
         return peripheralCache.computeIfAbsent(peripheralId, id -> new Peripheral(instanceId, id));
+    }
+
+    long getInstanceId() {
+        return instanceId;
+    }
+
+    static Adapter fromId(long adapterId) {
+        return adapterCache.computeIfAbsent(adapterId, Adapter::new);
     }
 
     /**
@@ -163,7 +183,10 @@ public class Adapter {
     }
 
     /**
-     * Gets a list of all available Bluetooth adapters on the system.
+     * Gets a list of all available Bluetooth adapters from all active backends.
+     * <p>
+     * Every call returns the same Adapter object for the same native adapter. Set any {@link Config} values
+     * before the first call.
      * @return A list of Adapter objects.
      */
     public static List<Adapter> getAdapters() {
@@ -171,7 +194,7 @@ public class Adapter {
         List<Adapter> adapters = new ArrayList<>();
 
         for (long nativeAdapterId : nativeAdapterIds) {
-            adapters.add(new Adapter(nativeAdapterId));
+            adapters.add(fromId(nativeAdapterId));
         }
 
         return adapters;
@@ -189,6 +212,7 @@ public class Adapter {
     private native boolean nativeAdapterScanIsActive(long adapterId);
     private native long[] nativeAdapterScanGetResults(long adapterId);
     private native long[] nativeAdapterGetPairedPeripherals(long adapterId);
+    private native long nativeAdapterCreateLocalPeripheral(long adapterId);
 
     private interface Callback {
         void onScanStart();
@@ -205,11 +229,7 @@ public class Adapter {
     }
 
     static {
-        try {
-            NativeLibraryLoader.loadLibrary("simplejavable");
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load native library", e);
-        }
+        NativeLibraryLoader.ensureLoaded();
 
         // Runtime.getRuntime().addShutdownHook(new Thread(() -> {
         //     // TODO: We might need this to clean up the native library.

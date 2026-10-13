@@ -19,6 +19,12 @@ java {
     }
 }
 
+dependencies {
+    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
 mavenPublishing {
     coordinates(group.toString(), "simplejavable", version.toString())
     publishToMavenCentral()
@@ -65,6 +71,46 @@ mavenPublishing {
 val nativeLibPath: String? by project // -PnativeLibPath=...
 val buildFromCMake: String? by project // -PbuildFromCMake (presence is what matters)
 
+// Directory holding a native library built with -DSIMPLEBLE_PLAIN=ON. Tests run only when it is set.
+val testNativeLibPath: String? by project // -PtestNativeLibPath=...
+
+val currentArch: String by lazy {
+    System.getProperty("os.arch").let { arch ->
+        when {
+            arch.contains("amd64") || arch.contains("x86_64") -> "x64"
+            arch.contains("aarch64") -> "aarch64"
+            arch.contains("x86") || arch.contains("i386") || arch.contains("i686") -> "x86"
+            else -> error("Unsupported architecture: $arch")
+        }
+    }
+}
+
+// Lay the test library out like the JAR, so NativeLibraryLoader finds it on the test classpath.
+val testNativeResources = layout.buildDirectory.dir("test-native")
+val prepareTestNativeLibrary by tasks.registering(Sync::class) {
+    testNativeLibPath?.let { path ->
+        from(path) {
+            include("*.so", "*.dll", "*.dylib")
+            into("native/$currentArch")
+        }
+    }
+    into(testNativeResources)
+}
+
+sourceSets.test {
+    runtimeClasspath += files(testNativeResources)
+}
+
+tasks.test {
+    useJUnitPlatform()
+    dependsOn(prepareTestNativeLibrary)
+    onlyIf("-PtestNativeLibPath is set") { testNativeLibPath != null }
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
 // Build native libraries using CMake
 tasks.register<Exec>("generateCMake") {
     val cmakePath = "../cpp" // Default CMake location
@@ -105,14 +151,6 @@ tasks.jar {
         // Build from CMake when explicitly requested
         dependsOn("buildNativeCMake")
         val cmakeBuildOutputPath = layout.buildDirectory.dir("build_cpp/lib").get().asFile
-        val currentArch = System.getProperty("os.arch").let { arch ->
-            when {
-                arch.contains("amd64") || arch.contains("x86_64") -> "x64"
-                arch.contains("aarch64") -> "aarch64"
-                arch.contains("x86") || arch.contains("i386") || arch.contains("i686") -> "x86"
-                else -> error("Unsupported architecture: $arch")
-            }
-        }
         from(cmakeBuildOutputPath) {
             include("**/*.so", "**/*.dll", "**/*.dylib")
             into("native/$currentArch")
