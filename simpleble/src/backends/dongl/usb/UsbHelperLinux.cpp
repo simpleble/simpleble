@@ -2,6 +2,8 @@
 
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -14,6 +16,8 @@
 #include <iomanip>
 #include <limits>
 #include <stdexcept>
+
+#include <simpleble/Exceptions.h>
 
 #include "LoggingInternal.h"
 
@@ -59,6 +63,7 @@ bool is_dongl_tty(const std::filesystem::path& tty_path) {
 
 UsbHelperLinux::UsbHelperLinux(const std::string& device_path) : UsbHelperImpl(device_path) {
     if (!_open_serial_port()) {
+        if (errno == EBUSY) throw Exception::AdapterInUse(_device_path);
         throw std::runtime_error("Failed to open serial port " + _device_path + ": " + std::strerror(errno));
     }
 
@@ -155,6 +160,19 @@ bool UsbHelperLinux::_open_serial_port() {
     _serial_fd = open(_device_path.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
     if (_serial_fd < 0) {
         return false;
+    }
+
+    // Prevent other processes from using the port while we hold it, as they would take bytes meant for us.
+    // NOTE: TIOCEXCL doesn't stop root or a process opening the port at the same time, so we also take
+    // a lock that other SimpleBLE processes will respect.
+    if (flock(_serial_fd, LOCK_EX | LOCK_NB) != 0) {
+        const int lock_error = errno == EWOULDBLOCK ? EBUSY : errno;
+        _close_serial_port();
+        errno = lock_error;
+        return false;
+    }
+    if (ioctl(_serial_fd, TIOCEXCL) == -1) {
+        SIMPLEBLE_LOG_WARN(fmt::format("Failed to get exclusive access to {}: {}", _device_path, std::strerror(errno)));
     }
 
     try {
