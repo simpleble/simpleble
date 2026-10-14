@@ -30,6 +30,15 @@ internal static partial class NativeMethods
     internal static extern nint simpleble_backend_get_handle(nuint index, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern nint simpleble_backend_get_native(ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern nint simpleble_backend_get_dongl(ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern nint simpleble_backend_get_simulator(ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_backend_release_handle(nint handle);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]

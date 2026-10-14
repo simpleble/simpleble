@@ -524,6 +524,24 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Backend_nativeGet
     });
 }
 
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplejavable_Backend_nativeGetNative(JNIEnv* env, jclass clazz) {
+    return safe_jni_call(env, [&]() {
+        return static_cast<jlong>(Cache::get().addBackend(SimpleBLE::Backend::get_native()));
+    });
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplejavable_Backend_nativeGetDongl(JNIEnv* env, jclass clazz) {
+    return safe_jni_call(env, [&]() {
+        return static_cast<jlong>(Cache::get().addBackend(SimpleBLE::Backend::get_dongl()));
+    });
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplejavable_Backend_nativeGetSimulator(JNIEnv* env, jclass clazz) {
+    return safe_jni_call(env, [&]() {
+        return static_cast<jlong>(Cache::get().addBackend(SimpleBLE::Backend::get_simulator()));
+    });
+}
+
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Backend_nativeBackendIdentifier(JNIEnv* env, jobject thiz,
                                                                                             jlong backend_id) {
     return safe_jni_call(env, [&]() {

@@ -144,6 +144,26 @@ func TestPlainHandleOwnership(t *testing.T) {
 	}
 }
 
+func TestPlainNamedBackends(t *testing.T) {
+	if err := bindings.Load(plainLibrary(t)); err != nil {
+		t.Fatal(err)
+	}
+	native, err := simplegoble.GetNativeBackend()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer native.Close()
+	if name, err := native.Identifier(); err != nil || name != "Plain" {
+		t.Fatalf("native backend = %q, %v", name, err)
+	}
+	if _, err := simplegoble.GetDonglBackend(); !errors.Is(err, simplegoble.OperationNotSupported) {
+		t.Fatalf("GetDonglBackend: %v", err)
+	}
+	if _, err := simplegoble.GetSimulatorBackend(); !errors.Is(err, simplegoble.OperationNotSupported) {
+		t.Fatalf("GetSimulatorBackend: %v", err)
+	}
+}
+
 func TestPlainRejectsInvalidScanDuration(t *testing.T) {
 	a := plainAdapter(t)
 	for _, d := range []time.Duration{-1, time.Duration(1<<31) * time.Millisecond} {

@@ -14,12 +14,7 @@ import java.util.Scanner;
 
 public class DonglExample {
     public static void main(String[] args) {
-        List<Adapter> dongls = new ArrayList<>();
-        for (Backend backend : Backend.getBackends()) {
-            if (backend.getIdentifier().equals("Dongl")) {
-                dongls = backend.getAdapters();
-            }
-        }
+        List<Adapter> dongls = Backend.getDongl().getAdapters();
         if (dongls.isEmpty()) {
             System.err.println("No Dongl found.");
             System.exit(1);

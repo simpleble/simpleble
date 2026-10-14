@@ -20,6 +20,22 @@ public sealed class Backend : IDisposable
         index => new Backend(NativeCall.Invoke((ref nint error) =>
             NativeMethods.simpleble_backend_get_handle(index, ref error))));
 
+    /// <summary>The backend of the operating system's Bluetooth stack. Dispose the returned backend.</summary>
+    public static Backend GetNative() => new(NativeCall.Invoke(NativeMethods.simpleble_backend_get_native));
+
+    /// <summary>
+    /// The Dongl backend, whether or not Config.Dongl.UseDonglBackend lists it in GetBackends(). Throws
+    /// BleException with OperationNotSupported if this build of SimpleBLE doesn't include it. Dispose the returned
+    /// backend.
+    /// </summary>
+    public static Backend GetDongl() => new(NativeCall.Invoke(NativeMethods.simpleble_backend_get_dongl));
+
+    /// <summary>
+    /// The Simulator backend, which only has adapters while a simulation is active. Throws BleException with
+    /// OperationNotSupported if this build of SimpleBLE doesn't include it. Dispose the returned backend.
+    /// </summary>
+    public static Backend GetSimulator() => new(NativeCall.Invoke(NativeMethods.simpleble_backend_get_simulator));
+
     /// <summary>Returns independently owned wrappers. Dispose each returned adapter.</summary>
     public IReadOnlyList<Adapter> Adapters => NativeCall.Collect(
         handle.Query(NativeMethods.simpleble_backend_get_adapters_count),

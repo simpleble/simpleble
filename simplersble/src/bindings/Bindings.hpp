@@ -32,6 +32,7 @@ struct RustyDescriptorWrapper;
 struct RustyManufacturerDataWrapper;
 struct RustyBackendWrapper;
 
+class RustyBackend;
 class RustyLocalPeripheral;
 class RustyLocalService;
 class RustyLocalCharacteristic;
@@ -40,6 +41,9 @@ rust::Vec<Bindings::RustyAdapterWrapper> RustyAdapter_get_adapters();
 bool RustyAdapter_bluetooth_enabled();
 
 rust::Vec<Bindings::RustyBackendWrapper> RustyBackend_get_backends();
+std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_native();
+std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_dongl();
+std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_simulator();
 
 void RustyConfig_reset_all();
 

@@ -807,6 +807,29 @@ class Backend:
         """Get all enabled SimpleBLE backends."""
         ...
 
+    @staticmethod
+    def get_native() -> 'Backend':
+        """Get the backend of the operating system's Bluetooth stack."""
+        ...
+
+    @staticmethod
+    def get_dongl() -> 'Backend':
+        """Get the Dongl backend, whether or not config.dongl.use_dongl_backend lists it in get_backends().
+
+        Raises:
+            RuntimeError: If this build of SimplePyBLE doesn't include the Dongl backend.
+        """
+        ...
+
+    @staticmethod
+    def get_simulator() -> 'Backend':
+        """Get the Simulator backend, which only has adapters while a simulation is active.
+
+        Raises:
+            RuntimeError: If this build of SimplePyBLE doesn't include the Simulator backend.
+        """
+        ...
+
     def initialized(self) -> bool:
         """Check if the backend is initialized."""
         ...

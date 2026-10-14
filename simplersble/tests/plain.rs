@@ -138,6 +138,11 @@ async fn backend_enumeration() {
     let adapters = backends[0].adapters().unwrap();
     assert_eq!(adapters.len(), 1);
     assert_eq!(adapters[0].identifier().unwrap(), "Plain Adapter");
+
+    assert_eq!(Backend::get_native().unwrap().identifier(), "Plain");
+    for result in [Backend::get_dongl(), Backend::get_simulator()] {
+        assert!(result.err().unwrap().to_string().contains("not supported"));
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

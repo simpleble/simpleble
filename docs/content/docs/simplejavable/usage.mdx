@@ -101,15 +101,10 @@ attached across enumerations.
 ### Dongl
 
 The [Dongl](../dongl) USB adapter has its own backend, which is on by default.
-Select it by identifier:
+`Backend.getDongl()` returns it:
 
 ```java
-List<Adapter> dongls = new ArrayList<>();
-for (Backend backend : Backend.getBackends()) {
-    if (backend.getIdentifier().equals("Dongl")) {
-        dongls = backend.getAdapters();
-    }
-}
+List<Adapter> dongls = Backend.getDongl().getAdapters();
 ```
 
 With the backend enabled, `Adapter.getAdapters()` also includes Dongl adapters.

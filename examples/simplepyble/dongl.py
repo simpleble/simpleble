@@ -1,11 +1,7 @@
 import simplepyble
 
 if __name__ == "__main__":
-    adapters = []
-    for backend in simplepyble.Backend.get_backends():
-        if backend.identifier() == "Dongl":
-            adapters = backend.adapters()
-
+    adapters = simplepyble.Backend.get_dongl().adapters()
     if len(adapters) == 0:
         raise SystemExit("No Dongl found.")
 

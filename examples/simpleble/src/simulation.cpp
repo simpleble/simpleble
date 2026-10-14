@@ -101,23 +101,15 @@ int main() {
     environment.activate();
 
     // From here on, only the regular SimpleBLE API is used.
-    std::optional<SimpleBLE::Adapter> adapter;
-    for (auto& backend : SimpleBLE::Backend::get_backends()) {
-        if (backend.identifier() != "Simulator") continue;
-        adapter = backend.adapters().at(0);
-    }
-    if (!adapter) {
-        std::cerr << "The Simulator backend is not active." << std::endl;
-        return EXIT_FAILURE;
-    }
+    auto adapter = SimpleBLE::Backend::get_simulator().adapters().at(0);
 
     std::optional<SimpleBLE::Peripheral> monitor;
-    adapter->set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
+    adapter.set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
         log("Found ", peripheral.identifier(), " [", peripheral.address(), "] ", peripheral.rssi(), " dBm");
         if (peripheral.identifier() != "Simulated HRM") return;
         monitor = peripheral;
     });
-    adapter->scan_for(300);
+    adapter.scan_for(300);
     if (!monitor) {
         std::cerr << "The heart rate monitor was not found." << std::endl;
         return EXIT_FAILURE;

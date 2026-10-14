@@ -31,6 +31,44 @@ func GetBackends() ([]*Backend, error) {
 	return backends, nil
 }
 
+// GetNativeBackend returns the backend of the operating system's Bluetooth stack.
+func GetNativeBackend() (*Backend, error) {
+	return namedBackend(func(native *bindings.NativeAPI, nativeError *uintptr) uintptr {
+		return native.BackendNative(nativeError)
+	})
+}
+
+// GetDonglBackend returns the Dongl backend, whether or not
+// Config.Dongl.UseDonglBackend lists it in GetBackends. It fails with
+// OperationNotSupported if this build of SimpleBLE doesn't include it.
+func GetDonglBackend() (*Backend, error) {
+	return namedBackend(func(native *bindings.NativeAPI, nativeError *uintptr) uintptr {
+		return native.BackendDongl(nativeError)
+	})
+}
+
+// GetSimulatorBackend returns the Simulator backend, which only has adapters
+// while a simulation is active. It fails with OperationNotSupported if this
+// build of SimpleBLE doesn't include it.
+func GetSimulatorBackend() (*Backend, error) {
+	return namedBackend(func(native *bindings.NativeAPI, nativeError *uintptr) uintptr {
+		return native.BackendSimulator(nativeError)
+	})
+}
+
+func namedBackend(get func(native *bindings.NativeAPI, nativeError *uintptr) uintptr) (*Backend, error) {
+	native, err := bindings.API()
+	if err != nil {
+		return nil, err
+	}
+	var nativeError uintptr
+	nativeHandle := get(native, &nativeError)
+	if err := native.TakeError(&nativeError); err != nil {
+		return nil, err
+	}
+	return &Backend{handle: bindings.NewBackend(native, nativeHandle)}, nil
+}
+
 // Initialized reports whether the handle is open.
 func (b *Backend) Initialized() bool { return b.handle.Initialized() }
 

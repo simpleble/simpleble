@@ -19,6 +19,9 @@ type NativeAPI struct {
 	ErrorRelease                      func(*uintptr)
 	BackendCount                      func(*uintptr) uintptr
 	BackendGet                        func(uintptr, *uintptr) uintptr
+	BackendNative                     func(*uintptr) uintptr
+	BackendDongl                      func(*uintptr) uintptr
+	BackendSimulator                  func(*uintptr) uintptr
 	BackendRelease                    func(uintptr)
 	BackendIdentifier                 func(uintptr, *uintptr) *byte
 	BackendEnabled                    func(uintptr, *uintptr) bool
@@ -179,6 +182,9 @@ func Load(path string) error {
 		{"simpleble_error_release", &native.ErrorRelease},
 		{"simpleble_backend_get_count", &native.BackendCount},
 		{"simpleble_backend_get_handle", &native.BackendGet},
+		{"simpleble_backend_get_native", &native.BackendNative},
+		{"simpleble_backend_get_dongl", &native.BackendDongl},
+		{"simpleble_backend_get_simulator", &native.BackendSimulator},
 		{"simpleble_backend_release_handle", &native.BackendRelease},
 		{"simpleble_backend_identifier", &native.BackendIdentifier},
 		{"simpleble_backend_is_bluetooth_enabled", &native.BackendEnabled},

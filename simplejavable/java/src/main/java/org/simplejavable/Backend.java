@@ -8,8 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Represents a SimpleBLE backend, such as the operating system's Bluetooth stack or the Dongl USB adapter.
  * <p>
- * Use backends to choose where adapters come from. For example, select the backend whose identifier is
- * {@code "Dongl"} to use only Dongl adapters.
+ * Use backends to choose where adapters come from. For example, {@link #getDongl()} gives only Dongl adapters.
  */
 public class Backend {
     private static final Map<Long, Backend> backendCache = new ConcurrentHashMap<>();
@@ -67,7 +66,37 @@ public class Backend {
         return backends;
     }
 
+    /**
+     * Gets the backend of the operating system's Bluetooth stack.
+     * @return The native backend.
+     */
+    public static Backend getNative() {
+        return backendCache.computeIfAbsent(nativeGetNative(), Backend::new);
+    }
+
+    /**
+     * Gets the Dongl backend, whether or not {@link Config.Dongl#setUseDonglBackend(boolean)} lists it in
+     * {@link #getBackends()}.
+     * @return The Dongl backend.
+     * @throws UnsupportedOperationException if this build of SimpleBLE doesn't include the Dongl backend.
+     */
+    public static Backend getDongl() {
+        return backendCache.computeIfAbsent(nativeGetDongl(), Backend::new);
+    }
+
+    /**
+     * Gets the Simulator backend, which only has adapters while a simulation is active.
+     * @return The Simulator backend.
+     * @throws UnsupportedOperationException if this build of SimpleBLE doesn't include the Simulator backend.
+     */
+    public static Backend getSimulator() {
+        return backendCache.computeIfAbsent(nativeGetSimulator(), Backend::new);
+    }
+
     private static native long[] nativeGetBackends();
+    private static native long nativeGetNative();
+    private static native long nativeGetDongl();
+    private static native long nativeGetSimulator();
     private native String nativeBackendIdentifier(long backendId);
     private native boolean nativeBackendIsBluetoothEnabled(long backendId);
     private native long[] nativeBackendGetAdapters(long backendId);

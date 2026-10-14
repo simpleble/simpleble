@@ -64,6 +64,18 @@ rust::Vec<Bindings::RustyBackendWrapper> Bindings::RustyBackend_get_backends() {
     return result;
 }
 
+std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_native() {
+    return std::make_unique<Bindings::RustyBackend>(SimpleBLE::Backend::get_native());
+}
+
+std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_dongl() {
+    return std::make_unique<Bindings::RustyBackend>(SimpleBLE::Backend::get_dongl());
+}
+
+std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_simulator() {
+    return std::make_unique<Bindings::RustyBackend>(SimpleBLE::Backend::get_simulator());
+}
+
 // Config Bindings
 
 void Bindings::RustyConfig_reset_all() { SimpleBLE::Config::Base::reset_all(); }

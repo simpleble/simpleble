@@ -228,31 +228,15 @@ reads, subscription callbacks, and handle ownership.
 ## Use a Dongl
 
 A [Dongl](https://docs.simpleble.org/dongl) is a USB Bluetooth adapter made for
-SimpleBLE. Enable its backend before any other SimpleGoBLE call, then use the
-adapters of the backend whose identifier is `Dongl`:
+SimpleBLE. Its backend is on by default; use the adapters of the Dongl backend:
 
 ```go
-func donglAdapters() ([]*ble.Adapter, error) {
-    backends, err := ble.GetBackends()
-    if err != nil {
-        return nil, err
-    }
-    defer func() {
-        for _, backend := range backends {
-            _ = backend.Close()
-        }
-    }()
-    for _, backend := range backends {
-        name, err := backend.Identifier()
-        if err != nil {
-            return nil, err
-        }
-        if name == "Dongl" {
-            return backend.Adapters()
-        }
-    }
-    return nil, nil
+dongl, err := ble.GetDonglBackend()
+if err != nil {
+    return err
 }
+defer dongl.Close()
+adapters, err := dongl.Adapters() // Close each adapter when finished.
 ```
 
 `ble.Config` also holds the BlueZ and WinRT backend settings. Pairing through a

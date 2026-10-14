@@ -82,8 +82,7 @@ DEVICE_ADDRESS = "C4:2B:91:0E:5A:17"
 DEVICE_INFORMATION = "0000180a-0000-1000-8000-00805f9b34fb"
 FIRMWARE_REVISION = "00002a26-0000-1000-8000-00805f9b34fb"
 
-dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
-adapters = dongl.adapters()
+adapters = simplepyble.Backend.get_dongl().adapters()
 if not adapters:
     sys.exit("No Dongl found.")
 adapter = adapters[0]

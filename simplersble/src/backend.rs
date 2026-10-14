@@ -39,6 +39,34 @@ impl Backend {
         Ok(backends)
     }
 
+    /// Returns the backend of the operating system's Bluetooth stack.
+    pub fn get_native() -> Result<Backend, Error> {
+        Self::from_internal(ffi::RustyBackend_get_native())
+    }
+
+    /// Returns the Dongl backend, whether or not
+    /// [`config::dongl::use_dongl_backend`](crate::config::dongl::use_dongl_backend) lists it in
+    /// [`get_backends`](Self::get_backends).
+    ///
+    /// Fails if this build of SimpleBLE doesn't include the Dongl backend.
+    pub fn get_dongl() -> Result<Backend, Error> {
+        Self::from_internal(ffi::RustyBackend_get_dongl())
+    }
+
+    /// Returns the Simulator backend, which only has adapters while a simulation is active.
+    ///
+    /// Fails if this build of SimpleBLE doesn't include the Simulator backend.
+    pub fn get_simulator() -> Result<Backend, Error> {
+        Self::from_internal(ffi::RustyBackend_get_simulator())
+    }
+
+    fn from_internal(internal: Result<cxx::UniquePtr<ffi::RustyBackend>, cxx::Exception>) -> Result<Backend, Error> {
+        let internal = internal.map_err(Error::from_cxx_exception)?;
+        Ok(Backend {
+            inner: Arc::new(InnerBackend { internal }),
+        })
+    }
+
     /// Returns the backend's identifier, such as `"Dongl"`.
     pub fn identifier(&self) -> String {
         self.inner.internal.identifier()

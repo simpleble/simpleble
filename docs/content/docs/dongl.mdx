@@ -34,7 +34,7 @@ The firmware acts as a BLE central. It supports scanning with scan responses and
 
 ## Select a Dongl
 
-From SimpleBLE 1.2.1, the Dongl backend is on by default, so plugged-in Dongls appear next to the computer's own Bluetooth adapter. To use only Dongls, take the adapters from the backend whose identifier is `Dongl`. To leave Dongls out, turn the backend off before any other SimpleBLE call. With 1.2.0, turn it on first. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
+From SimpleBLE 1.2.1, the Dongl backend is on by default, so plugged-in Dongls appear next to the computer's own Bluetooth adapter. To use only Dongls, take the adapters of the Dongl backend, as below. To leave Dongls out, turn the backend off before any other SimpleBLE call. With 1.2.0, turn it on first. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
 
 <Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust"]}>
 <Tab value="C++">
@@ -76,8 +76,7 @@ simpleble_error_release(&error);
 ```python
 import simplepyble
 
-dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
-adapters = dongl.adapters()
+adapters = simplepyble.Backend.get_dongl().adapters()
 if not adapters:
     raise SystemExit("No Dongl found.")
 
@@ -91,14 +90,8 @@ print(adapter.identifier(), adapter.address())
 ```csharp
 using SimpleSharpBLE;
 
-IReadOnlyList<Adapter> adapters = [];
-foreach (var backend in Backend.GetBackends())
-{
-    using (backend)
-    {
-        if (backend.Identifier == "Dongl") adapters = backend.Adapters;
-    }
-}
+IReadOnlyList<Adapter> adapters;
+using (var dongl = Backend.GetDongl()) adapters = dongl.Adapters;
 if (adapters.Count == 0)
 {
     Console.WriteLine("No Dongl found.");
@@ -115,26 +108,14 @@ Console.WriteLine($"{adapter.Identifier} [{adapter.Address}]");
 ```go
 import ble "github.com/simpleble/simplegoble"
 
-backends, err := ble.GetBackends()
+dongl, err := ble.GetDonglBackend()
 if err != nil {
     return err
 }
-defer func() {
-    for _, backend := range backends {
-        _ = backend.Close()
-    }
-}()
-var adapters []*ble.Adapter // Close each adapter when finished.
-for _, backend := range backends {
-    name, err := backend.Identifier()
-    if err != nil {
-        return err
-    }
-    if name == "Dongl" {
-        if adapters, err = backend.Adapters(); err != nil {
-            return err
-        }
-    }
+defer dongl.Close()
+adapters, err := dongl.Adapters() // Close each adapter when finished.
+if err != nil {
+    return err
 }
 if len(adapters) == 0 {
     return errors.New("no Dongl found")
@@ -153,12 +134,7 @@ fmt.Printf("%s [%s]\n", name, address)
 import org.simplejavable.Adapter;
 import org.simplejavable.Backend;
 
-List<Adapter> adapters = new ArrayList<>();
-for (Backend backend : Backend.getBackends()) {
-    if (backend.getIdentifier().equals("Dongl")) {
-        adapters = backend.getAdapters();
-    }
-}
+List<Adapter> adapters = Backend.getDongl().getAdapters();
 if (adapters.isEmpty()) {
     System.err.println("No Dongl found.");
     return;
@@ -174,12 +150,7 @@ System.out.println(adapter.getIdentifier() + " [" + adapter.getAddress() + "]");
 ```rust
 use simplersble::Backend;
 
-let adapters = Backend::get_backends()
-    .unwrap()
-    .into_iter()
-    .find(|backend| backend.identifier() == "Dongl")
-    .map(|backend| backend.adapters().unwrap())
-    .unwrap_or_default();
+let adapters = Backend::get_dongl().unwrap().adapters().unwrap();
 if adapters.is_empty() {
     println!("No Dongl found.");
     return;
@@ -369,8 +340,7 @@ SERVICE = "0000180a-0000-1000-8000-00805f9b34fb"         # Device Information
 CHARACTERISTIC = "00002a26-0000-1000-8000-00805f9b34fb"  # Firmware Revision String
 TARGETS = ["C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"]
 
-dongl = next(b for b in simplepyble.Backend.get_backends() if b.identifier() == "Dongl")
-adapters = dongl.adapters()
+adapters = simplepyble.Backend.get_dongl().adapters()
 if len(adapters) < len(TARGETS):
     raise SystemExit(f"Found {len(adapters)} Dongls, need {len(TARGETS)}.")
 
@@ -407,14 +377,8 @@ const string Service = "0000180a-0000-1000-8000-00805f9b34fb";         // Device
 const string Characteristic = "00002a26-0000-1000-8000-00805f9b34fb";  // Firmware Revision String
 string[] targets = ["C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"];
 
-IReadOnlyList<Adapter> adapters = [];
-foreach (var backend in Backend.GetBackends())
-{
-    using (backend)
-    {
-        if (backend.Identifier == "Dongl") adapters = backend.Adapters;
-    }
-}
+IReadOnlyList<Adapter> adapters;
+using (var dongl = Backend.GetDongl()) adapters = dongl.Adapters;
 
 try
 {

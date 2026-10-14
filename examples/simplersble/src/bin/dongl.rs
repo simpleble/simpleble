@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use simplersble::{advanced, Adapter, Backend, Peripheral};
+use simplersble::{advanced, Backend, Peripheral};
 
 // Asks a question on the terminal and returns the trimmed answer.
 fn ask(question: &str) -> String {
@@ -10,16 +10,6 @@ fn ask(question: &str) -> String {
     let mut answer = String::new();
     std::io::stdin().read_line(&mut answer).unwrap();
     answer.trim().to_string()
-}
-
-// Returns the adapters of the backend whose identifier is "Dongl".
-fn dongl_adapters() -> Vec<Adapter> {
-    for backend in Backend::get_backends().unwrap() {
-        if backend.identifier() == "Dongl" {
-            return backend.adapters().unwrap();
-        }
-    }
-    Vec::new()
 }
 
 // Answers pairing requests from the terminal, since the Dongl pairs without the operating
@@ -42,7 +32,7 @@ fn register_pairing_callbacks(peripheral: &Peripheral) {
 }
 
 fn main() {
-    let adapters = dongl_adapters();
+    let adapters = Backend::get_dongl().unwrap().adapters().unwrap();
     if adapters.is_empty() {
         eprintln!("No Dongl found.");
         std::process::exit(1);

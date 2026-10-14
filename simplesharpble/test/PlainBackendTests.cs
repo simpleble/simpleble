@@ -23,6 +23,15 @@ public sealed class PlainBackendTests
     }
 
     [Fact]
+    public void NamedBackends()
+    {
+        using (var native = Backend.GetNative()) Assert.Equal("Plain", native.Identifier);
+
+        Assert.Equal(BleErrorCode.OperationNotSupported, Assert.Throws<BleException>(() => Backend.GetDongl()).Code);
+        Assert.Equal(BleErrorCode.OperationNotSupported, Assert.Throws<BleException>(() => Backend.GetSimulator()).Code);
+    }
+
+    [Fact]
     public void BackendEnumerationTransfersIndependentAdapterOwnership()
     {
         var backends = Backend.GetBackends();

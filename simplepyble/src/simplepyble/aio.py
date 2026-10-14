@@ -603,6 +603,18 @@ class Backend:
     def get_backends(cls) -> list['Backend']:
         return [cls(backend) for backend in simplepyble.Backend.get_backends()]
 
+    @classmethod
+    def get_native(cls) -> 'Backend':
+        return cls(simplepyble.Backend.get_native())
+
+    @classmethod
+    def get_dongl(cls) -> 'Backend':
+        return cls(simplepyble.Backend.get_dongl())
+
+    @classmethod
+    def get_simulator(cls) -> 'Backend':
+        return cls(simplepyble.Backend.get_simulator())
+
     def initialized(self) -> bool:
         return self._internal.initialized()
 

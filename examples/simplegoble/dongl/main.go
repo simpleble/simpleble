@@ -25,7 +25,12 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	adapters, err := donglAdapters()
+	dongl, err := ble.GetDonglBackend()
+	if err != nil {
+		return err
+	}
+	defer dongl.Close()
+	adapters, err := dongl.Adapters()
 	if err != nil {
 		return err
 	}
@@ -82,29 +87,6 @@ func run() error {
 		return fmt.Errorf("peripheral %q not found", os.Args[1])
 	}
 	return connect(ctx, target)
-}
-
-// donglAdapters returns the adapters of the backend whose identifier is "Dongl".
-func donglAdapters() ([]*ble.Adapter, error) {
-	backends, err := ble.GetBackends()
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		for _, backend := range backends {
-			_ = backend.Close()
-		}
-	}()
-	for _, backend := range backends {
-		name, err := backend.Identifier()
-		if err != nil {
-			return nil, err
-		}
-		if name == "Dongl" {
-			return backend.Adapters()
-		}
-	}
-	return nil, nil
 }
 
 // connect answers pairing requests from the terminal, which the Dongl handles

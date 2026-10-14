@@ -182,6 +182,15 @@ mod ffi {
         #[namespace = "Bindings"]
         fn RustyBackend_get_backends() -> Result<Vec<RustyBackendWrapper>>;
 
+        #[namespace = "Bindings"]
+        fn RustyBackend_get_native() -> Result<UniquePtr<RustyBackend>>;
+
+        #[namespace = "Bindings"]
+        fn RustyBackend_get_dongl() -> Result<UniquePtr<RustyBackend>>;
+
+        #[namespace = "Bindings"]
+        fn RustyBackend_get_simulator() -> Result<UniquePtr<RustyBackend>>;
+
         // Config functions
 
         #[namespace = "Bindings"]

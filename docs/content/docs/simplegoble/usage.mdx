@@ -68,7 +68,7 @@ func run() error {
 }
 ```
 
-Use `GetBackends()` and `backend.Adapters()` for backend-specific enumeration.
+Use `GetNativeBackend()`, `GetDonglBackend()`, or `GetSimulatorBackend()` and `backend.Adapters()` for the adapters of one backend, or `GetBackends()` to list them all.
 Close every returned backend and adapter. Adapters have independent lifetimes
 from their backend. Copies of a wrapper share ownership, so closing a copy closes
 the original as well.
@@ -100,30 +100,17 @@ synchronized, so set it before other goroutines use SimpleGoBLE.
 ## Use a Dongl
 
 A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Its backend
-is on by default; take the adapters from the backend whose identifier is
-`Dongl`:
+is on by default; take the adapters of the Dongl backend:
 
 ```go
-backends, err := ble.GetBackends()
+dongl, err := ble.GetDonglBackend()
 if err != nil {
     return err
 }
-defer func() {
-    for _, backend := range backends {
-        _ = backend.Close()
-    }
-}()
-var adapters []*ble.Adapter // Close each adapter when finished.
-for _, backend := range backends {
-    name, err := backend.Identifier()
-    if err != nil {
-        return err
-    }
-    if name == "Dongl" {
-        if adapters, err = backend.Adapters(); err != nil {
-            return err
-        }
-    }
+defer dongl.Close()
+adapters, err := dongl.Adapters() // Close each adapter when finished.
+if err != nil {
+    return err
 }
 if len(adapters) == 0 {
     return errors.New("no Dongl found")

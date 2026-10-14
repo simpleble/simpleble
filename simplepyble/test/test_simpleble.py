@@ -90,6 +90,13 @@ def test_backend_parity():
     assert async_backends[0].identifier() == "Plain"
     assert len(async_backends[0].adapters()) == 1
 
+    assert simplepyble.Backend.get_native().identifier() == "Plain"
+    assert aio.Backend.get_native().identifier() == "Plain"
+    with pytest.raises(RuntimeError, match="not supported"):
+        simplepyble.Backend.get_dongl()
+    with pytest.raises(RuntimeError, match="not supported"):
+        simplepyble.Backend.get_simulator()
+
 
 def test_platform_enums():
     assert simplepyble.OperatingSystem.IOS.name == "IOS"
