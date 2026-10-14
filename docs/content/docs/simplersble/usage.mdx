@@ -59,6 +59,8 @@ async fn main() {
 
 For event streams and notification examples, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleRsBLE Examples](./examples).
 
+Several handles can refer to the same adapter or device, such as a peripheral from a scan event and another from `scan_get_results()`. Each kind of event goes to the handle that last subscribed to it with `on_scan_event()`, `on_power_event()`, or `on_connection_event()`, and dropping a handle doesn't affect the others.
+
 ## Configure backends
 
 `simplersble::config` holds process-wide settings, grouped by backend: `simplebluez` (Linux), `winrt` (Windows), `corebluetooth` (macOS), and `dongl`. Set them at startup, before the first `Backend::get_backends()` or `Adapter::get_adapters()` call; changes made afterwards may not take effect.

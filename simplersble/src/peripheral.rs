@@ -503,7 +503,10 @@ impl Peripheral {
     }
 
     pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
-        BroadcastStream::new(self.inner.lock().unwrap().on_connection_event.subscribe())
+        let inner = self.inner.lock().unwrap();
+        inner.internal.register_connection_callbacks().unwrap();
+
+        BroadcastStream::new(inner.on_connection_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
     }
 }

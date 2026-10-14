@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use futures::{Stream, StreamExt};
 use simplersble::{
-    advanced, config, Adapter, Backend, CharacteristicCapability, ClientEvent, Error, LocalCharacteristic,
-    LocalCharacteristicEvent, LocalPeripheral, Peripheral, ScanEvent, ValueChangedEvent,
+    advanced, config, Adapter, Backend, CharacteristicCapability, ClientEvent, ConnectionEvent, Error,
+    LocalCharacteristic, LocalCharacteristicEvent, LocalPeripheral, Peripheral, ScanEvent, ValueChangedEvent,
 };
 
 // The simulated backend keeps its state for the lifetime of the process, so tests run one at a time.
@@ -207,6 +207,29 @@ async fn local_peripheral_loopback() {
         ClientEvent::Disconnected(client) => assert_eq!(client, address),
         event => panic!("unexpected client event {event:?}"),
     }
+    local.stop().unwrap();
+}
+
+// Dropping another handle for the same adapter or peripheral used to clear the callbacks of this one.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn handles_keep_their_events() {
+    let _serial = SERIAL.lock().await;
+    const SERVICE: &str = "0000a300-0000-1000-8000-00805f9b34fb";
+    const VALUE: &str = "0000a301-0000-1000-8000-00805f9b34fb";
+
+    let adapter = plain_adapter();
+    let (local, _characteristic) = host(&adapter, SERVICE, VALUE);
+    local.start().unwrap();
+
+    drop(plain_adapter());
+    let peer = find_peripheral(&adapter, SERVICE).await;
+
+    let mut events = peer.on_connection_event();
+    drop(adapter.scan_get_results().unwrap());
+    peer.connect().unwrap();
+    assert!(matches!(next_event(&mut events).await, ConnectionEvent::Connected));
+
+    release(&peer);
     local.stop().unwrap();
 }
 

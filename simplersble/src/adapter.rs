@@ -290,12 +290,18 @@ impl Adapter {
     }
 
     pub fn on_scan_event(&self) -> impl Stream<Item = Result<ScanEvent, Error>> {
-        BroadcastStream::new(self.inner.lock().unwrap().on_scan_event.subscribe())
+        let inner = self.inner.lock().unwrap();
+        inner.internal.register_scan_callbacks().unwrap();
+
+        BroadcastStream::new(inner.on_scan_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
     }
 
     pub fn on_power_event(&self) -> impl Stream<Item = Result<PowerEvent, Error>> {
-        BroadcastStream::new(self.inner.lock().unwrap().on_power_event.subscribe())
+        let inner = self.inner.lock().unwrap();
+        inner.internal.register_power_callbacks().unwrap();
+
+        BroadcastStream::new(inner.on_power_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
     }
 }

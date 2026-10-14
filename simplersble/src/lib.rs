@@ -104,19 +104,19 @@ mod ffi {
     extern "Rust" {
         type InnerAdapter;
 
-        pub fn on_callback_scan_start(self: &mut InnerAdapter);
-        pub fn on_callback_scan_stop(self: &mut InnerAdapter);
-        pub fn on_callback_scan_updated(self: &mut InnerAdapter, peripheral: &mut RustyPeripheralWrapper);
-        pub fn on_callback_scan_found(self: &mut InnerAdapter, peripheral: &mut RustyPeripheralWrapper);
-        pub fn on_callback_power_on(self: &mut InnerAdapter);
-        pub fn on_callback_power_off(self: &mut InnerAdapter);
+        pub fn on_callback_scan_start(self: &InnerAdapter);
+        pub fn on_callback_scan_stop(self: &InnerAdapter);
+        pub fn on_callback_scan_updated(self: &InnerAdapter, peripheral: &mut RustyPeripheralWrapper);
+        pub fn on_callback_scan_found(self: &InnerAdapter, peripheral: &mut RustyPeripheralWrapper);
+        pub fn on_callback_power_on(self: &InnerAdapter);
+        pub fn on_callback_power_off(self: &InnerAdapter);
 
         type InnerPeripheral;
 
-        pub fn on_callback_connected(self: &mut InnerPeripheral);
-        pub fn on_callback_disconnected(self: &mut InnerPeripheral);
+        pub fn on_callback_connected(self: &InnerPeripheral);
+        pub fn on_callback_disconnected(self: &InnerPeripheral);
         pub fn on_callback_characteristic_updated(
-            self: &mut InnerPeripheral,
+            self: &InnerPeripheral,
             service: &String,
             Characteristic: &String,
             data: &Vec<u8>,
@@ -254,6 +254,8 @@ mod ffi {
 
         fn link(self: &RustyAdapter, target: Pin<&mut InnerAdapter>) -> Result<()>;
         fn unlink(self: &RustyAdapter) -> Result<()>;
+        fn register_scan_callbacks(self: &RustyAdapter) -> Result<()>;
+        fn register_power_callbacks(self: &RustyAdapter) -> Result<()>;
 
         fn initialized(self: &RustyAdapter) -> Result<bool>;
         fn identifier(self: &RustyAdapter) -> Result<String>;
@@ -284,6 +286,7 @@ mod ffi {
 
         fn link(self: &RustyPeripheral, target: Pin<&mut InnerPeripheral>) -> Result<()>;
         fn unlink(self: &RustyPeripheral) -> Result<()>;
+        fn register_connection_callbacks(self: &RustyPeripheral) -> Result<()>;
 
         fn initialized(self: &RustyPeripheral) -> Result<bool>;
         fn identifier(self: &RustyPeripheral) -> Result<String>;

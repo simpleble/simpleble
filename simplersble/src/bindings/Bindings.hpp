@@ -12,6 +12,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 
 namespace SimpleRsBLE {
 
@@ -97,6 +98,8 @@ class RustyAdapter {
 
     void link(SimpleRsBLE::InnerAdapter& target) const;
     void unlink() const;
+    void register_scan_callbacks() const;
+    void register_power_callbacks() const;
 
     bool initialized() const;
     rust::String identifier() const;
@@ -126,8 +129,14 @@ class RustyAdapter {
     // This might require us to store pointers to pointers, so it's
     // important to be careful when handling these.
     std::unique_ptr<SimpleBLE::Adapter> _internal;
-    mutable SimpleRsBLE::InnerAdapter* _adapter = nullptr;
-    mutable std::mutex _adapter_mutex;
+
+    // NOTE: Callbacks belong to the adapter and can outlive this object,
+    // so they reach the InnerAdapter(Rust) through this shared back-pointer.
+    struct CallbackTarget {
+        std::shared_mutex mutex;
+        SimpleRsBLE::InnerAdapter const* adapter = nullptr;
+    };
+    std::shared_ptr<CallbackTarget> _callback_target = std::make_shared<CallbackTarget>();
 };
 
 class RustyPeripheral {
@@ -139,6 +148,7 @@ class RustyPeripheral {
 
     void link(SimpleRsBLE::InnerPeripheral& target) const;
     void unlink() const;
+    void register_connection_callbacks() const;
 
     bool initialized() const;
     rust::String identifier() const;
@@ -183,20 +193,14 @@ class RustyPeripheral {
     // This might require us to store pointers to pointers, so it's
     // important to be careful when handling these.
     std::unique_ptr<SimpleBLE::Peripheral> _internal;
-    mutable SimpleRsBLE::InnerPeripheral* _peripheral = nullptr;
 
-    // NOTE: Notify and indicate callbacks cannot be cleared in unlink() and can outlive this object,
-    // so they reach the InnerPeripheral(Rust) through this shared back-pointer instead.
-    struct ValueCallbackTarget {
-        std::mutex mutex;
-        SimpleRsBLE::InnerPeripheral* peripheral = nullptr;
+    // NOTE: Callbacks belong to the peripheral and can outlive this object,
+    // so they reach the InnerPeripheral(Rust) through this shared back-pointer.
+    struct CallbackTarget {
+        std::shared_mutex mutex;
+        SimpleRsBLE::InnerPeripheral const* peripheral = nullptr;
     };
-    std::shared_ptr<ValueCallbackTarget> _value_callback_target = std::make_shared<ValueCallbackTarget>();
-
-    // Pairing callbacks registered by this wrapper, so that unlink() knows which ones to clear.
-    mutable bool _dongl_passkey_request = false;
-    mutable bool _dongl_passkey_display = false;
-    mutable bool _dongl_numeric_comparison = false;
+    std::shared_ptr<CallbackTarget> _callback_target = std::make_shared<CallbackTarget>();
 };
 
 class RustyService {

@@ -178,63 +178,71 @@ void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target) const {
     // that Rust is keen on moving stuff around) the object is created as a
     // Pin<Box<T>>
 
-    // `_adapter` is a pointer to a pointer, allowing us to manipulate the contents within const functions.
-    std::lock_guard<std::mutex> lock(_adapter_mutex);
-    _adapter = &target;  // THIS LINE IS SUPER IMPORTANT
-
-    _internal->set_callback_on_scan_start([this]() {
-        if (this->_adapter == nullptr) return;
-
-        this->_adapter->on_callback_scan_start();
-    });
-
-    _internal->set_callback_on_scan_stop([this]() {
-        if (this->_adapter == nullptr) return;
-
-        this->_adapter->on_callback_scan_stop();
-    });
-
-    _internal->set_callback_on_scan_found([this](SimpleBLE::Peripheral peripheral) {
-        if (this->_adapter == nullptr) return;
-
-        Bindings::RustyPeripheralWrapper wrapper;
-        wrapper.internal = std::make_unique<Bindings::RustyPeripheral>(peripheral);
-        this->_adapter->on_callback_scan_found(wrapper);
-    });
-
-    _internal->set_callback_on_scan_updated([this](SimpleBLE::Peripheral peripheral) {
-        if (this->_adapter == nullptr) return;
-
-        Bindings::RustyPeripheralWrapper wrapper;
-        wrapper.internal = std::make_unique<Bindings::RustyPeripheral>(peripheral);
-        this->_adapter->on_callback_scan_updated(wrapper);
-    });
-
-    _internal->set_callback_on_power_on([this]() {
-        if (this->_adapter == nullptr) return;
-
-        this->_adapter->on_callback_power_on();
-    });
-
-    _internal->set_callback_on_power_off([this]() {
-        if (this->_adapter == nullptr) return;
-
-        this->_adapter->on_callback_power_off();
-    });
+    // NOTE: Callbacks are only registered once the InnerAdapter(Rust) subscribes to its events.
+    // They belong to the adapter, so registering them here would take them from every other handle.
+    std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
+    _callback_target->adapter = &target;  // THIS LINE IS SUPER IMPORTANT
 }
 
 void Bindings::RustyAdapter::unlink() const {
-    // Clear all callbacks
-    _internal->set_callback_on_scan_start(nullptr);
-    _internal->set_callback_on_scan_stop(nullptr);
-    _internal->set_callback_on_scan_found(nullptr);
-    _internal->set_callback_on_scan_updated(nullptr);
-    _internal->set_callback_on_power_on(nullptr);
-    _internal->set_callback_on_power_off(nullptr);
+    // NOTE: Callbacks stay registered, as they might belong to another handle by now.
+    // Clearing the back-pointer stops ours for good, once any running one finishes.
+    std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
+    _callback_target->adapter = nullptr;
+}
 
-    // `_adapter` is a pointer to a pointer.
-    std::lock_guard<std::mutex> lock(_adapter_mutex);
-    _adapter = nullptr;
+void Bindings::RustyAdapter::register_scan_callbacks() const {
+    auto target = _callback_target;
+
+    _internal->set_callback_on_scan_start([target]() {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->adapter == nullptr) return;
+
+        target->adapter->on_callback_scan_start();
+    });
+
+    _internal->set_callback_on_scan_stop([target]() {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->adapter == nullptr) return;
+
+        target->adapter->on_callback_scan_stop();
+    });
+
+    _internal->set_callback_on_scan_found([target](SimpleBLE::Peripheral peripheral) {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->adapter == nullptr) return;
+
+        Bindings::RustyPeripheralWrapper wrapper;
+        wrapper.internal = std::make_unique<Bindings::RustyPeripheral>(peripheral);
+        target->adapter->on_callback_scan_found(wrapper);
+    });
+
+    _internal->set_callback_on_scan_updated([target](SimpleBLE::Peripheral peripheral) {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->adapter == nullptr) return;
+
+        Bindings::RustyPeripheralWrapper wrapper;
+        wrapper.internal = std::make_unique<Bindings::RustyPeripheral>(peripheral);
+        target->adapter->on_callback_scan_updated(wrapper);
+    });
+}
+
+void Bindings::RustyAdapter::register_power_callbacks() const {
+    auto target = _callback_target;
+
+    _internal->set_callback_on_power_on([target]() {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->adapter == nullptr) return;
+
+        target->adapter->on_callback_power_on();
+    });
+
+    _internal->set_callback_on_power_off([target]() {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->adapter == nullptr) return;
+
+        target->adapter->on_callback_power_off();
+    });
 }
 
 bool Bindings::RustyAdapter::initialized() const { return _internal->initialized(); }
@@ -311,49 +319,35 @@ void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target) const
     // that Rust is keen on moving stuff around) the object is created as a
     // Pin<Box<T>>
 
-    // `_peripheral` is a pointer to a pointer, allowing us to manipulate the contents within const functions.
-    _peripheral = &target;  // THIS LINE IS SUPER IMPORTANT
-
-    {
-        std::lock_guard<std::mutex> lock(_value_callback_target->mutex);
-        _value_callback_target->peripheral = &target;
-    }
-
-    _internal->set_callback_on_connected([this]() {
-        if (this->_peripheral == nullptr) return;
-
-        this->_peripheral->on_callback_connected();
-    });
-
-    _internal->set_callback_on_disconnected([this]() {
-        if (this->_peripheral == nullptr) return;
-
-        this->_peripheral->on_callback_disconnected();
-    });
+    // NOTE: Callbacks are only registered once the InnerPeripheral(Rust) subscribes to its events.
+    // They belong to the peripheral, so registering them here would take them from every other handle.
+    std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
+    _callback_target->peripheral = &target;  // THIS LINE IS SUPER IMPORTANT
 }
 
 void Bindings::RustyPeripheral::unlink() const {
-    // Clear all callbacks
-    _internal->set_callback_on_connected(nullptr);
-    _internal->set_callback_on_disconnected(nullptr);
+    // NOTE: Callbacks stay registered, as they might belong to another handle by now.
+    // Clearing the back-pointer stops ours for good, once any running one finishes.
+    std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
+    _callback_target->peripheral = nullptr;
+}
 
-    // Pairing callbacks only exist on Dongl peripherals, so we only clear the ones registered here.
-    if (_dongl_passkey_request) {
-        dongl_set_passkey_request_callback(false);
-    }
-    if (_dongl_passkey_display) {
-        dongl_set_passkey_display_callback(false);
-    }
-    if (_dongl_numeric_comparison) {
-        dongl_set_numeric_comparison_callback(false);
-    }
+void Bindings::RustyPeripheral::register_connection_callbacks() const {
+    auto target = _callback_target;
 
-    // `_peripheral` is a pointer to a pointer.
-    _peripheral = nullptr;
+    _internal->set_callback_on_connected([target]() {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->peripheral == nullptr) return;
 
-    // NOTE: Notify and indicate callbacks stay registered, so clearing their back-pointer stops them for good.
-    std::lock_guard<std::mutex> lock(_value_callback_target->mutex);
-    _value_callback_target->peripheral = nullptr;
+        target->peripheral->on_callback_connected();
+    });
+
+    _internal->set_callback_on_disconnected([target]() {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->peripheral == nullptr) return;
+
+        target->peripheral->on_callback_disconnected();
+    });
 }
 
 bool Bindings::RustyPeripheral::initialized() const { return _internal->initialized(); }
@@ -446,12 +440,9 @@ void Bindings::RustyPeripheral::notify(rust::String const& service_rs, rust::Str
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
 
-    auto target = _value_callback_target;
+    auto target = _callback_target;
     _internal->notify(service, characteristic, [target, service_rs, characteristic_rs](std::string data) {
-        // NOTE: In this two cases we need to lock the mutex to ensure thread safety, as
-        // the callback cannot be cleared in the unlink() function. The callback keeps its
-        // own reference to the target, as it can outlive this object.
-        std::lock_guard<std::mutex> lock(target->mutex);
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
         if (target->peripheral == nullptr) return;
 
         rust::Vec<uint8_t> data_vec;
@@ -467,12 +458,9 @@ void Bindings::RustyPeripheral::indicate(rust::String const& service_rs, rust::S
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
 
-    auto target = _value_callback_target;
+    auto target = _callback_target;
     _internal->indicate(service, characteristic, [target, service_rs, characteristic_rs](std::string data) {
-        // NOTE: In this two cases we need to lock the mutex to ensure thread safety, as
-        // the callback cannot be cleared in the unlink() function. The callback keeps its
-        // own reference to the target, as it can outlive this object.
-        std::lock_guard<std::mutex> lock(target->mutex);
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
         if (target->peripheral == nullptr) return;
 
         rust::Vec<uint8_t> data_vec;
@@ -513,57 +501,56 @@ void Bindings::RustyPeripheral::write_descriptor(rust::String const& service, ru
 }
 
 // NOTE: The pairing callbacks run on a Dongl worker thread, possibly while connect() is still
-// in progress. Clearing a callback waits for it to finish, which is why unlink() can safely
-// release the back-pointer afterwards.
+// in progress. They hold the target lock while waiting for the user, so unlink() waits for them.
 
 void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(bool enabled) const {
     if (!enabled) {
         SimpleBLE::Advanced::Dongl::set_passkey_request_callback(*_internal, nullptr);
-        _dongl_passkey_request = false;
         return;
     }
 
-    SimpleBLE::Advanced::Dongl::set_passkey_request_callback(*_internal, [this]() -> std::optional<std::string> {
-        if (this->_peripheral == nullptr) return std::nullopt;
+    auto target = _callback_target;
+    SimpleBLE::Advanced::Dongl::set_passkey_request_callback(*_internal, [target]() -> std::optional<std::string> {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->peripheral == nullptr) return std::nullopt;
 
         rust::String passkey;
-        if (!this->_peripheral->on_callback_passkey_request(passkey)) return std::nullopt;
+        if (!target->peripheral->on_callback_passkey_request(passkey)) return std::nullopt;
 
         return std::string(passkey);
     });
-    _dongl_passkey_request = true;
 }
 
 void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(bool enabled) const {
     if (!enabled) {
         SimpleBLE::Advanced::Dongl::set_passkey_display_callback(*_internal, nullptr);
-        _dongl_passkey_display = false;
         return;
     }
 
-    SimpleBLE::Advanced::Dongl::set_passkey_display_callback(*_internal, [this](const std::string& passkey) {
-        if (this->_peripheral == nullptr) return;
+    auto target = _callback_target;
+    SimpleBLE::Advanced::Dongl::set_passkey_display_callback(*_internal, [target](const std::string& passkey) {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->peripheral == nullptr) return;
 
-        this->_peripheral->on_callback_passkey_display(
+        target->peripheral->on_callback_passkey_display(
             rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(passkey.data()), passkey.size()));
     });
-    _dongl_passkey_display = true;
 }
 
 void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(bool enabled) const {
     if (!enabled) {
         SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(*_internal, nullptr);
-        _dongl_numeric_comparison = false;
         return;
     }
 
-    SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(*_internal, [this](const std::string& passkey) {
-        if (this->_peripheral == nullptr) return false;
+    auto target = _callback_target;
+    SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(*_internal, [target](const std::string& passkey) {
+        std::shared_lock<std::shared_mutex> lock(target->mutex);
+        if (target->peripheral == nullptr) return false;
 
-        return this->_peripheral->on_callback_numeric_comparison(
+        return target->peripheral->on_callback_numeric_comparison(
             rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(passkey.data()), passkey.size()));
     });
-    _dongl_numeric_comparison = true;
 }
 
 // Service Bindings

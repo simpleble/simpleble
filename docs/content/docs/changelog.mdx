@@ -66,6 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimplePyBLE) Fixed `aio` programs crashing at exit on macOS when Bluetooth access isn't granted.
 - (SimpleRsBLE) Fixed linking on macOS and in Windows debug builds.
 - (SimpleRsBLE) Fixed a use-after-free when a notification arrived after its peripheral was dropped.
+- (SimpleRsBLE) Fixed creating or dropping an `Adapter` or `Peripheral` handle silencing the events of other handles for the same adapter or device.
 
 **Removed**
 
