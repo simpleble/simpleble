@@ -98,10 +98,15 @@ void AdapterLinux::scan_start() {
         seen_peripherals_.clear();
     }
 
+    // NOTE: Without a discovery filter, BlueZ drops LE devices that don't advertise as discoverable, like most beacons.
+    // Asking for duplicate data is enough to make it a filter, and it makes BlueZ replace the advertising data of
+    // each report instead of accumulating it. The transport is left alone, as BlueZ shares it with other scanners.
+    SimpleBluez::Adapter::DiscoveryFilter filter;
+    filter.DuplicateData = true;
+    adapter_->discovery_filter(filter);
+
     // Start scanning and notify the user.
     adapter_->discovery_start();
-
-    // TODO: Does a discovery filter need to be set?
 
     SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
     is_scanning_ = true;
