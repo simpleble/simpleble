@@ -207,8 +207,12 @@ SharedPtrVector<ServiceBase> PeripheralDongl::available_services() {
 
 SharedPtrVector<ServiceBase> PeripheralDongl::advertised_services() {
     std::lock_guard<std::mutex> lock(_advertising_mutex);
+    // The advertisement wins over the scan response, as insert() keeps existing keys.
+    auto service_data = _advertisement.service_data;
+    service_data.insert(_scan_response.service_data.begin(), _scan_response.service_data.end());
+
     SharedPtrVector<ServiceBase> service_list;
-    for (auto& [service_uuid, data] : _service_data) {
+    for (auto& [service_uuid, data] : service_data) {
         service_list.push_back(std::make_shared<ServiceBase>(service_uuid, data));
     }
 
@@ -217,10 +221,8 @@ SharedPtrVector<ServiceBase> PeripheralDongl::advertised_services() {
 
 std::map<uint16_t, ByteArray> PeripheralDongl::manufacturer_data() {
     std::lock_guard<std::mutex> lock(_advertising_mutex);
-    auto data = _scan_response.manufacturer_data;
-    for (auto& [company_id, bytes] : _advertisement.manufacturer_data) {
-        data[company_id] = bytes;
-    }
+    auto data = _advertisement.manufacturer_data;
+    data.insert(_scan_response.manufacturer_data.begin(), _scan_response.manufacturer_data.end());
     return data;
 }
 
@@ -395,10 +397,7 @@ void PeripheralDongl::update_advertising_data(Dongl::advertising_data_t advertis
     auto& packet = advertising_data.scan_response ? _scan_response : _advertisement;
     packet.tx_power = advertising_data.tx_power;
     packet.manufacturer_data = std::move(advertising_data.manufacturer_data);
-
-    for (auto& [uuid, data] : advertising_data.service_data) {
-        _service_data[uuid] = std::move(data);
-    }
+    packet.service_data = std::move(advertising_data.service_data);
 }
 
 void PeripheralDongl::_resolve_missing_uuids() {

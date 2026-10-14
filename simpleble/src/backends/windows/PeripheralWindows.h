@@ -101,7 +101,7 @@ class PeripheralWindows : public PeripheralBase {
     int16_t rssi_ = INT16_MIN;
     int16_t tx_power_ = INT16_MIN;
     uint16_t mtu_;
-    bool connectable_;
+    bool connectable_ = false;
     winrt::event_token connection_status_changed_token_;
 
     // Internal state for deferred (non-blocking) disconnect mode
@@ -118,8 +118,15 @@ class PeripheralWindows : public PeripheralBase {
     kvn::safe_callback<void()> callback_on_disconnected_;
     std::atomic_bool callback_on_disconnected_pending_{false};
 
-    std::map<uint16_t, SimpleBLE::ByteArray> manufacturer_data_;
-    std::map<BluetoothUUID, SimpleBLE::ByteArray> service_data_;
+    // Fields of the latest advertisement and the latest scan response, so a field that stops being advertised
+    // disappears. They are written by the scanner thread and read by user threads.
+    struct PacketFields {
+        std::map<uint16_t, SimpleBLE::ByteArray> manufacturer_data;
+        std::map<BluetoothUUID, SimpleBLE::ByteArray> service_data;
+    };
+    std::mutex advertising_mutex_;
+    PacketFields advertisement_;
+    PacketFields scan_response_;
 
     bool _attempt_connect();
 

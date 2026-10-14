@@ -141,13 +141,13 @@ class PeripheralDongl : public PeripheralBase {
     // Advertising fields are written by the serial reader thread during scans and read by user threads.
     mutable std::mutex _advertising_mutex;
     bool _connectable;
-    std::map<BluetoothUUID, ByteArray> _service_data;
 
     // Fields of the latest advertisement and the latest scan response. Like the OS backends, the peripheral reports
-    // what is currently advertised, so a field that stops being advertised disappears. Service data accumulates.
+    // what is currently advertised, so a field that stops being advertised disappears.
     struct PacketFields {
         int16_t tx_power = std::numeric_limits<int16_t>::min();
         std::map<uint16_t, ByteArray> manufacturer_data;
+        std::map<BluetoothUUID, ByteArray> service_data;
     };
     PacketFields _advertisement;
     PacketFields _scan_response;

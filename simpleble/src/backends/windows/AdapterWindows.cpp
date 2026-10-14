@@ -225,11 +225,12 @@ void AdapterWindows::_scan_received_callback(advertising_data_t data) {
         // If the incoming peripheral has never been seen before, create and save a reference to it.
         auto base_peripheral = std::make_shared<PeripheralWindows>(data);
         this->peripherals_.insert(std::make_pair(data.mac_address, base_peripheral));
+    } else {
+        // Update the received advertising data.
+        this->peripherals_.at(data.mac_address)->update_advertising_data(data);
     }
 
-    // Update the received advertising data.
     auto base_peripheral = this->peripherals_.at(data.mac_address);
-    base_peripheral->update_advertising_data(data);
 
     // Convert the base object into an external-facing Peripheral object
     Peripheral peripheral = Factory::build(base_peripheral);
