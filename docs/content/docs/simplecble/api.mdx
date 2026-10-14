@@ -133,6 +133,27 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
+  signature={"simpleble_backend_t simpleble_backend_get_native(simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the backend of the operating system's Bluetooth stack."}
+  detailed={"Returns: An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle()."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_backend_t simpleble_backend_get_dongl(simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the Dongl backend."}
+  detailed={"This works whether or not the Dongl backend is part of the backend list. Fails with SIMPLEBLE_ERROR_OPERATION_NOT_SUPPORTED if this build of SimpleBLE doesn't include it. Returns: An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle()."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_backend_t simpleble_backend_get_simulator(simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the Simulator backend."}
+  detailed={"It only has adapters while a simulation environment is active. Fails with SIMPLEBLE_ERROR_OPERATION_NOT_SUPPORTED if this build of SimpleBLE doesn't include it. Returns: An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle()."}
+  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
   signature={"void simpleble_backend_release_handle(simpleble_backend_t handle)"}
   brief={"Releases an owned backend handle."}
   parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Handle to release, or NULL for no action."}]}

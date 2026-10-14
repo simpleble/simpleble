@@ -43,12 +43,7 @@ From SimpleBLE 1.2.1, the Dongl backend is on by default, so plugged-in Dongls a
 #include <simpleble/Backend.h>
 #include <simpleble/SimpleBLE.h>
 
-std::vector<SimpleBLE::Adapter> dongls;
-for (auto& backend : SimpleBLE::Backend::get_backends()) {
-    if (backend.identifier() == "Dongl") {
-        dongls = backend.adapters();
-    }
-}
+std::vector<SimpleBLE::Adapter> dongls = SimpleBLE::Backend::get_dongl().adapters();
 if (dongls.empty()) {
     std::cerr << "No Dongl found." << std::endl;
     return EXIT_FAILURE;
@@ -64,18 +59,11 @@ std::cout << adapter.identifier() << " [" << adapter.address() << "]" << std::en
 ```c
 simpleble_error_t* error = NULL;
 simpleble_adapter_t adapter = NULL;
-size_t backend_count = simpleble_backend_get_count(&error);
-for (size_t i = 0; i < backend_count && !error && !adapter; i++) {
-    simpleble_backend_t backend = simpleble_backend_get_handle(i, &error);
-    if (error) break;
-
-    char* identifier = simpleble_backend_identifier(backend, &error);
-    if (identifier && strcmp(identifier, "Dongl") == 0 && simpleble_backend_get_adapters_count(backend, &error) > 0) {
-        adapter = simpleble_backend_get_adapters_handle(backend, 0, &error);
-    }
-    simpleble_free(identifier);
-    simpleble_backend_release_handle(backend);
+simpleble_backend_t dongl = simpleble_backend_get_dongl(&error);
+if (dongl && simpleble_backend_get_adapters_count(dongl, &error) > 0) {
+    adapter = simpleble_backend_get_adapters_handle(dongl, 0, &error);
 }
+simpleble_backend_release_handle(dongl);
 if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
 simpleble_error_release(&error);
 
@@ -229,12 +217,7 @@ int main() {
     const std::string characteristic = "00002a26-0000-1000-8000-00805f9b34fb";  // Firmware Revision String
     const std::vector<std::string> targets = {"C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"};
 
-    std::vector<SimpleBLE::Adapter> dongls;
-    for (auto& backend : SimpleBLE::Backend::get_backends()) {
-        if (backend.identifier() == "Dongl") {
-            dongls = backend.adapters();
-        }
-    }
+    std::vector<SimpleBLE::Adapter> dongls = SimpleBLE::Backend::get_dongl().adapters();
     if (dongls.size() < targets.size()) {
         std::cerr << "Found " << dongls.size() << " Dongls, need " << targets.size() << "." << std::endl;
         return EXIT_FAILURE;
@@ -332,20 +315,13 @@ int main(void) {
     simpleble_error_t* error = NULL;
     simpleble_adapter_t dongls[TARGET_COUNT] = {NULL};
     size_t dongl_count = 0;
-    size_t backend_count = simpleble_backend_get_count(&error);
-    for (size_t i = 0; i < backend_count && !error; i++) {
-        simpleble_backend_t backend = simpleble_backend_get_handle(i, &error);
-        if (error) break;
-
-        char* identifier = simpleble_backend_identifier(backend, &error);
-        if (identifier && strcmp(identifier, "Dongl") == 0) {
-            size_t count = simpleble_backend_get_adapters_count(backend, &error);
-            for (size_t j = 0; j < count && dongl_count < TARGET_COUNT && !error; j++) {
-                dongls[dongl_count] = simpleble_backend_get_adapters_handle(backend, j, &error);
-                if (!error) dongl_count++;
-            }
+    simpleble_backend_t backend = simpleble_backend_get_dongl(&error);
+    if (backend) {
+        size_t count = simpleble_backend_get_adapters_count(backend, &error);
+        for (size_t i = 0; i < count && dongl_count < TARGET_COUNT && !error; i++) {
+            dongls[dongl_count] = simpleble_backend_get_adapters_handle(backend, i, &error);
+            if (!error) dongl_count++;
         }
-        simpleble_free(identifier);
         simpleble_backend_release_handle(backend);
     }
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));

@@ -41,6 +41,32 @@ class SIMPLEBLE_EXPORT Backend {
      */
     static std::vector<Backend> get_backends();
 
+    /**
+     * Get the backend of the operating system's Bluetooth stack.
+     *
+     * This is SimpleBluez on Linux, WinRT on Windows, CoreBluetooth on macOS and iOS, and Android on Android.
+     */
+    static Backend get_native();
+
+    /**
+     * Get the Dongl backend.
+     *
+     * NOTE: This works whether or not Config::Dongl::use_dongl_backend includes the Dongl backend in
+     * get_backends().
+     *
+     * @throws Exception::OperationNotSupported if this build of SimpleBLE doesn't include the Dongl backend.
+     */
+    static Backend get_dongl();
+
+    /**
+     * Get the Simulator backend.
+     *
+     * NOTE: It only has adapters while a Simulation::Environment is active.
+     *
+     * @throws Exception::OperationNotSupported if this build of SimpleBLE doesn't include the Simulator backend.
+     */
+    static Backend get_simulator();
+
   protected:
     BackendBase* operator->();
     const BackendBase* operator->() const;

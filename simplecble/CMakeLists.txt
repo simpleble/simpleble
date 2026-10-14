@@ -137,6 +137,7 @@ if(SIMPLECBLE_TEST)
     find_package(GTest REQUIRED)
 
     add_executable(simplecble_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_backend.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_config.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_logging.cpp

@@ -222,6 +222,12 @@ TEST_F(Plain, HardwareConfigurationCannotEnableAnotherBackend) {
     EXPECT_EQ(backends.front().identifier(), "Plain");
 }
 
+TEST_F(Plain, NamedBackends) {
+    EXPECT_EQ(Backend::get_native().identifier(), "Plain");
+    EXPECT_THROW(Backend::get_dongl(), Exception::OperationNotSupported);
+    EXPECT_THROW(Backend::get_simulator(), Exception::OperationNotSupported);
+}
+
 TEST_F(Plain, ExplicitSimulationUsesTheSameBackend) {
     auto backend = Backend::get_backends().front();
     {

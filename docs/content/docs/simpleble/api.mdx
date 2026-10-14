@@ -50,6 +50,21 @@ The following notes provide an overview of the architecture of some of the highe
   detailed="Get all available backends. This will cause backends to be instantiated/initialized."
 />
 
+<ApiMethod
+  signature="static Backend get_native()"
+  detailed="Get the backend of the operating system's Bluetooth stack. This is SimpleBluez on Linux, WinRT on Windows, CoreBluetooth on macOS and iOS, and Android on Android."
+/>
+
+<ApiMethod
+  signature="static Backend get_dongl()"
+  detailed="Get the Dongl backend. NOTE: This works whether or not `Config::Dongl::use_dongl_backend` includes the Dongl backend in `get_backends()`. Throws `Exception::OperationNotSupported` if this build of SimpleBLE doesn't include the Dongl backend."
+/>
+
+<ApiMethod
+  signature="static Backend get_simulator()"
+  detailed="Get the Simulator backend. NOTE: It only has adapters while a `Simulation::Environment` is active. Throws `Exception::OperationNotSupported` if this build of SimpleBLE doesn't include the Simulator backend."
+/>
+
 </ApiClass>
 
 ## SimpleBLE::Adapter [#simpleble-adapter]

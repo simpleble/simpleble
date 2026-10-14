@@ -30,6 +30,39 @@ SIMPLECBLE_EXPORT size_t simpleble_backend_get_count(simpleble_error_t** out_err
 SIMPLECBLE_EXPORT simpleble_backend_t simpleble_backend_get_handle(size_t index, simpleble_error_t** out_error);
 
 /**
+ * @brief Obtains an owned handle for the backend of the operating system's Bluetooth stack.
+ *
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle().
+ * @see simpleble_error_t
+ */
+SIMPLECBLE_EXPORT simpleble_backend_t simpleble_backend_get_native(simpleble_error_t** out_error);
+
+/**
+ * @brief Obtains an owned handle for the Dongl backend.
+ *
+ * This works whether or not the Dongl backend is part of the backend list. Fails with
+ * SIMPLEBLE_ERROR_OPERATION_NOT_SUPPORTED if this build of SimpleBLE doesn't include it.
+ *
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle().
+ * @see simpleble_error_t
+ */
+SIMPLECBLE_EXPORT simpleble_backend_t simpleble_backend_get_dongl(simpleble_error_t** out_error);
+
+/**
+ * @brief Obtains an owned handle for the Simulator backend.
+ *
+ * It only has adapters while a simulation environment is active. Fails with
+ * SIMPLEBLE_ERROR_OPERATION_NOT_SUPPORTED if this build of SimpleBLE doesn't include it.
+ *
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle().
+ * @see simpleble_error_t
+ */
+SIMPLECBLE_EXPORT simpleble_backend_t simpleble_backend_get_simulator(simpleble_error_t** out_error);
+
+/**
  * @brief Releases an owned backend handle.
  *
  * @param[in] handle Handle to release, or NULL for no action.

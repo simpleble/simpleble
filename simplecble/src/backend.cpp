@@ -50,6 +50,35 @@ simpleble_backend_t simpleble_backend_get_handle(size_t index, simpleble_error_t
     return nullptr;
 }
 
+// Wraps one of the named backends in an owned handle.
+static simpleble_backend_t named_backend_handle(SimpleBLE::Backend (*get_backend)(), simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    try {
+        return (simpleble_backend_t) new SimpleBLE::Backend(get_backend());
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+
+    return nullptr;
+}
+
+simpleble_backend_t simpleble_backend_get_native(simpleble_error_t** out_error) {
+    return named_backend_handle(SimpleBLE::Backend::get_native, out_error);
+}
+
+simpleble_backend_t simpleble_backend_get_dongl(simpleble_error_t** out_error) {
+    return named_backend_handle(SimpleBLE::Backend::get_dongl, out_error);
+}
+
+simpleble_backend_t simpleble_backend_get_simulator(simpleble_error_t** out_error) {
+    return named_backend_handle(SimpleBLE::Backend::get_simulator, out_error);
+}
+
 void simpleble_backend_release_handle(simpleble_backend_t handle) {
     if (handle == nullptr) {
         return;

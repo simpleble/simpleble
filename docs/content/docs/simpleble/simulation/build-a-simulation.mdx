@@ -46,17 +46,13 @@ int main() {
     environment.activate();
 
     // From here on, this is ordinary SimpleBLE code.
-    for (auto& backend : SimpleBLE::Backend::get_backends()) {
-        if (backend.identifier() != "Simulator") continue;
-
-        auto adapter = backend.adapters().at(0);
-        adapter.scan_for(200);
-        for (auto& peripheral : adapter.scan_get_results()) {
-            peripheral.connect();
-            auto level = peripheral.read(BATTERY_SERVICE, BATTERY_LEVEL);
-            std::cout << peripheral.identifier() << ": " << int(level[0]) << "%" << std::endl;
-            peripheral.disconnect();
-        }
+    auto adapter = SimpleBLE::Backend::get_simulator().adapters().at(0);
+    adapter.scan_for(200);
+    for (auto& peripheral : adapter.scan_get_results()) {
+        peripheral.connect();
+        auto level = peripheral.read(BATTERY_SERVICE, BATTERY_LEVEL);
+        std::cout << peripheral.identifier() << ": " << int(level[0]) << "%" << std::endl;
+        peripheral.disconnect();
     }
     return 0;
 }
