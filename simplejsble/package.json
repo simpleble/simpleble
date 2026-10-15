@@ -1,0 +1,41 @@
+{
+  "name": "simplejsble",
+  "version": "0.0.0",
+  "description": "SimpleBLE for Node.js and Electron: a cross-platform Bluetooth Low Energy library",
+  "license": "BUSL-1.1",
+  "homepage": "https://simpleble.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simpleble/simpleble.git",
+    "directory": "simplejsble"
+  },
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22"
+  },
+  "binary": {
+    "napi_versions": [
+      8
+    ]
+  },
+  "files": [
+    "dist",
+    "prebuilds",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:plain": "node scripts/build.mjs --plain",
+    "build:ts": "tsc -p tsconfig.json",
+    "test": "node --test --test-concurrency=1 --test-reporter=spec \"test/*.test.mjs\"",
+    "test:types": "tsc -p test/types"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "cmake-js": "^8.0.0",
+    "node-addon-api": "^8.9.2",
+    "typescript": "^5.9.0"
+  }
+}

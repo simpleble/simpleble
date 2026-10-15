@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": [
+      "ES2022"
+    ],
+    "types": [
+      "node"
+    ],
+    "rootDir": "lib",
+    "outDir": "dist",
+    "declaration": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": false,
+    "stripInternal": true
+  },
+  "include": [
+    "lib"
+  ]
+}
