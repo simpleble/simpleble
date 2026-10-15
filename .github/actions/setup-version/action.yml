@@ -37,7 +37,10 @@ runs:
         rm Cargo.toml.bak
         sed -i.bak 's/^version = .*/version = "'"$version_str"'"/' simpleaible/pyproject.toml
         rm simpleaible/pyproject.toml.bak
+        sed -i.bak 's/^  "version": ".*",$/  "version": "'"$version_str"'",/' simplejsble/package.json
+        rm simplejsble/package.json.bak
         echo "Updated VERSION file to: $version_str"
         grep '^version = ' Cargo.toml
         grep '^version = ' simpleaible/pyproject.toml
+        grep '^  "version": ' simplejsble/package.json
         echo "VERSION=$version_str" >> $GITHUB_ENV

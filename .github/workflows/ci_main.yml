@@ -129,6 +129,10 @@ jobs:
     needs: [simplecble]
     uses: ./.github/workflows/ci_simplegoble.yml
 
+  simplejsble:
+    needs: [smoketest]
+    uses: ./.github/workflows/ci_simplejsble.yml
+
   linux-internals:
     needs: [smoketest, libraries]
     if: ${{ needs.libraries.outputs.values != '[]' && needs.libraries.outputs.values != '' }}
@@ -137,7 +141,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     permissions:
       contents: write
@@ -289,6 +293,40 @@ jobs:
             git tag "$tag"
             git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
           fi
+
+  publish-simplejsble:
+    needs: [publish-release]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # npm trusted publishing needs npm 11.5.1 or later.
+      - name: Update npm
+        run: npm install -g npm@^11.5.1
+
+      - name: Download SimpleJSBLE package
+        uses: actions/download-artifact@v4
+        with:
+          name: simplejsble-npm
+          path: package
+
+      - name: Publish to npm
+        run: |
+          package=$(ls package/simplejsble-*.tgz)
+          version=$(tar -xOzf "$package" package/package.json | jq -r .version)
+          if [[ -n "$(npm view "simplejsble@$version" version 2>/dev/null)" ]]; then
+            echo "simplejsble@$version is already published."
+            exit 0
+          fi
+          # Only releases move the latest tag; main builds are development versions.
+          if [[ "$GITHUB_EVENT_NAME" == "release" ]]; then tag=latest; else tag=dev; fi
+          npm publish "$package" --tag "$tag" --access public
 
   publish-simpleaible:
     needs: [publish-release]

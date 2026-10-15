@@ -1,0 +1,133 @@
+name: Build SimpleJSBLE
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.config.target }})
+    runs-on: ${{ matrix.config.runner-os }}
+    container: ${{ matrix.config.container-image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          # Linux builds run in manylinux containers, so the addon only needs glibc 2.28.
+          - { runner-os: ubuntu-22.04, target: linux-x64, container-image: 'quay.io/pypa/manylinux_2_28_x86_64' }
+          - { runner-os: ubuntu-22.04-arm, target: linux-arm64, container-image: 'quay.io/pypa/manylinux_2_28_aarch64' }
+          - { runner-os: macos-15-intel, target: darwin-x64 }
+          - { runner-os: macos-15, target: darwin-arm64 }
+          - { runner-os: windows-2022, target: win32-x64 }
+          - { runner-os: windows-11-arm, target: win32-arm64 }
+    defaults:
+      run:
+        shell: bash
+        working-directory: simplejsble
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: dnf install -y dbus-devel
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install build tools
+        run: npm ci --no-audit --no-fund
+
+      - name: Test the binding against PLAIN
+        run: |
+          npm run build:plain
+          npm test
+          npm run test:types
+
+      - name: Build the addon
+        run: npm run build
+
+      - name: Check the addon
+        run: npm run check:prebuild
+
+      # Each target's file gets its own name, as the release step collects them all.
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifact
+          cp "prebuilds/${{ matrix.config.target }}/simplejsble.node" "artifact/simplejsble-${{ matrix.config.target }}.node"
+
+      - name: Upload addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: simplejsble-prebuild-${{ matrix.config.target }}
+          path: simplejsble/artifact/simplejsble-${{ matrix.config.target }}.node
+          if-no-files-found: error
+
+  package:
+    needs: build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: simplejsble
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install build tools
+        run: npm ci --no-audit --no-fund
+
+      - name: Download addons
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simplejsble-prebuild-*
+          path: simplejsble/artifact
+          merge-multiple: true
+
+      - name: Pack
+        run: |
+          for target in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-arm64 win32-x64; do
+            mkdir -p "prebuilds/$target"
+            cp "artifact/simplejsble-$target.node" "prebuilds/$target/simplejsble.node"
+          done
+          mkdir -p ../package
+          npm pack --pack-destination ../package
+          tar -tzf ../package/simplejsble-*.tgz
+
+      # The addons were tested where they were built; this checks the package around them.
+      - name: Install and load the package
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir smoke && cd smoke
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$GITHUB_WORKSPACE"/package/simplejsble-*.tgz
+          node -e "const ble = require('simplejsble'); if (typeof ble.Adapter.getAdapters !== 'function') process.exit(1)"
+          node --input-type=module -e "import { Adapter } from 'simplejsble'; if (typeof Adapter.getAdapters !== 'function') process.exit(1)"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: simplejsble-npm
+          path: package/simplejsble-*.tgz
+          if-no-files-found: error
