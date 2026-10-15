@@ -153,6 +153,31 @@ public sealed class LocalAndConfigurationTests
     }
 
     [Fact]
+    public void PlainHostAdvertisesManufacturerDataWithoutConnections()
+    {
+        var adapters = Adapter.GetAdapters();
+        try
+        {
+            using var host = adapters[0].CreateLocalPeripheral();
+            host.SetAdvertisedManufacturerData(0x004c, [0x02]);
+            host.SetAdvertisedManufacturerData(0x004c, [0x02, 0x15]);
+            host.SetConnectable(false);
+            host.Start();
+            adapters[0].ScanFor(TimeSpan.FromMilliseconds(250));
+            var peers = adapters[0].ScanGetResults();
+            try
+            {
+                var peer = Assert.Single(peers, p => p.Identifier == "Plain Adapter Peripheral");
+                Assert.Equal(new byte[] { 0x02, 0x15 }, Assert.Single(peer.ManufacturerData).Value);
+                Assert.False(peer.IsConnectable);
+                host.Stop();
+            }
+            finally { foreach (var peer in peers) peer.Dispose(); }
+        }
+        finally { foreach (var adapter in adapters) adapter.Dispose(); }
+    }
+
+    [Fact]
     public async Task PlainHostAliasesFollowUuidsNotPositions()
     {
         var adapters = Adapter.GetAdapters();

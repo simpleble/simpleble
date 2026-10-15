@@ -89,6 +89,18 @@ constexpr auto kDocsLocalPeripheralAddAdvertisedService = R"pbdoc(
     Add one or more service UUIDs to the advertisement
 )pbdoc";
 
+constexpr auto kDocsLocalPeripheralSetAdvertisedManufacturerData = R"pbdoc(
+    Add manufacturer specific data to the advertisement
+
+    Setting data for the same company identifier again replaces it.
+)pbdoc";
+
+constexpr auto kDocsLocalPeripheralSetConnectable = R"pbdoc(
+    Choose whether centrals can connect
+
+    Local peripherals are connectable by default.
+)pbdoc";
+
 constexpr auto kDocsLocalPeripheralAddService = R"pbdoc(
     Add a primary GATT service
 )pbdoc";
@@ -251,6 +263,16 @@ void wrap_local(py::module& m) {
         .def("add_advertised_service",
              py::overload_cast<std::vector<SimpleBLE::BluetoothUUID>>(&SimpleBLE::Local::Peripheral::add_advertised_service),
              py::call_guard<py::gil_scoped_release>(), kDocsLocalPeripheralAddAdvertisedService)
+        .def(
+            "set_advertised_manufacturer_data",
+            [](SimpleBLE::Local::Peripheral& p, uint16_t company_id, py::object data) {
+                SimpleBLE::ByteArray cpp_data = to_byte_array(data);
+                py::gil_scoped_release release;
+                p.set_advertised_manufacturer_data(company_id, std::move(cpp_data));
+            },
+            kDocsLocalPeripheralSetAdvertisedManufacturerData)
+        .def("set_connectable", &SimpleBLE::Local::Peripheral::set_connectable,
+             py::call_guard<py::gil_scoped_release>(), kDocsLocalPeripheralSetConnectable)
         .def("add_service", &SimpleBLE::Local::Peripheral::add_service, py::call_guard<py::gil_scoped_release>(),
              kDocsLocalPeripheralAddService)
         .def("services", &SimpleBLE::Local::Peripheral::services, py::call_guard<py::gil_scoped_release>(),

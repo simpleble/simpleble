@@ -42,6 +42,17 @@ class LocalPeripheral internal constructor(private val instanceId: Long) {
         )
     }
 
+    /** Adds manufacturer specific data to the advertisement. Setting data for the same company identifier again replaces it. */
+    fun setAdvertisedManufacturerData(companyId: Int, data: ByteArray) {
+        require(companyId in 0..0xFFFF) { "companyId must be between 0 and 0xFFFF" }
+        nativeSetAdvertisedManufacturerData(instanceId, companyId, data)
+    }
+
+    /** Chooses whether centrals can connect. Local peripherals are connectable by default. */
+    fun setConnectable(connectable: Boolean) {
+        nativeSetConnectable(instanceId, connectable)
+    }
+
     val services: List<LocalService>
         get() = synchronized(configuredServices) { configuredServices.toList() }
 
@@ -78,6 +89,8 @@ class LocalPeripheral internal constructor(private val instanceId: Long) {
 
     private external fun nativeRegister(peripheralId: Long, callback: Callback)
     private external fun nativeAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>)
+    private external fun nativeSetAdvertisedManufacturerData(peripheralId: Long, companyId: Int, data: ByteArray)
+    private external fun nativeSetConnectable(peripheralId: Long, connectable: Boolean)
     private external fun nativeAddService(peripheralId: Long, uuid: String): Long
     private external fun nativeRemoveAllServices(peripheralId: Long)
     private external fun nativeStart(peripheralId: Long)

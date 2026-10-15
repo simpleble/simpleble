@@ -2,6 +2,7 @@ package org.simplejavable;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.simplejavable.LocalCharacteristicCapability.NOTIFY;
 import static org.simplejavable.LocalCharacteristicCapability.READ;
@@ -91,6 +92,25 @@ class LocalPeripheralTest {
             }
             host.stop();
             host.setEventListener(null);
+        }
+    }
+
+    @Test
+    void advertisesManufacturerDataWithoutConnections() throws Exception {
+        Adapter adapter = TestSupport.plainAdapter();
+        LocalPeripheral host = adapter.createLocalPeripheral();
+
+        try {
+            host.setAdvertisedManufacturerData(0x004c, new byte[] {0x02});
+            host.setAdvertisedManufacturerData(0x004c, new byte[] {0x02, 0x15});
+            host.setConnectable(false);
+            host.start();
+
+            Peripheral beacon = TestSupport.scanFor(adapter, "Plain Adapter Peripheral");
+            assertArrayEquals(new byte[] {0x02, 0x15}, beacon.manufacturerData().get(0x004c));
+            assertFalse(beacon.isConnectable());
+        } finally {
+            host.stop();
         }
     }
 

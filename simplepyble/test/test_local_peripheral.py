@@ -177,6 +177,18 @@ def test_local_peripheral_loopback(host):
     assert clients == [ADAPTER_ADDRESS, ADAPTER_ADDRESS]
 
 
+def test_local_manufacturer_data_and_connectability(host):
+    adapter = simplepyble.Adapter.get_adapters()[0]
+    host.set_advertised_manufacturer_data(0x004C, b"\x02")
+    host.set_advertised_manufacturer_data(0x004C, bytearray(b"\x02\x15"))
+    host.set_connectable(False)
+    host.start()
+
+    peer = scan_for(adapter, HOST_NAME)
+    assert peer.manufacturer_data() == {0x004C: b"\x02\x15"}
+    assert peer.is_connectable() is False
+
+
 def test_local_read_callback_errors_fail_the_read(host):
     adapter = simplepyble.Adapter.get_adapters()[0]
     _, dynamic = configure(host)

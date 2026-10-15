@@ -142,6 +142,8 @@ struct LocalPeripheral : L::PeripheralBase {
     }
     void add_advertised_service(BluetoothUUID) override { check(); }
     void add_advertised_service(std::vector<BluetoothUUID>) override { check(); }
+    void set_advertised_manufacturer_data(uint16_t, ByteArray) override { check(); }
+    void set_connectable(bool) override { check(); }
     std::shared_ptr<L::ServiceBase> add_service(BluetoothUUID id) override {
         check();
         auto value = std::make_shared<LocalService>(id);

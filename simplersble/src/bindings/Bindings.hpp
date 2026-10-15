@@ -283,6 +283,8 @@ class RustyLocalPeripheral {
     void unlink() const;
 
     void add_advertised_service(rust::Str uuid) const;
+    void set_advertised_manufacturer_data(uint16_t company_id, rust::Slice<const uint8_t> data) const;
+    void set_connectable(bool connectable) const;
     std::unique_ptr<Bindings::RustyLocalService> add_service(rust::Str uuid) const;
     void remove_all_services() const;
 

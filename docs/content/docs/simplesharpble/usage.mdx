@@ -277,6 +277,11 @@ Set `ReadHandler` to compute read values on demand. It runs synchronously on the
 native thread, so return quickly and do not call SimpleSharpBLE from it. Set it
 to `null` to serve the stored `Value` again.
 
+`SetAdvertisedManufacturerData(companyId, data)` adds manufacturer specific data
+to the advertisement, and `SetConnectable(false)` makes it non-connectable, for
+example to [advertise a beacon](../recipes/advertise#advertise-a-beacon).
+Configure both before `Start`.
+
 `IsStarted` and `IsAdvertising` report the host state. After `Stop`,
 `RemoveAllServices` clears the layout so you can rebuild it. Disposing a service
 or characteristic wrapper does not remove it from the host. On Linux,

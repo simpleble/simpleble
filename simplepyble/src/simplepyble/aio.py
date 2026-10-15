@@ -382,6 +382,12 @@ class LocalPeripheral:
     def add_advertised_service(self, service_uuids: str | list[str]):
         self._internal.add_advertised_service(service_uuids)
 
+    def set_advertised_manufacturer_data(self, company_id: int, data: bytes | bytearray | memoryview):
+        self._internal.set_advertised_manufacturer_data(company_id, data)
+
+    def set_connectable(self, connectable: bool):
+        self._internal.set_connectable(connectable)
+
     def add_service(self, uuid: str) -> LocalService:
         return LocalService(self._internal.add_service(uuid))
 

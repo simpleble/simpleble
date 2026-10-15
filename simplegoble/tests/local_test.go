@@ -42,6 +42,16 @@ func plainHost(t *testing.T) (*ble.Adapter, *ble.LocalPeripheral, *ble.LocalServ
 
 func connectHost(t *testing.T, a *ble.Adapter, host *ble.LocalPeripheral) *ble.Peripheral {
 	t.Helper()
+	p := findHost(t, a, host)
+	if err := p.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// findHost starts the host and scans until it is found.
+func findHost(t *testing.T, a *ble.Adapter, host *ble.LocalPeripheral) *ble.Peripheral {
+	t.Helper()
 	found := make(chan *ble.Peripheral, 1)
 	sent := false
 	if err := a.SetCallbackOnScanFound(func(p *ble.Peripheral) {
@@ -73,10 +83,29 @@ func connectHost(t *testing.T, a *ble.Adapter, host *ble.LocalPeripheral) *ble.P
 	if err := a.SetCallbackOnScanFound(nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Connect(); err != nil {
+	return p
+}
+
+func TestPlainLocalManufacturerDataAndConnectability(t *testing.T) {
+	a, host, _, _ := plainHost(t)
+	if err := host.SetAdvertisedManufacturerData(0x004c, []byte{0x02}); err != nil {
 		t.Fatal(err)
 	}
-	return p
+	if err := host.SetAdvertisedManufacturerData(0x004c, []byte{0x02, 0x15}); err != nil {
+		t.Fatal(err)
+	}
+	if err := host.SetConnectable(false); err != nil {
+		t.Fatal(err)
+	}
+
+	p := findHost(t, a, host)
+	data, err := p.ManufacturerData()
+	if err != nil || len(data) != 1 || !bytes.Equal(data[0x004c], []byte{0x02, 0x15}) {
+		t.Fatalf("manufacturer data = %v, %v", data, err)
+	}
+	if connectable, err := p.IsConnectable(); err != nil || connectable {
+		t.Fatalf("connectable = %v, %v", connectable, err)
+	}
 }
 
 func TestPlainLocalConfigurationAndValueOwnership(t *testing.T) {

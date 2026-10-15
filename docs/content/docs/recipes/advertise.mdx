@@ -219,7 +219,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -235,6 +235,74 @@ SimpleBLE::ByteArray ibeacon = {0x02, 0x15,
 peripheral.set_advertised_manufacturer_data(0x004c, ibeacon);
 peripheral.set_connectable(false);
 peripheral.start();
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+peripheral = adapter.create_local_peripheral()
+
+# iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+ibeacon = bytes.fromhex("0215" "e2c56db5dffb48d2b060d0f5a71096e0" "0001" "0002" "c5")
+peripheral.set_advertised_manufacturer_data(0x004C, ibeacon)
+peripheral.set_connectable(False)
+peripheral.start()
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+Adapter adapter = Adapter.getAdapters().get(0);
+LocalPeripheral peripheral = adapter.createLocalPeripheral();
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+byte[] ibeacon = HexFormat.of().parseHex("0215" + "e2c56db5dffb48d2b060d0f5a71096e0" + "0001" + "0002" + "c5");
+peripheral.setAdvertisedManufacturerData(0x004c, ibeacon);
+peripheral.setConnectable(false);
+peripheral.start();
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use simplersble::Adapter;
+
+let adapter = Adapter::get_adapters().unwrap().remove(0);
+let peripheral = adapter.create_local_peripheral().unwrap();
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+let ibeacon = [
+    0x02, 0x15,
+    0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+    0x00, 0x01, 0x00, 0x02, 0xc5,
+];
+peripheral.set_advertised_manufacturer_data(0x004c, &ibeacon).unwrap();
+peripheral.set_connectable(false).unwrap();
+peripheral.start().unwrap();
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+val peripheral = adapter.createLocalPeripheral(applicationContext)
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+val ibeacon = listOf(
+    0x02, 0x15,
+    0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+    0x00, 0x01, 0x00, 0x02, 0xc5,
+).map { it.toByte() }.toByteArray()
+peripheral.setAdvertisedManufacturerData(0x004c, ibeacon)
+peripheral.setConnectable(false)
+lifecycleScope.launch { peripheral.start() }
 ```
 
 </Tab>

@@ -2,6 +2,7 @@
 // without it this file is empty, so that a regular `cargo test` never touches Bluetooth hardware.
 #![cfg(simplersble_plain)]
 
+use std::collections::HashMap;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -263,6 +264,25 @@ async fn read_callback_panics_and_reentrancy() {
 
     characteristic.clear_callback_on_read().unwrap();
     release(&peer);
+    local.stop().unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn local_manufacturer_data_and_connectability() {
+    let _serial = SERIAL.lock().await;
+    const SERVICE: &str = "0000a400-0000-1000-8000-00805f9b34fb";
+
+    let adapter = plain_adapter();
+    let local = adapter.create_local_peripheral().unwrap();
+    local.add_service(SERVICE).unwrap();
+    local.set_advertised_manufacturer_data(0x004c, &[0x02]).unwrap();
+    local.set_advertised_manufacturer_data(0x004c, &[0x02, 0x15]).unwrap();
+    local.set_connectable(false).unwrap();
+    local.start().unwrap();
+
+    let peer = find_peripheral(&adapter, SERVICE).await;
+    assert_eq!(peer.manufacturer_data().unwrap(), HashMap::from([(0x004c, vec![0x02, 0x15])]));
+    assert!(!peer.is_connectable().unwrap());
     local.stop().unwrap();
 }
 

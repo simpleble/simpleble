@@ -49,6 +49,16 @@ impl InnerLocalPeripheral {
         self.internal.add_advertised_service(uuid).map_err(Error::from_cxx_exception)
     }
 
+    fn set_advertised_manufacturer_data(&self, company_id: u16, data: &[u8]) -> Result<(), Error> {
+        self.internal
+            .set_advertised_manufacturer_data(company_id, data)
+            .map_err(Error::from_cxx_exception)
+    }
+
+    fn set_connectable(&self, connectable: bool) -> Result<(), Error> {
+        self.internal.set_connectable(connectable).map_err(Error::from_cxx_exception)
+    }
+
     fn add_service(&self, uuid: &str) -> Result<LocalService, Error> {
         let internal = self.internal.add_service(uuid).map_err(Error::from_cxx_exception)?;
         let service: LocalService = InnerLocalService::new(internal).into();
@@ -135,6 +145,18 @@ impl LocalPeripheral {
     /// Adds a service UUID to the advertisement.
     pub fn add_advertised_service(&self, uuid: &str) -> Result<(), Error> {
         self.inner.add_advertised_service(uuid)
+    }
+
+    /// Adds manufacturer specific data to the advertisement.
+    ///
+    /// Setting data for the same company identifier again replaces it.
+    pub fn set_advertised_manufacturer_data(&self, company_id: u16, data: &[u8]) -> Result<(), Error> {
+        self.inner.set_advertised_manufacturer_data(company_id, data)
+    }
+
+    /// Chooses whether centrals can connect. Local peripherals are connectable by default.
+    pub fn set_connectable(&self, connectable: bool) -> Result<(), Error> {
+        self.inner.set_connectable(connectable)
     }
 
     /// Adds a primary GATT service.

@@ -76,6 +76,27 @@ public class LocalPeripheral {
     }
 
     /**
+     * Adds manufacturer specific data to the advertisement. Setting data for the same company identifier again
+     * replaces it. Call before {@link #start()}.
+     * @param companyId The company identifier, from 0 to 0xFFFF.
+     * @param data The manufacturer specific data.
+     */
+    public void setAdvertisedManufacturerData(int companyId, byte[] data) {
+        if (companyId < 0 || companyId > 0xFFFF) {
+            throw new IllegalArgumentException("companyId must be between 0 and 0xFFFF");
+        }
+        nativeSetAdvertisedManufacturerData(instanceId, companyId, Objects.requireNonNull(data, "data"));
+    }
+
+    /**
+     * Chooses whether centrals can connect. Local peripherals are connectable by default. Call before {@link #start()}.
+     * @param connectable Whether centrals can connect.
+     */
+    public void setConnectable(boolean connectable) {
+        nativeSetConnectable(instanceId, connectable);
+    }
+
+    /**
      * Adds a primary GATT service. Call before {@link #start()}.
      * @param uuid The service UUID.
      * @return The new LocalService.
@@ -143,6 +164,8 @@ public class LocalPeripheral {
 
     private native void nativeRegister(long peripheralId, Callback callback);
     private native void nativeAddAdvertisedService(long peripheralId, String[] serviceUuids);
+    private native void nativeSetAdvertisedManufacturerData(long peripheralId, int companyId, byte[] data);
+    private native void nativeSetConnectable(long peripheralId, boolean connectable);
     private native long nativeAddService(long peripheralId, String uuid);
     private native void nativeRemoveAllServices(long peripheralId);
     private native void nativeStart(long peripheralId);

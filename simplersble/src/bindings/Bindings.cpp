@@ -634,6 +634,15 @@ void Bindings::RustyLocalPeripheral::add_advertised_service(rust::Str uuid) cons
     _internal->add_advertised_service(std::string(uuid));
 }
 
+void Bindings::RustyLocalPeripheral::set_advertised_manufacturer_data(uint16_t company_id,
+                                                                      rust::Slice<const uint8_t> data) const {
+    _internal->set_advertised_manufacturer_data(company_id, SimpleBLE::ByteArray(data.data(), data.size()));
+}
+
+void Bindings::RustyLocalPeripheral::set_connectable(bool connectable) const {
+    _internal->set_connectable(connectable);
+}
+
 std::unique_ptr<Bindings::RustyLocalService> Bindings::RustyLocalPeripheral::add_service(rust::Str uuid) const {
     return std::make_unique<Bindings::RustyLocalService>(_internal->add_service(std::string(uuid)));
 }

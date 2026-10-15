@@ -73,6 +73,22 @@ func (p *LocalPeripheral) AddAdvertisedService(value string) error {
 	})
 }
 
+// SetAdvertisedManufacturerData adds manufacturer specific data to the advertisement before Start.
+// Setting data for the same company identifier again replaces it.
+func (p *LocalPeripheral) SetAdvertisedManufacturerData(companyID uint16, data []byte) error {
+	return bindings.Command(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) {
+		native.LocalPeripheralManufacturerData(nativeHandle, companyID, bindings.InputBytes(data), uintptr(len(data)),
+			nativeError)
+	})
+}
+
+// SetConnectable chooses whether centrals can connect, before Start. Local peripherals are connectable by default.
+func (p *LocalPeripheral) SetConnectable(connectable bool) error {
+	return bindings.Command(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) {
+		native.LocalPeripheralSetConnectable(nativeHandle, connectable, nativeError)
+	})
+}
+
 // AddService adds a primary GATT service before Start and returns an owned handle.
 // Whether a host accepts repeated service UUIDs depends on the backend.
 func (p *LocalPeripheral) AddService(value string) (*LocalService, error) {

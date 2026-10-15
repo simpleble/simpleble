@@ -81,6 +81,8 @@ type NativeAPI struct {
 	AdapterCreateLocalPeripheral      func(uintptr, *uintptr) uintptr
 	LocalPeripheralRelease            func(uintptr)
 	LocalPeripheralAdvertiseService   func(uintptr, UUID, *uintptr)
+	LocalPeripheralManufacturerData   func(uintptr, uint16, *byte, uintptr, *uintptr)
+	LocalPeripheralSetConnectable     func(uintptr, bool, *uintptr)
 	LocalPeripheralAddService         func(uintptr, UUID, *uintptr) uintptr
 	LocalPeripheralServiceCount       func(uintptr, *uintptr) uintptr
 	LocalPeripheralServiceGet         func(uintptr, uintptr, *uintptr) uintptr
@@ -247,6 +249,8 @@ func Load(path string) error {
 		{"simpleble_adapter_create_local_peripheral", &native.AdapterCreateLocalPeripheral},
 		{"simpleble_local_peripheral_release_handle", &native.LocalPeripheralRelease},
 		{"simpleble_local_peripheral_add_advertised_service", &native.LocalPeripheralAdvertiseService},
+		{"simpleble_local_peripheral_set_advertised_manufacturer_data", &native.LocalPeripheralManufacturerData},
+		{"simpleble_local_peripheral_set_connectable", &native.LocalPeripheralSetConnectable},
 		{"simpleble_local_peripheral_add_service", &native.LocalPeripheralAddService},
 		{"simpleble_local_peripheral_services_count", &native.LocalPeripheralServiceCount},
 		{"simpleble_local_peripheral_services_get", &native.LocalPeripheralServiceGet},

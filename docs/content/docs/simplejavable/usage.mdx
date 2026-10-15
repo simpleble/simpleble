@@ -184,6 +184,11 @@ runs synchronously on a native thread, so return quickly. If it returns `null` o
 throws, the client reads the stored value. Pass `null` to serve the stored value
 again.
 
+`setAdvertisedManufacturerData(companyId, data)` adds manufacturer specific data to
+the advertisement, and `setConnectable(false)` makes it non-connectable, for example
+to [advertise a beacon](../recipes/advertise#advertise-a-beacon). Configure both
+before `start()`.
+
 `isStarted()` and `isAdvertising()` report the host state. The configuration cannot
 change while started. After `stop()`, `removeAllServices()` clears the layout so you
 can rebuild it.

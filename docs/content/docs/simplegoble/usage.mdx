@@ -243,6 +243,11 @@ before calling `Start`, which publishes services and starts advertising. Use
 After stopping, use `RemoveAllServices` to rebuild the layout. Native backends
 report unsupported operations through the usual error classifications.
 
+`SetAdvertisedManufacturerData(companyID, data)` adds manufacturer specific data
+to the advertisement, and `SetConnectable(false)` makes it non-connectable, for
+example to [advertise a beacon](../recipes/advertise#advertise-a-beacon).
+Configure both before `Start`.
+
 On macOS and Linux, `host.SetAdvertisementLocalName(name)` sets the local name
 in the advertisement before `Start`, and `ClearAdvertisementLocalName` removes
 it. This changes only the advertisement, not the system Bluetooth name. Other

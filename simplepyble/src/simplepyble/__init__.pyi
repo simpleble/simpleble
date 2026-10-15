@@ -560,6 +560,29 @@ class LocalPeripheral:
         """
         ...
 
+    def set_advertised_manufacturer_data(self, company_id: int, data: Union[bytes, bytearray, memoryview]) -> None:
+        """
+        Add manufacturer specific data to the advertisement.
+
+        Setting data for the same company identifier again replaces it.
+
+        Args:
+            company_id: The company identifier
+            data: The manufacturer specific data
+        """
+        ...
+
+    def set_connectable(self, connectable: bool) -> None:
+        """
+        Choose whether centrals can connect.
+
+        Local peripherals are connectable by default.
+
+        Args:
+            connectable: Whether centrals can connect
+        """
+        ...
+
     def add_service(self, uuid: str) -> LocalService:
         """
         Add a primary GATT service.

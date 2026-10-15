@@ -385,6 +385,8 @@ mod ffi {
         fn unlink(self: &RustyLocalPeripheral) -> Result<()>;
 
         fn add_advertised_service(self: &RustyLocalPeripheral, uuid: &str) -> Result<()>;
+        fn set_advertised_manufacturer_data(self: &RustyLocalPeripheral, company_id: u16, data: &[u8]) -> Result<()>;
+        fn set_connectable(self: &RustyLocalPeripheral, connectable: bool) -> Result<()>;
         fn add_service(self: &RustyLocalPeripheral, uuid: &str) -> Result<UniquePtr<RustyLocalService>>;
         fn remove_all_services(self: &RustyLocalPeripheral) -> Result<()>;
 

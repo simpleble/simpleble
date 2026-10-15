@@ -726,6 +726,21 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_LocalPeripheral_nativeA
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_LocalPeripheral_nativeSetAdvertisedManufacturerData(
+    JNIEnv* env, jobject thiz, jlong peripheral_id, jint company_id, jbyteArray j_data) {
+    return safe_jni_call(env, [&]() {
+        ByteArray<LocalRef> data(j_data);
+        Cache::get().getLocalPeripheral(peripheral_id).set_advertised_manufacturer_data(static_cast<uint16_t>(company_id),
+                                                                                        data.bytes());
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_LocalPeripheral_nativeSetConnectable(JNIEnv* env, jobject thiz,
+                                                                                              jlong peripheral_id,
+                                                                                              jboolean connectable) {
+    return safe_jni_call(env, [&]() { Cache::get().getLocalPeripheral(peripheral_id).set_connectable(connectable); });
+}
+
 extern "C" JNIEXPORT jlong JNICALL Java_org_simplejavable_LocalPeripheral_nativeAddService(JNIEnv* env, jobject thiz,
                                                                                            jlong peripheral_id,
                                                                                            jstring j_uuid) {

@@ -146,6 +146,8 @@ peripheral.start().unwrap();
 
 To compute values on demand, `characteristic.set_callback_on_read()` takes an `Fn() -> Vec<u8>` that answers client reads instead of the stored value, until `clear_callback_on_read()`. It runs synchronously on a native thread while the client waits, so return promptly and do not call blocking BLE operations from it.
 
+`set_advertised_manufacturer_data(company_id, data)` adds manufacturer specific data to the advertisement, and `set_connectable(false)` makes it non-connectable, for example to [advertise a beacon](../recipes/advertise#advertise-a-beacon). Configure both before `start()`.
+
 Clones of a `LocalPeripheral`, `LocalService`, or `LocalCharacteristic` refer to the same object. Dropping the last clone of the `LocalPeripheral` stops it.
 
 ## Platform-specific features

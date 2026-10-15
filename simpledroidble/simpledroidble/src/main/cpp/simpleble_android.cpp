@@ -313,6 +313,21 @@ extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_LocalPeripheral_nat
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_LocalPeripheral_nativeSetAdvertisedManufacturerData(
+    JNIEnv* env, jobject, jlong peripheral_id, jint company_id, jbyteArray data) {
+    call(env, [peripheral_id, company_id, data] {
+        NativeCache::get().local_peripheral(peripheral_id).set_advertised_manufacturer_data(
+            static_cast<uint16_t>(company_id), SimpleJNI::ByteArray<SimpleJNI::LocalRef>(data).bytes());
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_LocalPeripheral_nativeSetConnectable(
+    JNIEnv* env, jobject, jlong peripheral_id, jboolean connectable) {
+    call(env, [peripheral_id, connectable] {
+        NativeCache::get().local_peripheral(peripheral_id).set_connectable(connectable);
+    });
+}
+
 extern "C" JNIEXPORT jlong JNICALL Java_org_simpleble_android_LocalPeripheral_nativeAddService(
     JNIEnv* env, jobject, jlong peripheral_id, jstring uuid) {
     return call(env, [peripheral_id, uuid] {

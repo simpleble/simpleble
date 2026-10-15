@@ -13,6 +13,7 @@ import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -137,6 +138,25 @@ class PlainBackendIntegrationTest {
 
         activePeripheral.disconnect()
         assertTrue(!activePeripheral.isConnected)
+    }
+
+    @Test
+    fun localManufacturerDataWithoutConnections() = runBlocking {
+        val activeAdapter = Adapter.getAdapters().single()
+        adapter = activeAdapter
+        val local = activeAdapter.createLocalPeripheral(InstrumentationRegistry.getInstrumentation().targetContext)
+        local.setAdvertisedManufacturerData(0x004c, byteArrayOf(0x02))
+        local.setAdvertisedManufacturerData(0x004c, byteArrayOf(0x02, 0x15))
+        local.setConnectable(false)
+        try {
+            local.start()
+            activeAdapter.scanFor(250)
+            val beacon = activeAdapter.scanGetResults().single { it.identifier == "Plain Adapter Peripheral" }
+            assertArrayEquals(byteArrayOf(0x02, 0x15), beacon.manufacturerData()[0x004c])
+            assertFalse(beacon.isConnectable)
+        } finally {
+            local.stop()
+        }
     }
 
     @Test

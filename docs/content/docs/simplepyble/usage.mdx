@@ -65,6 +65,8 @@ peripheral.stop()
 
 On macOS and Linux, `simplepyble.advanced.macos.set_advertisement_local_name()` and `simplepyble.advanced.linux.set_advertisement_local_name()` set the advertised name before `start()`. See the [Advertise recipe](../recipes/advertise) for platform notes.
 
+`set_advertised_manufacturer_data(company_id, data)` adds manufacturer specific data to the advertisement, and `set_connectable(False)` makes it non-connectable, for example to [advertise a beacon](../recipes/advertise#advertise-a-beacon). Configure both before `start()`.
+
 ## Dongl pairing
 
 When connecting through a [Dongl](../dongl#pairing-and-bonding), your application answers pairing requests. Register the callbacks your device needs in `simplepyble.advanced.dongl` before `connect()`, since pairing can start as soon as the link is up:

@@ -38,6 +38,15 @@ public sealed class Peripheral : IDisposable
         foreach (var value in values)
             handle.Execute((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_add_advertised_service(h, value, ref e));
     }
+    /// <summary>Adds manufacturer specific data to the advertisement. Setting data for the same company identifier again replaces it. Call before Start.</summary>
+    public void SetAdvertisedManufacturerData(ushort companyId, byte[] data)
+    {
+        byte[] input = Buffers.Input(data);
+        handle.Execute((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_set_advertised_manufacturer_data(h, companyId, input, (nuint)data.Length, ref e));
+    }
+    /// <summary>Chooses whether centrals can connect. Local peripherals are connectable by default. Call before Start.</summary>
+    public void SetConnectable(bool connectable) =>
+        handle.Execute((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_set_connectable(h, connectable, ref e));
     /// <summary>Adds a primary service. Call before Start; dispose the returned wrapper.</summary>
     public Service AddService(string uuid)
     {

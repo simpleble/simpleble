@@ -188,6 +188,8 @@ Assigning `value` publishes the new bytes to subscribed clients when the charact
 
 Call `stop()` from your lifecycle cleanup. Advertising data, services, and characteristics cannot be changed while started; values and handlers can.
 
+`setAdvertisedManufacturerData(companyId, data)` adds manufacturer specific data to the advertisement, and `setConnectable(false)` makes it non-connectable, for example to [advertise a beacon](../recipes/advertise#advertise-a-beacon).
+
 SimpleDroidBLE includes the phone's system Bluetooth name. Android's public advertising API cannot set an arbitrary per-advertisement name.
 
 Peripheral mode currently uses legacy advertising, including its 31-byte payload limits, and rejects prepared writes. Use regular write requests or write commands within the negotiated GATT payload size.

@@ -22,6 +22,12 @@ internal static partial class NativeMethods
     internal static extern void simpleble_local_peripheral_add_advertised_service(nint h, NativeUuid uuid, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_local_peripheral_set_advertised_manufacturer_data(nint h, ushort companyId, byte[] data, nuint length, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_local_peripheral_set_connectable(nint h, [MarshalAs(UnmanagedType.I1)] bool connectable, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern nint simpleble_local_peripheral_add_service(nint h, NativeUuid uuid, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
