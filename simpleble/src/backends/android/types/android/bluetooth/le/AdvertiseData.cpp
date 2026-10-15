@@ -5,6 +5,7 @@ namespace SimpleBLE::Android {
 SimpleJNI::GlobalRef<jclass> AdvertiseData::Builder::_cls;
 jmethodID AdvertiseData::Builder::_constructor = nullptr;
 jmethodID AdvertiseData::Builder::_add_service_uuid = nullptr;
+jmethodID AdvertiseData::Builder::_add_manufacturer_data = nullptr;
 jmethodID AdvertiseData::Builder::_set_include_device_name = nullptr;
 jmethodID AdvertiseData::Builder::_build = nullptr;
 
@@ -13,6 +14,7 @@ const SimpleJNI::JNIDescriptor AdvertiseData::Builder::descriptor{
     &_cls,
     {{"<init>", "()V", &_constructor},
      {"addServiceUuid", "(Landroid/os/ParcelUuid;)Landroid/bluetooth/le/AdvertiseData$Builder;", &_add_service_uuid},
+     {"addManufacturerData", "(I[B)Landroid/bluetooth/le/AdvertiseData$Builder;", &_add_manufacturer_data},
      {"setIncludeDeviceName", "(Z)Landroid/bluetooth/le/AdvertiseData$Builder;", &_set_include_device_name},
      {"build", "()Landroid/bluetooth/le/AdvertiseData;", &_build}}};
 const SimpleJNI::AutoRegister<AdvertiseData::Builder> AdvertiseData::Builder::registrar{&descriptor};
@@ -24,6 +26,13 @@ AdvertiseData::Builder::Builder() {
 
 AdvertiseData::Builder& AdvertiseData::Builder::addServiceUuid(const ParcelUUID& uuid) {
     _obj.call_object_method(_add_service_uuid, uuid.get());
+    return *this;
+}
+
+AdvertiseData::Builder& AdvertiseData::Builder::addManufacturerData(uint16_t manufacturer_id,
+                                                                    const std::vector<uint8_t>& data) {
+    SimpleJNI::ByteArray<SimpleJNI::LocalRef> bytes(data);
+    _obj.call_object_method(_add_manufacturer_data, static_cast<jint>(manufacturer_id), bytes.get());
     return *this;
 }
 

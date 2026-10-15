@@ -38,6 +38,33 @@ SIMPLECBLE_EXPORT void simpleble_local_peripheral_add_advertised_service(simpleb
                                                                          simpleble_error_t** out_error);
 
 /**
+ * @brief Adds manufacturer specific data to the advertisement.
+ *
+ * @param[in] handle Valid, non-NULL local peripheral handle.
+ * @param[in] company_id Company identifier. Setting data for the same identifier again replaces it.
+ * @param[in] data Bytes to copy; may be NULL when data_length is zero.
+ * @param[in] data_length Number of bytes to copy.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note Configure it before starting the peripheral.
+ */
+SIMPLECBLE_EXPORT void simpleble_local_peripheral_set_advertised_manufacturer_data(simpleble_local_peripheral_t handle,
+                                                                                   uint16_t company_id,
+                                                                                   const uint8_t* data,
+                                                                                   size_t data_length,
+                                                                                   simpleble_error_t** out_error);
+
+/**
+ * @brief Chooses whether centrals can connect. Local peripherals are connectable by default.
+ *
+ * @param[in] handle Valid, non-NULL local peripheral handle.
+ * @param[in] connectable Whether centrals can connect.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note Configure it before starting the peripheral.
+ */
+SIMPLECBLE_EXPORT void simpleble_local_peripheral_set_connectable(simpleble_local_peripheral_t handle, bool connectable,
+                                                                  simpleble_error_t** out_error);
+
+/**
  * @brief Adds a primary local GATT service.
  *
  * @param[in] handle Valid, non-NULL local peripheral handle.

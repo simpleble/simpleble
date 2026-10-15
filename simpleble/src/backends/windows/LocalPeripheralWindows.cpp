@@ -1,6 +1,7 @@
 #include "LocalPeripheralWindows.h"
 
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <utility>
 
@@ -11,10 +12,12 @@
 #include "LoggingInternal.h"
 #include "MtaManager.h"
 #include "Utils.h"
+#include "winrt/Windows.Foundation.Collections.h"
 #include "winrt/Windows.Foundation.Metadata.h"
 
 namespace SimpleBLE::Local {
 
+using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 
 PeripheralWindows::PeripheralWindows(winrt::Windows::Devices::Bluetooth::BluetoothAdapter adapter)
@@ -79,6 +82,18 @@ void PeripheralWindows::add_advertised_service(std::vector<BluetoothUUID> servic
     }
 }
 
+void PeripheralWindows::set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _advertised_manufacturer_data[company_id] = std::move(data);
+}
+
+void PeripheralWindows::set_connectable(bool connectable) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _connectable = connectable;
+}
+
 std::shared_ptr<ServiceBase> PeripheralWindows::add_service(BluetoothUUID uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
@@ -103,8 +118,34 @@ void PeripheralWindows::start() {
     if (_started.load()) {
         return;
     }
+    if (_services.empty() && _advertised_manufacturer_data.empty()) {
+        throw Exception::OperationFailed(
+            "Windows peripheral mode requires at least one local service or manufacturer data.");
+    }
     if (_services.empty()) {
-        throw Exception::OperationFailed("Windows peripheral mode requires at least one local service.");
+        // Only a publisher can advertise the manufacturer data, and its advertisements aren't connectable.
+        if (_connectable) {
+            throw Exception::OperationNotSupported();
+        }
+        // A publisher can't advertise service UUIDs, as Windows reserves them for GATT service providers.
+        if (!_advertised_service_uuids.empty()) {
+            throw Exception::OperationFailed(
+                fmt::format("Advertised service UUID {} is not hosted by this local peripheral.",
+                            _advertised_service_uuids.front()));
+        }
+        try {
+            _start_publisher();
+        } catch (...) {
+            _stop_advertising();
+            throw;
+        }
+        _started.store(true);
+        return;
+    }
+    // GATT service providers can't advertise manufacturer data, and don't start advertising when they aren't
+    // connectable.
+    if (!_advertised_manufacturer_data.empty() || !_connectable) {
+        throw Exception::OperationNotSupported();
     }
     if (!winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(
             L"Windows.Devices.Bluetooth.BluetoothAdapter", L"IsPeripheralRoleSupported") ||
@@ -224,6 +265,9 @@ bool PeripheralWindows::is_advertising() {
         return false;
     }
     return WinRT::MtaManager::get().execute_sync<bool>([this]() {
+        if (_publisher) {
+            return _publisher->publisher.Status() == BluetoothLEAdvertisementPublisherStatus::Started;
+        }
         return std::all_of(_services.begin(), _services.end(),
                            [](const auto& service) { return service->is_advertising(); });
     });
@@ -249,6 +293,46 @@ void PeripheralWindows::set_callback_on_client_disconnected(
 void PeripheralWindows::_ensure_mutable() const {
     if (_started.load()) {
         throw Exception::OperationFailed("The local peripheral cannot be changed while it is started.");
+    }
+}
+
+void PeripheralWindows::_start_publisher() {
+    auto state = std::make_shared<Publisher>();
+    std::weak_ptr<Publisher> weak_state = state;
+    _publisher = state;
+
+    WinRT::MtaManager::get().execute_sync([this, &state, weak_state]() {
+        BluetoothLEAdvertisement advertisement;
+        for (const auto& [company_id, data] : _advertised_manufacturer_data) {
+            advertisement.ManufacturerData().Append(
+                BluetoothLEManufacturerData(company_id, bytearray_to_ibuffer(data)));
+        }
+
+        state->publisher = BluetoothLEAdvertisementPublisher(advertisement);
+        state->status_changed_token = state->publisher.StatusChanged(
+            [weak_state](const BluetoothLEAdvertisementPublisher&,
+                         const BluetoothLEAdvertisementPublisherStatusChangedEventArgs& args) {
+                if (auto current = weak_state.lock()) {
+                    {
+                        std::scoped_lock lock(current->mutex);
+                        current->status = args.Status();
+                        current->error = args.Error();
+                    }
+                    current->cv.notify_all();
+                }
+            });
+        state->publisher.Start();
+    });
+
+    std::unique_lock lock(state->mutex);
+    state->cv.wait_for(lock, std::chrono::seconds(5), [&state]() {
+        return state->status == BluetoothLEAdvertisementPublisherStatus::Started ||
+               state->status == BluetoothLEAdvertisementPublisherStatus::Aborted;
+    });
+    if (state->status != BluetoothLEAdvertisementPublisherStatus::Started) {
+        throw Exception::OperationFailed(fmt::format("Windows failed to start advertising (status {}, WinRT error {}).",
+                                                     static_cast<int32_t>(state->status),
+                                                     static_cast<int32_t>(state->error)));
     }
 }
 
@@ -400,6 +484,14 @@ std::exception_ptr PeripheralWindows::_stop_advertising() noexcept {
     std::exception_ptr first_error;
     try {
         WinRT::MtaManager::get().execute_sync([this, &first_error]() {
+            if (_publisher && _publisher->publisher) {
+                try {
+                    _publisher->publisher.StatusChanged(_publisher->status_changed_token);
+                    _publisher->publisher.Stop();
+                } catch (...) {
+                    first_error = std::current_exception();
+                }
+            }
             for (const auto& service : _services) {
                 try {
                     service->stop_advertising();
@@ -415,6 +507,7 @@ std::exception_ptr PeripheralWindows::_stop_advertising() noexcept {
             first_error = std::current_exception();
         }
     }
+    _publisher.reset();
     return first_error;
 }
 

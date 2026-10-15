@@ -54,6 +54,55 @@ void simpleble_local_peripheral_add_advertised_service(simpleble_local_periphera
     }
 }
 
+void simpleble_local_peripheral_set_advertised_manufacturer_data(simpleble_local_peripheral_t handle,
+                                                                 uint16_t company_id, const uint8_t* data,
+                                                                 size_t data_length, simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+    if (data == nullptr && data_length != 0) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "data is NULL");
+        return;
+    }
+
+    auto* peripheral = (SimpleBLE::Local::Peripheral*)handle;
+    try {
+        peripheral->set_advertised_manufacturer_data(
+            company_id,
+            data_length == 0 ? SimpleBLE::ByteArray{} : SimpleBLE::ByteArray((const char*)data, data_length));
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}
+
+void simpleble_local_peripheral_set_connectable(simpleble_local_peripheral_t handle, bool connectable,
+                                                simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+
+    auto* peripheral = (SimpleBLE::Local::Peripheral*)handle;
+    try {
+        peripheral->set_connectable(connectable);
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}
+
 simpleble_local_service_t simpleble_local_peripheral_add_service(simpleble_local_peripheral_t handle,
                                                                  simpleble_uuid_t uuid, simpleble_error_t** out_error) {
     simpleble_error_release(out_error);

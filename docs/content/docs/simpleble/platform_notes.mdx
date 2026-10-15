@@ -20,6 +20,8 @@ Windows hosts local services with WinRT `GattServiceProvider`. The Bluetooth ada
 
 Windows controls the friendly name placed in a discoverable advertisement. WinRT requires one provider per primary service; SimpleBLE starts every configured provider as one peripheral operation and prioritizes providers added with `add_advertised_service()`. Windows owns the shared advertisement payload and may omit UUIDs that do not fit. Explicitly selected UUIDs must belong to configured services, and `start()` throws if the adapter or driver lacks the resources to publish every provider. Windows reports a client session after the client first interacts with or subscribes to a hosted characteristic; a bare link that performs no GATT operation may not produce a client-connected callback.
 
+`GattServiceProvider` can't advertise manufacturer data, and doesn't start advertising when it isn't connectable. A local peripheral without services advertises its manufacturer data through `BluetoothLEAdvertisementPublisher` instead, which requires `set_connectable(false)` and can't include service UUIDs or Flags. Other combinations of services, manufacturer data, and `set_connectable(false)` throw `OperationNotSupported` from `start()`.
+
 ## MacOS / iOS
 
 ### Peripheral Identifiers (UUIDs)
@@ -36,6 +38,8 @@ macOS and iOS manage Bluetooth connections at the OS level.
 macOS and iOS can host a local peripheral through CoreBluetooth. Because CoreBluetooth does not expose peripheral-role connection events, SimpleBLE reports a client as connected when it first subscribes to a characteristic and disconnected when its final subscription ends. Client addresses are CoreBluetooth identifiers rather than Bluetooth MAC addresses.
 
 CoreBluetooth supports an advertisement-specific local name distinct from the system Bluetooth and GAP device names. Set it before `start()` with `SimpleBLE::Advanced::MacOS::set_advertisement_local_name()` or `SimpleBLE::Advanced::iOS::set_advertisement_local_name()`. Advertising is best-effort and space-limited; iOS omits the local name while the app is in the background.
+
+CoreBluetooth can only advertise a local name and service UUIDs, and its advertisements are always connectable. `set_advertised_manufacturer_data()` and `set_connectable(false)` throw `OperationNotSupported`.
 
 ## Linux (BlueZ)
 
@@ -73,6 +77,8 @@ On Linux, `Adapter::create_local_peripheral()` registers a BlueZ GATT applicatio
 SimpleBLE permits the same adapter to scan and advertise at the same time, but availability depends on BlueZ and the Bluetooth controller supporting concurrent operation and having sufficient resources. Incoming clients of the local peripheral are reported through `SimpleBLE::Local::Peripheral` client callbacks, not as remote `SimpleBLE::Peripheral` objects to `connect()` to.
 
 BlueZ supports a per-advertisement local name independent of the adapter alias. Set it before `start()` with `SimpleBLE::Advanced::Linux::set_advertisement_local_name()`. BlueZ may shorten the name to fit the advertising data.
+
+A non-connectable local peripheral advertises as a BlueZ `broadcast`, which carries no Flags on adapters that also support BR/EDR. A local peripheral without services registers no GATT application.
 
 ## Android
 

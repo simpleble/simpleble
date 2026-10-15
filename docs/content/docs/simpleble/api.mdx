@@ -514,6 +514,20 @@ Capabilities are passed to `add_characteristic` as a `std::set`. Each characteri
   notes={[{ content: "Throws `OperationFailed` if the peripheral is already started.", type: "warn" }]}
 />
 
+<ApiMethod
+  signature="void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data)"
+  parameters={[{"name":"company_id","type":"uint16_t"},{"name":"data","type":"ByteArray"}]}
+  detailed="Add manufacturer specific data to the advertisement. Setting data for the same company identifier again replaces it. Must be called before `start()`."
+  notes={[{ content: "Throws `OperationFailed` if the peripheral is already started, and `OperationNotSupported` on macOS and iOS. See the platform notes for Windows.", type: "warn" }]}
+/>
+
+<ApiMethod
+  signature="void set_connectable(bool connectable)"
+  parameters={[{"name":"connectable","type":"bool"}]}
+  detailed="Choose whether centrals can connect. Local peripherals are connectable by default. Must be called before `start()`."
+  notes={[{ content: "Throws `OperationFailed` if the peripheral is already started. macOS and iOS throw `OperationNotSupported` for a non-connectable peripheral.", type: "warn" }]}
+/>
+
 The portable API does not select a local name. Linux, macOS, and iOS expose their native advertisement-specific name through `SimpleBLE::Advanced::Linux::set_advertisement_local_name()`, `SimpleBLE::Advanced::MacOS::set_advertisement_local_name()`, and `SimpleBLE::Advanced::iOS::set_advertisement_local_name()`. Each function accepts a `Local::Peripheral&` and an `std::optional<std::string>`, must be called before `start()`, and changes only the advertisement payload. Passing `std::nullopt` removes the override.
 
 <ApiMethod

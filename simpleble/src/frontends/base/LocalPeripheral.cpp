@@ -32,6 +32,12 @@ void Peripheral::add_advertised_service(std::vector<BluetoothUUID> service_uuids
     (*this)->add_advertised_service(std::move(service_uuids));
 }
 
+void Peripheral::set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) {
+    (*this)->set_advertised_manufacturer_data(company_id, std::move(data));
+}
+
+void Peripheral::set_connectable(bool connectable) { (*this)->set_connectable(connectable); }
+
 Service Peripheral::add_service(BluetoothUUID uuid) { return Factory::build((*this)->add_service(std::move(uuid))); }
 
 std::vector<Service> Peripheral::services() { return Factory::vector((*this)->services()); }

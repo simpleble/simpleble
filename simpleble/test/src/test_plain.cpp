@@ -366,6 +366,28 @@ TEST_F(Plain, LocalGattRoundTripsThroughTheCentralApi) {
     EXPECT_EQ(replacement.value(), (ByteArray{0x99}));
 }
 
+TEST_F(Plain, LocalManufacturerDataAndConnectability) {
+    auto local = adapter.create_local_peripheral();
+    local.add_service(SERVICE);
+    local.set_advertised_manufacturer_data(0x004c, ByteArray{0x02});
+    local.set_advertised_manufacturer_data(0x004c, ByteArray{0x02, 0x15});
+    local.set_advertised_manufacturer_data(0xffff, ByteArray{});
+
+    local.start();
+    EXPECT_THROW(local.set_advertised_manufacturer_data(0x0001, ByteArray{}), Exception::OperationFailed);
+    EXPECT_THROW(local.set_connectable(false), Exception::OperationFailed);
+    auto peripheral = discover("Plain Adapter Peripheral");
+    EXPECT_EQ(peripheral.manufacturer_data(),
+              (std::map<uint16_t, ByteArray>{{0x004c, ByteArray{0x02, 0x15}}, {0xffff, ByteArray{}}}));
+    EXPECT_TRUE(peripheral.is_connectable());
+    local.stop();
+
+    local.set_connectable(false);
+    local.start();
+    EXPECT_FALSE(discover("Plain Adapter Peripheral").is_connectable());
+    local.stop();
+}
+
 TEST_F(Plain, LocalSubscriptionsCountClientsAndDisconnects) {
     Simulation::Environment environment;
     environment.add_adapter("Host", "00:00:00:00:00:01");

@@ -32,6 +32,16 @@ class SIMPLEBLE_EXPORT Peripheral {
     void add_advertised_service(BluetoothUUID service_uuid);
     void add_advertised_service(std::vector<BluetoothUUID> service_uuids);
 
+    /**
+     * Add manufacturer specific data to the advertisement.
+     *
+     * Setting data for the same company identifier again replaces it.
+     */
+    void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data);
+
+    /** Choose whether centrals can connect. Local peripherals are connectable by default. */
+    void set_connectable(bool connectable);
+
     /** Add a primary GATT service. */
     Service add_service(BluetoothUUID uuid);
     std::vector<Service> services();

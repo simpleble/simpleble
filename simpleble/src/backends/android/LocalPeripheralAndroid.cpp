@@ -139,6 +139,18 @@ void PeripheralAndroid::add_advertised_service(std::vector<BluetoothUUID> servic
     }
 }
 
+void PeripheralAndroid::set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _advertised_manufacturer_data[company_id] = std::move(data);
+}
+
+void PeripheralAndroid::set_connectable(bool connectable) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _connectable = connectable;
+}
+
 std::shared_ptr<ServiceBase> PeripheralAndroid::add_service(BluetoothUUID uuid) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
@@ -210,6 +222,9 @@ void PeripheralAndroid::start() {
         for (const auto& uuid : service_uuids) {
             data_builder.addServiceUuid(Android::ParcelUUID(Android::UUID::fromString(uuid)));
         }
+        for (const auto& [company_id, bytes] : _advertised_manufacturer_data) {
+            data_builder.addManufacturerData(company_id, bytes);
+        }
         auto data = data_builder.build();
 
         Android::AdvertiseData::Builder response_builder;
@@ -217,7 +232,7 @@ void PeripheralAndroid::start() {
         auto scan_response = response_builder.build();
 
         auto settings = Android::AdvertiseSettings::Builder()
-                            .setConnectable(true)
+                            .setConnectable(_connectable)
                             .setAdvertiseMode(Android::AdvertiseSettings::ADVERTISE_MODE_BALANCED)
                             .build();
         _advertiser = _adapter.getBluetoothLeAdvertiser();

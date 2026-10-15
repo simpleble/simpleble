@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <exception>
 #include <map>
 #include <memory>
@@ -12,6 +13,7 @@
 #include <kvn_safe_callback.hpp>
 
 #include "../common/LocalPeripheralBase.h"
+#include "winrt/Windows.Devices.Bluetooth.Advertisement.h"
 #include "winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h"
 #include "winrt/Windows.Devices.Bluetooth.h"
 
@@ -28,6 +30,8 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
 
     void add_advertised_service(BluetoothUUID service_uuid) override;
     void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
+    void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) override;
+    void set_connectable(bool connectable) override;
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;
     std::vector<std::shared_ptr<ServiceBase>> services() override;
@@ -64,8 +68,24 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
         std::mutex clients_mutex;
     };
 
+    // NOTE: GATT service providers can't advertise manufacturer data, so a peripheral without services advertises it
+    // through a publisher instead. Publisher advertisements aren't connectable.
+    struct Publisher {
+        winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementPublisher publisher{nullptr};
+        winrt::event_token status_changed_token{};
+        std::mutex mutex;
+        std::condition_variable cv;
+        winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementPublisherStatus status{
+            winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementPublisherStatus::Created};
+        winrt::Windows::Devices::Bluetooth::BluetoothError error{
+            winrt::Windows::Devices::Bluetooth::BluetoothError::Success};
+    };
+
     winrt::Windows::Devices::Bluetooth::BluetoothAdapter _adapter{nullptr};
     std::vector<BluetoothUUID> _advertised_service_uuids;
+    std::map<uint16_t, ByteArray> _advertised_manufacturer_data;
+    bool _connectable = true;
+    std::shared_ptr<Publisher> _publisher;
     std::vector<std::shared_ptr<ServiceWindows>> _services;
     std::shared_ptr<RunState> _run;
     std::atomic_bool _started{false};
@@ -75,6 +95,7 @@ class PeripheralWindows : public PeripheralBase, public std::enable_shared_from_
     kvn::safe_callback<void(BluetoothAddress)> _callback_on_client_disconnected;
 
     void _ensure_mutable() const;
+    void _start_publisher();
     void _observe_session(const std::shared_ptr<RunState>& run, const GattSession& session);
     void _on_session_status_changed(const std::shared_ptr<RunState>& run, const std::string& key,
                                     const GattSession& sender, const GattSessionStatusChangedEventArgs& args);

@@ -18,6 +18,8 @@ class PeripheralBase {
 
     virtual void add_advertised_service(BluetoothUUID service_uuid) = 0;
     virtual void add_advertised_service(std::vector<BluetoothUUID> service_uuids) = 0;
+    virtual void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) = 0;
+    virtual void set_connectable(bool connectable) = 0;
 
     virtual std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) = 0;
     virtual std::vector<std::shared_ptr<ServiceBase>> services() = 0;

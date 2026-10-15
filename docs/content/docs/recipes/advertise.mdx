@@ -215,6 +215,35 @@ Configure services, characteristics, and advertising before `start()`. While sta
 
 SimpleBLE permits the same adapter to scan while the local peripheral is started when the platform Bluetooth stack and controller support concurrent scanning and advertising. On Linux, BlueZ and the controller must support both operations at the same time.
 
+## Advertise a beacon
+
+A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
+
+<Tabs items={["C++"]}>
+<Tab value="C++">
+
+```cpp
+auto peripheral = adapter.create_local_peripheral();
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+SimpleBLE::ByteArray ibeacon = {0x02, 0x15,
+                                0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2,
+                                0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+                                0x00, 0x01,  // Major
+                                0x00, 0x02,  // Minor
+                                0xc5};       // Measured power (-59 dBm)
+peripheral.set_advertised_manufacturer_data(0x004c, ibeacon);
+peripheral.set_connectable(false);
+peripheral.start();
+```
+
+</Tab>
+</Tabs>
+
+Setting data for the same company identifier again replaces it. To change the payload while advertising, call `stop()`, set the data, then `start()` again.
+
+Beacons work on Linux, Windows, and Android. macOS and iOS can't advertise manufacturer data. Windows advertises manufacturer data only from a non-connectable peripheral without services.
+
 ## Hosting from C
 
 SimpleCBLE provides the same local-hosting flow through owned local peripheral, service, and characteristic handles. See the [C hosting example](../simplecble/tutorial#local-peripheral-hosting) for creation, start/stop, and cleanup.

@@ -50,6 +50,18 @@ void PeripheralLinux::add_advertised_service(std::vector<BluetoothUUID> service_
     }
 }
 
+void PeripheralLinux::set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _advertised_manufacturer_data[company_id] = std::move(data);
+}
+
+void PeripheralLinux::set_connectable(bool connectable) {
+    std::scoped_lock lock(_lifecycle_mutex);
+    _ensure_mutable();
+    _connectable = connectable;
+}
+
 void PeripheralLinux::set_advertisement_local_name(std::optional<std::string> local_name) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();
@@ -101,14 +113,21 @@ void PeripheralLinux::start() {
         }
     }
 
+    // NOTE: BlueZ only makes "peripheral" advertisements connectable. A "broadcast" can't be discoverable,
+    // as the Bluetooth spec doesn't allow broadcasters to set discoverable flags.
     _bluez_advertisement = _root->advertisement_add(_name);
-    _bluez_advertisement->adv_type("peripheral");
-    _bluez_advertisement->discoverable(true);
+    _bluez_advertisement->adv_type(_connectable ? "peripheral" : "broadcast");
+    if (_connectable) {
+        _bluez_advertisement->discoverable(true);
+    }
     if (_advertisement_local_name.has_value()) {
         _bluez_advertisement->local_name(*_advertisement_local_name);
     }
     if (!service_uuids.empty()) {
         _bluez_advertisement->service_uuids(service_uuids);
+    }
+    if (!_advertised_manufacturer_data.empty()) {
+        _bluez_advertisement->manufacturer_data(_advertised_manufacturer_data);
     }
 
     for (const auto& service : _services) {
@@ -117,8 +136,11 @@ void PeripheralLinux::start() {
 
     bool application_registered = false;
     try {
-        _adapter->register_application(_service_manager->path());
-        application_registered = true;
+        // NOTE: Without services there is no GATT application to publish.
+        if (!_services.empty()) {
+            _adapter->register_application(_service_manager->path());
+            application_registered = true;
+        }
         _adapter->register_advertisement(_bluez_advertisement);
         _started.store(true);
     } catch (...) {
@@ -150,11 +172,14 @@ void PeripheralLinux::stop() {
         first_error = std::current_exception();
     }
 
-    try {
-        _adapter->unregister_application(_service_manager->path());
-    } catch (...) {
-        if (!first_error) {
-            first_error = std::current_exception();
+    // Services can't change while started, so this matches what start() registered.
+    if (!_services.empty()) {
+        try {
+            _adapter->unregister_application(_service_manager->path());
+        } catch (...) {
+            if (!first_error) {
+                first_error = std::current_exception();
+            }
         }
     }
 

@@ -61,6 +61,18 @@ void PeripheralMac::add_advertised_service(std::vector<BluetoothUUID> service_uu
     }
 }
 
+void PeripheralMac::set_advertised_manufacturer_data(uint16_t, ByteArray) {
+    // CoreBluetooth only advertises a local name and service UUIDs.
+    throw Exception::OperationNotSupported();
+}
+
+void PeripheralMac::set_connectable(bool connectable) {
+    // CoreBluetooth advertisements are always connectable.
+    if (!connectable) {
+        throw Exception::OperationNotSupported();
+    }
+}
+
 void PeripheralMac::set_advertisement_local_name(std::optional<std::string> local_name) {
     std::scoped_lock lock(_lifecycle_mutex);
     _ensure_mutable();

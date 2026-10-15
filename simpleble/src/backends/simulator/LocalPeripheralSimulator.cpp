@@ -161,6 +161,8 @@ class LocalDevice final : public Device, public std::enable_shared_from_this<Loc
     std::atomic_bool released{false};
 
     std::vector<BluetoothUUID> advertised;
+    std::map<uint16_t, ByteArray> manufacturer_data;
+    bool connectable = true;
     std::map<BluetoothUUID, std::shared_ptr<ServiceSimulator>> services;
 
     // Services may be replaced before disconnect callbacks run.
@@ -283,6 +285,8 @@ void LocalDevice::start() {
                 internal()->advertisement.services.push_back(uuid);
             }
         }
+        internal()->advertisement.manufacturer_data = manufacturer_data;
+        internal()->advertisement.connectable = connectable;
     }
 
     owner->add_device(shared_from_this());
@@ -414,6 +418,20 @@ class PeripheralSimulator final : public PeripheralBase {
         for (auto& uuid : uuids) {
             device_->advertised.push_back(normalize(uuid));
         }
+    }
+
+    void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) override {
+        std::lock_guard<std::mutex> lock(device_->mutex);
+        device_->require_stopped();
+
+        device_->manufacturer_data[company_id] = std::move(data);
+    }
+
+    void set_connectable(bool connectable) override {
+        std::lock_guard<std::mutex> lock(device_->mutex);
+        device_->require_stopped();
+
+        device_->connectable = connectable;
     }
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override {

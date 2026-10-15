@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -29,6 +30,8 @@ class PeripheralLinux : public PeripheralBase {
 
     void add_advertised_service(BluetoothUUID service_uuid) override;
     void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
+    void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) override;
+    void set_connectable(bool connectable) override;
     void set_advertisement_local_name(std::optional<std::string> local_name);
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;
@@ -56,6 +59,8 @@ class PeripheralLinux : public PeripheralBase {
     std::string _name;
 
     std::vector<BluetoothUUID> _advertised_service_uuids;
+    std::map<uint16_t, ByteArray> _advertised_manufacturer_data;
+    bool _connectable = true;
     std::optional<std::string> _advertisement_local_name;
     std::vector<std::shared_ptr<ServiceLinux>> _services;
     size_t _next_service_id{0};

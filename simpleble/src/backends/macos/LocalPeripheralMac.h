@@ -27,6 +27,8 @@ class PeripheralMac : public PeripheralBase, public std::enable_shared_from_this
 
     void add_advertised_service(BluetoothUUID service_uuid) override;
     void add_advertised_service(std::vector<BluetoothUUID> service_uuids) override;
+    void set_advertised_manufacturer_data(uint16_t company_id, ByteArray data) override;
+    void set_connectable(bool connectable) override;
     void set_advertisement_local_name(std::optional<std::string> local_name);
 
     std::shared_ptr<ServiceBase> add_service(BluetoothUUID uuid) override;

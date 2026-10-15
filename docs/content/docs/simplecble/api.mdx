@@ -632,6 +632,20 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
+  signature={"void simpleble_local_peripheral_set_advertised_manufacturer_data(simpleble_local_peripheral_t handle, uint16_t company_id, const uint8_t* data, size_t data_length, simpleble_error_t** out_error)"}
+  brief={"Adds manufacturer specific data to the advertisement."}
+  notes={[{"content": "Configure it before starting the peripheral.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "company_id", "type": "uint16_t", "description": "Company identifier. Setting data for the same identifier again replaces it."}, {"name": "data", "type": "const uint8_t*", "description": "Bytes to copy; may be NULL when data_length is zero."}, {"name": "data_length", "type": "size_t", "description": "Number of bytes to copy."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_peripheral_set_connectable(simpleble_local_peripheral_t handle, bool connectable, simpleble_error_t** out_error)"}
+  brief={"Chooses whether centrals can connect. Local peripherals are connectable by default."}
+  notes={[{"content": "Configure it before starting the peripheral.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "connectable", "type": "bool", "description": "Whether centrals can connect."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
   signature={"simpleble_local_service_t simpleble_local_peripheral_add_service(simpleble_local_peripheral_t handle, simpleble_uuid_t uuid, simpleble_error_t** out_error)"}
   brief={"Adds a primary local GATT service."}
   detailed={"Returns: An owned service handle, or NULL on failure. Release with simpleble_local_service_release_handle()."}

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <utility>
+#include <vector>
 
 #include "simplejni/Common.hpp"
 #include "simplejni/Registry.hpp"
@@ -18,6 +20,7 @@ class AdvertiseData {
       public:
         Builder();
         Builder& addServiceUuid(const ParcelUUID& uuid);
+        Builder& addManufacturerData(uint16_t manufacturer_id, const std::vector<uint8_t>& data);
         Builder& setIncludeDeviceName(bool include);
         AdvertiseData build();
 
@@ -26,6 +29,7 @@ class AdvertiseData {
         static SimpleJNI::GlobalRef<jclass> _cls;
         static jmethodID _constructor;
         static jmethodID _add_service_uuid;
+        static jmethodID _add_manufacturer_data;
         static jmethodID _set_include_device_name;
         static jmethodID _build;
         static const SimpleJNI::JNIDescriptor descriptor;
