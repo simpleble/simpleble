@@ -65,7 +65,10 @@ BluetoothAddress PeripheralWindows::address() { return address_; }
 
 int16_t PeripheralWindows::rssi() { return rssi_; }
 
-int16_t PeripheralWindows::tx_power() { return tx_power_; }
+int16_t PeripheralWindows::tx_power() {
+    std::lock_guard<std::mutex> lock(advertising_mutex_);
+    return advertisement_.tx_power != INT16_MIN ? advertisement_.tx_power : scan_response_.tx_power;
+}
 
 uint16_t PeripheralWindows::mtu() {
     if (!is_connected()) return 0;
@@ -80,20 +83,20 @@ void PeripheralWindows::update_advertising_data(advertising_data_t advertising_d
         identifier_ = advertising_data.identifier;
     }
     rssi_ = advertising_data.rssi;
-
-    if (advertising_data.tx_power != INT16_MIN) {
-        tx_power_ = advertising_data.tx_power;
-    }
-
     address_type_ = advertising_data.address_type;
-    
+
+    std::lock_guard<std::mutex> lock(advertising_mutex_);
     if (!advertising_data.scan_response) {
         // Scan responses don't describe connectability.
         connectable_ = advertising_data.connectable;
+        if (!advertising_data.scannable) {
+            // No scan response follows a non-scannable advertisement, so the last one no longer applies.
+            scan_response_ = {};
+        }
     }
 
-    std::lock_guard<std::mutex> lock(advertising_mutex_);
     auto& packet = advertising_data.scan_response ? scan_response_ : advertisement_;
+    packet.tx_power = advertising_data.tx_power;
     packet.manufacturer_data = std::move(advertising_data.manufacturer_data);
     packet.service_data = std::move(advertising_data.service_data);
 }

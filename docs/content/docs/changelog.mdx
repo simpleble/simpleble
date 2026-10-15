@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Changed**
 
+- (SimpleBLE) Advertising data reflects the latest advertisement and scan response.
 - (SimplePyBLE) Declared the BUSL-1.1 license in package metadata.
 - (SimpleAIBLE) Declared the BUSL-1.1 license in package metadata and included the license file.
 - (SimpleRsBLE) Included the license file in the crate.
@@ -45,10 +46,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed every command taking up to several seconds on Windows.
 - (Dongl) Fixed an unplugged Dongl leaving its peripherals connected and commands waiting for a timeout.
 - (Dongl) Fixed Bluetooth being reported as enabled without a Dongl plugged in.
-- (Dongl) Fixed service data that a device stopped advertising still being reported.
 - (Linux) Fixed scans missing devices that don't advertise as discoverable, like most beacons.
 - (Windows) Fixed local peripheral notifications failing after a client write.
-- (Windows) Fixed manufacturer and service data that a device stopped advertising still being reported.
 - (MacOS) Fixed exceptions thrown by disconnection and notification callbacks crashing the program.
 - (SimpleJavaBLE) Fixed several Dongls appearing as one adapter.
 - (SimpleJavaBLE) Fixed adapter listeners stopping after adapters were enumerated again.

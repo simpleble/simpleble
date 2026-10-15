@@ -80,8 +80,8 @@ void PeripheralMac::update_advertising_data(advertising_data_t advertising_data)
     rssi_ = advertising_data.rssi;
     tx_power_ = advertising_data.tx_power;
 
-    advertising_data.service_data.merge(service_data_);
-    service_data_ = advertising_data.service_data;
+    // CoreBluetooth reports the advertisement combined with the latest scan response, so each report replaces the last.
+    service_data_ = std::move(advertising_data.service_data);
 }
 
 void PeripheralMac::connect() {

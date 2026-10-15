@@ -35,6 +35,8 @@ class SIMPLEBLE_EXPORT Peripheral {
      *
      * @note If the field has not been advertised by the peripheral,
      *       the returned value will be -32768.
+     * @note Advertising data reflects the latest advertisement and scan response.
+     *       When both carry the same field, the advertisement wins.
      */
     int16_t tx_power();
     uint16_t mtu();
@@ -61,6 +63,13 @@ class SIMPLEBLE_EXPORT Peripheral {
      *       that were advertised by the device.
      */
     std::vector<Service> services();
+
+    /**
+     * @brief Provides the advertised manufacturer specific data, by company identifier.
+     *
+     * @note Advertising data reflects the latest advertisement and scan response.
+     *       When both carry the same field, the advertisement wins.
+     */
     std::map<uint16_t, ByteArray> manufacturer_data();
 
     /* Calling any of the methods below when the device is not connected will throw

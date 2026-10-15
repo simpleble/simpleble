@@ -8,7 +8,6 @@
 
 #include <simpleble/Exceptions.h>
 #include <simpleble/Config.h>
-#include <algorithm>
 #include <limits>
 #include "CommonUtils.h"
 #include "LoggingInternal.h"
@@ -57,14 +56,8 @@ void PeripheralAndroid::update_advertising_data(Android::ScanResult scan_result)
         tx_power_ = tx_power_level;
     }
 
-    auto service_uuids = scan_record.getServiceUuids();
-    for (auto& service_uuid : service_uuids) {
-        if (std::find(advertised_services_.begin(), advertised_services_.end(), service_uuid) ==
-            advertised_services_.end()) {
-            advertised_services_.push_back(service_uuid);
-        }
-    }
-
+    // Each result carries the advertisement combined with its scan response, so it replaces the last one.
+    advertised_services_ = scan_record.getServiceUuids();
     manufacturer_data_ = scan_record.getManufacturerData();
 }
 

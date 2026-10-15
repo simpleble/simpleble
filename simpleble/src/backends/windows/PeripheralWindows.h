@@ -99,7 +99,6 @@ class PeripheralWindows : public PeripheralBase {
     BluetoothAddress address_;
     SimpleBLE::BluetoothAddressType address_type_;
     int16_t rssi_ = INT16_MIN;
-    int16_t tx_power_ = INT16_MIN;
     uint16_t mtu_;
     bool connectable_ = false;
     winrt::event_token connection_status_changed_token_;
@@ -121,6 +120,7 @@ class PeripheralWindows : public PeripheralBase {
     // Fields of the latest advertisement and the latest scan response, so a field that stops being advertised
     // disappears. They are written by the scanner thread and read by user threads.
     struct PacketFields {
+        int16_t tx_power = INT16_MIN;
         std::map<uint16_t, SimpleBLE::ByteArray> manufacturer_data;
         std::map<BluetoothUUID, SimpleBLE::ByteArray> service_data;
     };

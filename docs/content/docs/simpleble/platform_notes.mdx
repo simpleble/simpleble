@@ -34,6 +34,9 @@ macOS and iOS manage Bluetooth connections at the OS level.
 *   **Unpairing:** Applications cannot programmatically "unpair" or "forget" a device. This must be done by the user in the system settings.
 *   **Connection State:** The OS might keep a connection alive even if your application disconnects, especially if other apps or the system itself are using the device.
 
+### Advertising Data
+CoreBluetooth reports a single manufacturer data entry, the last one in the advertisement. When the scan response also carries manufacturer data, CoreBluetooth appends its bytes, company identifier included, to that entry. CoreBluetooth also keeps the previous scan response after a device switches to a non-scannable advertisement.
+
 ### Local Peripheral Mode
 macOS and iOS can host a local peripheral through CoreBluetooth. Because CoreBluetooth does not expose peripheral-role connection events, SimpleBLE reports a client as connected when it first subscribes to a characteristic and disconnected when its final subscription ends. Client addresses are CoreBluetooth identifiers rather than Bluetooth MAC addresses.
 
@@ -70,6 +73,9 @@ If you need to verify the address used over the air, use BlueZ tools such as `bt
 On Linux, BlueZ exposes adapters, peripherals, services, and characteristics as D-Bus object paths. If a Bluetooth adapter is disabled, unplugged, or otherwise removed, BlueZ removes the adapter object path and any child device paths below it. SimpleBLE objects retained by the application may still exist as C++ objects, but the underlying BlueZ objects they refer to are no longer present.
 
 Applications that support adapter hot-plug or adapter removal should treat existing adapters, remote peripherals, and local peripherals as stale after the adapter disappears. Stop active work, release retained objects when possible, and call `SimpleBLE::Adapter::get_adapters()` again to discover the current adapter set before scanning, connecting, or advertising again.
+
+### Advertising Data
+BlueZ keeps the last value of a field that a device stops advertising, including TX power, and only adds to its list of advertised service UUIDs. On Linux, such data stays reported until BlueZ removes the device. BlueZ also reports some advertisements without their scan response, so a field that differs between the two can alternate.
 
 ### Local Peripheral Mode
 On Linux, `Adapter::create_local_peripheral()` registers a BlueZ GATT application and an LE advertisement through D-Bus, so `bluetoothd` must be running and the process must have the same D-Bus access used for scanning.

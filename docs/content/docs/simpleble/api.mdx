@@ -254,7 +254,7 @@ This class is intended to be used by the user only. Library developers should us
 <ApiMethod
   signature="int16_t tx_power()"
   brief="Provides the advertised transmit power in dBm."
-  notes={[{ content: "If the field has not been advertised by the peripheral, the returned value will be -32768.", type: "info" }]}
+  notes={[{ content: "If the field has not been advertised by the peripheral, the returned value will be -32768. Advertising data reflects the latest advertisement and scan response; when both carry the same field, the advertisement wins.", type: "info" }]}
 />
 
 <ApiMethod
@@ -293,6 +293,8 @@ This class is intended to be used by the user only. Library developers should us
 
 <ApiMethod
   signature="std::map< uint16_t, ByteArray > manufacturer_data()"
+  brief="Provides the advertised manufacturer specific data, by company identifier."
+  notes={[{ content: "Advertising data reflects the latest advertisement and scan response; when both carry the same field, the advertisement wins. See the platform notes for Linux and macOS.", type: "info" }]}
 />
 
 <ApiMethod
