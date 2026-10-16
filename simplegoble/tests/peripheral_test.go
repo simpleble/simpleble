@@ -3,6 +3,7 @@ package simplegoble_test
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	ble "github.com/simpleble/simplegoble"
@@ -129,7 +130,7 @@ func TestPlainPeripheralDiscoveryAndOwnership(t *testing.T) {
 	if copy.Initialized() {
 		t.Fatal("copy retained released peripheral handle")
 	}
-	if _, err := copy.Read("180f", "2a19"); !errors.Is(err, ble.ErrClosed) {
+	if _, err := copy.Read(batteryService, batteryValue); !errors.Is(err, ble.ErrClosed) {
 		t.Fatal(err)
 	}
 	if connected, err := p.IsConnected(); err != nil || !connected {
@@ -175,15 +176,15 @@ func TestPlainGATTValuesMetadataAndErrors(t *testing.T) {
 	if mtu, err := p.MTU(); err != nil || mtu != 244 {
 		t.Fatalf("MTU = %v, %v", mtu, err)
 	}
-	if battery, err := p.Read("0000180F", "2A19"); err != nil || !bytes.Equal(battery, []byte{100}) {
-		t.Fatalf("short uppercase UUID read = %v, %v", battery, err)
+	if battery, err := p.Read(strings.ToUpper(batteryService), strings.ToUpper(batteryValue)); err != nil || !bytes.Equal(battery, []byte{100}) {
+		t.Fatalf("uppercase UUID read = %v, %v", battery, err)
 	}
 	for _, write := range []func(string, string, []byte) error{p.WriteRequest, p.WriteCommand} {
 		for _, payload := range [][]byte{{0, 0xff, 0x80, 1}, nil} {
 			if err := write(testService, testValue, payload); err != nil {
 				t.Fatal(err)
 			}
-			data, err := p.Read("fff0", "fff1")
+			data, err := p.Read(testService, testValue)
 			if err != nil || !bytes.Equal(data, payload) || data == nil {
 				t.Fatalf("characteristic round trip = %v, %v", data, err)
 			}
@@ -193,7 +194,7 @@ func TestPlainGATTValuesMetadataAndErrors(t *testing.T) {
 		if err := p.WriteDescriptor(testService, testValue, description, payload); err != nil {
 			t.Fatal(err)
 		}
-		if data, err := p.ReadDescriptor("fff0", "fff1", "2901"); err != nil || !bytes.Equal(data, payload) || data == nil {
+		if data, err := p.ReadDescriptor(testService, testValue, description); err != nil || !bytes.Equal(data, payload) || data == nil {
 			t.Fatalf("descriptor round trip = %v, %v", data, err)
 		}
 	}
@@ -203,10 +204,14 @@ func TestPlainGATTValuesMetadataAndErrors(t *testing.T) {
 		code ble.ErrorCode
 	}{
 		{func() error { _, err := p.Read("invalid", testValue); return err }, ble.InvalidArgument},
-		{func() error { _, err := p.Read("fff9", testValue); return err }, ble.GATTServiceNotFound},
-		{func() error { _, err := p.Read(testService, "fff9"); return err }, ble.GATTCharacteristicNotFound},
-		{func() error { _, err := p.ReadDescriptor(testService, testValue, "2909"); return err }, ble.GATTDescriptorNotFound},
-		{func() error { _, err := p.Read(testService, "fff2"); return err }, ble.OperationFailed},
+		{func() error { _, err := p.Read("fff0", testValue); return err }, ble.InvalidArgument},
+		{func() error { _, err := p.Read("0000fff9-0000-1000-8000-00805f9b34fb", testValue); return err }, ble.GATTServiceNotFound},
+		{func() error { _, err := p.Read(testService, "0000fff9-0000-1000-8000-00805f9b34fb"); return err }, ble.GATTCharacteristicNotFound},
+		{func() error {
+			_, err := p.ReadDescriptor(testService, testValue, "00002909-0000-1000-8000-00805f9b34fb")
+			return err
+		}, ble.GATTDescriptorNotFound},
+		{func() error { _, err := p.Read(testService, "0000fff2-0000-1000-8000-00805f9b34fb"); return err }, ble.OperationFailed},
 		{func() error { return p.WriteRequest(batteryService, batteryValue, []byte{1}) }, ble.OperationNotSupported},
 	} {
 		if err := check.call(); !errors.Is(err, check.code) {
@@ -266,7 +271,7 @@ func TestPlainSubscriptionsAndConnectionEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 		values := make(chan []byte, 8)
-		if err := subscribe("FFF0", "FFF1", func(data []byte) { values <- data }); err != nil {
+		if err := subscribe(strings.ToUpper(testService), strings.ToUpper(testValue), func(data []byte) { values <- data }); err != nil {
 			t.Fatal(err)
 		}
 		if flags, err := p.ReadDescriptor(testService, testValue, cccd); err != nil || !bytes.Equal(flags, []byte{byte(i + 1), 0}) {
@@ -285,7 +290,7 @@ func TestPlainSubscriptionsAndConnectionEvents(t *testing.T) {
 		if err := p.Unsubscribe(testService, testValue); err != nil {
 			t.Fatal(err)
 		}
-		if flags, err := p.ReadDescriptor("fff0", "fff1", "2902"); err != nil || !bytes.Equal(flags, []byte{0, 0}) {
+		if flags, err := p.ReadDescriptor(testService, testValue, cccd); err != nil || !bytes.Equal(flags, []byte{0, 0}) {
 			t.Fatalf("unsubscribe flags = %v, %v", flags, err)
 		}
 	}

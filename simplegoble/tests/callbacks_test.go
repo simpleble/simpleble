@@ -15,8 +15,8 @@ type nativeCallback struct {
 }
 
 func TestSubscriptionInstallationAndFailure(t *testing.T) {
-	service, _ := bindings.NewUUID("fff0")
-	characteristic, _ := bindings.NewUUID("fff1")
+	service, _ := bindings.NewUUID(testService)
+	characteristic, _ := bindings.NewUUID(testValue)
 	var current nativeCallback
 	dispatch := func(callback nativeCallback, data []byte) {
 		var invoke func(uintptr, bindings.UUID, bindings.UUID, *byte, uintptr, uintptr) uintptr

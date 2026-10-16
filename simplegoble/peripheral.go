@@ -165,8 +165,8 @@ func (p *Peripheral) ManufacturerData() (map[uint16][]byte, error) {
 	})
 }
 
-// Read reads a characteristic value. UUIDs accept 4/8-digit Bluetooth UUIDs or
-// canonical 128-bit UUIDs. The returned buffer is Go-owned, including empty values.
+// Read reads a characteristic value. UUIDs are canonical 128-bit UUIDs. The
+// returned buffer is Go-owned, including empty values.
 func (p *Peripheral) Read(service, characteristic string) ([]byte, error) {
 	return p.read(service, characteristic, "")
 }

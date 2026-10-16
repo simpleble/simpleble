@@ -202,14 +202,14 @@ func readBattery(peripheral *ble.Peripheral) ([]byte, error) {
         return nil, err
     }
     defer peripheral.Disconnect()
-    return peripheral.Read("180f", "2a19")
+    return peripheral.Read("0000180f-0000-1000-8000-00805f9b34fb", "00002a19-0000-1000-8000-00805f9b34fb")
 }
 ```
 
 `Services` includes characteristic capabilities and descriptor UUIDs. Use
 `Read`, `WriteRequest`, and `WriteCommand` for characteristics, and
-`ReadDescriptor` and `WriteDescriptor` for descriptors. UUID arguments accept
-4/8-digit Bluetooth identifiers or canonical 128-bit UUIDs, in either case.
+`ReadDescriptor` and `WriteDescriptor` for descriptors. UUID arguments are
+canonical 128-bit UUIDs, in either case.
 Empty writes are supported. Keep an input byte slice unchanged until the write
 returns.
 

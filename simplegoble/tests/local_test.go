@@ -132,7 +132,7 @@ func TestPlainLocalConfigurationAndValueOwnership(t *testing.T) {
 	if flags, err := c.Capabilities(); err != nil || flags != 31 {
 		t.Fatalf("capabilities = %v, %v", flags, err)
 	}
-	if _, err := service.AddCharacteristic("fff2", 1<<31); !errors.Is(err, ble.InvalidArgument) {
+	if _, err := service.AddCharacteristic("0000fff2-0000-1000-8000-00805f9b34fb", 1<<31); !errors.Is(err, ble.InvalidArgument) {
 		t.Fatal(err)
 	}
 	if _, err := host.AddService("180f\x00"); !errors.Is(err, ble.InvalidArgument) {
@@ -157,7 +157,7 @@ func TestPlainLocalConfigurationAndValueOwnership(t *testing.T) {
 	if err := host.RemoveAllServices(); !errors.Is(err, ble.OperationFailed) {
 		t.Fatal(err)
 	}
-	if _, err := service.AddCharacteristic("fff2", ble.CapabilityRead); !errors.Is(err, ble.OperationFailed) {
+	if _, err := service.AddCharacteristic("0000fff2-0000-1000-8000-00805f9b34fb", ble.CapabilityRead); !errors.Is(err, ble.OperationFailed) {
 		t.Fatal(err)
 	}
 	if err := host.Stop(); err != nil {

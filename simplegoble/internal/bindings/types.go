@@ -14,14 +14,8 @@ type UUID struct {
 
 func NewUUID(value string) (UUID, error) {
 	var uuid UUID
-	switch len(value) {
-	case 4:
-		value = "0000" + value + "-0000-1000-8000-00805f9b34fb"
-	case 8:
-		value += "-0000-1000-8000-00805f9b34fb"
-	case 36:
-	default:
-		return uuid, &Error{Code: InvalidArgument, Message: "expected a 4/8-digit Bluetooth UUID or a canonical 128-bit UUID"}
+	if len(value) != 36 {
+		return uuid, &Error{Code: InvalidArgument, Message: "expected a canonical 128-bit UUID"}
 	}
 	if value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
 		return uuid, &Error{Code: InvalidArgument, Message: "invalid UUID"}

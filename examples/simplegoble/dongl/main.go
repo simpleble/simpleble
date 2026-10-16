@@ -2,11 +2,10 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,12 +18,35 @@ func main() {
 	}
 }
 
-func run() error {
-	if len(os.Args) > 2 {
-		return fmt.Errorf("usage: dongl [ADDRESS]")
+// ask prints a question and returns the user's answer.
+func ask(input *bufio.Reader, question string) (string, error) {
+	fmt.Print(question)
+	line, err := input.ReadString('\n')
+	return strings.TrimSpace(line), err
+}
+
+// choose asks the user to pick one of count listed entries.
+func choose(input *bufio.Reader, count int) (int, error) {
+	answer, err := ask(input, "Enter choice: ")
+	if err != nil {
+		return 0, err
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
+	choice, err := strconv.Atoi(answer)
+	if err != nil || choice < 0 || choice >= count {
+		return 0, fmt.Errorf("invalid choice %q", answer)
+	}
+	return choice, nil
+}
+
+func describe(name func() (string, error), address func() (string, error)) string {
+	identifier, _ := name()
+	mac, _ := address()
+	return fmt.Sprintf("%s [%s]", identifier, mac)
+}
+
+func run() error {
+	input := bufio.NewReader(os.Stdin)
+
 	dongl, err := ble.GetDonglBackend()
 	if err != nil {
 		return err
@@ -42,17 +64,27 @@ func run() error {
 	if len(adapters) == 0 {
 		return fmt.Errorf("no Dongl found")
 	}
-	adapter := adapters[0]
-	name, err := adapter.Identifier()
-	if err != nil {
-		return err
-	}
-	address, err := adapter.Address()
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s [%s]\n", name, address)
 
+	// Query the user to pick a Dongl
+	fmt.Println("Please select a Dongl:")
+	for i, adapter := range adapters {
+		fmt.Printf("%d: %s\n", i, describe(adapter.Identifier, adapter.Address))
+	}
+	choice, err := choose(input, len(adapters))
+	if err != nil {
+		return err
+	}
+	adapter := adapters[choice]
+	fmt.Printf("Selected Dongl: %s\n", describe(adapter.Identifier, adapter.Address))
+
+	if err := adapter.SetCallbackOnScanFound(func(peripheral *ble.Peripheral) {
+		fmt.Printf("Found %s\n", describe(peripheral.Identifier, peripheral.Address))
+		_ = peripheral.Close()
+	}); err != nil {
+		return err
+	}
+
+	// Scan for 5 seconds
 	if err := adapter.ScanFor(5 * time.Second); err != nil {
 		return err
 	}
@@ -65,47 +97,26 @@ func run() error {
 			_ = peripheral.Close()
 		}
 	}()
-	var target *ble.Peripheral
-	for _, peripheral := range peripherals {
-		name, err := peripheral.Identifier()
-		if err != nil {
-			return err
-		}
-		address, err := peripheral.Address()
-		if err != nil {
-			return err
-		}
-		fmt.Printf("%s (%s)\n", name, address)
-		if len(os.Args) == 2 && strings.EqualFold(address, os.Args[1]) {
-			target = peripheral
-		}
+	if len(peripherals) == 0 {
+		return fmt.Errorf("no peripherals found")
 	}
-	if len(os.Args) == 1 {
-		return nil
-	}
-	if target == nil {
-		return fmt.Errorf("peripheral %q not found", os.Args[1])
-	}
-	return connect(ctx, target)
-}
 
-// connect answers pairing requests from the terminal, which the Dongl handles
-// without the operating system. Register the callbacks before connecting.
-func connect(ctx context.Context, peripheral *ble.Peripheral) error {
-	input := bufio.NewReader(os.Stdin)
-	ask := func(question string) (string, bool) {
-		fmt.Print(question)
-		answer, err := input.ReadString('\n')
-		return strings.TrimSpace(answer), err == nil
+	// Query the user to pick a peripheral
+	fmt.Println("Please select a peripheral:")
+	for i, peripheral := range peripherals {
+		fmt.Printf("%d: %s\n", i, describe(peripheral.Identifier, peripheral.Address))
 	}
-	if err := peripheral.SetCallbackOnNumericComparison(func(passkey string) bool {
-		answer, _ := ask(fmt.Sprintf("Does the device show %s? [y/N] ", passkey))
-		return answer == "y"
-	}); err != nil {
+	choice, err = choose(input, len(peripherals))
+	if err != nil {
 		return err
 	}
+	peripheral := peripherals[choice]
+
+	// Pairing can start as soon as the link is up, so register the callbacks
+	// before connecting. The Dongl pairs without the operating system.
 	if err := peripheral.SetCallbackOnPasskeyRequest(func() (string, bool) {
-		return ask("Enter the passkey shown by the device: ")
+		passkey, err := ask(input, "Enter the passkey shown on the device (empty to reject): ")
+		return passkey, err == nil && passkey != ""
 	}); err != nil {
 		return err
 	}
@@ -114,15 +125,35 @@ func connect(ctx context.Context, peripheral *ble.Peripheral) error {
 	}); err != nil {
 		return err
 	}
+	if err := peripheral.SetCallbackOnNumericComparison(func(passkey string) bool {
+		answer, err := ask(input, fmt.Sprintf("Does the device show %s? [y/N] ", passkey))
+		return err == nil && answer == "y"
+	}); err != nil {
+		return err
+	}
+
+	fmt.Printf("Connecting to: %s\n", describe(peripheral.Identifier, peripheral.Address))
 	if err := peripheral.Connect(); err != nil {
 		return err
 	}
 	defer peripheral.Disconnect()
+
+	fmt.Println("Successfully connected, listing services...")
+	services, err := peripheral.Services()
+	if err != nil {
+		return err
+	}
+	for _, service := range services {
+		fmt.Printf("Service: %s\n", service.UUID)
+		for _, characteristic := range service.Characteristics {
+			fmt.Printf("    Characteristic: %s\n", characteristic.UUID)
+		}
+	}
+
 	paired, err := peripheral.IsPaired()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Connected, paired: %t. Press Ctrl+C to disconnect.\n", paired)
-	<-ctx.Done()
+	fmt.Printf("Paired: %t\n", paired)
 	return nil
 }

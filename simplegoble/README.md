@@ -141,7 +141,7 @@ func readBattery(peripheral *ble.Peripheral) error {
     }
     defer peripheral.Disconnect()
 
-    value, err := peripheral.Read("180f", "2a19")
+    value, err := peripheral.Read("0000180f-0000-1000-8000-00805f9b34fb", "00002a19-0000-1000-8000-00805f9b34fb")
     if err != nil {
         return err
     }
@@ -152,8 +152,8 @@ func readBattery(peripheral *ble.Peripheral) error {
 
 Use `Services()` to inspect characteristics, their capabilities, and descriptors.
 `Read`, `WriteRequest`, and `WriteCommand` access characteristic values;
-`ReadDescriptor` and `WriteDescriptor` access descriptors. UUIDs accept short
-4/8-digit Bluetooth identifiers or full 128-bit UUIDs.
+`ReadDescriptor` and `WriteDescriptor` access descriptors. UUIDs are full
+128-bit UUIDs.
 
 `Notify` and `Indicate` deliver Go-owned byte slices to your handler.
 `Unsubscribe` stops a subscription. `ManufacturerData` returns advertisement
@@ -163,7 +163,7 @@ Run the scan and read examples:
 
 ```sh
 go run github.com/simpleble/simplegoble/examples/scan
-go run github.com/simpleble/simplegoble/examples/read ADDRESS 180f 2a19
+go run github.com/simpleble/simplegoble/examples/read
 ```
 
 For backend-specific enumeration, call `GetBackends()` and then
@@ -185,15 +185,15 @@ func hostBattery(adapter *ble.Adapter, done <-chan struct{}) error {
         return err
     }
     defer host.Close()
-    if err := host.AddAdvertisedService("180f"); err != nil {
+    if err := host.AddAdvertisedService("0000180f-0000-1000-8000-00805f9b34fb"); err != nil {
         return err
     }
-    service, err := host.AddService("180f")
+    service, err := host.AddService("0000180f-0000-1000-8000-00805f9b34fb")
     if err != nil {
         return err
     }
     defer service.Close()
-    battery, err := service.AddCharacteristic("2a19", ble.CapabilityRead|ble.CapabilityNotify)
+    battery, err := service.AddCharacteristic("00002a19-0000-1000-8000-00805f9b34fb", ble.CapabilityRead|ble.CapabilityNotify)
     if err != nil {
         return err
     }
@@ -245,7 +245,7 @@ Dongl happens without the operating system: register
 `SetCallbackOnNumericComparison` on the peripheral before `Connect`.
 
 ```sh
-go run github.com/simpleble/simplegoble/examples/dongl [ADDRESS]
+go run github.com/simpleble/simplegoble/examples/dongl
 ```
 
 ## Platforms
