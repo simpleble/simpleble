@@ -1,0 +1,163 @@
+---
+title: Usage
+description: Install and use the SimpleJSBLE Node.js and Electron binding.
+---
+
+SimpleJSBLE exposes SimpleBLE to Node.js and Electron with promises, `EventEmitter` events, and TypeScript types.
+
+## Requirements
+
+- Node.js 22 or newer, or an Electron release built on it.
+- Windows 10 or newer, macOS 13.0 or newer, or Linux with glibc 2.28 or newer, on x64 or arm64.
+- On Linux, BlueZ and the D-Bus library (`libdbus-1-3` on Debian and Ubuntu).
+
+## Install from npm
+
+```bash
+npm install simplejsble
+```
+
+The package carries the native addon for every supported platform, so installation compiles and downloads nothing. Development builds of the main branch are published under the `dev` tag:
+
+```bash
+npm install simplejsble@dev
+```
+
+## First scan
+
+```js
+import { Adapter } from 'simplejsble';
+
+const [adapter] = await Adapter.getAdapters();
+if (!adapter) throw new Error('No Bluetooth adapters found.');
+
+adapter.on('scanFound', peripheral => {
+  console.log(peripheral.identifier(), peripheral.address(), peripheral.rssi());
+});
+await adapter.scanFor(5000);
+```
+
+The package works with both `import` and `require`. For more, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleJSBLE Examples](./examples).
+
+## Calls, events, and lifetime
+
+Calls that reach the Bluetooth stack return promises. Calls on one object run in the order they were made: a `read()` issued after `connect()` waits for the connection. Data the library already holds, such as `identifier()`, `rssi()`, `manufacturerData()`, or `services()`, is returned directly.
+
+`Adapter`, `Peripheral`, `LocalPeripheral`, and `LocalCharacteristic` are `EventEmitter`s. Events are delivered on the JavaScript thread in the order they happened, and a listener that throws is an uncaught exception, as with any other emitter.
+
+An adapter gives you one `Peripheral` object per device, whether it came from `scanFound`, `scanGetResults()`, or `getConnectedPeripherals()`, so you can compare them with `===` and keep state on them. On Windows each `Adapter.getAdapters()` creates new adapter objects, and listeners on one `Adapter` hear only about calls made through it, so keep the adapter you started with.
+
+Objects with listeners or subscriptions stay alive without other references. An active scan, an open connection, and a started local peripheral keep Node.js running until they end, so a script exits once it stops scanning, disconnects, and stops hosting.
+
+Failures reject with a `SimpleBLEError`. Its `code` is SimpleBLE's error code, such as `'PERIPHERAL_NOT_CONNECTED'` or `'GATT_CHARACTERISTIC_NOT_FOUND'`; WinRT failures also carry the original HRESULT in `nativeCode`. Invalid arguments are `TypeError`s.
+
+## Connect and use GATT
+
+```js
+const SERVICE = '0000180f-0000-1000-8000-00805f9b34fb';
+const BATTERY_LEVEL = '00002a19-0000-1000-8000-00805f9b34fb';
+
+peripheral.on('disconnected', () => console.log('Disconnected'));
+await peripheral.connect();
+
+for (const service of peripheral.services()) {
+  console.log(service.uuid, service.characteristics.map(c => c.uuid));
+}
+
+const level = await peripheral.read(SERVICE, BATTERY_LEVEL);
+await peripheral.notify(SERVICE, BATTERY_LEVEL, value => console.log(`Battery: ${value[0]}%`));
+```
+
+UUIDs are full 128-bit strings. Values are read as `Buffer`s, and writes take any `Uint8Array`. `writeRequest()` waits for the peripheral to confirm, while `writeCommand()` does not.
+
+`notify()` and `indicate()` call your function with each value until `unsubscribe()` or a disconnection; after a disconnection, subscribe again once reconnected. Calling either again for the same characteristic replaces the function.
+
+## Host a local peripheral
+
+`adapter.createLocalPeripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Configure the advertisement and services, then call `start()`; call `stop()` before changing them.
+
+```js
+const SERVICE = '12345678-1234-5678-1234-56789abcdef0';
+const ECHO = '12345678-1234-5678-1234-56789abcdef1';
+
+const host = adapter.createLocalPeripheral();
+host.addAdvertisedService(SERVICE);
+
+const echo = host.addService(SERVICE).addCharacteristic(ECHO, ['read', 'writeRequest', 'notify']);
+await echo.setValue(Buffer.from('ready'));
+
+// Echo each write to subscribed clients.
+echo.on('write', value => echo.setValue(value));
+host.on('clientConnected', address => console.log(`${address} connected`));
+
+await host.start();
+```
+
+`setValue()` stores a value and publishes it to subscribed clients when the characteristic can notify or indicate. Characteristics emit `write` with the written value, which `value()` already returns, and `subscribed` and `unsubscribed` when the first client subscribes and the last one leaves. The local peripheral emits `clientConnected` and `clientDisconnected` with the client's address, or a platform-specific identifier where the platform hides it.
+
+`setAdvertisedManufacturerData(companyId, data)` adds manufacturer-specific data to the advertisement, and `setConnectable(false)` makes it non-connectable, for example to [advertise a beacon](../recipes/advertise#advertise-a-beacon).
+
+To compute values on demand, `setReadHandler()` takes a function that answers each read instead of the stored value, until you pass `null`. It can return a promise, and the client's read waits for it.
+
+## Handlers
+
+Read handlers and the Dongl pairing handlers below answer questions a native thread waits on. The thread blocks until your handler returns or its promise settles, and SimpleBLE's own timeouts apply meanwhile, so answer promptly; a handler that never settles stalls that object.
+
+If a handler throws or rejects, the error is an unhandled rejection in Node.js, and SimpleBLE gets a default answer: an empty value for a read, and a rejection for pairing.
+
+Setting a handler returns a promise that resolves once the native object uses it. Await it before the operation that needs it.
+
+## Configure backends
+
+`Config` holds process-wide settings grouped by backend: `Config.simpleBluez` (Linux), `Config.winRT` (Windows), and `Config.dongl`. Set them at startup, before the first call that reaches a backend; later changes might not take effect.
+
+```js
+import { Config } from 'simplejsble';
+
+Config.simpleBluez.connectionTimeout = 5000;
+```
+
+Timeouts are in milliseconds. Each group has a `reset()` that restores its defaults, and `Config.resetAll()` restores them all.
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Its backend is on by default, so `Adapter.getAdapters()` includes Dongl adapters; to use only them, take the adapters of the Dongl backend:
+
+```js
+import { Backend } from 'simplejsble';
+
+const dongl = await Backend.getDongl();
+const [adapter] = await dongl.adapters();
+if (!adapter) throw new Error('No Dongl found.');
+```
+
+A Dongl adapter works like any other adapter. Only one program can use a Dongl at a time: `await adapter.close()` stops the adapter's scan and local peripherals, disconnects its peripherals, and frees the Dongl for other programs right away. The closed objects then reject calls with `OBJECT_NOT_INITIALIZED`. In TypeScript and runtimes with explicit resource management, `await using adapter = ...` closes it at the end of the scope.
+
+Pairing through a Dongl happens without the operating system, so your application answers pairing requests. Set the handlers your device needs before `connect()`, since pairing can start as soon as the link is up:
+
+- `setPasskeyRequestHandler(handler)`: return the six digits the peer shows, or `undefined` to reject.
+- `setPasskeyDisplayHandler(handler)`: show the passkey so the user can type it on the peer.
+- `setNumericComparisonHandler(handler)`: return `true` only if the peer shows the same six digits.
+
+```js
+import { createInterface } from 'node:readline/promises';
+
+const input = createInterface({ input: process.stdin, output: process.stdout });
+
+await peripheral.setNumericComparisonHandler(async passkey => {
+  return (await input.question(`Does the device show ${passkey}? [y/N] `)) === 'y';
+});
+await peripheral.connect();
+```
+
+Passing `null` removes a handler. A request without a handler is rejected, and peripherals of other adapters reject the setters with `OPERATION_NOT_SUPPORTED`.
+
+## Electron
+
+Use SimpleJSBLE from the main process, and send plain data to renderers over IPC rather than SimpleJSBLE objects. When packaging, unpack `*.node` files from the ASAR archive, for example with `asarUnpack: ['**/*.node']` in electron-builder.
+
+## Platform notes
+
+- **macOS**: Bluetooth permission belongs to the app that runs Node.js. From a terminal, macOS asks for permission for the terminal app; packaged Electron apps need an `NSBluetoothAlwaysUsageDescription` entry in their `Info.plist`. See [Bluetooth Permissions](../fundamentals/permissions).
+- **Linux**: SimpleJSBLE talks to BlueZ over the D-Bus system bus, so the user needs access to it, as described in [Bluetooth Permissions](../fundamentals/permissions).
+- **Windows**: Adapters are re-created on each enumeration, as described in [Calls, events, and lifetime](#calls-events-and-lifetime).

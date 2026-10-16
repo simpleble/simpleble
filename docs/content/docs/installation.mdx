@@ -18,6 +18,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleJavaBLE](./simplejavable/usage) | Java | Production-ready | JVM desktop apps and integrations | Maven Central or local source |
 | [SimpleGoBLE](./simplegoble/usage) | Go | Development | Desktop BLE client | Go modules |
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
+| [SimpleJSBLE](./simplejsble/usage) | JavaScript / TypeScript | Development | Node.js and Electron apps | npm |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
@@ -39,7 +40,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Android", "Unity", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "Android", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -172,6 +173,19 @@ If you want to use a local checkout while developing:
 [dependencies]
 simplersble = { path = "path/to/simpleble" }
 ```
+
+</Tab>
+<Tab value="Node.js">
+
+Install the Node.js package with Node.js 22 or newer:
+
+```sh
+npm install simplejsble
+```
+
+The package includes the native addon for Windows, macOS, and Linux on x64 and
+arm64, so nothing is compiled during installation. See
+[SimpleJSBLE Usage](./simplejsble/usage) for Electron and platform notes.
 
 </Tab>
 <Tab value="Android">
