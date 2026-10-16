@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 
 import type { NativeService, PeripheralHandle } from './native';
-import { intern, onNativeEvent, release, retain, retainWhileListening } from './registry';
+import { intern, onNativeEvent, release, retain, retainWhileListening, unregister } from './registry';
 
 export type BluetoothAddressType = 'public' | 'random' | 'unspecified';
 
@@ -32,6 +32,12 @@ export interface PeripheralEvents {
 const EVENTS = ['connected', 'disconnected'] as const;
 
 const construct = Symbol('construct');
+
+/**
+ * Releases a peripheral of the adapter with the given key, which is closing.
+ * @internal
+ */
+export const releaseFrom = Symbol('releaseFrom');
 
 // Notification and indication callbacks by subscription id. The addon passes
 // only the id with each value.
@@ -94,7 +100,7 @@ export class Peripheral extends EventEmitter<PeripheralEvents> {
 
   /** @internal */
   static wrap(handle: PeripheralHandle): Peripheral {
-    return intern(handle.key(), () => new Peripheral(construct, handle));
+    return intern(handle.key(), () => new Peripheral(construct, handle), () => handle.release());
   }
 
   identifier(): string {
@@ -203,6 +209,17 @@ export class Peripheral extends EventEmitter<PeripheralEvents> {
     super.removeAllListeners(...args);
     this.#rehook();
     return this;
+  }
+
+  /** @internal */
+  [releaseFrom](adapterKey: string): void {
+    if (this.#handle.owner() !== adapterKey) return;
+
+    const key = this.#handle.key();
+    for (const [subscriptionKey, subscription] of [...this.#subscriptions]) this.#forget(subscriptionKey, subscription);
+    this.removeAllListeners();
+    this.#handle.release();
+    unregister(key, this);
   }
 
   /** @internal */

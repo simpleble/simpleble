@@ -23,7 +23,7 @@ BackendHandle::BackendHandle(const Napi::CallbackInfo& info) : Napi::ObjectWrap<
     backend_ = *info[0].As<Napi::External<SimpleBLE::Backend>>().Data();
 }
 
-BackendHandle::~BackendHandle() { release_in_lifecycle(std::move(backend_)); }
+BackendHandle::~BackendHandle() { release_later(backend_); }
 
 Napi::Value BackendHandle::key(const Napi::CallbackInfo& info) {
     return Napi::String::New(info.Env(), key_of(Internal<SimpleBLE::Backend>::of(backend_)));

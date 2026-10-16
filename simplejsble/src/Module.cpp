@@ -152,8 +152,8 @@ Napi::Value config_reset(const Napi::CallbackInfo& info) {
 
 void finalize(Napi::Env, AddonData* data) {
     data->dispatcher->close();
-    release_in_lifecycle(std::move(data->scanning.objects));
-    release_later(std::move(data->connected.objects));
+    release_later(data->scanning.objects);
+    release_later(data->connected.objects);
     delete data;
     owner = nullptr;
 }

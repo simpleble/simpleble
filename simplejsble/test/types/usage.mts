@@ -57,6 +57,11 @@ await peripheral.indicate('service', 'characteristic', (data: string) => {});
 peripheral.services()[0].uuid = 'changed';
 const paired: Peripheral[] = await adapter.getPairedPeripherals();
 
+{
+  await using closing = adapter;
+}
+await adapter.close();
+
 Config.dongl.useDonglBackend = false;
 // @ts-expect-error Settings are typed.
 Config.simpleBluez.connectionTimeout = '2s';

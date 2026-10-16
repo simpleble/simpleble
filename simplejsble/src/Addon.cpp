@@ -116,7 +116,7 @@ Napi::Promise run(Napi::Env env, std::shared_ptr<Executor::Strand> strand, std::
                 deferred->Reject(to_js(env, capture(std::current_exception())));
             }
             // The finisher can hold the last reference to a native object.
-            release_later(std::move(finisher));
+            release_later(finisher);
         });
     };
 
@@ -128,22 +128,6 @@ Napi::Promise run(Napi::Env env, std::shared_ptr<Executor::Strand> strand, std::
     // NOTE: The completion runs on this thread, so it can't release before this.
     dispatcher->hold(env);
     return promise;
-}
-
-void hold_active(Napi::Env env, ActiveSet& active, const void* pointer, std::shared_ptr<void> object) {
-    if (!object || !active.objects.emplace(pointer, std::move(object)).second) return;
-    addon(env).dispatcher->hold(env);
-}
-
-void release_active(Napi::Env env, ActiveSet& active, const void* pointer) {
-    auto node = active.objects.extract(pointer);
-    if (node.empty()) return;
-    if (active.lifecycle) {
-        release_in_lifecycle(std::move(node.mapped()));
-    } else {
-        release_later(std::move(node.mapped()));
-    }
-    addon(env).dispatcher->release(env);
 }
 
 std::shared_ptr<Executor::Strand> lifecycle() {
@@ -189,18 +173,24 @@ void emit(Napi::Env env, const std::string& key, const char* event) {
     addon(env).dispatch.Call({Napi::String::New(env, key), Napi::String::New(env, event)});
 }
 
-// The TypeScript side reuses its object for the peripheral's key, and turns the
-// External into a handle (peripheralHandle()) only when it has none, so frequent
-// scan updates don't create handles.
-void emit(Napi::Env env, const std::string& key, const char* event, const SimpleBLE::Peripheral& peripheral) {
-    auto external = Napi::External<SimpleBLE::Peripheral>::New(env, new SimpleBLE::Peripheral(peripheral),
-                                                               [](Napi::Env, SimpleBLE::Peripheral* copy) {
-                                                                   release_later(std::move(*copy));
-                                                                   delete copy;
-                                                               });
-    addon(env).dispatch.Call({Napi::String::New(env, key), Napi::String::New(env, event),
-                              Napi::String::New(env, key_of(Internal<SimpleBLE::Peripheral>::of(peripheral))),
-                              external});
+void emit(Napi::Env env, const std::string& key, const char* event, SimpleBLE::Peripheral& peripheral,
+          const void* owner) {
+    const auto peripheral_key = key_of(Internal<SimpleBLE::Peripheral>::of(peripheral));
+    auto source = std::make_unique<PeripheralSource>(PeripheralSource{peripheral, owner});
+    // NOTE: `source` holds the peripheral too, so this can't be the last reference.
+    peripheral = SimpleBLE::Peripheral();
+
+    auto external = Napi::External<PeripheralSource>::New(env, source.get(),
+                                                          [](Napi::Env, PeripheralSource* source) { delete source; });
+    auto held = source.release();
+    try {
+        addon(env).dispatch.Call({Napi::String::New(env, key), Napi::String::New(env, event),
+                                  Napi::String::New(env, peripheral_key), external});
+    } catch (...) {
+        release_later(held->peripheral);
+        throw;
+    }
+    release_later(held->peripheral);
 }
 
 Napi::Buffer<uint8_t> to_buffer(Napi::Env env, const SimpleBLE::ByteArray& bytes) {

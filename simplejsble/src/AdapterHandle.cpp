@@ -11,8 +11,8 @@ namespace {
 // Powering off ends a scan without a scan-stop callback on several backends, so
 // it counts as a stop too. An unplugged Dongl reports nothing at the adapter
 // level, so its scan keeps Node running until scanStop() is called.
-void scan_started(Napi::Env env, const void* pointer, std::shared_ptr<void> adapter) {
-    hold_active(env, addon(env).scanning, pointer, std::move(adapter));
+void scan_started(Napi::Env env, const SimpleBLE::Adapter& adapter) {
+    hold_active(env, addon(env).scanning, adapter, Internal<SimpleBLE::Adapter>::of(adapter));
 }
 
 void scan_stopped(Napi::Env env, const void* pointer) { release_active(env, addon(env).scanning, pointer); }
@@ -36,6 +36,9 @@ Napi::Function AdapterHandle::define(Napi::Env env) {
                            InstanceMethod<&AdapterHandle::get_paired_peripherals>("getPairedPeripherals"),
                            InstanceMethod<&AdapterHandle::get_connected_peripherals>("getConnectedPeripherals"),
                            InstanceMethod<&AdapterHandle::subscribe>("subscribe"),
+                           InstanceMethod<&AdapterHandle::connections>("connections"),
+                           InstanceMethod<&AdapterHandle::close>("close"),
+                           InstanceMethod<&AdapterHandle::release>("release"),
                        });
 }
 
@@ -58,7 +61,7 @@ AdapterHandle::AdapterHandle(const Napi::CallbackInfo& info) : Napi::ObjectWrap<
     adapter_ = *info[0].As<Napi::External<SimpleBLE::Adapter>>().Data();
 }
 
-AdapterHandle::~AdapterHandle() { release_in_lifecycle(std::move(adapter_)); }
+AdapterHandle::~AdapterHandle() { release_later(adapter_); }
 
 std::shared_ptr<Executor::Strand> AdapterHandle::strand() {
     if (!strand_) strand_ = strand_for(Internal<SimpleBLE::Adapter>::of(adapter_));
@@ -108,8 +111,7 @@ Napi::Value AdapterHandle::scan_start(const Napi::CallbackInfo& info) {
     return run(info.Env(), strand(), [adapter]() mutable -> Finisher {
         adapter.scan_start();
         return [adapter](Napi::Env env) {
-            scan_started(env, Internal<SimpleBLE::Adapter>::of(adapter),
-                         Internal<SimpleBLE::Adapter>::pointer(adapter));
+            scan_started(env, adapter);
             return env.Undefined();
         };
     });
@@ -149,24 +151,28 @@ Napi::Value AdapterHandle::scan_is_active(const Napi::CallbackInfo& info) {
 }
 
 Napi::Value AdapterHandle::scan_get_results(const Napi::CallbackInfo& info) {
-    return guard(info.Env(), [&] { return wrap_peripherals(info.Env(), adapter_.scan_get_results()); });
+    return guard(info.Env(), [&] {
+        return wrap_peripherals(info.Env(), adapter_.scan_get_results(), Internal<SimpleBLE::Adapter>::of(adapter_));
+    });
 }
 
 // NOTE: Unlike SimplePyBLE's aio module, these two return promises: on Windows
 // they run a device query through WinRT.
 Napi::Value AdapterHandle::get_paired_peripherals(const Napi::CallbackInfo& info) {
     auto adapter = adapter_;
-    return run(info.Env(), strand(), [adapter]() mutable -> Finisher {
+    const void* owner = Internal<SimpleBLE::Adapter>::of(adapter_);
+    return run(info.Env(), strand(), [adapter, owner]() mutable -> Finisher {
         auto peripherals = adapter.get_paired_peripherals();
-        return [peripherals](Napi::Env env) { return wrap_peripherals(env, peripherals); };
+        return [peripherals, owner](Napi::Env env) { return wrap_peripherals(env, peripherals, owner); };
     });
 }
 
 Napi::Value AdapterHandle::get_connected_peripherals(const Napi::CallbackInfo& info) {
     auto adapter = adapter_;
-    return run(info.Env(), strand(), [adapter]() mutable -> Finisher {
+    const void* owner = Internal<SimpleBLE::Adapter>::of(adapter_);
+    return run(info.Env(), strand(), [adapter, owner]() mutable -> Finisher {
         auto peripherals = adapter.get_connected_peripherals();
-        return [peripherals](Napi::Env env) { return wrap_peripherals(env, peripherals); };
+        return [peripherals, owner](Napi::Env env) { return wrap_peripherals(env, peripherals, owner); };
     });
 }
 
@@ -190,13 +196,15 @@ Napi::Value AdapterHandle::subscribe(const Napi::CallbackInfo& info) {
 
     // NOTE: The callbacks are stored in the native adapter, so they hold it weakly.
     const void* pointer = Internal<SimpleBLE::Adapter>::of(adapter_);
-    std::weak_ptr<void> native = Internal<SimpleBLE::Adapter>::pointer(adapter_);
+    std::weak_ptr native = Internal<SimpleBLE::Adapter>::pointer(adapter_);
 
-    auto on_scan_start = [events, pointer, native]() {
+    auto on_scan_start = [events, native]() {
         auto dispatcher = events->dispatcher.lock();
         if (!dispatcher) return;
-        dispatcher->post([events, pointer, native](Napi::Env env) {
-            scan_started(env, pointer, native.lock());
+        dispatcher->post([events, native](Napi::Env env) {
+            auto adapter = Internal<SimpleBLE::Adapter>::from(native.lock());
+            scan_started(env, adapter);
+            release_later(adapter);
             emit(env, events->key, "scanStart");
         });
     };
@@ -218,23 +226,57 @@ Napi::Value AdapterHandle::subscribe(const Napi::CallbackInfo& info) {
         adapter_.set_callback_on_power_on(signal("powerOn"));
         adapter_.set_callback_on_power_off(stop_signal("powerOff"));
 
-        adapter_.set_callback_on_scan_found([events](SimpleBLE::Peripheral peripheral) {
+        adapter_.set_callback_on_scan_found([events, pointer](SimpleBLE::Peripheral peripheral) {
             auto dispatcher = events->dispatcher.lock();
             if (!dispatcher) return;
-            dispatcher->post([events, peripheral](Napi::Env env) { emit(env, events->key, "scanFound", peripheral); });
+            dispatcher->post([events, pointer, peripheral](Napi::Env env) mutable {
+                emit(env, events->key, "scanFound", peripheral, pointer);
+            });
         });
 
         // A device can advertise many times a second. Only one update per
         // device is queued at a time; the getters always read current data.
-        adapter_.set_callback_on_scan_updated([events](SimpleBLE::Peripheral peripheral) {
+        adapter_.set_callback_on_scan_updated([events, pointer](SimpleBLE::Peripheral peripheral) {
             auto dispatcher = events->dispatcher.lock();
             if (!dispatcher) return;
             Dispatcher::Key key{events.get(), Internal<SimpleBLE::Peripheral>::of(peripheral)};
-            dispatcher->post_coalesced(
-                key, [events, peripheral](Napi::Env env) { emit(env, events->key, "scanUpdated", peripheral); });
+            dispatcher->post_coalesced(key, [events, pointer, peripheral](Napi::Env env) mutable {
+                emit(env, events->key, "scanUpdated", peripheral, pointer);
+            });
         });
         return info.Env().Undefined();
     });
+}
+
+// The peripherals connected through this adapter, which close() disconnects
+// before releasing them. Unlike getConnectedPeripherals(), this leaves out
+// connections other programs made.
+Napi::Value AdapterHandle::connections(const Napi::CallbackInfo& info) {
+    const void* pointer = Internal<SimpleBLE::Adapter>::of(adapter_);
+    std::vector<SimpleBLE::Peripheral> peripherals;
+    for (const auto& [key, entry] : addon(info.Env()).connected.objects) {
+        if (entry.owner == pointer) peripherals.push_back(entry.object);
+    }
+    return wrap_peripherals(info.Env(), peripherals, pointer);
+}
+
+// Releases everything the addon holds of this adapter, after the TypeScript
+// side has stopped its scan, disconnected its peripherals and released their
+// handles. The promise settles once the lifecycle strand has dropped them, so
+// an enumeration that follows can open the adapter again.
+Napi::Value AdapterHandle::close(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    const void* pointer = Internal<SimpleBLE::Adapter>::of(adapter_);
+    release_owned(env, addon(env).scanning, pointer);
+    release_owned(env, addon(env).connected, pointer);
+    release_later(adapter_);
+    return run(env, lifecycle(), [] { return finish_undefined(); });
+}
+
+// Drops the adapter of a handle the TypeScript side doesn't use.
+Napi::Value AdapterHandle::release(const Napi::CallbackInfo& info) {
+    release_later(adapter_);
+    return info.Env().Undefined();
 }
 
 }  // namespace SimpleJSBLE

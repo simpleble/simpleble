@@ -109,7 +109,14 @@ import { Backend } from 'simplejsble';
 
 const dongl = await Backend.getDongl();
 const [adapter] = await dongl.adapters();
+
+// ...
+
+await adapter.close();
 ```
+
+`close()` stops the adapter's scan, disconnects its peripherals, and frees the
+Dongl for other programs. Adapters also support `await using`.
 
 `Config` holds the Dongl, BlueZ, and WinRT backend settings; set them before the
 first call that reaches a backend. Pairing through a Dongl happens without the

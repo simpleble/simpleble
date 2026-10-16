@@ -34,18 +34,20 @@ Napi::Function PeripheralHandle::define(Napi::Env env) {
                            InstanceMethod<&PeripheralHandle::indicate>("indicate"),
                            InstanceMethod<&PeripheralHandle::unsubscribe>("unsubscribe"),
                            InstanceMethod<&PeripheralHandle::subscribe>("subscribe"),
+                           InstanceMethod<&PeripheralHandle::owner>("owner"),
+                           InstanceMethod<&PeripheralHandle::release>("release"),
                        });
 }
 
-Napi::Object PeripheralHandle::wrap(Napi::Env env, const SimpleBLE::Peripheral& peripheral) {
-    SimpleBLE::Peripheral copy = peripheral;
-    return addon(env).peripheral_constructor.New({Napi::External<SimpleBLE::Peripheral>::New(env, &copy)});
+Napi::Object PeripheralHandle::wrap(Napi::Env env, const SimpleBLE::Peripheral& peripheral, const void* owner) {
+    PeripheralSource source{peripheral, owner};
+    return addon(env).peripheral_constructor.New({Napi::External<PeripheralSource>::New(env, &source)});
 }
 
-Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Peripheral>& peripherals) {
+Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Peripheral>& peripherals, const void* owner) {
     auto array = Napi::Array::New(env, peripherals.size());
     for (uint32_t i = 0; i < peripherals.size(); i++) {
-        array.Set(i, PeripheralHandle::wrap(env, peripherals[i]));
+        array.Set(i, PeripheralHandle::wrap(env, peripherals[i], owner));
     }
     return array;
 }
@@ -53,10 +55,12 @@ Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Periphe
 PeripheralHandle::PeripheralHandle(const Napi::CallbackInfo& info) : Napi::ObjectWrap<PeripheralHandle>(info) {
     if (!info[0].IsExternal()) throw Napi::TypeError::New(info.Env(), "Peripherals come from an Adapter");
 
-    peripheral_ = *info[0].As<Napi::External<SimpleBLE::Peripheral>>().Data();
+    const auto& source = *info[0].As<Napi::External<PeripheralSource>>().Data();
+    peripheral_ = source.peripheral;
+    owner_ = source.owner;
 }
 
-PeripheralHandle::~PeripheralHandle() { release_later(std::move(peripheral_)); }
+PeripheralHandle::~PeripheralHandle() { release_later(peripheral_); }
 
 std::shared_ptr<Executor::Strand> PeripheralHandle::strand() {
     if (!strand_) strand_ = strand_for(Internal<SimpleBLE::Peripheral>::of(peripheral_));
@@ -65,7 +69,8 @@ std::shared_ptr<Executor::Strand> PeripheralHandle::strand() {
 
 Napi::Value peripheral_handle(const Napi::CallbackInfo& info) {
     if (!info[0].IsExternal()) throw Napi::TypeError::New(info.Env(), "Expected a peripheral");
-    return PeripheralHandle::wrap(info.Env(), *info[0].As<Napi::External<SimpleBLE::Peripheral>>().Data());
+    const auto& source = *info[0].As<Napi::External<PeripheralSource>>().Data();
+    return PeripheralHandle::wrap(info.Env(), source.peripheral, source.owner);
 }
 
 Napi::Value PeripheralHandle::key(const Napi::CallbackInfo& info) {
@@ -171,11 +176,11 @@ double subscription_id(const Napi::CallbackInfo& info, size_t index) {
 
 Napi::Value PeripheralHandle::connect(const Napi::CallbackInfo& info) {
     auto peripheral = peripheral_;
-    return run(info.Env(), strand(), [peripheral]() mutable -> Finisher {
+    const void* owner = owner_;
+    return run(info.Env(), strand(), [peripheral, owner]() mutable -> Finisher {
         peripheral.connect();
-        return [peripheral](Napi::Env env) {
-            hold_active(env, addon(env).connected, Internal<SimpleBLE::Peripheral>::of(peripheral),
-                        Internal<SimpleBLE::Peripheral>::pointer(peripheral));
+        return [peripheral, owner](Napi::Env env) {
+            hold_active(env, addon(env).connected, peripheral, owner);
             return env.Undefined();
         };
     });
@@ -340,13 +345,16 @@ Napi::Value PeripheralHandle::subscribe(const Napi::CallbackInfo& info) {
 
     // NOTE: The callbacks are stored in the native peripheral, so they hold it weakly.
     const void* pointer = Internal<SimpleBLE::Peripheral>::of(peripheral_);
-    std::weak_ptr<void> native = Internal<SimpleBLE::Peripheral>::pointer(peripheral_);
+    std::weak_ptr native = Internal<SimpleBLE::Peripheral>::pointer(peripheral_);
+    const void* owner = owner_;
 
-    auto on_connected = [events, pointer, native]() {
+    auto on_connected = [events, native, owner]() {
         auto dispatcher = events->dispatcher.lock();
         if (!dispatcher) return;
-        dispatcher->post([events, pointer, native](Napi::Env env) {
-            hold_active(env, addon(env).connected, pointer, native.lock());
+        dispatcher->post([events, native, owner](Napi::Env env) {
+            auto peripheral = Internal<SimpleBLE::Peripheral>::from(native.lock());
+            hold_active(env, addon(env).connected, peripheral, owner);
+            release_later(peripheral);
             emit(env, events->key, "connected");
         });
     };
@@ -365,6 +373,17 @@ Napi::Value PeripheralHandle::subscribe(const Napi::CallbackInfo& info) {
         peripheral_.set_callback_on_disconnected(on_disconnected);
         return info.Env().Undefined();
     });
+}
+
+Napi::Value PeripheralHandle::owner(const Napi::CallbackInfo& info) {
+    return Napi::String::New(info.Env(), key_of(owner_));
+}
+
+// Drops the peripheral of a handle the TypeScript side doesn't use, or when its
+// adapter closes. Later calls fail with OBJECT_NOT_INITIALIZED.
+Napi::Value PeripheralHandle::release(const Napi::CallbackInfo& info) {
+    release_later(peripheral_);
+    return info.Env().Undefined();
 }
 
 }  // namespace SimpleJSBLE

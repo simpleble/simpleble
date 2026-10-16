@@ -125,6 +125,33 @@ test('a peripheral with subscriptions keeps receiving values after its last refe
   assert.equal(child.status, 0, child.stderr);
 });
 
+test('close() ends the scan and connections and releases the adapter and its peripherals', () => {
+  // Node exits on its own only if close() ended both.
+  const child = node(`
+    import { once } from 'node:events';
+    const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
+    const [adapter] = await Adapter.getAdapters();
+    await adapter.scanStart();
+    const [peripheral] = await once(adapter, 'scanFound');
+    await peripheral.connect();
+    await adapter.close();
+
+    for (const call of [() => adapter.identifier(), () => peripheral.isConnected()]) {
+      try {
+        call();
+        throw new Error('a closed object answered');
+      } catch (error) {
+        if (error.code !== 'OBJECT_NOT_INITIALIZED') throw error;
+      }
+    }
+    const [again] = await Adapter.getAdapters();
+    if (again === adapter) throw new Error('getAdapters() returned the closed adapter');
+    console.log((await again.getConnectedPeripherals()).length);
+  `);
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(child.stdout.trim(), '0');
+});
+
 test('a pending operation keeps Node running until it settles', () => {
   const child = node(`
     const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);

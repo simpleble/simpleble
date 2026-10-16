@@ -19,9 +19,9 @@ struct EventTarget {
 
 // The handles below are internal: the TypeScript classes own them and expose
 // the public API. Each wraps a copy of the SimpleBLE object and releases it on
-// the lifecycle strand when collected. Backend calls enumerate adapters, so they
-// run on the lifecycle strand too; adapters and peripherals create their own
-// strand on their first asynchronous call.
+// the lifecycle strand when collected or closed. Backend calls enumerate
+// adapters, so they run on the lifecycle strand too; adapters and peripherals
+// create their own strand on their first asynchronous call.
 
 class BackendHandle : public Napi::ObjectWrap<BackendHandle> {
   public:
@@ -63,6 +63,9 @@ class AdapterHandle : public Napi::ObjectWrap<AdapterHandle> {
     Napi::Value get_paired_peripherals(const Napi::CallbackInfo& info);
     Napi::Value get_connected_peripherals(const Napi::CallbackInfo& info);
     Napi::Value subscribe(const Napi::CallbackInfo& info);
+    Napi::Value connections(const Napi::CallbackInfo& info);
+    Napi::Value close(const Napi::CallbackInfo& info);
+    Napi::Value release(const Napi::CallbackInfo& info);
 
     std::shared_ptr<Executor::Strand> strand();
 
@@ -73,7 +76,7 @@ class AdapterHandle : public Napi::ObjectWrap<AdapterHandle> {
 class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
   public:
     static Napi::Function define(Napi::Env env);
-    static Napi::Object wrap(Napi::Env env, const SimpleBLE::Peripheral& peripheral);
+    static Napi::Object wrap(Napi::Env env, const SimpleBLE::Peripheral& peripheral, const void* owner);
 
     explicit PeripheralHandle(const Napi::CallbackInfo& info);
     ~PeripheralHandle() override;
@@ -103,15 +106,19 @@ class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
     Napi::Value indicate(const Napi::CallbackInfo& info);
     Napi::Value unsubscribe(const Napi::CallbackInfo& info);
     Napi::Value subscribe(const Napi::CallbackInfo& info);
+    Napi::Value owner(const Napi::CallbackInfo& info);
+    Napi::Value release(const Napi::CallbackInfo& info);
 
     std::shared_ptr<Executor::Strand> strand();
 
     SimpleBLE::Peripheral peripheral_;
+    // The adapter the peripheral came from, for Adapter.close().
+    const void* owner_ = nullptr;
     std::shared_ptr<Executor::Strand> strand_;
 };
 
 Napi::Array wrap_adapters(Napi::Env env, const std::vector<SimpleBLE::Adapter>& adapters);
-Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Peripheral>& peripherals);
+Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Peripheral>& peripherals, const void* owner);
 
 // Turns the External passed with a peripheral event into a handle.
 Napi::Value peripheral_handle(const Napi::CallbackInfo& info);

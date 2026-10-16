@@ -38,10 +38,33 @@ export function lookup(key: string): object | undefined {
   return objects.get(key)?.deref();
 }
 
-/** @internal */
-export function intern<T extends object>(key: string, create: () => T): T {
+/** Every object that still stands for a native object. @internal */
+export function registered(): object[] {
+  return [...objects.values()].map(ref => ref.deref()).filter(object => object !== undefined);
+}
+
+/**
+ * Forgets `object`, which no longer stands for a native object, so the next
+ * object for `key` is a new one.
+ * @internal
+ */
+export function unregister(key: string, object: object): void {
+  if (lookup(key) === object) objects.delete(key);
+  retained.delete(object);
+}
+
+/**
+ * Returns the object for `key`, created if there is none. `discard` releases
+ * the new handle when an object exists, as an unused handle would otherwise
+ * keep the native object until garbage collection.
+ * @internal
+ */
+export function intern<T extends object>(key: string, create: () => T, discard?: () => void): T {
   const existing = lookup(key);
-  if (existing) return existing as T;
+  if (existing) {
+    discard?.();
+    return existing as T;
+  }
 
   const object = create();
   const ref = new WeakRef(object);

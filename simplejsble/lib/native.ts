@@ -28,6 +28,9 @@ export interface AdapterHandle {
   getPairedPeripherals(): Promise<PeripheralHandle[]>;
   getConnectedPeripherals(): Promise<PeripheralHandle[]>;
   subscribe(): void;
+  connections(): PeripheralHandle[];
+  close(): Promise<void>;
+  release(): void;
 }
 
 /** @internal */
@@ -56,6 +59,8 @@ export interface PeripheralHandle {
   indicate(service: string, characteristic: string, id: number): Promise<void>;
   unsubscribe(service: string, characteristic: string): Promise<void>;
   subscribe(): void;
+  owner(): string;
+  release(): void;
 }
 
 /** @internal */
