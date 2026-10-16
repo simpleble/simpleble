@@ -12,6 +12,23 @@
 #include <stddef.h>   // size_t
 #include <stdio.h>    // FILE
 
+#if !defined(FMT_HEADER_ONLY) && defined(_WIN32)
+#  if defined(FMT_LIB_EXPORT)
+#    define FMT_CAPI __declspec(dllexport)
+#  elif defined(FMT_SHARED)
+#    define FMT_CAPI __declspec(dllimport)
+#  endif
+#elif defined(FMT_LIB_EXPORT) || defined(FMT_SHARED)
+#  ifdef __GNUC__
+#    define FMT_CAPI __attribute__((visibility("default")))
+#  else
+#    define FMT_CAPI
+#  endif
+#endif
+#ifndef FMT_CAPI
+#  define FMT_CAPI
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,10 +62,10 @@ typedef struct {
 
 enum { fmt_error = -1, fmt_error_invalid_arg = -2 };
 
-int fmt_vformat(char* buffer, size_t size, const char* fmt, const fmt_arg* args,
-                size_t num_args);
-int fmt_vprint(FILE* stream, const char* fmt, const fmt_arg* args,
-               size_t num_args);
+int FMT_CAPI fmt_vformat(char* buffer, size_t size, const char* fmt,
+                         const fmt_arg* args, size_t num_args);
+int FMT_CAPI fmt_vprint(FILE* stream, const char* fmt, const fmt_arg* args,
+                        size_t num_args);
 
 #ifdef __cplusplus
 }
@@ -92,7 +109,7 @@ static inline fmt_arg fmt_from_ptr(const void* x) {
   return (fmt_arg){.type = fmt_pointer, .value.pointer = x};
 }
 
-void fmt_unsupported_type(void);
+void FMT_CAPI fmt_unsupported_type(void);
 
 #  if !defined(_MSC_VER) || defined(__clang__)
 typedef signed char fmt_signed_char;

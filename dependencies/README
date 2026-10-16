@@ -3,7 +3,8 @@ Initially we expect to have header only dependencies.
 External dependencies will be bundled as part of the install directory.
 Internal dependencies are only consumed internally and don't affect any public API.
 
-The internal fmt headers are vendored unmodified from fmt 12.2.0:
-https://github.com/fmtlib/fmt/tree/12.2.0/include/fmt
-Upstream commit: 1be298e1bd68957e4cd352e1f676f00e07dcfb57.
+The internal fmt headers are vendored unmodified from fmt's main branch, after
+12.2.0, which includes the fix for 32-bit builds:
+https://github.com/fmtlib/fmt/tree/7a3b442edc02cb45dbe60e7eaf2068356eb3f525/include/fmt
+Upstream commit: 7a3b442edc02cb45dbe60e7eaf2068356eb3f525.
 The upstream license is retained in internal/include/fmt/LICENSE.

@@ -88,7 +88,7 @@ struct printf_precision_handler {
   auto operator()(T value) -> int {
     if (!int_checker<std::numeric_limits<T>::is_signed>::fits_in_int(value))
       report_error("number is too big");
-    return max_of(static_cast<int>(value), 0);
+    return detail::is_negative(value) ? -1 : static_cast<int>(value);
   }
 
   template <typename T, FMT_ENABLE_IF(!std::is_integral<T>::value)>
@@ -246,6 +246,15 @@ class printf_arg_formatter : public arg_formatter<Char> {
     detail::write<Char>(this->out, value, this->specs, this->locale);
   }
 
+  // C requires no characters when converting a zero value with a precision of
+  // zero, so only the sign and the padding remain.
+  void write_zero_with_zero_precision() {
+    auto s = this->specs;
+    s.set_type(presentation_type::none);
+    char sign_str[] = {getsign<char>(s.sign()), '\0'};
+    write_bytes<Char, align::right>(this->out, sign_str, s);
+  }
+
  public:
   printf_arg_formatter(basic_appender<Char> iter, format_specs& s,
                        context_type& ctx)
@@ -258,8 +267,9 @@ class printf_arg_formatter : public arg_formatter<Char> {
     // MSVC2013 fails to compile separate overloads for bool and Char so use
     // std::is_same instead.
     if (!std::is_same<T, Char>::value) {
-      write(value);
-      return;
+      if (value == 0 && this->specs.precision == 0)
+        return write_zero_with_zero_precision();
+      return write(value);
     }
     format_specs s = this->specs;
     if (s.type() != presentation_type::none &&
@@ -490,7 +500,6 @@ void vprintf(buffer<Char>& buf, basic_string_view<Char> format,
           str, to_unsigned(nul != str_end ? nul - str : specs.precision));
       arg = sv;
     }
-    if (specs.alt() && arg.visit(is_zero_int())) specs.clear_alt();
     if (specs.fill_unit<Char>() == '0') {
       if (is_arithmetic_type(arg.type()) && specs.align() != align::left) {
         specs.set_align(align::numeric);
@@ -550,6 +559,13 @@ void vprintf(buffer<Char>& buf, basic_string_view<Char> format,
     if (specs.type() == presentation_type::none)
       report_error("invalid format specifier");
     if (upper) specs.set_upper();
+    // C requires no '0x' prefix for a zero value and, for '#o', a single '0'
+    // when the value and the precision are both zero.
+    if (specs.alt() && arg.visit(is_zero_int())) {
+      specs.clear_alt();
+      if (specs.type() == presentation_type::oct && specs.precision == 0)
+        specs.precision = 1;
+    }
 
     start = it;
 

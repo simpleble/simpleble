@@ -89,9 +89,11 @@ namespace detail {
 #endif
 
 #if FMT_USE_BITINT
+FMT_PRAGMA_CLANG(diagnostic push)
 FMT_PRAGMA_CLANG(diagnostic ignored "-Wbit-int-extension")
 template <int N> using bitint = _BitInt(N);
 template <int N> using ubitint = unsigned _BitInt(N);
+FMT_PRAGMA_CLANG(diagnostic pop)
 #else
 template <int N> struct bitint {};
 template <int N> struct ubitint {};
@@ -141,6 +143,7 @@ FMT_CONSTEXPR auto write_escaped_alternative(OutputIt out, const T& v,
 
   formatter<std::remove_cv_t<T>, Char> underlying;
   maybe_set_debug_format(underlying, true);
+  ctx.advance_to(out);
   return underlying.format(v, ctx);
 }
 #endif
@@ -278,12 +281,6 @@ struct is_bit_reference_like<std::__bit_const_reference<C>> {
 #endif
 
 template <typename T, typename Enable = void>
-struct has_format_as : std::false_type {};
-template <typename T>
-struct has_format_as<T, void_t<decltype(format_as(std::declval<const T&>()))>>
-    : std::true_type {};
-
-template <typename T, typename Enable = void>
 struct has_format_as_member : std::false_type {};
 template <typename T>
 struct has_format_as_member<
@@ -320,7 +317,7 @@ template <typename Char> struct formatter<std::filesystem::path, Char> {
     if (it == end) return it;
 
     Char c = *it;
-    if ((c >= '0' && c <= '9') || c == '{')
+    if ((c >= '1' && c <= '9') || c == '{')
       it = detail::parse_width(it, end, specs_, width_ref_, ctx);
     if (it != end && *it == '?') {
       debug_ = true;
@@ -351,44 +348,18 @@ template <typename Char> struct formatter<std::filesystem::path, Char> {
   }
 };
 
-class path : public std::filesystem::path {
- public:
-  auto display_string() const -> std::string {
-    const std::filesystem::path& base = *this;
-    return fmt::format(FMT_STRING("{}"), base);
-  }
-  auto system_string() const -> std::string { return string(); }
-
-  auto generic_display_string() const -> std::string {
-    const std::filesystem::path& base = *this;
-    return fmt::format(FMT_STRING("{:g}"), base);
-  }
-  auto generic_system_string() const -> std::string { return generic_string(); }
-};
-
 #endif  // FMT_CPP_LIB_FILESYSTEM
 
 template <size_t N, typename Char>
 struct formatter<std::bitset<N>, Char>
     : nested_formatter<basic_string_view<Char>, Char> {
- private:
-  // This is a functor because C++11 doesn't support generic lambdas.
-  struct writer {
-    const std::bitset<N>& bs;
-
-    template <typename OutputIt>
-    FMT_CONSTEXPR auto operator()(OutputIt out) -> OutputIt {
-      for (auto pos = N; pos > 0; --pos)
-        out = detail::write<Char>(out, bs[pos - 1] ? Char('1') : Char('0'));
-      return out;
-    }
-  };
-
  public:
   template <typename FormatContext>
   auto format(const std::bitset<N>& bs, FormatContext& ctx) const
       -> decltype(ctx.out()) {
-    return this->write_padded(ctx, writer{bs});
+    auto str = bs.template to_string<Char>();
+    auto view = basic_string_view<Char>(str);
+    return this->write(ctx, this->nested(view));
   }
 };
 
@@ -560,9 +531,10 @@ template <> struct formatter<std::error_code> {
     if (it == end) return it;
 
     it = detail::parse_align(it, end, specs_);
+    if (it == end) return it;
 
     char c = *it;
-    if (it != end && ((c >= '0' && c <= '9') || c == '{'))
+    if ((c >= '1' && c <= '9') || c == '{')
       it = detail::parse_width(it, end, specs_, width_ref_, ctx);
 
     if (it != end && *it == '?') {
@@ -620,6 +592,8 @@ struct formatter<
     T, char,
     typename std::enable_if<std::is_base_of<std::exception, T>::value>::type> {
  private:
+  format_specs specs_;
+  detail::arg_ref<char> width_ref_;
   bool with_typename_ = false;
 
  public:
@@ -627,7 +601,14 @@ struct formatter<
     auto it = ctx.begin();
     auto end = ctx.end();
     if (it == end || *it == '}') return it;
-    if (*it == 't') {
+
+    it = detail::parse_align(it, end, specs_);
+    if (it == end) return it;
+
+    char c = *it;
+    if ((c >= '1' && c <= '9') || c == '{')
+      it = detail::parse_width(it, end, specs_, width_ref_, ctx);
+    if (it != end && *it == 't') {
       ++it;
       with_typename_ = FMT_USE_RTTI != 0;
     }
@@ -637,15 +618,70 @@ struct formatter<
   template <typename Context>
   auto format(const std::exception& ex, Context& ctx) const
       -> decltype(ctx.out()) {
-    auto out = ctx.out();
+    // Common case: no width requested, so write directly without buffering.
+    if (specs_.width == 0 && specs_.dynamic_width() == arg_id_kind::none)
+      return write(ctx.out(), ex);
+    auto buf = memory_buffer();
+    write(appender(buf), ex);
+    return write_padded(ctx, string_view(buf.data(), buf.size()));
+  }
+
+ protected:
+  // Applies the parsed fill/align/width to an already-formatted message.
+  template <typename Context>
+  auto write_padded(Context& ctx, string_view message) const
+      -> decltype(ctx.out()) {
+    auto specs = specs_;
+    detail::handle_dynamic_spec(specs.dynamic_width(), specs.width, width_ref_,
+                                ctx);
+    return detail::write(ctx.out(), message, specs);
+  }
+
+ private:
+  template <typename OutputIt>
+  auto write(OutputIt out, const std::exception& ex) const -> OutputIt {
 #if FMT_USE_RTTI
     if (with_typename_) {
       out = detail::write_demangled_name(out, typeid(ex));
       *out++ = ':';
       *out++ = ' ';
     }
-#endif
-    return detail::write_bytes<char>(out, string_view(ex.what()));
+#endif  // FMT_USE_RTTI
+    out = detail::write_bytes<char>(out, string_view(ex.what()));
+#if FMT_USE_RTTI && FMT_USE_EXCEPTIONS
+    // If the exception carries a nested exception (e.g. via
+    // std::throw_with_nested), format the whole chain.
+    if (auto* nested = dynamic_cast<const std::nested_exception*>(&ex)) {
+      if (auto ep = nested->nested_ptr()) {
+        out = detail::write(out, string_view(": "));
+        try {
+          std::rethrow_exception(ep);
+        } catch (const std::exception& nested_ex) {
+          out = write(out, nested_ex);
+        } catch (...) {
+          out = detail::write(out, string_view("unknown exception"));
+        }
+      }
+    }
+#endif  // FMT_USE_RTTI && FMT_USE_EXCEPTIONS
+    return out;
+  }
+};
+
+template <> struct formatter<std::exception_ptr> : formatter<std::exception> {
+  template <typename FormatContext>
+  auto format(const std::exception_ptr& ep, FormatContext& ctx) const
+      -> decltype(ctx.out()) {
+    if (!ep) return this->write_padded(ctx, string_view("none"));
+#if FMT_USE_EXCEPTIONS
+    try {
+      std::rethrow_exception(ep);
+    } catch (const std::exception& e) {
+      return formatter<std::exception>::format(e, ctx);
+    } catch (...) {
+    }
+#endif  // FMT_USE_EXCEPTIONS
+    return this->write_padded(ctx, string_view("unknown exception"));
   }
 };
 
