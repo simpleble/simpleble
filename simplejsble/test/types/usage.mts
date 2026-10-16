@@ -1,5 +1,13 @@
 // Compiled by `npm run test:types`, never run. Checks the published types.
-import { Adapter, Backend, Config, Peripheral, SimpleBLEError, type ErrorCode } from 'simplejsble';
+import {
+  Adapter,
+  Backend,
+  Config,
+  Peripheral,
+  SimpleBLEError,
+  type CharacteristicCapability,
+  type ErrorCode,
+} from 'simplejsble';
 
 const [backend] = await Backend.getBackends();
 const name: string = backend.identifier();
@@ -26,6 +34,27 @@ adapter.scanStart() satisfies void;
 const powered: boolean = adapter.isPowered();
 
 const results: Peripheral[] = adapter.scanGetResults();
+
+const [peripheral] = results;
+peripheral.on('disconnected', () => {});
+// @ts-expect-error Peripheral events are checked too.
+peripheral.on('disconected', () => {});
+await peripheral.connect();
+for (const service of peripheral.services()) {
+  for (const characteristic of service.characteristics) {
+    const capability: CharacteristicCapability | undefined = characteristic.capabilities[0];
+    const descriptor: string | undefined = characteristic.descriptors[0]?.uuid;
+  }
+}
+const value: Buffer = await peripheral.read('service', 'characteristic');
+await peripheral.writeRequest('service', 'characteristic', new Uint8Array([1]));
+// @ts-expect-error Values are bytes.
+await peripheral.writeCommand('service', 'characteristic', 'text');
+await peripheral.notify('service', 'characteristic', (data: Buffer) => {});
+// @ts-expect-error The callback receives a Buffer.
+await peripheral.indicate('service', 'characteristic', (data: string) => {});
+// @ts-expect-error Service trees are read-only.
+peripheral.services()[0].uuid = 'changed';
 const paired: Peripheral[] = await adapter.getPairedPeripherals();
 
 Config.dongl.useDonglBackend = false;

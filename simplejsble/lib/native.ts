@@ -43,20 +43,41 @@ export interface PeripheralHandle {
   isConnectable(): boolean;
   isPaired(): Promise<boolean>;
   manufacturerData(): [number, Buffer][];
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  unpair(): Promise<void>;
+  services(): NativeService[];
+  read(service: string, characteristic: string): Promise<Buffer>;
+  writeRequest(service: string, characteristic: string, data: Uint8Array): Promise<void>;
+  writeCommand(service: string, characteristic: string, data: Uint8Array): Promise<void>;
+  readDescriptor(service: string, characteristic: string, descriptor: string): Promise<Buffer>;
+  writeDescriptor(service: string, characteristic: string, descriptor: string, data: Uint8Array): Promise<void>;
+  notify(service: string, characteristic: string, id: number): Promise<void>;
+  indicate(service: string, characteristic: string, id: number): Promise<void>;
+  unsubscribe(service: string, characteristic: string): Promise<void>;
+  subscribe(): void;
+}
+
+/** @internal */
+export interface NativeService {
+  uuid: string;
+  data: Buffer;
+  characteristics: { uuid: string; capabilities: string[]; descriptors: { uuid: string }[] }[];
 }
 
 /** @internal */
 export interface NativeModule {
   setup(options: {
     makeError(code: string, message: string, nativeCode?: number): Error;
-    dispatch(key: string, event: string, peripheralKey?: string): void;
+    dispatch(key: string, event: string, peripheralKey?: string, peripheral?: object): void;
+    deliver(id: number, value: Buffer): void;
   }): void;
   getBackends(): Promise<BackendHandle[]>;
   getNativeBackend(): Promise<BackendHandle>;
   getDonglBackend(): Promise<BackendHandle>;
   getSimulatorBackend(): Promise<BackendHandle>;
   getAdapters(): Promise<AdapterHandle[]>;
-  eventPeripheral(): PeripheralHandle;
+  peripheralHandle(peripheral: object): PeripheralHandle;
   bluetoothEnabled(): Promise<boolean>;
   configGet(name: string): boolean | number;
   configSet(name: string, value: boolean | number): void;

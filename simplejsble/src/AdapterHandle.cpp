@@ -11,15 +11,11 @@ namespace {
 // Powering off ends a scan without a scan-stop callback on several backends, so
 // it counts as a stop too. An unplugged Dongl reports nothing at the adapter
 // level, so its scan keeps Node running until scanStop() is called.
-void scan_started(Napi::Env env, const void* pointer, const std::shared_ptr<void>& adapter) {
-    auto& data = addon(env);
-    if (adapter && data.scanning.emplace(pointer, adapter).second) data.dispatcher->hold(env);
+void scan_started(Napi::Env env, const void* pointer, std::shared_ptr<void> adapter) {
+    hold_active(env, addon(env).scanning, pointer, std::move(adapter));
 }
 
-void scan_stopped(Napi::Env env, const void* pointer) {
-    auto& data = addon(env);
-    if (data.scanning.erase(pointer) > 0) data.dispatcher->release(env);
-}
+void scan_stopped(Napi::Env env, const void* pointer) { release_active(env, addon(env).scanning, pointer); }
 
 }  // namespace
 
@@ -62,7 +58,7 @@ AdapterHandle::AdapterHandle(const Napi::CallbackInfo& info) : Napi::ObjectWrap<
     adapter_ = *info[0].As<Napi::External<SimpleBLE::Adapter>>().Data();
 }
 
-AdapterHandle::~AdapterHandle() { release_later(std::move(adapter_)); }
+AdapterHandle::~AdapterHandle() { release_in_lifecycle(std::move(adapter_)); }
 
 std::shared_ptr<Executor::Strand> AdapterHandle::strand() {
     if (!strand_) strand_ = strand_for(Internal<SimpleBLE::Adapter>::of(adapter_));
@@ -225,8 +221,7 @@ Napi::Value AdapterHandle::subscribe(const Napi::CallbackInfo& info) {
         adapter_.set_callback_on_scan_found([events](SimpleBLE::Peripheral peripheral) {
             auto dispatcher = events->dispatcher.lock();
             if (!dispatcher) return;
-            dispatcher->post(
-                [events, peripheral](Napi::Env env) { emit_peripheral(env, events->key, "scanFound", peripheral); });
+            dispatcher->post([events, peripheral](Napi::Env env) { emit(env, events->key, "scanFound", peripheral); });
         });
 
         // A device can advertise many times a second. Only one update per
@@ -235,9 +230,8 @@ Napi::Value AdapterHandle::subscribe(const Napi::CallbackInfo& info) {
             auto dispatcher = events->dispatcher.lock();
             if (!dispatcher) return;
             Dispatcher::Key key{events.get(), Internal<SimpleBLE::Peripheral>::of(peripheral)};
-            dispatcher->post_coalesced(key, [events, peripheral](Napi::Env env) {
-                emit_peripheral(env, events->key, "scanUpdated", peripheral);
-            });
+            dispatcher->post_coalesced(
+                key, [events, peripheral](Napi::Env env) { emit(env, events->key, "scanUpdated", peripheral); });
         });
         return info.Env().Undefined();
     });

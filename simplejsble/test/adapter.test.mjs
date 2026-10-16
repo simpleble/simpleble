@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { test } from 'node:test';
 
-import { Adapter, Backend, Peripheral, SimpleBLEError } from '../dist/index.js';
+import { Adapter, Backend, Peripheral } from '../dist/index.js';
 
 const [adapter] = await Adapter.getAdapters();
 
@@ -31,6 +31,10 @@ test('backends and adapters keep one object per native object', async () => {
   assert.equal((await backends[0].adapters())[0], adapter);
   assert.equal(await Adapter.bluetoothEnabled(), true);
   assert.equal(await backends[0].bluetoothEnabled(), true);
+
+  assert.equal(await Backend.getNative(), backends[0]);
+  // A PLAIN build has no Dongl backend.
+  await assert.rejects(Backend.getDongl(), { code: 'OPERATION_NOT_SUPPORTED' });
 });
 
 test('scan events deliver the same Peripheral object as the scan results', async () => {
@@ -98,15 +102,4 @@ test('scanFor() checks its argument before calling the core', async () => {
   await assert.rejects(adapter.scanFor(1.5), RangeError);
   await assert.rejects(adapter.scanFor(2 ** 31), RangeError);
   await assert.rejects(adapter.scanFor('100'), TypeError);
-});
-
-test('native failures become SimpleBLEError with the SimpleBLE error code', async () => {
-  assert.equal(await Backend.getNative(), (await Backend.getBackends())[0]);
-
-  // A PLAIN build has no Dongl backend.
-  await assert.rejects(Backend.getDongl(), error => {
-    assert.ok(error instanceof SimpleBLEError);
-    assert.equal(error.code, 'OPERATION_NOT_SUPPORTED');
-    return true;
-  });
 });

@@ -90,6 +90,19 @@ class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
     Napi::Value is_connectable(const Napi::CallbackInfo& info);
     Napi::Value is_paired(const Napi::CallbackInfo& info);
     Napi::Value manufacturer_data(const Napi::CallbackInfo& info);
+    Napi::Value connect(const Napi::CallbackInfo& info);
+    Napi::Value disconnect(const Napi::CallbackInfo& info);
+    Napi::Value unpair(const Napi::CallbackInfo& info);
+    Napi::Value services(const Napi::CallbackInfo& info);
+    Napi::Value read(const Napi::CallbackInfo& info);
+    Napi::Value write_request(const Napi::CallbackInfo& info);
+    Napi::Value write_command(const Napi::CallbackInfo& info);
+    Napi::Value read_descriptor(const Napi::CallbackInfo& info);
+    Napi::Value write_descriptor(const Napi::CallbackInfo& info);
+    Napi::Value notify(const Napi::CallbackInfo& info);
+    Napi::Value indicate(const Napi::CallbackInfo& info);
+    Napi::Value unsubscribe(const Napi::CallbackInfo& info);
+    Napi::Value subscribe(const Napi::CallbackInfo& info);
 
     std::shared_ptr<Executor::Strand> strand();
 
@@ -100,10 +113,7 @@ class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
 Napi::Array wrap_adapters(Napi::Env env, const std::vector<SimpleBLE::Adapter>& adapters);
 Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Peripheral>& peripherals);
 
-// Emits an event about `peripheral`, passing only its key. The TypeScript side
-// reuses its object for that key and calls eventPeripheral() for a handle only
-// when it has none, so frequent scan updates don't create handles.
-void emit_peripheral(Napi::Env env, const std::string& key, const char* event, const SimpleBLE::Peripheral& peripheral);
-Napi::Value event_peripheral(const Napi::CallbackInfo& info);
+// Turns the External passed with a peripheral event into a handle.
+Napi::Value peripheral_handle(const Napi::CallbackInfo& info);
 
 }  // namespace SimpleJSBLE

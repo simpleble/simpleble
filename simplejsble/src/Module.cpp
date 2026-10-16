@@ -48,6 +48,7 @@ Napi::Value setup(const Napi::CallbackInfo& info) {
     auto& data = addon(info.Env());
     data.make_error = Napi::Persistent(options.Get("makeError").As<Napi::Function>());
     data.dispatch = Napi::Persistent(options.Get("dispatch").As<Napi::Function>());
+    data.deliver = Napi::Persistent(options.Get("deliver").As<Napi::Function>());
     return info.Env().Undefined();
 }
 
@@ -151,7 +152,8 @@ Napi::Value config_reset(const Napi::CallbackInfo& info) {
 
 void finalize(Napi::Env, AddonData* data) {
     data->dispatcher->close();
-    release_later(std::move(data->scanning));
+    release_in_lifecycle(std::move(data->scanning.objects));
+    release_later(std::move(data->connected.objects));
     delete data;
     owner = nullptr;
 }
@@ -183,7 +185,7 @@ Napi::Object init(Napi::Env env, Napi::Object exports) {
     exports.Set("getDonglBackend", Napi::Function::New<get_backend<&SimpleBLE::Backend::get_dongl>>(env));
     exports.Set("getSimulatorBackend", Napi::Function::New<get_backend<&SimpleBLE::Backend::get_simulator>>(env));
     exports.Set("getAdapters", Napi::Function::New<get_adapters>(env, "getAdapters"));
-    exports.Set("eventPeripheral", Napi::Function::New<event_peripheral>(env, "eventPeripheral"));
+    exports.Set("peripheralHandle", Napi::Function::New<peripheral_handle>(env, "peripheralHandle"));
     exports.Set("bluetoothEnabled", Napi::Function::New<bluetooth_enabled>(env, "bluetoothEnabled"));
     exports.Set("configGet", Napi::Function::New<config_get>(env, "configGet"));
     exports.Set("configSet", Napi::Function::New<config_set>(env, "configSet"));

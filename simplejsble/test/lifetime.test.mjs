@@ -76,6 +76,55 @@ test('a scan ended by powering off no longer keeps Node running', () => {
   assert.equal(child.status, 0, child.stderr);
 });
 
+// Finds PLAIN's device, inside a child process.
+const findPeripheral = `
+  import { once } from 'node:events';
+  const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
+  const BATTERY = '0000180f-0000-1000-8000-00805f9b34fb';
+  const LEVEL = '00002a19-0000-1000-8000-00805f9b34fb';
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanStart();
+  const [found] = await once(adapter, 'scanFound');
+  await adapter.scanStop();
+`;
+
+test('an open connection keeps Node running until it ends', () => {
+  // Waiting for a notification needs the connection to keep Node running.
+  const child = node(`
+    ${findPeripheral}
+    await found.connect();
+    const value = await new Promise(resolve => found.notify(BATTERY, LEVEL, resolve));
+    console.log(value[0]);
+    await found.disconnect();
+  `);
+  assert.equal(child.error, undefined);
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(child.stdout.trim(), '100');
+});
+
+test('a peripheral with subscriptions keeps receiving values after its last reference is dropped', () => {
+  const child = node(
+    `
+    ${findPeripheral}
+    let values = 0;
+    await (async () => {
+      const peripheral = found;
+      await peripheral.connect();
+      await peripheral.notify(BATTERY, LEVEL, () => values++);
+    })();
+    found = undefined;
+    for (let i = 0; i < 30 && values < 2; i++) {
+      globalThis.gc();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (values < 2) throw new Error('no values after garbage collection');
+    await (await adapter.getConnectedPeripherals())[0].disconnect();
+    `.replace('const [found]', 'let [found]'),
+    ['--expose-gc'],
+  );
+  assert.equal(child.status, 0, child.stderr);
+});
+
 test('a pending operation keeps Node running until it settles', () => {
   const child = node(`
     const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
@@ -87,12 +136,18 @@ test('a pending operation keeps Node running until it settles', () => {
 });
 
 test('an exception in a listener is uncaught and later events still arrive', () => {
+  // NOTE: PLAIN reports the scan stop after scanStop() settles, and nothing
+  // keeps Node running for that event, so the timer does.
   const child = node(`
     const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
     process.on('uncaughtException', error => console.log('uncaught', error.message));
     const [adapter] = await Adapter.getAdapters();
     adapter.on('scanStart', () => { throw new Error('from listener'); });
-    adapter.on('scanStop', () => console.log('scanStop'));
+    const timer = setTimeout(() => {}, 5000);
+    adapter.on('scanStop', () => {
+      console.log('scanStop');
+      clearTimeout(timer);
+    });
     await adapter.scanStart();
     await adapter.scanStop();
   `);

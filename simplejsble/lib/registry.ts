@@ -7,9 +7,31 @@ const finalizer = new FinalizationRegistry<{ key: string; ref: WeakRef<object> }
   if (objects.get(key) === ref) objects.delete(key);
 });
 
-// Objects with listeners for native events are kept alive, so listeners keep
-// working after the caller drops its own reference.
-const retained = new Set<object>();
+// Objects with listeners for native events or with subscriptions are kept
+// alive, so they keep working after the caller drops its own reference.
+const retained = new Map<object, number>();
+
+/** @internal */
+export function retain(object: object): void {
+  retained.set(object, (retained.get(object) ?? 0) + 1);
+}
+
+/** @internal */
+export function release(object: object): void {
+  const count = (retained.get(object) ?? 0) - 1;
+  if (count > 0) {
+    retained.set(object, count);
+  } else {
+    retained.delete(object);
+  }
+}
+
+/**
+ * Lets an object see a native event before its listeners do, even without
+ * listeners, e.g. to forget subscriptions on a disconnection.
+ * @internal
+ */
+export const onNativeEvent = Symbol('onNativeEvent');
 
 /** @internal */
 export function lookup(key: string): object | undefined {
@@ -35,14 +57,19 @@ export function intern<T extends object>(key: string, create: () => T): T {
  */
 export function retainWhileListening(emitter: EventEmitter, events: readonly string[]): () => void {
   const listening = () => events.some(event => emitter.listenerCount(event) > 0);
+  let held = false;
 
   // NOTE: 'newListener' fires before the listener is added, 'removeListener'
   // after it is removed.
   const onNewListener = (event: string | symbol) => {
-    if (typeof event === 'string' && events.includes(event)) retained.add(emitter);
+    if (held || typeof event !== 'string' || !events.includes(event)) return;
+    held = true;
+    retain(emitter);
   };
   const onRemoveListener = (event: string | symbol) => {
-    if (typeof event === 'string' && events.includes(event) && !listening()) retained.delete(emitter);
+    if (!held || typeof event !== 'string' || !events.includes(event) || listening()) return;
+    held = false;
+    release(emitter);
   };
 
   const hook = () => {

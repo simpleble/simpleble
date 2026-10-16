@@ -17,24 +17,31 @@
 
 namespace SimpleJSBLE {
 
+// Native objects with an active scan or an open connection. Like a listening
+// server or a socket, each keeps Node running and is itself kept alive until it
+// ends. `lifecycle` says whether its objects are released on the lifecycle strand.
+struct ActiveSet {
+    explicit ActiveSet(bool lifecycle) : lifecycle(lifecycle) {}
+
+    std::map<const void*, std::shared_ptr<void>> objects;
+    const bool lifecycle;
+};
+
 // Per-environment state, stored as Node-API instance data.
 struct AddonData {
     std::shared_ptr<Dispatcher> dispatcher;
 
     // Provided by the TypeScript layer through setup().
     Napi::FunctionReference make_error;  // (code, message, nativeCode?) => SimpleBLEError
-    Napi::FunctionReference dispatch;    // (targetKey, event, payload?) => void
+    Napi::FunctionReference dispatch;    // (targetKey, event, peripheralKey?, peripheral?) => void
+    Napi::FunctionReference deliver;     // (subscriptionId, value) => void
 
     Napi::FunctionReference backend_constructor;
     Napi::FunctionReference adapter_constructor;
     Napi::FunctionReference peripheral_constructor;
 
-    // Native adapters with an active scan. Like a listening server, each one
-    // keeps Node running and is itself kept alive until its scan stops.
-    std::map<const void*, std::shared_ptr<void>> scanning;
-
-    // The peripheral of the event being dispatched, see emit_peripheral().
-    std::optional<SimpleBLE::Peripheral> event_peripheral;
+    ActiveSet scanning{true};
+    ActiveSet connected{false};
 };
 
 AddonData& addon(Napi::Env env);
@@ -89,18 +96,34 @@ std::string key_of(const void* pointer);
 
 // Calls the TypeScript dispatcher, which emits `event` on the object with `key`.
 void emit(Napi::Env env, const std::string& key, const char* event);
-void emit(Napi::Env env, const std::string& key, const char* event, const std::string& peripheral_key);
+void emit(Napi::Env env, const std::string& key, const char* event, const SimpleBLE::Peripheral& peripheral);
 
-// Releases of native objects and enumerations of backends and adapters run in
-// order on this strand. Destroying the last reference to a native object can
-// block (on Windows it calls into WinRT), so it happens off the JavaScript
-// thread; and destroying a Dongl adapter closes its port, which an enumeration
-// that follows must not race, or it finds the port still in use.
+// Enumerations of backends and adapters, and releases of backends and
+// adapters, run in order on this strand. Destroying a Dongl adapter closes its
+// port, which an enumeration that follows must not race, or it finds the port
+// still in use.
 std::shared_ptr<Executor::Strand> lifecycle();
 
-// Drops `value` on the lifecycle strand instead of the calling thread.
+// JavaScript thread only. Records that `object` became active or ended. Doing
+// either twice is a no-op, since some backends report a change both from the
+// call and from a callback.
+void hold_active(Napi::Env env, ActiveSet& active, const void* pointer, std::shared_ptr<void> object);
+void release_active(Napi::Env env, ActiveSet& active, const void* pointer);
+
+// Drops `value` on the executor instead of the calling thread: destroying the
+// last reference to a native object can block (on Windows it calls into WinRT).
 template <typename T>
 void release_later(T&& value) noexcept {
+    try {
+        Executor::get().post([value = std::forward<T>(value)]() {});
+    } catch (...) {
+        // NOTE: If posting fails, the value is dropped here instead.
+    }
+}
+
+// Like release_later(), for backends and adapters, on the lifecycle strand.
+template <typename T>
+void release_in_lifecycle(T&& value) noexcept {
     try {
         Executor::get().post(lifecycle(), [value = std::forward<T>(value)]() {});
     } catch (...) {
