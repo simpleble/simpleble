@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include "simpleble/Logging.h"
 
 #define SIMPLEBLE_LOG_LEVEL_NONE 0

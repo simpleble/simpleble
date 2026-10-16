@@ -19,7 +19,7 @@
 #include "protocol/simpleble.pb.h"
 #include "simpleble/Types.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 using namespace SimpleBLE;
 using namespace std::chrono_literals;

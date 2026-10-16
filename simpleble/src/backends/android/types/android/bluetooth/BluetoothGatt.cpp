@@ -1,6 +1,6 @@
 #include "BluetoothGatt.h"
 #include <android/log.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "types/java/util/List.h"
 

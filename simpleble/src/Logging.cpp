@@ -1,7 +1,7 @@
 #include "simpleble/Logging.h"
 
 #include <fmt/chrono.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <ctime>
 #include <fstream>
 #include <mutex>
@@ -89,8 +89,17 @@ void Logger::log_default_stdout() {
 }
 
 void Logger::log_default_file() {
-    std::time_t t = std::time(nullptr);
-    std::string date_time_str = fmt::format("{:%Y-%m-%d_%H-%M-%S}", fmt::localtime(t));
+    const std::time_t t = std::time(nullptr);
+    std::tm local_time{};
+#if defined(_WIN32)
+    const bool converted = ::localtime_s(&local_time, &t) == 0;
+#else
+    const bool converted = ::localtime_r(&t, &local_time) != nullptr;
+#endif
+    if (!converted) {
+        throw fmt::format_error("time_t value out of range");
+    }
+    std::string date_time_str = fmt::format("{:%Y-%m-%d_%H-%M-%S}", local_time);
     std::string filename = fmt::format("simpleble_{}", date_time_str);
     log_default_file(filename);
 }

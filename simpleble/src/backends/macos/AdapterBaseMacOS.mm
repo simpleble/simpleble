@@ -1,7 +1,7 @@
 #import "AdapterBaseMacOS.h"
 #import "TargetConditionals.h"
 
-#import <fmt/core.h>
+#import <fmt/format.h>
 #import <simpleble/Exceptions.h>
 #import "LoggingInternal.h"
 #import "Utils.h"

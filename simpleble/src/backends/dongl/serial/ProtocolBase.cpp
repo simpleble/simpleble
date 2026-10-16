@@ -5,7 +5,7 @@ using namespace SimpleBLE::Dongl::Serial;
 #include "nanopb/pb_decode.h"
 #include "nanopb/pb_encode.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "LoggingInternal.h"
 

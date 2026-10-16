@@ -9,7 +9,7 @@
 #include <types/android/bluetooth/BluetoothDevice.h>
 #include <types/android/bluetooth/le/ScanResult.h>
 #include <android/log.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <jni.h>
 #include <thread>
 

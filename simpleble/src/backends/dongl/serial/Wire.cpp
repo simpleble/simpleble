@@ -2,7 +2,7 @@
 
 #include <cstring>
 #include <kvn/kvn_bytearray.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 using namespace SimpleBLE::Dongl::Serial;
 

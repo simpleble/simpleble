@@ -24,6 +24,7 @@ include dependencies/internal/include/fmt/chrono.h
 include dependencies/internal/include/fmt/color.h
 include dependencies/internal/include/fmt/compile.h
 include dependencies/internal/include/fmt/core.h
+include dependencies/internal/include/fmt/fmt-c.h
 include dependencies/internal/include/fmt/format-inl.h
 include dependencies/internal/include/fmt/format.h
 include dependencies/internal/include/fmt/os.h

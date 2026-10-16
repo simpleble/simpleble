@@ -7,7 +7,7 @@
 #import "LocalPeripheralMac.h"
 #import "PeripheralMac.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <chrono>
 #include <limits>

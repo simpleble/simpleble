@@ -1,6 +1,6 @@
 // Formatting library for C++ - legacy printf implementation
 //
-// Copyright (c) 2012 - 2016, Victor Zverovich
+// Copyright (c) 2012 - present, Victor Zverovich and {fmt} contributors
 // All rights reserved.
 //
 // For the license information refer to format.h.
@@ -9,7 +9,7 @@
 #define FMT_PRINTF_H_
 
 #ifndef FMT_MODULE
-#  include <algorithm>  // std::max
+#  include <algorithm>  // std::find
 #  include <limits>     // std::numeric_limits
 #endif
 
@@ -17,10 +17,6 @@
 
 FMT_BEGIN_NAMESPACE
 FMT_BEGIN_EXPORT
-
-template <typename T> struct printf_formatter {
-  printf_formatter() = delete;
-};
 
 template <typename Char> class basic_printf_context {
  private:
@@ -33,8 +29,6 @@ template <typename Char> class basic_printf_context {
 
  public:
   using char_type = Char;
-  using parse_context_type = parse_context<Char>;
-  template <typename T> using formatter_type = printf_formatter<T>;
   enum { builtin_types = 1 };
 
   /// Constructs a `printf_context` object. References to the arguments are
@@ -46,7 +40,7 @@ template <typename Char> class basic_printf_context {
   auto out() -> basic_appender<Char> { return out_; }
   void advance_to(basic_appender<Char>) {}
 
-  auto locale() -> detail::locale_ref { return {}; }
+  auto locale() -> locale_ref { return {}; }
 
   auto arg(int id) const -> basic_format_arg<basic_printf_context> {
     return args_.get(id);
@@ -74,10 +68,9 @@ inline auto find<false, char>(const char* first, const char* last, char value,
 
 // Checks if a value fits in int - used to avoid warnings about comparing
 // signed and unsigned integers.
-template <bool IsSigned> struct int_checker {
+template <bool IS_SIGNED> struct int_checker {
   template <typename T> static auto fits_in_int(T value) -> bool {
-    unsigned max = to_unsigned(max_value<int>());
-    return value <= max;
+    return value <= to_unsigned(max_value<int>());
   }
   inline static auto fits_in_int(bool) -> bool { return true; }
 };
@@ -95,7 +88,7 @@ struct printf_precision_handler {
   auto operator()(T value) -> int {
     if (!int_checker<std::numeric_limits<T>::is_signed>::fits_in_int(value))
       report_error("number is too big");
-    return (std::max)(static_cast<int>(value), 0);
+    return max_of(static_cast<int>(value), 0);
   }
 
   template <typename T, FMT_ENABLE_IF(!std::is_integral<T>::value)>
@@ -143,7 +136,7 @@ template <typename T, typename Context> class arg_converter {
   void operator()(U value) {
     bool is_signed = type_ == 'd' || type_ == 'i';
     using target_type = conditional_t<std::is_same<T, void>::value, U, T>;
-    if (const_check(sizeof(target_type) <= sizeof(int))) {
+    if FMT_CONSTEXPR20 (sizeof(target_type) <= sizeof(int)) {
       // Extra casts are used to silence warnings.
       using unsigned_type = typename make_unsigned_or_bool<target_type>::type;
       if (is_signed)
@@ -337,6 +330,7 @@ template <typename Char, typename GetArg>
 auto parse_header(const Char*& it, const Char* end, format_specs& specs,
                   GetArg get_arg) -> int {
   int arg_index = -1;
+  if (it == end) return arg_index;
   Char c = *it;
   if (c >= '0' && c <= '9') {
     // Parse an argument index (if followed by '$') or a width possibly
@@ -364,8 +358,21 @@ auto parse_header(const Char*& it, const Char* end, format_specs& specs,
       if (specs.width == -1) report_error("number is too big");
     } else if (*it == '*') {
       ++it;
-      specs.width = static_cast<int>(
-          get_arg(-1).visit(detail::printf_width_handler(specs)));
+      // Check for positional width argument like *1$
+      if (it != end && *it >= '0' && *it <= '9') {
+        int width_index = parse_nonnegative_int(it, end, -1);
+        if (it != end && *it == '$') {
+          ++it;
+          specs.width = static_cast<int>(
+              get_arg(width_index).visit(detail::printf_width_handler(specs)));
+        } else {
+          // Invalid format, rewind and treat as non-positional
+          report_error("invalid format specifier");
+        }
+      } else {
+        specs.width = static_cast<int>(
+            get_arg(-1).visit(detail::printf_width_handler(specs)));
+      }
     }
   }
   return arg_index;
@@ -410,7 +417,9 @@ void vprintf(buffer<Char>& buf, basic_string_view<Char> format,
       arg_index = parse_ctx.next_arg_id();
     else
       parse_ctx.check_arg_id(--arg_index);
-    return detail::get_arg(context, arg_index);
+    auto arg = context.arg(arg_index);
+    if (!arg) report_error("argument not found");
+    return arg;
   };
 
   const Char* start = parse_ctx.begin();
@@ -429,6 +438,8 @@ void vprintf(buffer<Char>& buf, basic_string_view<Char> format,
     }
     write(out, basic_string_view<Char>(start, to_unsigned(it - 1 - start)));
 
+    if (it == end) report_error("invalid format string");
+
     auto specs = format_specs();
     specs.set_align(align::right);
 
@@ -444,15 +455,28 @@ void vprintf(buffer<Char>& buf, basic_string_view<Char> format,
         specs.precision = parse_nonnegative_int(it, end, 0);
       } else if (c == '*') {
         ++it;
-        specs.precision =
-            static_cast<int>(get_arg(-1).visit(printf_precision_handler()));
+        // Check for positional precision argument like .*1$
+        if (it != end && *it >= '0' && *it <= '9') {
+          int precision_index = parse_nonnegative_int(it, end, -1);
+          if (it != end && *it == '$') {
+            ++it;
+            specs.precision = static_cast<int>(
+                get_arg(precision_index).visit(printf_precision_handler()));
+          } else {
+            // Invalid format, rewind and treat as non-positional
+            report_error("invalid format specifier");
+          }
+        } else {
+          specs.precision =
+              static_cast<int>(get_arg(-1).visit(printf_precision_handler()));
+        }
       } else {
         specs.precision = 0;
       }
     }
 
     auto arg = get_arg(arg_index);
-    // For d, i, o, u, x, and X conversion specifiers, if a precision is
+    // For d, i, o, u, x and X conversion specifiers, if a precision is
     // specified, the '0' flag is ignored
     if (specs.precision >= 0 && is_integral_type(arg.type())) {
       // Ignore '0' for non-numeric types or if '-' present.
@@ -565,21 +589,25 @@ inline auto vsprintf(basic_string_view<Char> fmt,
 
 /**
  * Formats `args` according to specifications in `fmt` and returns the result
- * as as string.
+ * as string.
  *
  * **Example**:
  *
  *     std::string message = fmt::sprintf("The answer is %d", 42);
  */
-template <typename S, typename... T, typename Char = detail::char_t<S>>
-inline auto sprintf(const S& fmt, const T&... args) -> std::basic_string<Char> {
-  return vsprintf(detail::to_string_view(fmt),
-                  fmt::make_format_args<basic_printf_context<Char>>(args...));
+template <typename... T>
+inline auto sprintf(string_view fmt, const T&... args) -> std::string {
+  return vsprintf(fmt, make_printf_args(args...));
+}
+template <typename... T>
+FMT_DEPRECATED auto sprintf(basic_string_view<wchar_t> fmt, const T&... args)
+    -> std::wstring {
+  return vsprintf(fmt, make_printf_args<wchar_t>(args...));
 }
 
 template <typename Char>
-inline auto vfprintf(std::FILE* f, basic_string_view<Char> fmt,
-                     typename vprintf_args<Char>::type args) -> int {
+auto vfprintf(std::FILE* f, basic_string_view<Char> fmt,
+              typename vprintf_args<Char>::type args) -> int {
   auto buf = basic_memory_buffer<Char>();
   detail::vprintf(buf, fmt, args);
   size_t size = buf.size();
@@ -596,17 +624,14 @@ inline auto vfprintf(std::FILE* f, basic_string_view<Char> fmt,
  *
  *     fmt::fprintf(stderr, "Don't %s!", "panic");
  */
-template <typename S, typename... T, typename Char = detail::char_t<S>>
-inline auto fprintf(std::FILE* f, const S& fmt, const T&... args) -> int {
-  return vfprintf(f, detail::to_string_view(fmt),
-                  make_printf_args<Char>(args...));
+template <typename... T>
+inline auto fprintf(std::FILE* f, string_view fmt, const T&... args) -> int {
+  return vfprintf(f, fmt, make_printf_args(args...));
 }
-
-template <typename Char>
-FMT_DEPRECATED inline auto vprintf(basic_string_view<Char> fmt,
-                                   typename vprintf_args<Char>::type args)
-    -> int {
-  return vfprintf(stdout, fmt, args);
+template <typename... T>
+FMT_DEPRECATED auto fprintf(std::FILE* f, basic_string_view<wchar_t> fmt,
+                            const T&... args) -> int {
+  return vfprintf(f, fmt, make_printf_args<wchar_t>(args...));
 }
 
 /**
@@ -620,11 +645,6 @@ FMT_DEPRECATED inline auto vprintf(basic_string_view<Char> fmt,
 template <typename... T>
 inline auto printf(string_view fmt, const T&... args) -> int {
   return vfprintf(stdout, fmt, make_printf_args(args...));
-}
-template <typename... T>
-FMT_DEPRECATED inline auto printf(basic_string_view<wchar_t> fmt,
-                                  const T&... args) -> int {
-  return vfprintf(stdout, fmt, make_printf_args<wchar_t>(args...));
 }
 
 FMT_END_EXPORT

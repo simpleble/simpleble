@@ -10,7 +10,7 @@
 #include "usb/UsbHelper.h"
 #include <simpleble/Config.h>
 #include <simpleble/Exceptions.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace SimpleBLE {
 

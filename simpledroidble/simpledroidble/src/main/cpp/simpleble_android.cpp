@@ -1,7 +1,7 @@
 #include <jni.h>
 
 #include <android/log.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <simpleble/Advanced.h>
 #include <simpleble/Logging.h>
 #include <simpleble/SimpleBLE.h>

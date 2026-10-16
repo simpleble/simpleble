@@ -6,7 +6,7 @@
 #include "simplejni/Registry.hpp"
 
 #include <android/log.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <mutex>
 #include <stdexcept>

@@ -4,7 +4,7 @@
 #include <simpledbus/base/Exceptions.h>
 #include <simpledbus/base/Logging.h>
 #include <simpledbus/base/Path.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <algorithm>
 #include <iostream>
 

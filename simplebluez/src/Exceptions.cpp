@@ -1,6 +1,6 @@
 #include <simplebluez/Exceptions.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace SimpleBluez {
 

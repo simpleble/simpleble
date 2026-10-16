@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <simpleble/Exceptions.h>
 
 #include "LoggingInternal.h"

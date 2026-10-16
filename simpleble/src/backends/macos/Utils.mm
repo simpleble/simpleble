@@ -1,6 +1,6 @@
 #import "Utils.h"
 
-#import <fmt/core.h>
+#import <fmt/format.h>
 
 #include <simpleble/Exceptions.h>
 
