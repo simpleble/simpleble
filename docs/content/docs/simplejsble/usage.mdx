@@ -29,7 +29,6 @@ npm install simplejsble@dev
 import { Adapter } from 'simplejsble';
 
 const [adapter] = await Adapter.getAdapters();
-if (!adapter) throw new Error('No Bluetooth adapters found.');
 
 adapter.on('scanFound', peripheral => {
   console.log(peripheral.identifier(), peripheral.address(), peripheral.rssi());
@@ -45,7 +44,7 @@ Calls that reach the Bluetooth stack return promises. Calls on one object run in
 
 `Adapter`, `Peripheral`, `LocalPeripheral`, and `LocalCharacteristic` are `EventEmitter`s. Events are delivered on the JavaScript thread in the order they happened, and a listener that throws is an uncaught exception, as with any other emitter.
 
-An adapter gives you one `Peripheral` object per device, whether it came from `scanFound`, `scanGetResults()`, or `getConnectedPeripherals()`, so you can compare them with `===` and keep state on them. On Windows each `Adapter.getAdapters()` creates new adapter objects, and listeners on one `Adapter` hear only about calls made through it, so keep the adapter you started with.
+Every enumeration returns the same `Adapter` object for an adapter, and an adapter gives you one `Peripheral` object per device, whether it came from `scanFound`, `scanGetResults()`, or `getConnectedPeripherals()`. Compare them with `===` and keep state on them.
 
 Objects with listeners or subscriptions stay alive without other references. An active scan, an open connection, and a started local peripheral keep Node.js running until they end, so a script exits once it stops scanning, disconnects, and stops hosting.
 
@@ -101,7 +100,7 @@ To compute values on demand, `setReadHandler()` takes a function that answers ea
 
 ## Handlers
 
-Read handlers and the Dongl pairing handlers below answer questions a native thread waits on. The thread blocks until your handler returns or its promise settles, and SimpleBLE's own timeouts apply meanwhile, so answer promptly; a handler that never settles stalls that object.
+Read handlers and the Dongl pairing handlers below answer questions SimpleBLE waits on. A handler can return a promise and take as long as it needs, for example to ask the user; the operation waits for the answer.
 
 If a handler throws or rejects, the error is an unhandled rejection in Node.js, and SimpleBLE gets a default answer: an empty value for a read, and a rejection for pairing.
 
@@ -109,7 +108,7 @@ Setting a handler returns a promise that resolves once the native object uses it
 
 ## Configure backends
 
-`Config` holds process-wide settings grouped by backend: `Config.simpleBluez` (Linux), `Config.winRT` (Windows), and `Config.dongl`. Set them at startup, before the first call that reaches a backend; later changes might not take effect.
+`Config` holds process-wide settings grouped by backend: `Config.simpleBluez` (Linux), `Config.winRT` (Windows), and `Config.dongl`. Set them at startup, before the first call that reaches a backend.
 
 ```js
 import { Config } from 'simplejsble';
@@ -128,7 +127,6 @@ import { Backend } from 'simplejsble';
 
 const dongl = await Backend.getDongl();
 const [adapter] = await dongl.adapters();
-if (!adapter) throw new Error('No Dongl found.');
 ```
 
 A Dongl adapter works like any other adapter. Only one program can use a Dongl at a time: `await adapter.close()` stops the adapter's scan and local peripherals, disconnects its peripherals, and frees the Dongl for other programs right away. The closed objects then reject calls with `OBJECT_NOT_INITIALIZED`. In TypeScript and runtimes with explicit resource management, `await using adapter = ...` closes it at the end of the scope.
@@ -160,4 +158,3 @@ Use SimpleJSBLE from the main process, and send plain data to renderers over IPC
 
 - **macOS**: Bluetooth permission belongs to the app that runs Node.js. From a terminal, macOS asks for permission for the terminal app; packaged Electron apps need an `NSBluetoothAlwaysUsageDescription` entry in their `Info.plist`. See [Bluetooth Permissions](../fundamentals/permissions).
 - **Linux**: SimpleJSBLE talks to BlueZ over the D-Bus system bus, so the user needs access to it, as described in [Bluetooth Permissions](../fundamentals/permissions).
-- **Windows**: Adapters are re-created on each enumeration, as described in [Calls, events, and lifetime](#calls-events-and-lifetime).

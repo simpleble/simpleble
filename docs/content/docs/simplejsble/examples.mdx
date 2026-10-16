@@ -17,8 +17,8 @@ live alongside the other SimpleBLE binding examples:
 - **peripheral**: Host a GATT service that echoes writes to subscribed clients.
 - **dongl**: Scan with a Dongl adapter, then connect and answer pairing requests.
 
-The examples use the SimpleJSBLE of the checkout, so build it first, then run
-an example from `examples/simplejsble`:
+Build SimpleJSBLE from the checkout, then run an example from
+`examples/simplejsble`:
 
 ```sh
 cd simplejsble
@@ -28,9 +28,6 @@ cd ../examples/simplejsble
 npm install
 node scan.js
 ```
-
-To run an example with the published package instead, copy it into a project
-that has `npm install simplejsble`.
 
 For binding development, see the
 [contributor guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplejsble-publishing.md).
