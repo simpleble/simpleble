@@ -28,7 +28,9 @@ export interface AdapterHandle {
   getPairedPeripherals(): Promise<PeripheralHandle[]>;
   getConnectedPeripherals(): Promise<PeripheralHandle[]>;
   subscribe(): void;
+  createLocalPeripheral(): LocalPeripheralHandle;
   connections(): PeripheralHandle[];
+  hosts(): LocalPeripheralHandle[];
   close(): Promise<void>;
   release(): void;
 }
@@ -59,6 +61,50 @@ export interface PeripheralHandle {
   indicate(service: string, characteristic: string, id: number): Promise<void>;
   unsubscribe(service: string, characteristic: string): Promise<void>;
   subscribe(): void;
+  setPasskeyRequestHandler(id: number | undefined): Promise<void>;
+  setPasskeyDisplayHandler(id: number | undefined): Promise<void>;
+  setNumericComparisonHandler(id: number | undefined): Promise<void>;
+  owner(): string;
+  release(): void;
+}
+
+/** @internal */
+export interface LocalPeripheralHandle {
+  key(): string;
+  addAdvertisedService(uuid: string | readonly string[]): void;
+  setAdvertisedManufacturerData(companyId: number, data: Uint8Array): void;
+  setConnectable(connectable: boolean): void;
+  addService(uuid: string): LocalServiceHandle;
+  services(): LocalServiceHandle[];
+  removeAllServices(): void;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  isStarted(): boolean;
+  isAdvertising(): Promise<boolean>;
+  subscribe(): void;
+  owner(): string;
+  release(): void;
+}
+
+/** @internal */
+export interface LocalServiceHandle {
+  key(): string;
+  uuid(): string;
+  addCharacteristic(uuid: string, capabilities: readonly string[]): LocalCharacteristicHandle;
+  characteristics(): LocalCharacteristicHandle[];
+  owner(): string;
+  release(): void;
+}
+
+/** @internal */
+export interface LocalCharacteristicHandle {
+  key(): string;
+  uuid(): string;
+  capabilities(): string[];
+  value(): Buffer;
+  setValue(value: Uint8Array): Promise<void>;
+  setReadHandler(id: number | undefined): Promise<void>;
+  subscribe(): void;
   owner(): string;
   release(): void;
 }
@@ -74,8 +120,9 @@ export interface NativeService {
 export interface NativeModule {
   setup(options: {
     makeError(code: string, message: string, nativeCode?: number): Error;
-    dispatch(key: string, event: string, peripheralKey?: string, peripheral?: object): void;
+    dispatch(key: string, event: string, argument?: unknown, peripheral?: object): void;
     deliver(id: number, value: Buffer): void;
+    answer(id: number, argument: string | undefined, respond?: (value: unknown) => void): void;
   }): void;
   getBackends(): Promise<BackendHandle[]>;
   getNativeBackend(): Promise<BackendHandle>;

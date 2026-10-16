@@ -4,9 +4,11 @@
 #include <simpleble/Backend.h>
 #include <simpleble/SimpleBLE.h>
 
+#include <atomic>
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <future>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -82,13 +84,18 @@ struct AddonData {
     Napi::FunctionReference make_error;  // (code, message, nativeCode?) => SimpleBLEError
     Napi::FunctionReference dispatch;    // (targetKey, event, peripheralKey?, peripheral?) => void
     Napi::FunctionReference deliver;     // (subscriptionId, value) => void
+    Napi::FunctionReference answer;      // (handlerId, argument?, respond?) => void
 
     Napi::FunctionReference backend_constructor;
     Napi::FunctionReference adapter_constructor;
     Napi::FunctionReference peripheral_constructor;
+    Napi::FunctionReference local_peripheral_constructor;
+    Napi::FunctionReference local_service_constructor;
+    Napi::FunctionReference local_characteristic_constructor;
 
     ActiveSet<SimpleBLE::Adapter> scanning;
     ActiveSet<SimpleBLE::Peripheral> connected;
+    ActiveSet<SimpleBLE::Local::Peripheral> hosting;
 };
 
 AddonData& addon(Napi::Env env);
@@ -167,6 +174,7 @@ struct PeripheralSource {
 
 // Calls the TypeScript dispatcher, which emits `event` on the object with `key`.
 void emit(Napi::Env env, const std::string& key, const char* event);
+void emit(Napi::Env env, const std::string& key, const char* event, Napi::Value argument);
 
 // Like emit(), with a peripheral of the adapter at `owner`. The TypeScript side
 // reuses its object for the peripheral's key, and turns the External into a
@@ -179,5 +187,68 @@ void emit(Napi::Env env, const std::string& key, const char* event, SimpleBLE::P
 
 Napi::Buffer<uint8_t> to_buffer(Napi::Env env, const SimpleBLE::ByteArray& bytes);
 SimpleBLE::ByteArray to_bytes(const Napi::Value& value);
+
+// The answer to a question a native thread asks a TypeScript handler, such as a
+// read handler's value. If nothing can answer anymore, e.g. because the
+// environment is gone, the asking thread gets the fallback.
+template <typename T>
+class Reply {
+  public:
+    explicit Reply(T fallback) : fallback_(std::move(fallback)) {}
+    ~Reply() { set(fallback_); }
+
+    std::future<T> future() { return promise_.get_future(); }
+
+    void set(T value) {
+        if (answered_.exchange(true)) return;
+        promise_.set_value(std::move(value));
+    }
+
+    const T& fallback() const { return fallback_; }
+
+  private:
+    T fallback_;
+    std::atomic_bool answered_{false};
+    std::promise<T> promise_;
+};
+
+// Calls the handler registered under `id` on the JavaScript thread with
+// `argument`, and waits for its answer, which `convert` turns into a T. The
+// handler may return a promise; it answers undefined when it fails.
+// NOTE: The core lets these callbacks block.
+template <typename T, typename Convert>
+T ask(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::optional<std::string> argument, T fallback,
+      Convert convert) {
+    auto target = dispatcher.lock();
+    if (!target) return fallback;
+
+    auto reply = std::make_shared<Reply<T>>(std::move(fallback));
+    auto answer = reply->future();
+    target->post([reply, id, argument = std::move(argument), convert](Napi::Env env) {
+        auto respond = Napi::Function::New(env, [reply, convert](const Napi::CallbackInfo& info) {
+            if (info[0].IsUndefined()) {
+                reply->set(reply->fallback());
+                return;
+            }
+            try {
+                reply->set(convert(info[0]));
+            } catch (...) {
+                reply->set(reply->fallback());
+                throw;
+            }
+        });
+        Napi::Value value = argument ? Napi::String::New(env, *argument) : env.Undefined();
+        addon(env).answer.Call({Napi::Number::New(env, id), value, respond});
+    });
+
+    // Only the job and its function hold the reply now, so the fallback
+    // arrives if they go away unanswered.
+    target.reset();
+    reply.reset();
+    return answer.get();
+}
+
+// Like ask(), for a handler that doesn't answer.
+void tell(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::string argument);
 
 }  // namespace SimpleJSBLE

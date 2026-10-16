@@ -33,6 +33,18 @@ export function release(object: object): void {
  */
 export const onNativeEvent = Symbol('onNativeEvent');
 
+/**
+ * Releases an object that came from the adapter with the given key, which is
+ * closing. Objects of other adapters ignore it.
+ * @internal
+ */
+export const releaseFrom = Symbol('releaseFrom');
+
+/** @internal */
+export interface Releasable {
+  [releaseFrom](adapterKey: string): void;
+}
+
 /** @internal */
 export function lookup(key: string): object | undefined {
   return objects.get(key)?.deref();

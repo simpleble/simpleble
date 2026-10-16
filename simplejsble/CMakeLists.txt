@@ -27,6 +27,7 @@ add_library(simplejsble SHARED
     src/BackendHandle.cpp
     src/Dispatcher.cpp
     src/Executor.cpp
+    src/LocalHandles.cpp
     src/Module.cpp
     src/PeripheralHandle.cpp
     ${CMAKE_JS_SRC})

@@ -125,18 +125,21 @@ test('a peripheral with subscriptions keeps receiving values after its last refe
   assert.equal(child.status, 0, child.stderr);
 });
 
-test('close() ends the scan and connections and releases the adapter and its peripherals', () => {
-  // Node exits on its own only if close() ended both.
+test('close() ends the scan, connections and local peripherals, and releases what came from the adapter', () => {
+  // Node exits on its own only if close() ended all three.
   const child = node(`
     import { once } from 'node:events';
     const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
     const [adapter] = await Adapter.getAdapters();
+    const host = adapter.createLocalPeripheral();
+    host.addService('00001234-0000-1000-8000-00805f9b34fb');
+    await host.start();
     await adapter.scanStart();
     const [peripheral] = await once(adapter, 'scanFound');
     await peripheral.connect();
     await adapter.close();
 
-    for (const call of [() => adapter.identifier(), () => peripheral.isConnected()]) {
+    for (const call of [() => adapter.identifier(), () => peripheral.isConnected(), () => host.isStarted()]) {
       try {
         call();
         throw new Error('a closed object answered');
@@ -150,6 +153,45 @@ test('close() ends the scan and connections and releases the adapter and its per
   `);
   assert.equal(child.status, 0, child.stderr);
   assert.equal(child.stdout.trim(), '0');
+});
+
+test('a started local peripheral keeps Node running until it stops', () => {
+  const child = node(`
+    const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
+    const [adapter] = await Adapter.getAdapters();
+    const host = adapter.createLocalPeripheral();
+    host.addService('00001234-0000-1000-8000-00805f9b34fb');
+    await host.start();
+    setTimeout(() => host.stop().then(() => console.log('stopped')), 300).unref();
+  `);
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(child.stdout.trim(), 'stopped');
+});
+
+test('a failing read handler is unhandled and the read still completes', () => {
+  const child = node(`
+    const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
+    const SERVICE = '00001234-0000-1000-8000-00805f9b34fb';
+    const VALUE = '00005678-0000-1000-8000-00805f9b34fb';
+    process.on('unhandledRejection', error => console.log('unhandled', error.message));
+    const [adapter] = await Adapter.getAdapters();
+    const host = adapter.createLocalPeripheral();
+    const value = host.addService(SERVICE).addCharacteristic(VALUE, ['read']);
+    await value.setReadHandler(() => { throw new Error('from handler'); });
+    await host.start();
+    const found = new Promise(resolve => {
+      adapter.on('scanFound', peripheral => peripheral.identifier() === 'Plain Adapter Peripheral' && resolve(peripheral));
+    });
+    await adapter.scanStart();
+    const peer = await found;
+    await adapter.scanStop();
+    await peer.connect();
+    console.log('read', (await peer.read(SERVICE, VALUE)).length);
+    await peer.disconnect();
+    await host.stop();
+  `);
+  assert.equal(child.status, 0, child.stderr);
+  assert.deepEqual(child.stdout.trim().split('\n').sort(), ['read 0', 'unhandled from handler']);
 });
 
 test('a pending operation keeps Node running until it settles', () => {

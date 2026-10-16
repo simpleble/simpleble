@@ -1,0 +1,8 @@
+{
+  "name": "simplejsble-examples",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "simplejsble": "file:../../simplejsble"
+  }
+}

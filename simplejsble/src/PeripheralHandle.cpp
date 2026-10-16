@@ -1,3 +1,5 @@
+#include <simpleble/Advanced.h>
+
 #include "Handles.h"
 
 #include <cstdint>
@@ -34,6 +36,10 @@ Napi::Function PeripheralHandle::define(Napi::Env env) {
                            InstanceMethod<&PeripheralHandle::indicate>("indicate"),
                            InstanceMethod<&PeripheralHandle::unsubscribe>("unsubscribe"),
                            InstanceMethod<&PeripheralHandle::subscribe>("subscribe"),
+                           InstanceMethod<&PeripheralHandle::set_passkey_request_handler>("setPasskeyRequestHandler"),
+                           InstanceMethod<&PeripheralHandle::set_passkey_display_handler>("setPasskeyDisplayHandler"),
+                           InstanceMethod<&PeripheralHandle::set_numeric_comparison_handler>(
+                               "setNumericComparisonHandler"),
                            InstanceMethod<&PeripheralHandle::owner>("owner"),
                            InstanceMethod<&PeripheralHandle::release>("release"),
                        });
@@ -372,6 +378,62 @@ Napi::Value PeripheralHandle::subscribe(const Napi::CallbackInfo& info) {
         peripheral_.set_callback_on_connected(on_connected);
         peripheral_.set_callback_on_disconnected(on_disconnected);
         return info.Env().Undefined();
+    });
+}
+
+// Dongl pairing. The core holds a callback's lock while it runs, and a pairing
+// question waits for the JavaScript thread, so handlers are replaced on the
+// peripheral's strand rather than the JavaScript thread. Peripherals of other
+// backends reject them with OPERATION_NOT_SUPPORTED.
+
+Napi::Value PeripheralHandle::set_passkey_request_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto peripheral = peripheral_;
+    return run(info.Env(), strand(), [peripheral, id, dispatcher]() mutable {
+        std::function<std::optional<std::string>()> on_request;
+        if (id) {
+            on_request = [dispatcher, id = *id]() {
+                return ask(dispatcher, id, std::nullopt, std::optional<std::string>(),
+                           [](const Napi::Value& value) -> std::optional<std::string> {
+                               if (!value.IsString()) throw Napi::TypeError::New(value.Env(), "A passkey is a string");
+                               return value.As<Napi::String>().Utf8Value();
+                           });
+            };
+        }
+        SimpleBLE::Advanced::Dongl::set_passkey_request_callback(peripheral, on_request);
+        return finish_undefined();
+    });
+}
+
+Napi::Value PeripheralHandle::set_passkey_display_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto peripheral = peripheral_;
+    return run(info.Env(), strand(), [peripheral, id, dispatcher]() mutable {
+        std::function<void(const std::string&)> on_display;
+        if (id) on_display = [dispatcher, id = *id](const std::string& passkey) { tell(dispatcher, id, passkey); };
+        SimpleBLE::Advanced::Dongl::set_passkey_display_callback(peripheral, on_display);
+        return finish_undefined();
+    });
+}
+
+Napi::Value PeripheralHandle::set_numeric_comparison_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto peripheral = peripheral_;
+    return run(info.Env(), strand(), [peripheral, id, dispatcher]() mutable {
+        std::function<bool(const std::string&)> on_compare;
+        if (id) {
+            on_compare = [dispatcher, id = *id](const std::string& passkey) {
+                return ask(dispatcher, id, passkey, false, [](const Napi::Value& value) {
+                    if (!value.IsBoolean()) throw Napi::TypeError::New(value.Env(), "Expected a boolean");
+                    return value.As<Napi::Boolean>().Value();
+                });
+            };
+        }
+        SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, on_compare);
+        return finish_undefined();
     });
 }
 

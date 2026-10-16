@@ -49,6 +49,7 @@ Napi::Value setup(const Napi::CallbackInfo& info) {
     data.make_error = Napi::Persistent(options.Get("makeError").As<Napi::Function>());
     data.dispatch = Napi::Persistent(options.Get("dispatch").As<Napi::Function>());
     data.deliver = Napi::Persistent(options.Get("deliver").As<Napi::Function>());
+    data.answer = Napi::Persistent(options.Get("answer").As<Napi::Function>());
     return info.Env().Undefined();
 }
 
@@ -154,6 +155,7 @@ void finalize(Napi::Env, AddonData* data) {
     data->dispatcher->close();
     release_later(data->scanning.objects);
     release_later(data->connected.objects);
+    release_later(data->hosting.objects);
     delete data;
     owner = nullptr;
 }
@@ -178,6 +180,9 @@ Napi::Object init(Napi::Env env, Napi::Object exports) {
     data->backend_constructor = Napi::Persistent(BackendHandle::define(env));
     data->adapter_constructor = Napi::Persistent(AdapterHandle::define(env));
     data->peripheral_constructor = Napi::Persistent(PeripheralHandle::define(env));
+    data->local_peripheral_constructor = Napi::Persistent(LocalPeripheralHandle::define(env));
+    data->local_service_constructor = Napi::Persistent(LocalServiceHandle::define(env));
+    data->local_characteristic_constructor = Napi::Persistent(LocalCharacteristicHandle::define(env));
 
     exports.Set("setup", Napi::Function::New<setup>(env, "setup"));
     exports.Set("getBackends", Napi::Function::New<get_backends>(env, "getBackends"));

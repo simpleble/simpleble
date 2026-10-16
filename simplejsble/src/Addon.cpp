@@ -173,6 +173,18 @@ void emit(Napi::Env env, const std::string& key, const char* event) {
     addon(env).dispatch.Call({Napi::String::New(env, key), Napi::String::New(env, event)});
 }
 
+void emit(Napi::Env env, const std::string& key, const char* event, Napi::Value argument) {
+    addon(env).dispatch.Call({Napi::String::New(env, key), Napi::String::New(env, event), argument});
+}
+
+void tell(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::string argument) {
+    auto target = dispatcher.lock();
+    if (!target) return;
+    target->post([id, argument = std::move(argument)](Napi::Env env) {
+        addon(env).answer.Call({Napi::Number::New(env, id), Napi::String::New(env, argument)});
+    });
+}
+
 void emit(Napi::Env env, const std::string& key, const char* event, SimpleBLE::Peripheral& peripheral,
           const void* owner) {
     const auto peripheral_key = key_of(Internal<SimpleBLE::Peripheral>::of(peripheral));

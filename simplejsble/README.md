@@ -152,6 +152,7 @@ npm install simplejsble@dev
 ## Documentation and support
 
 - Read the [SimpleJSBLE usage guide](https://docs.simpleble.org/simplejsble/usage).
+- Browse the [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplejsble).
 - Join the [Discord community](https://discord.gg/N9HqNEcvP3).
 - Contribute in [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplejsble); see the [development and publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplejsble-publishing.md).
 - Visit [simpleble.org](https://simpleble.org/) for commercial licensing and professional services.

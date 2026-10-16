@@ -3,6 +3,9 @@ import {
   Adapter,
   Backend,
   Config,
+  LocalCharacteristic,
+  LocalPeripheral,
+  LocalService,
   Peripheral,
   SimpleBLEError,
   type CharacteristicCapability,
@@ -56,6 +59,27 @@ await peripheral.indicate('service', 'characteristic', (data: string) => {});
 // @ts-expect-error Service trees are read-only.
 peripheral.services()[0].uuid = 'changed';
 const paired: Peripheral[] = await adapter.getPairedPeripherals();
+
+await peripheral.setPasskeyRequestHandler(async () => '123456');
+await peripheral.setNumericComparisonHandler((passkey: string) => passkey === '123456');
+await peripheral.setPasskeyDisplayHandler(null);
+// @ts-expect-error A passkey is a string.
+await peripheral.setPasskeyRequestHandler(() => 123456);
+
+const host: LocalPeripheral = adapter.createLocalPeripheral();
+const localService: LocalService = host.addService('service');
+const localValue: LocalCharacteristic = localService.addCharacteristic('characteristic', ['read', 'notify']);
+// @ts-expect-error Capabilities are checked.
+localService.addCharacteristic('characteristic', ['shout']);
+localValue.on('write', (data: Buffer) => {});
+host.on('clientConnected', (address: string) => {});
+// @ts-expect-error Local events are checked too.
+host.on('clientConected', () => {});
+await localValue.setReadHandler(async () => new Uint8Array([1]));
+// @ts-expect-error Read handlers return bytes.
+await localValue.setReadHandler(() => 'text');
+await host.start();
+const advertising: boolean = await host.isAdvertising();
 
 {
   await using closing = adapter;

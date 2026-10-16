@@ -36,7 +36,9 @@ Napi::Function AdapterHandle::define(Napi::Env env) {
                            InstanceMethod<&AdapterHandle::get_paired_peripherals>("getPairedPeripherals"),
                            InstanceMethod<&AdapterHandle::get_connected_peripherals>("getConnectedPeripherals"),
                            InstanceMethod<&AdapterHandle::subscribe>("subscribe"),
+                           InstanceMethod<&AdapterHandle::create_local_peripheral>("createLocalPeripheral"),
                            InstanceMethod<&AdapterHandle::connections>("connections"),
+                           InstanceMethod<&AdapterHandle::hosts>("hosts"),
                            InstanceMethod<&AdapterHandle::close>("close"),
                            InstanceMethod<&AdapterHandle::release>("release"),
                        });
@@ -260,15 +262,34 @@ Napi::Value AdapterHandle::connections(const Napi::CallbackInfo& info) {
     return wrap_peripherals(info.Env(), peripherals, pointer);
 }
 
+Napi::Value AdapterHandle::create_local_peripheral(const Napi::CallbackInfo& info) {
+    return guard(info.Env(), [&] {
+        return LocalPeripheralHandle::wrap(info.Env(), adapter_.create_local_peripheral(),
+                                           Internal<SimpleBLE::Adapter>::of(adapter_));
+    });
+}
+
+// The started local peripherals of this adapter, which close() stops.
+Napi::Value AdapterHandle::hosts(const Napi::CallbackInfo& info) {
+    const void* pointer = Internal<SimpleBLE::Adapter>::of(adapter_);
+    auto array = Napi::Array::New(info.Env());
+    uint32_t count = 0;
+    for (const auto& [key, entry] : addon(info.Env()).hosting.objects) {
+        if (entry.owner == pointer) array.Set(count++, LocalPeripheralHandle::wrap(info.Env(), entry.object, pointer));
+    }
+    return array;
+}
+
 // Releases everything the addon holds of this adapter, after the TypeScript
-// side has stopped its scan, disconnected its peripherals and released their
-// handles. The promise settles once the lifecycle strand has dropped them, so
+// side has stopped its scan and local peripherals, disconnected its peripherals
+// and released their handles. The promise settles once the lifecycle strand has dropped them, so
 // an enumeration that follows can open the adapter again.
 Napi::Value AdapterHandle::close(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     const void* pointer = Internal<SimpleBLE::Adapter>::of(adapter_);
     release_owned(env, addon(env).scanning, pointer);
     release_owned(env, addon(env).connected, pointer);
+    release_owned(env, addon(env).hosting, pointer);
     release_later(adapter_);
     return run(env, lifecycle(), [] { return finish_undefined(); });
 }

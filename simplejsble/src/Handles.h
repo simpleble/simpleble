@@ -63,7 +63,9 @@ class AdapterHandle : public Napi::ObjectWrap<AdapterHandle> {
     Napi::Value get_paired_peripherals(const Napi::CallbackInfo& info);
     Napi::Value get_connected_peripherals(const Napi::CallbackInfo& info);
     Napi::Value subscribe(const Napi::CallbackInfo& info);
+    Napi::Value create_local_peripheral(const Napi::CallbackInfo& info);
     Napi::Value connections(const Napi::CallbackInfo& info);
+    Napi::Value hosts(const Napi::CallbackInfo& info);
     Napi::Value close(const Napi::CallbackInfo& info);
     Napi::Value release(const Napi::CallbackInfo& info);
 
@@ -106,6 +108,9 @@ class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
     Napi::Value indicate(const Napi::CallbackInfo& info);
     Napi::Value unsubscribe(const Napi::CallbackInfo& info);
     Napi::Value subscribe(const Napi::CallbackInfo& info);
+    Napi::Value set_passkey_request_handler(const Napi::CallbackInfo& info);
+    Napi::Value set_passkey_display_handler(const Napi::CallbackInfo& info);
+    Napi::Value set_numeric_comparison_handler(const Napi::CallbackInfo& info);
     Napi::Value owner(const Napi::CallbackInfo& info);
     Napi::Value release(const Napi::CallbackInfo& info);
 
@@ -116,6 +121,100 @@ class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
     const void* owner_ = nullptr;
     std::shared_ptr<Executor::Strand> strand_;
 };
+
+// A local object, the adapter it was created from, and the local peripheral
+// that hosts it, as passed to the local handles. Calls on a local object run
+// on its host's strand.
+template <typename T>
+struct LocalSource {
+    T object;
+    const void* owner;
+    const void* host;
+};
+
+class LocalPeripheralHandle : public Napi::ObjectWrap<LocalPeripheralHandle> {
+  public:
+    static Napi::Function define(Napi::Env env);
+    static Napi::Object wrap(Napi::Env env, const SimpleBLE::Local::Peripheral& peripheral, const void* owner);
+
+    explicit LocalPeripheralHandle(const Napi::CallbackInfo& info);
+    ~LocalPeripheralHandle() override;
+
+  private:
+    Napi::Value key(const Napi::CallbackInfo& info);
+    Napi::Value add_advertised_service(const Napi::CallbackInfo& info);
+    Napi::Value set_advertised_manufacturer_data(const Napi::CallbackInfo& info);
+    Napi::Value set_connectable(const Napi::CallbackInfo& info);
+    Napi::Value add_service(const Napi::CallbackInfo& info);
+    Napi::Value services(const Napi::CallbackInfo& info);
+    Napi::Value remove_all_services(const Napi::CallbackInfo& info);
+    Napi::Value start(const Napi::CallbackInfo& info);
+    Napi::Value stop(const Napi::CallbackInfo& info);
+    Napi::Value is_started(const Napi::CallbackInfo& info);
+    Napi::Value is_advertising(const Napi::CallbackInfo& info);
+    Napi::Value subscribe(const Napi::CallbackInfo& info);
+    Napi::Value owner(const Napi::CallbackInfo& info);
+    Napi::Value release(const Napi::CallbackInfo& info);
+
+    std::shared_ptr<Executor::Strand> strand();
+
+    SimpleBLE::Local::Peripheral peripheral_;
+    const void* owner_ = nullptr;
+    std::shared_ptr<Executor::Strand> strand_;
+};
+
+class LocalServiceHandle : public Napi::ObjectWrap<LocalServiceHandle> {
+  public:
+    static Napi::Function define(Napi::Env env);
+    static Napi::Object wrap(Napi::Env env, const SimpleBLE::Local::Service& service, const void* owner,
+                             const void* host);
+
+    explicit LocalServiceHandle(const Napi::CallbackInfo& info);
+    ~LocalServiceHandle() override;
+
+  private:
+    Napi::Value key(const Napi::CallbackInfo& info);
+    Napi::Value uuid(const Napi::CallbackInfo& info);
+    Napi::Value add_characteristic(const Napi::CallbackInfo& info);
+    Napi::Value characteristics(const Napi::CallbackInfo& info);
+    Napi::Value owner(const Napi::CallbackInfo& info);
+    Napi::Value release(const Napi::CallbackInfo& info);
+
+    SimpleBLE::Local::Service service_;
+    const void* owner_ = nullptr;
+    const void* host_ = nullptr;
+};
+
+class LocalCharacteristicHandle : public Napi::ObjectWrap<LocalCharacteristicHandle> {
+  public:
+    static Napi::Function define(Napi::Env env);
+    static Napi::Object wrap(Napi::Env env, const SimpleBLE::Local::Characteristic& characteristic,
+                             const void* owner, const void* host);
+
+    explicit LocalCharacteristicHandle(const Napi::CallbackInfo& info);
+    ~LocalCharacteristicHandle() override;
+
+  private:
+    Napi::Value key(const Napi::CallbackInfo& info);
+    Napi::Value uuid(const Napi::CallbackInfo& info);
+    Napi::Value capabilities(const Napi::CallbackInfo& info);
+    Napi::Value value(const Napi::CallbackInfo& info);
+    Napi::Value set_value(const Napi::CallbackInfo& info);
+    Napi::Value set_read_handler(const Napi::CallbackInfo& info);
+    Napi::Value subscribe(const Napi::CallbackInfo& info);
+    Napi::Value owner(const Napi::CallbackInfo& info);
+    Napi::Value release(const Napi::CallbackInfo& info);
+
+    std::shared_ptr<Executor::Strand> strand();
+
+    SimpleBLE::Local::Characteristic characteristic_;
+    const void* owner_ = nullptr;
+    const void* host_ = nullptr;
+    std::shared_ptr<Executor::Strand> strand_;
+};
+
+// The id of the handler a call registers, or none to clear it.
+std::optional<double> handler_id(const Napi::CallbackInfo& info, size_t index);
 
 Napi::Array wrap_adapters(Napi::Env env, const std::vector<SimpleBLE::Adapter>& adapters);
 Napi::Array wrap_peripherals(Napi::Env env, const std::vector<SimpleBLE::Peripheral>& peripherals, const void* owner);

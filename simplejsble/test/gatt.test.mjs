@@ -163,6 +163,14 @@ test('subscriptions follow call order when calls are not awaited one by one', as
   }
 });
 
+test('pairing handlers reach the core', async () => {
+  // Only Dongl peripherals take them.
+  for (const set of ['setPasskeyRequestHandler', 'setPasskeyDisplayHandler', 'setNumericComparisonHandler']) {
+    await assert.rejects(peripheral[set](() => {}), { code: 'OPERATION_NOT_SUPPORTED' }, set);
+  }
+  await assert.rejects(peripheral.setPasskeyRequestHandler('123456'), TypeError);
+});
+
 test('unpair() reaches the device', async () => {
   assert.equal(await peripheral.isPaired(), true);
   await peripheral.unpair();

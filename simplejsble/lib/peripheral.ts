@@ -1,7 +1,16 @@
 import { EventEmitter } from 'node:events';
 
+import { HandlerSlot } from './handlers';
 import type { NativeService, PeripheralHandle } from './native';
-import { intern, onNativeEvent, release, retain, retainWhileListening, unregister } from './registry';
+import {
+  intern,
+  onNativeEvent,
+  release,
+  releaseFrom,
+  retain,
+  retainWhileListening,
+  unregister,
+} from './registry';
 
 export type BluetoothAddressType = 'public' | 'random' | 'unspecified';
 
@@ -32,12 +41,6 @@ export interface PeripheralEvents {
 const EVENTS = ['connected', 'disconnected'] as const;
 
 const construct = Symbol('construct');
-
-/**
- * Releases a peripheral of the adapter with the given key, which is closing.
- * @internal
- */
-export const releaseFrom = Symbol('releaseFrom');
 
 // Notification and indication callbacks by subscription id. The addon passes
 // only the id with each value.
@@ -89,6 +92,9 @@ export class Peripheral extends EventEmitter<PeripheralEvents> {
   readonly #rehook: () => void;
   // Subscriptions by subscriptionKey().
   readonly #subscriptions = new Map<string, Subscription>();
+  readonly #passkeyRequest = new HandlerSlot<() => string | undefined | Promise<string | undefined>>();
+  readonly #passkeyDisplay = new HandlerSlot<(passkey: string) => void>();
+  readonly #numericComparison = new HandlerSlot<(passkey: string) => boolean | Promise<boolean>>();
 
   private constructor(token: typeof construct, handle: PeripheralHandle) {
     if (token !== construct) throw new TypeError('Peripherals come from an Adapter');
@@ -205,6 +211,30 @@ export class Peripheral extends EventEmitter<PeripheralEvents> {
     if (ended) this.#forget(key, ended);
   }
 
+  /**
+   * Answers a Dongl's request for the passkey the peer shows, with six digits,
+   * or undefined to reject pairing. Set it before connect(), as pairing can
+   * start as soon as the link is up. The handler can return a promise, e.g. of
+   * the user's input, and the Dongl waits for it.
+   */
+  setPasskeyRequestHandler(handler: (() => string | undefined | Promise<string | undefined>) | null): Promise<void> {
+    return this.#passkeyRequest.set(handler, id => this.#handle.setPasskeyRequestHandler(id));
+  }
+
+  /** Shows a Dongl's six-digit passkey, which the user enters on the peer. Set it before connect(). */
+  setPasskeyDisplayHandler(handler: ((passkey: string) => void) | null): Promise<void> {
+    return this.#passkeyDisplay.set(handler, id => this.#handle.setPasskeyDisplayHandler(id));
+  }
+
+  /**
+   * Answers whether the peer shows the same six-digit number as a Dongl,
+   * accepting or rejecting pairing. Set it before connect(). The handler can
+   * return a promise.
+   */
+  setNumericComparisonHandler(handler: ((passkey: string) => boolean | Promise<boolean>) | null): Promise<void> {
+    return this.#numericComparison.set(handler, id => this.#handle.setNumericComparisonHandler(id));
+  }
+
   override removeAllListeners(...args: Parameters<EventEmitter<PeripheralEvents>['removeAllListeners']>): this {
     super.removeAllListeners(...args);
     this.#rehook();
@@ -217,6 +247,7 @@ export class Peripheral extends EventEmitter<PeripheralEvents> {
 
     const key = this.#handle.key();
     for (const [subscriptionKey, subscription] of [...this.#subscriptions]) this.#forget(subscriptionKey, subscription);
+    for (const slot of [this.#passkeyRequest, this.#passkeyDisplay, this.#numericComparison]) slot.drop();
     this.removeAllListeners();
     this.#handle.release();
     unregister(key, this);

@@ -1,8 +1,9 @@
 import { EventEmitter } from 'node:events';
 
+import { LocalPeripheral } from './local';
 import { native, type AdapterHandle } from './native';
-import { Peripheral, releaseFrom } from './peripheral';
-import { intern, registered, retainWhileListening, unregister } from './registry';
+import { Peripheral } from './peripheral';
+import { intern, registered, releaseFrom, retainWhileListening, unregister, type Releasable } from './registry';
 
 export interface AdapterEvents {
   scanStart: [];
@@ -107,12 +108,18 @@ export class Adapter extends EventEmitter<AdapterEvents> {
     return this.#handle.getConnectedPeripherals().then(handles => handles.map(Peripheral.wrap));
   }
 
+  /** A host for GATT services of this process, advertised by this adapter. */
+  createLocalPeripheral(): LocalPeripheral {
+    return LocalPeripheral.wrap(this.#handle.createLocalPeripheral());
+  }
+
   /**
-   * Stops this adapter's scan, disconnects the peripherals connected through
-   * it, and releases the adapter and its peripherals. Once the promise
-   * resolves, a Dongl is free for other programs. Calls on the closed adapter
-   * and its peripherals then fail with OBJECT_NOT_INITIALIZED, they emit no
-   * more events, and getAdapters() returns a new Adapter for the device.
+   * Stops this adapter's scan and local peripherals, disconnects the
+   * peripherals connected through it, and releases the adapter and every object
+   * that came from it. Once the promise resolves, a Dongl is free for other
+   * programs. Calls on the closed objects then fail with OBJECT_NOT_INITIALIZED,
+   * they emit no more events, and getAdapters() returns a new Adapter for the
+   * device.
    */
   close(): Promise<void> {
     this.#closing ??= this.#close();
@@ -139,10 +146,11 @@ export class Adapter extends EventEmitter<AdapterEvents> {
       if (await this.#handle.scanIsActive()) await this.#handle.scanStop();
     } catch {}
     const connections = this.#handle.connections().map(Peripheral.wrap);
-    await Promise.allSettled(connections.map(peripheral => peripheral.disconnect()));
+    const hosts = this.#handle.hosts().map(LocalPeripheral.wrap);
+    await Promise.allSettled([...connections.map(peripheral => peripheral.disconnect()), ...hosts.map(host => host.stop())]);
 
     for (const object of registered()) {
-      if (object instanceof Peripheral) object[releaseFrom](key);
+      (object as Partial<Releasable>)[releaseFrom]?.(key);
     }
     await this.#handle.close();
     this.removeAllListeners();

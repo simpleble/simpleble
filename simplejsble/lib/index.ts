@@ -1,6 +1,7 @@
 import type { EventEmitter } from 'node:events';
 
 import { SimpleBLEError, type ErrorCode } from './errors';
+import { answer } from './handlers';
 import { native } from './native';
 import { Peripheral, deliver } from './peripheral';
 import { lookup, onNativeEvent } from './registry';
@@ -11,7 +12,8 @@ interface NativeTarget extends EventEmitter {
 
 native.setup({
   makeError: (code, message, nativeCode) => new SimpleBLEError(code as ErrorCode, message, nativeCode),
-  dispatch: (key, event, peripheralKey, external) => {
+  // `argument` is the event's value, or a peripheral's key when `external` holds the peripheral.
+  dispatch: (key, event, argument, external) => {
     // Objects with listeners are kept alive, so a missing object had none.
     const target = lookup(key) as NativeTarget | undefined;
     if (!target) return;
@@ -19,21 +21,31 @@ native.setup({
     target[onNativeEvent]?.(event);
     if (target.listenerCount(event) === 0) return;
 
-    if (peripheralKey === undefined) {
+    if (external !== undefined) {
+      const peripheral =
+        (lookup(argument as string) as Peripheral | undefined) ?? Peripheral.wrap(native.peripheralHandle(external));
+      target.emit(event, peripheral);
+    } else if (argument === undefined) {
       target.emit(event);
-      return;
+    } else {
+      target.emit(event, argument);
     }
-    const peripheral =
-      (lookup(peripheralKey) as Peripheral | undefined) ?? Peripheral.wrap(native.peripheralHandle(external!));
-    target.emit(event, peripheral);
   },
   deliver,
+  answer,
 });
 
 export { Adapter, type AdapterEvents } from './adapter';
 export { Backend } from './backend';
 export { Config, type DonglConfig, type SimpleBluezConfig, type WinRTConfig } from './config';
 export { SimpleBLEError, type ErrorCode } from './errors';
+export {
+  LocalCharacteristic,
+  LocalPeripheral,
+  LocalService,
+  type LocalCharacteristicEvents,
+  type LocalPeripheralEvents,
+} from './local';
 export {
   Peripheral,
   type BluetoothAddressType,
