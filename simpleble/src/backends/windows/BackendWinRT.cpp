@@ -26,24 +26,26 @@ BackendWinRT::BackendWinRT(buildToken) {
 
 bool BackendWinRT::bluetooth_enabled() {
     return MtaManager::get().execute_sync<bool>([this]() {
-        bool enabled = false;
-        auto radio_collection = async_get(Radio::GetRadiosAsync());
-        for (uint32_t i = 0; i < radio_collection.Size(); i++) {
-            auto radio = radio_collection.GetAt(i);
-
-            // Skip non-bluetooth radios
-            if (radio.Kind() != RadioKind::Bluetooth) {
-                continue;
-            }
-
-            // Assume that bluetooth is enabled if any of the radios are enabled
-            if (radio.State() == RadioState::On) {
-                enabled = true;
-                break;
+        bool has_bluetooth_radio = false;
+        auto radio_collection = async_get_radio([]() { return Radio::GetRadiosAsync(); });
+        if (radio_collection) {
+            for (const auto& radio : radio_collection) {
+                if (radio.Kind() != RadioKind::Bluetooth) {
+                    continue;
+                }
+                has_bluetooth_radio = true;
+                if (radio.State() == RadioState::On) {
+                    return true;
+                }
             }
         }
 
-        return enabled;
+        // Preserve a known disabled state. An unavailable radio API (or an empty
+        // WoW64 radio list) is not evidence that an existing BLE adapter is off.
+        if (has_bluetooth_radio) return false;
+        auto device_information_collection = async_get(
+            Devices::Enumeration::DeviceInformation::FindAllAsync(BluetoothAdapter::GetDeviceSelector()));
+        return device_information_collection.Size() > 0;
     });
 }
 

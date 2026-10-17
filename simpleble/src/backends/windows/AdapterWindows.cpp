@@ -36,7 +36,7 @@ using namespace std::chrono_literals;
 
 AdapterWindows::AdapterWindows(std::string device_id)
     : adapter_(async_get(BluetoothAdapter::FromIdAsync(winrt::to_hstring(device_id)))),
-      radio_(async_get(adapter_.GetRadioAsync())) {
+      radio_(async_get_radio([this]() { return adapter_.GetRadioAsync(); })) {
     // IMPORTANT NOTE: This function must be executed in the MTA context. In this case, this is managed by the BackendWinRT class.
     auto device_information = async_get(
         Devices::Enumeration::DeviceInformation::CreateFromIdAsync(winrt::to_hstring(device_id)));
@@ -51,7 +51,9 @@ AdapterWindows::AdapterWindows(std::string device_id)
     }
 
     // Register member functions directly as callback handlers
-    radio_state_changed_token_ = radio_.StateChanged({this, &AdapterWindows::on_power_state_changed});
+    if (radio_) {
+        radio_state_changed_token_ = radio_.StateChanged({this, &AdapterWindows::on_power_state_changed});
+    }
     scanner_stopped_token_ = scanner_.Stopped({this, &AdapterWindows::_on_scanner_stopped});
     scanner_received_token_ = scanner_.Received({this, &AdapterWindows::_on_scanner_received});
 }
@@ -61,6 +63,10 @@ AdapterWindows::~AdapterWindows() {
 
     MtaManager::get().execute_sync([this]() {
         scanner_.Stop();
+
+        if (radio_ && radio_state_changed_token_) {
+            radio_.StateChanged(radio_state_changed_token_);
+        }
 
         if (scanner_received_token_) {
             scanner_.Received(scanner_received_token_);
@@ -86,14 +92,17 @@ BluetoothAddress AdapterWindows::address() {
 }
 
 void AdapterWindows::power_on() {
+    if (!radio_) throw Exception::OperationNotSupported();
     MtaManager::get().execute_sync([this]() { async_get(radio_.SetStateAsync(RadioState::On)); });
 }
 
 void AdapterWindows::power_off() {
+    if (!radio_) throw Exception::OperationNotSupported();
     MtaManager::get().execute_sync([this]() { async_get(radio_.SetStateAsync(RadioState::Off)); });
 }
 
 bool AdapterWindows::is_powered() {
+    if (!radio_) throw Exception::OperationNotSupported();
     return MtaManager::get().execute_sync<bool>([this]() { return radio_.State() == RadioState::On; });
 }
 

@@ -47,4 +47,28 @@ static auto async_get(async_t const& async) {
     }
 }
 
+
+// Radio management is unavailable to some unpackaged WoW64 clients even when
+// the Bluetooth LE APIs work. Only suppress that specific COM registration error.
+template <typename query_t>
+static auto async_get_radio(query_t query) -> decltype(query().GetResults()) {
+    try {
+        auto async = query();
+        if (async.Status() == Foundation::AsyncStatus::Started) {
+            wait_for_completed(async, TEN_SECONDS_IN_MSECS);
+        }
+        return async.GetResults();
+    } catch (const winrt::hresult_access_denied& err) {
+        throw SimpleBLE::Exception::WinRTAccessDenied(err.code().value, winrt::to_string(err.message()));
+    } catch (const winrt::hresult_error& err) {
+        constexpr int32_t CLASS_NOT_REGISTERED = static_cast<int32_t>(0x80040154u);
+        if (err.code().value == CLASS_NOT_REGISTERED) {
+            return decltype(query().GetResults()){nullptr};
+        }
+        throw SimpleBLE::Exception::WinRTException(err.code().value, winrt::to_string(err.message()));
+    } catch (const std::exception& err) {
+        throw SimpleBLE::Exception::BaseException(err.what());
+    }
+}
+
 }  // namespace SimpleBLE
