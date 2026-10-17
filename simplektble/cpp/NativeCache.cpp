@@ -3,6 +3,9 @@
 #include <stdexcept>
 #include <tuple>
 
+namespace Org {
+namespace SimpleKtBLE {
+
 NativeCache& NativeCache::get() {
     // NOTE: Never destroyed, so SimpleBLE objects are not torn down while the JVM exits.
     static NativeCache& cache = *new NativeCache();
@@ -107,3 +110,6 @@ void NativeCache::remove_data_callback(int64_t adapter_id, int64_t peripheral_id
     if (expected && callback->second != expected) return;
     _data_callbacks.erase(callback);
 }
+
+}  // namespace SimpleKtBLE
+}  // namespace Org

@@ -14,6 +14,9 @@
 #include "org/simplektble/DataCallback.h"
 #include "org/simplektble/PeripheralCallback.h"
 
+namespace Org {
+namespace SimpleKtBLE {
+
 class NativeCache {
   public:
     static NativeCache& get();
@@ -70,3 +73,6 @@ class NativeCache {
     std::map<int64_t, std::map<int64_t, PeripheralEntry>> _peripherals;
     std::map<DataCallbackKey, std::shared_ptr<Org::SimpleKtBLE::DataCallback>> _data_callbacks;
 };
+
+}  // namespace SimpleKtBLE
+}  // namespace Org

@@ -15,6 +15,9 @@
 #include "simplejni/Common.hpp"
 #include "simplejni/VM.hpp"
 
+namespace Org {
+namespace SimpleKtBLE {
+
 /**
  * Runs Java callbacks one at a time, in order, on a single thread attached to the JVM.
  *
@@ -158,3 +161,6 @@ class ThreadRunner final {
     std::thread::id _thread_id;
     std::mutex _join_mutex;
 };
+
+}  // namespace SimpleKtBLE
+}  // namespace Org

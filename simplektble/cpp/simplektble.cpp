@@ -34,6 +34,8 @@
 namespace {
 
 namespace Kt = Org::SimpleKtBLE;
+using Kt::NativeCache;
+using Kt::ThreadRunner;
 
 template <typename Func>
 auto call(JNIEnv* env, Func&& func) noexcept {
