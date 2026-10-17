@@ -74,6 +74,7 @@ Before releasing a new version of the project, perform the following steps in or
    - `simpleaible/README.rst`
    - `simplejsble/README.md`
    - `simplepyble/README.rst`
+   - `simplernble/README.md`
    - `simplersble/README.md`
    - `simplesharpble/README.md`
 
@@ -105,7 +106,7 @@ Before releasing a new version of the project, perform the following steps in or
 
 7. Wait for the branch-triggered `CI Main` workflow to finish successfully. A `main` push publishes development packages: `X.Y.Z-devN` to crates.io and Maven Central, `X.Y.Z.devN` to PyPI, `X.Y.Z-dev.N` to NuGet, and `X.Y.Z-devN` to npm under the `dev` tag.
 
-   Confirm that SimpleRsBLE, SimplePyBLE, SimpleAIBLE, SimpleJavaBLE, SimpleDroidBridge, SimpleDroidBLE, SimpleSharpBLE, and SimpleJSBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing. If a job fails for a reason unrelated to the release, such as an interrupted Android SDK download, use **Re-run failed jobs** on that run instead.
+   Confirm that SimpleRsBLE, SimplePyBLE, SimpleAIBLE, SimpleJavaBLE, SimpleDroidBridge, SimpleDroidBLE, SimpleSharpBLE, SimpleJSBLE, and SimpleRnBLE all use the expected development version. If a fix is required, push the fix and wait for its workflow to finish before continuing. If a job fails for a reason unrelated to the release, such as an interrupted Android SDK download, use **Re-run failed jobs** on that run instead.
 
 ### Tag and publish the release
 
@@ -134,6 +135,7 @@ Before releasing a new version of the project, perform the following steps in or
     - SimpleDroidBLE and SimpleDroidBridge `X.Y.Z` are available on Maven Central.
     - SimpleSharpBLE `X.Y.Z` is available on NuGet.
     - SimpleJSBLE `X.Y.Z` is available on npm under the `latest` tag.
+    - SimpleRnBLE `X.Y.Z` is available on npm under the `latest` tag.
 
     Maven Central and NuGet can take 15 minutes or more to list a new version after its publish job succeeds.
 

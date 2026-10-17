@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -253,6 +253,60 @@ console.log('Scan results:');
 for (const peripheral of adapter.scanGetResults()) {
   const state = peripheral.isConnectable() ? 'connectable' : 'not connectable';
   console.log(`- ${peripheral.identifier()} [${peripheral.address()}] ${state}`);
+}
+```
+
+</Tab>
+<Tab value="React Native">
+
+Install the package and Nitro Modules:
+
+```sh
+npm install simplernble react-native-nitro-modules
+cd ios && pod install
+```
+
+Add the Bluetooth permissions from [SimpleRnBLE Usage](./simplernble/usage#permissions), then use this as `App.tsx`:
+
+```tsx
+import { useState } from 'react';
+import { Button, FlatList, PermissionsAndroid, Platform, Text, View } from 'react-native';
+import { Adapter, type Peripheral } from 'simplernble';
+
+export default function App() {
+  const [peripherals, setPeripherals] = useState<Peripheral[]>([]);
+
+  const scan = async () => {
+    if (Platform.OS === 'android') {
+      await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      ]);
+    }
+    const [adapter] = await Adapter.getAdapters();
+    const update = () => setPeripherals(adapter.scanGetResults());
+    adapter.on('scanFound', update);
+    try {
+      await adapter.scanFor(5000);
+    } finally {
+      adapter.off('scanFound', update);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, paddingTop: 64, paddingHorizontal: 16 }}>
+      <Button title="Scan for 5 seconds" onPress={scan} />
+      <FlatList
+        data={peripherals}
+        keyExtractor={peripheral => peripheral.address()}
+        renderItem={({ item }) => (
+          <Text>
+            {item.identifier()} [{item.address()}] {item.rssi()} dBm
+          </Text>
+        )}
+      />
+    </View>
+  );
 }
 ```
 

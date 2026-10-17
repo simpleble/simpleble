@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "Android"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -201,6 +201,35 @@ await peripheral.start();
 ```
 
 </Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+const [adapter] = await Adapter.getAdapters();
+const peripheral = adapter.createLocalPeripheral();
+
+peripheral.addAdvertisedService('12345678-1234-5678-1234-56789abcdef0');
+
+const service = peripheral.addService('12345678-1234-5678-1234-56789abcdef0');
+const characteristic = service.addCharacteristic('12345678-1234-5678-1234-56789abcdef1', [
+  'read',
+  'writeRequest',
+  'notify',
+]);
+await characteristic.setValue(Uint8Array.from('ready', c => c.charCodeAt(0)));
+
+// Echo the written value to subscribed clients.
+characteristic.on('write', value => characteristic.setValue(value));
+
+peripheral.on('clientConnected', address => console.log(`Client connected: ${address}`));
+
+await peripheral.start();
+```
+
+On Android, request `BLUETOOTH_ADVERTISE` and `BLUETOOTH_CONNECT` at runtime first.
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -246,7 +275,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "Android"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -325,6 +354,26 @@ const peripheral = adapter.createLocalPeripheral();
 
 // iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
 const ibeacon = Buffer.from('0215' + 'e2c56db5dffb48d2b060d0f5a71096e0' + '0001' + '0002' + 'c5', 'hex');
+peripheral.setAdvertisedManufacturerData(0x004c, ibeacon);
+peripheral.setConnectable(false);
+await peripheral.start();
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+const [adapter] = await Adapter.getAdapters();
+const peripheral = adapter.createLocalPeripheral();
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+const ibeacon = Uint8Array.of(
+  0x02, 0x15,
+  0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+  0x00, 0x01, 0x00, 0x02, 0xc5,
+);
 peripheral.setAdvertisedManufacturerData(0x004c, ibeacon);
 peripheral.setConnectable(false);
 await peripheral.start();

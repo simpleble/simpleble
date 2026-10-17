@@ -1,0 +1,50 @@
+---
+title: Examples
+description: A runnable React Native app that scans, connects, and reads with SimpleRnBLE.
+---
+
+The [example app](https://github.com/simpleble/simpleble/tree/main/examples/simplernble)
+lives alongside the other SimpleBLE binding examples. It asks for the Bluetooth
+permissions, scans for five seconds, and lists what it found. Tap a peripheral
+to connect and list its services; each characteristic can then be read, and
+followed when it notifies.
+
+The app builds SimpleRnBLE from the checkout. Prepare the binding first, from
+`simplernble`:
+
+```sh
+cd simplernble
+npm ci
+npm run nitrogen
+scripts/build-ios.sh   # iOS only: builds SimpleBLE.xcframework into prebuilt/
+```
+
+Then install the app's dependencies and start Metro, from `examples/simplernble`:
+
+```sh
+cd ../examples/simplernble
+npm install
+npm start
+```
+
+With Metro running, build and run the app on a phone in another terminal.
+On Android, from the repository root, which has the Gradle wrapper for React Native projects:
+
+```sh
+utils/gradle-react-native/gradlew -p examples/simplernble/android :app:installDebug
+adb reverse tcp:8081 tcp:8081
+adb shell am start -n org.simplernble.example/.MainActivity
+```
+
+On iOS, from `examples/simplernble/ios`:
+
+```sh
+pod install
+open SimpleRnBLEExample.xcworkspace
+```
+
+Pick your phone and a development team in Xcode, then run.
+
+For binding development and tests, see the
+[contributor guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplernble-publishing.md).
+For events, lifetime, and handlers, see [Usage](./usage).

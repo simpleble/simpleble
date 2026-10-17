@@ -20,7 +20,7 @@ Connecting moves from BLE advertisements into the GATT database. Once connected,
 
 ## Connect and list GATT objects
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -150,6 +150,26 @@ peripheral.disconnect().unwrap();
 <Tab value="Node.js">
 
 ```js
+const peripheral = adapter.scanGetResults()[selectedIndex];
+
+await peripheral.connect();
+
+console.log(`MTU: ${peripheral.mtu()}`);
+for (const service of peripheral.services()) {
+  console.log(`Service: ${service.uuid}`);
+  for (const characteristic of service.characteristics) {
+    console.log(`  Characteristic: ${characteristic.uuid}`);
+    console.log(`    Capabilities: ${characteristic.capabilities.join(' ')}`);
+  }
+}
+
+await peripheral.disconnect();
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
 const peripheral = adapter.scanGetResults()[selectedIndex];
 
 await peripheral.connect();

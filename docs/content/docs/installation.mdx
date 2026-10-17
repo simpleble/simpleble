@@ -19,6 +19,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleGoBLE](./simplegoble/usage) | Go | Development | Desktop BLE client | Go modules |
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
 | [SimpleJSBLE](./simplejsble/usage) | JavaScript / TypeScript | Production-ready | Node.js and Electron apps | npm |
+| [SimpleRnBLE](./simplernble/usage) | JavaScript / TypeScript | Production-ready | React Native apps on iOS and Android | npm |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
@@ -40,7 +41,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "Android", "Unity", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Android", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -186,6 +187,21 @@ npm install simplejsble
 The package includes the native addon for Windows, macOS, and Linux on x64 and
 arm64, so nothing is compiled during installation. See
 [SimpleJSBLE Usage](./simplejsble/usage) for Electron and platform notes.
+
+</Tab>
+<Tab value="React Native">
+
+Install the React Native package and Nitro Modules, which it is built on:
+
+```sh
+npm install simplernble react-native-nitro-modules
+cd ios && pod install
+```
+
+The package includes SimpleBLE prebuilt for iOS, and compiles it with the NDK
+in your app's Android build. Apps declare Bluetooth usage in `Info.plist` and
+request the Android permissions at runtime; see
+[SimpleRnBLE Usage](./simplernble/usage) for permissions and Expo.
 
 </Tab>
 <Tab value="Android">

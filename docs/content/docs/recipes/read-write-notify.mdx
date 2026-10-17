@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -84,6 +84,14 @@ console.log('Read:', value);
 ```
 
 </Tab>
+<Tab value="React Native">
+
+```ts
+const value = await peripheral.read(serviceUuid, characteristicUuid);
+console.log('Read:', value);
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -96,7 +104,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -173,6 +181,19 @@ await peripheral.writeCommand(serviceUuid, characteristicUuid, payload);
 ```
 
 </Tab>
+<Tab value="React Native">
+
+```ts
+const payload = Uint8Array.of(0x01, 0x02, 0x03);
+
+// Acknowledged write.
+await peripheral.writeRequest(serviceUuid, characteristicUuid, payload);
+
+// Unacknowledged write.
+await peripheral.writeCommand(serviceUuid, characteristicUuid, payload);
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -187,7 +208,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -289,6 +310,17 @@ import { setTimeout as sleep } from 'node:timers/promises';
 await peripheral.notify(serviceUuid, characteristicUuid, data => console.log('Notification:', data));
 
 await sleep(10_000);
+
+await peripheral.unsubscribe(serviceUuid, characteristicUuid);
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+await peripheral.notify(serviceUuid, characteristicUuid, data => console.log('Notification:', data));
+
+await new Promise<void>(resolve => setTimeout(() => resolve(), 10_000));
 
 await peripheral.unsubscribe(serviceUuid, characteristicUuid);
 ```
