@@ -1,0 +1,71 @@
+// Built as part of a React Native app, which provides the Android, Kotlin and
+// React Native Gradle plugins.
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply from: "../nitrogen/generated/android/SimpleRnBLE+autolinking.gradle"
+
+// NOTE: In the repository, SimpleBLE's sources sit beside the package. A
+// published package carries them in native/. Apps reach the package through a
+// node_modules link, so the paths start from its real location.
+def packageDir = file("..").canonicalFile
+def simplebleRoot = new File(packageDir.parentFile, "simpleble/CMakeLists.txt").exists() ? packageDir.parentFile : new File(packageDir, "native")
+def plain = rootProject.findProperty("simplernble.plain") == "true"
+def architectures = rootProject.findProperty("reactNativeArchitectures")?.split(",") ?: ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"]
+
+android {
+  namespace "org.simplernble"
+  compileSdk rootProject.ext.compileSdkVersion
+  ndkVersion rootProject.ext.ndkVersion
+
+  defaultConfig {
+    // SimpleBLE's Android backend needs Android 12.
+    minSdk 31
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON", "-DSIMPLEBLE_PLAIN=${plain ? 'ON' : 'OFF'}"
+        abiFilters(*architectures)
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+
+  buildFeatures {
+    prefab true
+  }
+
+  // The app packages these libraries once, from React Native itself.
+  packagingOptions {
+    excludes = [
+      "META-INF",
+      "META-INF/**",
+      "**/libc++_shared.so",
+      "**/libfbjni.so",
+      "**/libjsi.so",
+      "**/libreactnative.so",
+      "**/libhermes.so",
+    ]
+  }
+
+  sourceSets {
+    main {
+      // The bridge classes SimpleBLE's Android backend calls into.
+      java.srcDirs += ["${simplebleRoot}/simpledroidbridge/src/main/java"]
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+  implementation project(":react-native-nitro-modules")
+}

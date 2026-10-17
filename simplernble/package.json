@@ -1,0 +1,59 @@
+{
+  "name": "simplernble",
+  "version": "0.0.0",
+  "description": "SimpleBLE for React Native: a cross-platform Bluetooth Low Energy library for iOS and Android",
+  "keywords": [
+    "react-native",
+    "bluetooth",
+    "ble",
+    "bluetooth-low-energy",
+    "simpleble",
+    "nitro-modules",
+    "ios",
+    "android"
+  ],
+  "license": "BUSL-1.1",
+  "homepage": "https://simpleble.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simpleble/simpleble.git",
+    "directory": "simplernble"
+  },
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "react-native": "./src/index.ts",
+  "source": "./src/index.ts",
+  "files": [
+    "src",
+    "lib",
+    "cpp",
+    "android/build.gradle",
+    "android/CMakeLists.txt",
+    "android/src",
+    "nitrogen/generated",
+    "native",
+    "prebuilt/release",
+    "nitro.json",
+    "SimpleRnBLE.podspec",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "nitrogen": "nitrogen --logLevel=warning",
+    "build": "npm run nitrogen && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test",
+    "test:android": "node scripts/test.mjs android",
+    "test:ios": "node scripts/test.mjs ios",
+    "prepack": "node scripts/prepack.mjs"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.80",
+    "react-native-nitro-modules": ">=0.37.1 <0.38"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "nitrogen": "0.37.1",
+    "react-native": "0.87.1",
+    "react-native-nitro-modules": "0.37.1",
+    "typescript": "^5.9.0"
+  }
+}

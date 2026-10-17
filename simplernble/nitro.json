@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": ["simplernble"],
+  "ios": {
+    "iosModuleName": "SimpleRnBLE"
+  },
+  "android": {
+    "androidNamespace": ["simplernble"],
+    "androidCxxLibName": "SimpleRnBLE"
+  },
+  "autolinking": {
+    "SimpleRnBLE": {
+      "all": {
+        "language": "c++",
+        "implementationClassName": "HybridSimpleRnBLE"
+      }
+    }
+  },
+  "ignorePaths": ["**/node_modules", "lib"]
+}
