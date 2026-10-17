@@ -1,0 +1,120 @@
+name: Build SimpleRnBLE
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-15
+    defaults:
+      run:
+        shell: bash
+        working-directory: simplernble
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          cd ../examples/simplernble && npm install --no-audit --no-fund
+
+      - name: Check the types
+        run: |
+          npm run nitrogen
+          npm run typecheck
+
+      - name: Build SimpleBLE for iOS
+        run: |
+          scripts/build-ios.sh
+          PLAIN=1 scripts/build-ios.sh
+
+      # The simulator has no Bluetooth; the tests run against PLAIN.
+      - name: Test the binding on a simulator
+        run: |
+          device=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcrun simctl boot "$device"
+          SIMULATOR="$device" npm run test:ios
+
+      - name: Pack
+        run: |
+          mkdir -p ../package
+          npm pack --pack-destination ../package
+          tar -tzf ../package/simplernble-*.tgz | grep -E 'SimpleBLE.xcframework/Info.plist|native/simpleble/CMakeLists.txt|nitrogen/generated/android'
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: simplernble-npm
+          path: package/simplernble-*.tgz
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: simplernble
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm run nitrogen
+          cd ../examples/simplernble && npm install --no-audit --no-fund
+
+      - name: Enable KVM for the emulator
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The emulator has no Bluetooth devices; the tests run against PLAIN.
+      - name: Test the binding on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          working-directory: simplernble
+          script: npm run test:android
+
+      - name: Build against the Android backend
+        working-directory: .
+        run: utils/gradle-react-native/gradlew -p examples/simplernble/android :app:assembleDebug --console=plain
