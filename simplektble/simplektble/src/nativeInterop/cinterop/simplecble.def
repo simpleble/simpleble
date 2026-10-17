@@ -1,0 +1,5 @@
+headers = simplecble/simplecble.h
+headerFilter = simplecble/*
+staticLibraries = libsimplecble.a libsimpleble.a
+linkerOpts.ios = -lc++ -lobjc -framework Foundation -framework CoreBluetooth
+linkerOpts.osx = -lc++ -lobjc -framework Foundation -framework CoreBluetooth -framework IOBluetooth -framework IOKit
