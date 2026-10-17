@@ -54,6 +54,15 @@ jobs:
           npm test
           npm run test:types
 
+      # NOTE: Node.js 24.22 tears environments down in a different order, which
+      # the addon's cleanup has to survive.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Test the binding against PLAIN on Node.js 24
+        run: npm test
+
       - name: Build the addon
         run: npm run build
 

@@ -39,15 +39,21 @@ class Dispatcher {
         std::optional<Key> key;
     };
 
+    // Shared with the thread-safe function's finalizer, which can outlive the
+    // dispatcher. Its mutex also guards the dispatcher's own fields.
+    struct State {
+        std::mutex mutex;
+        bool closed = false;
+    };
+
     static void drain(Napi::Env env, Napi::Function callback, Dispatcher* self, std::nullptr_t* data);
     static bool report(Napi::Env env, const Napi::Error& error);
     void enqueue(Entry entry);
 
-    std::mutex mutex_;
+    std::shared_ptr<State> state_ = std::make_shared<State>();
     std::deque<Entry> queue_;
     std::set<Key> queued_keys_;
     bool scheduled_ = false;
-    bool closed_ = false;
     std::size_t holds_ = 0;
     Napi::TypedThreadSafeFunction<Dispatcher, std::nullptr_t, drain> function_;
 };

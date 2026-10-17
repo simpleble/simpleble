@@ -4,8 +4,18 @@
 
 namespace SimpleJSBLE {
 
+// NOTE: Node deletes the thread-safe function when it tears down the
+// environment, which Electron does before the addon's own cleanup runs. The
+// finalizer then marks the dispatcher closed, so nothing touches the function.
 Dispatcher::Dispatcher(Napi::Env env) {
-    function_ = decltype(function_)::New(env, "simplejsble", 0, 1, this);
+    auto finalize = [](Napi::Env, std::shared_ptr<State>* state, Dispatcher*) {
+        {
+            std::lock_guard<std::mutex> lock((*state)->mutex);
+            (*state)->closed = true;
+        }
+        delete state;
+    };
+    function_ = decltype(function_)::New(env, "simplejsble", 0, 1, this, finalize, new std::shared_ptr<State>(state_));
     // NOTE: Only pending operations keep Node alive, see hold().
     function_.Unref(env);
 }
@@ -15,8 +25,8 @@ void Dispatcher::post(Job job) { enqueue({std::move(job), std::nullopt}); }
 void Dispatcher::post_coalesced(Key key, Job job) { enqueue({std::move(job), key}); }
 
 void Dispatcher::enqueue(Entry entry) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (closed_) return;
+    std::lock_guard<std::mutex> lock(state_->mutex);
+    if (state_->closed) return;
 
     if (entry.key) {
         if (!queued_keys_.insert(*entry.key).second) return;
@@ -35,7 +45,7 @@ void Dispatcher::drain(Napi::Env env, Napi::Function, Dispatcher* self, std::nul
 
     std::deque<Entry> jobs;
     {
-        std::lock_guard<std::mutex> lock(self->mutex_);
+        std::lock_guard<std::mutex> lock(self->state_->mutex);
         self->scheduled_ = false;
         jobs.swap(self->queue_);
         self->queued_keys_.clear();
@@ -65,27 +75,28 @@ bool Dispatcher::report(Napi::Env env, const Napi::Error& error) {
 }
 
 void Dispatcher::hold(Napi::Env env) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (closed_) return;
+    std::lock_guard<std::mutex> lock(state_->mutex);
+    if (state_->closed) return;
     if (holds_++ == 0) function_.Ref(env);
 }
 
 void Dispatcher::release(Napi::Env env) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (closed_) return;
+    std::lock_guard<std::mutex> lock(state_->mutex);
+    if (state_->closed) return;
     if (--holds_ == 0) function_.Unref(env);
 }
 
 void Dispatcher::close() {
     std::deque<Entry> jobs;
+    bool abort = false;
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (closed_) return;
-        closed_ = true;
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        abort = !state_->closed;
+        state_->closed = true;
         jobs.swap(queue_);
         queued_keys_.clear();
     }
-    function_.Abort();
+    if (abort) function_.Abort();
 }
 
 }  // namespace SimpleJSBLE
