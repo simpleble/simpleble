@@ -88,6 +88,17 @@ const findPeripheral = `
   await adapter.scanStop();
 `;
 
+test('a scan started with Bluetooth off does not keep Node running', () => {
+  const child = node(`
+    const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
+    const [adapter] = await Adapter.getAdapters();
+    await adapter.powerOff();
+    await adapter.scanStart();
+    await adapter.powerOn();
+  `);
+  assert.equal(child.status, 0, child.stderr);
+});
+
 test('an open connection keeps Node running until it ends', () => {
   // Waiting for a notification needs the connection to keep Node running.
   const child = node(`

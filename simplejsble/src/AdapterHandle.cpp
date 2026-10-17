@@ -117,8 +117,11 @@ Napi::Value AdapterHandle::scan_start(const Napi::CallbackInfo& info) {
     auto adapter = adapter_;
     return run(info.Env(), strand(), [adapter]() mutable -> Finisher {
         adapter.scan_start();
-        return [adapter](Napi::Env env) {
-            scan_started(env, adapter);
+        // NOTE: With Bluetooth off, SimpleBLE logs a warning and doesn't scan, so
+        // only a scan that is active or may still report starting keeps Node running.
+        const bool scanning = adapter.scan_is_active() || adapter.is_powered();
+        return [adapter, scanning](Napi::Env env) {
+            if (scanning) scan_started(env, adapter);
             return env.Undefined();
         };
     });
