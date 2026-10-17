@@ -1,7 +1,7 @@
 // Builds the addon for this machine and copies it to prebuilds/<platform>-<arch>.
 // `--plain` builds against SimpleBLE's PLAIN backend, for tests only.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { availableParallelism } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -38,6 +38,9 @@ if (process.platform !== 'win32') {
 
 const destination = join(root, 'prebuilds', `${process.platform}-${process.arch}`);
 mkdirSync(destination, { recursive: true });
+// NOTE: macOS kills a process that loads a signed binary rewritten in place,
+// so the new addon gets a new file.
+rmSync(join(destination, 'simplejsble.node'), { force: true });
 copyFileSync(addon, join(destination, 'simplejsble.node'));
 
 run(process.execPath, [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json']);
