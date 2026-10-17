@@ -150,6 +150,19 @@ await peripheral.connect();
 
 Passing `null` removes a handler. A request without a handler is rejected, and peripherals of other adapters reject the setters with `OPERATION_NOT_SUPPORTED`.
 
+## Logging
+
+SimpleBLE writes its log to standard output, up to the `info` level. `Logging` changes that for the whole process:
+
+```js
+import { Logging } from 'simplejsble';
+
+Logging.level = 'warn';
+Logging.setCallback(entry => console.error(`[${entry.level}] ${entry.module}: ${entry.message}`));
+```
+
+`setCallback()` delivers each entry, with its `level`, `module`, `file`, `line`, `function`, and `message`, on the JavaScript thread in the order SimpleBLE logged them, and `null` discards entries. `logToFile(path)` appends them to a file instead, and `logToStdout()` restores the default. Levels go from `'none'`, which turns logging off, to `'verbose'`.
+
 ## Platform-specific features
 
 - On macOS and Linux, `host.setAdvertisementLocalName('Name')` sets the local name in a local peripheral's advertisement before `start()`, and `null` removes it. This changes only the advertisement, not the system Bluetooth name.

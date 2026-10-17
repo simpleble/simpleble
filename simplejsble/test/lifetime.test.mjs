@@ -276,3 +276,61 @@ test('a terminated worker releases the addon for the next environment', () => {
   assert.equal(child.status, 0, child.stderr);
   assert.equal(child.stdout.trim(), 'owned');
 });
+
+
+// SimpleBLE logs a warning, and doesn't scan, when scanning with Bluetooth off.
+test('log entries reach the callback, null discards them, and the level filters them', () => {
+  const child = node(`
+    const { Adapter, Logging } = await import(process.env.SIMPLEJSBLE_ENTRY);
+    const [adapter] = await Adapter.getAdapters();
+    await adapter.powerOff();
+    const entries = [];
+    Logging.setCallback(entry => entries.push(entry));
+    await adapter.scanStart();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    Logging.setCallback(null);
+    await adapter.scanStart();
+    Logging.logToStdout();
+    Logging.level = 'error';
+    await adapter.scanStart();
+    Logging.level = 'info';
+    await adapter.scanStart();
+    await adapter.powerOn();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const [entry] = entries;
+    console.log(JSON.stringify({ count: entries.length, ...entry, line: typeof entry.line, frozen: Object.isFrozen(entry) }));
+  `);
+  assert.equal(child.status, 0, child.stderr);
+  const lines = child.stdout.trim().split('\n');
+  const result = JSON.parse(lines.find(line => line.startsWith('{')));
+  assert.equal(result.count, 1);
+  assert.equal(result.level, 'warn');
+  assert.equal(result.module, 'SimpleBLE');
+  assert.equal(result.message, 'Bluetooth is not enabled.');
+  assert.equal(result.line, 'number');
+  assert.equal(result.frozen, true);
+  assert.equal(lines.filter(line => line.startsWith('[WARNING]')).length, 1, child.stdout);
+});
+
+test('the log goes back to standard output when the environment that set a callback ends', () => {
+  const child = node(`
+    import { Worker } from 'node:worker_threads';
+    import { once } from 'node:events';
+    const source = \`
+      import { parentPort } from 'node:worker_threads';
+      const { Logging } = await import(process.env.SIMPLEJSBLE_ENTRY);
+      Logging.setCallback(() => {});
+      parentPort.postMessage('set');
+    \`;
+    const worker = new Worker(source, { eval: true });
+    await once(worker, 'message');
+    await worker.terminate();
+    const { Adapter } = await import(process.env.SIMPLEJSBLE_ENTRY);
+    const [adapter] = await Adapter.getAdapters();
+    await adapter.powerOff();
+    await adapter.scanStart();
+    await adapter.powerOn();
+  `);
+  assert.equal(child.status, 0, child.stderr);
+  assert.match(child.stdout, /Bluetooth is not enabled\./);
+});

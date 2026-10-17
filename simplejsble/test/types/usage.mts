@@ -6,10 +6,12 @@ import {
   LocalCharacteristic,
   LocalPeripheral,
   LocalService,
+  Logging,
   Peripheral,
   SimpleBLEError,
   type CharacteristicCapability,
   type ErrorCode,
+  type LogEntry,
 } from 'simplejsble';
 
 const [backend] = await Backend.getBackends();
@@ -103,3 +105,10 @@ try {
 }
 
 export { name, results, paired };
+
+Logging.level = 'warn';
+// @ts-expect-error Levels are checked.
+Logging.level = 'loud';
+Logging.setCallback((entry: LogEntry) => console.log(entry.level, entry.message));
+Logging.setCallback(null);
+Logging.logToFile('ble.log');

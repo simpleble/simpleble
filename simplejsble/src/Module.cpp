@@ -1,10 +1,15 @@
 #include <napi.h>
 #include <simpleble/Backend.h>
+#include <simpleble/Logging.h>
 #include <simpleble/SimpleBLE.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
+#include <iterator>
 #include <string>
+#include <utility>
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -151,7 +156,91 @@ Napi::Value config_reset(const Napi::CallbackInfo& info) {
     return info.Env().Undefined();
 }
 
+using SimpleBLE::Logging::Level;
+using SimpleBLE::Logging::Logger;
+
+const std::pair<const char*, Level> LOG_LEVELS[] = {
+    {"none", Level::None}, {"fatal", Level::Fatal}, {"error", Level::Error},     {"warn", Level::Warn},
+    {"info", Level::Info}, {"debug", Level::Debug}, {"verbose", Level::Verbose},
+};
+
+Napi::Value logging_get_level(const Napi::CallbackInfo& info) {
+    const Level level = Logger::get()->get_level();
+    for (const auto& [name, value] : LOG_LEVELS) {
+        if (value == level) return Napi::String::New(info.Env(), name);
+    }
+    return Napi::String::New(info.Env(), "none");
+}
+
+Napi::Value logging_set_level(const Napi::CallbackInfo& info) {
+    const std::string name = info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
+    for (const auto& [candidate, value] : LOG_LEVELS) {
+        if (name == candidate) {
+            Logger::get()->set_level(value);
+            return info.Env().Undefined();
+        }
+    }
+    throw Napi::TypeError::New(info.Env(), "level must be one of none, fatal, error, warn, info, debug, verbose");
+}
+
+// NOTE: SimpleBLE logs from any thread, holding its logger's lock while it
+// calls the callback, so the callback only queues the entry for the JavaScript
+// thread. Queued entries don't keep Node running.
+Napi::Value logging_set_callback(const Napi::CallbackInfo& info) {
+    auto& data = addon(info.Env());
+    if (info[0].IsNull()) {
+        Logger::get()->set_callback(nullptr);
+        data.log_callback.Reset();
+        return info.Env().Undefined();
+    }
+    if (!info[0].IsFunction()) throw Napi::TypeError::New(info.Env(), "callback must be a function or null");
+
+    data.log_callback = Napi::Persistent(info[0].As<Napi::Function>());
+    std::weak_ptr<Dispatcher> weak = data.dispatcher;
+    Logger::get()->set_callback([weak](Level level, const std::string& module, const std::string& file, uint32_t line,
+                                       const std::string& function, const std::string& message) {
+        auto dispatcher = weak.lock();
+        if (!dispatcher) return;
+        dispatcher->post([level, module, file, line, function, message](Napi::Env env) {
+            auto& callback = addon(env).log_callback;
+            if (callback.IsEmpty()) return;
+            auto entry = Napi::Object::New(env);
+            entry.Set("level", Napi::String::New(env, std::find_if(std::begin(LOG_LEVELS), std::end(LOG_LEVELS),
+                                                                   [level](const auto& pair) {
+                                                                       return pair.second == level;
+                                                                   })->first));
+            entry.Set("module", Napi::String::New(env, module));
+            entry.Set("file", Napi::String::New(env, file));
+            entry.Set("line", Napi::Number::New(env, line));
+            entry.Set("function", Napi::String::New(env, function));
+            entry.Set("message", Napi::String::New(env, message));
+            callback.Call({entry});
+        });
+    });
+    return info.Env().Undefined();
+}
+
+Napi::Value logging_to_stdout(const Napi::CallbackInfo& info) {
+    Logger::get()->log_default_stdout();
+    addon(info.Env()).log_callback.Reset();
+    return info.Env().Undefined();
+}
+
+Napi::Value logging_to_file(const Napi::CallbackInfo& info) {
+    if (info[0].IsUndefined()) {
+        Logger::get()->log_default_file();
+    } else if (info[0].IsString()) {
+        Logger::get()->log_default_file(info[0].As<Napi::String>().Utf8Value());
+    } else {
+        throw Napi::TypeError::New(info.Env(), "path must be a string");
+    }
+    addon(info.Env()).log_callback.Reset();
+    return info.Env().Undefined();
+}
+
 void finalize(Napi::Env, AddonData* data) {
+    // SimpleBLE's logger outlives the environment, so it goes back to its default.
+    if (!data->log_callback.IsEmpty()) Logger::get()->log_default_stdout();
     data->dispatcher->close();
     release_later(data->scanning.objects);
     release_later(data->connected.objects);
@@ -195,6 +284,11 @@ Napi::Object init(Napi::Env env, Napi::Object exports) {
     exports.Set("configGet", Napi::Function::New<config_get>(env, "configGet"));
     exports.Set("configSet", Napi::Function::New<config_set>(env, "configSet"));
     exports.Set("configReset", Napi::Function::New<config_reset>(env, "configReset"));
+    exports.Set("loggingGetLevel", Napi::Function::New<logging_get_level>(env, "loggingGetLevel"));
+    exports.Set("loggingSetLevel", Napi::Function::New<logging_set_level>(env, "loggingSetLevel"));
+    exports.Set("loggingSetCallback", Napi::Function::New<logging_set_callback>(env, "loggingSetCallback"));
+    exports.Set("loggingToStdout", Napi::Function::New<logging_to_stdout>(env, "loggingToStdout"));
+    exports.Set("loggingToFile", Napi::Function::New<logging_to_file>(env, "loggingToFile"));
     return exports;
 }
 

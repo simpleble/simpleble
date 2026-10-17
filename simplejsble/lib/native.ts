@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
+import type { LogEntry, LogLevel } from './logging';
+
 // Shapes of the objects the addon returns. They are internal: the public
 // classes own them, and the published declarations leave them out.
 
@@ -136,6 +138,11 @@ export interface NativeModule {
   configGet(name: string): boolean | number;
   configSet(name: string, value: boolean | number): void;
   configReset(group: string): void;
+  loggingGetLevel(): LogLevel;
+  loggingSetLevel(level: LogLevel): void;
+  loggingSetCallback(callback: ((entry: LogEntry) => void) | null): void;
+  loggingToStdout(): void;
+  loggingToFile(path?: string): void;
 }
 
 function load(): NativeModule {

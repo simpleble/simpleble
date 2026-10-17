@@ -86,6 +86,9 @@ struct AddonData {
     Napi::FunctionReference deliver;     // (subscriptionId, value) => void
     Napi::FunctionReference answer;      // (handlerId, argument?, respond?) => void
 
+    // Set through Logging.setCallback(); SimpleBLE's logger posts each entry here.
+    Napi::FunctionReference log_callback;
+
     Napi::FunctionReference backend_constructor;
     Napi::FunctionReference adapter_constructor;
     Napi::FunctionReference peripheral_constructor;
