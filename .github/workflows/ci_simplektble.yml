@@ -1,0 +1,185 @@
+name: Build SimpleKtBLE
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  # The shared tests cover the binding layer only, against PLAIN: JNI on the JVM, and the C API on macOS and iOS.
+  test-plain:
+    runs-on: macos-15
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Test SimpleKtBLE PLAIN backend
+        run: |
+          utils/gradle/gradlew -p simplektble -Psimplektble.plain=true --no-daemon \
+            :simplektble:jvmTest :simplektble:macosArm64Test :simplektble:iosSimulatorArm64Test
+
+  build-jni:
+    runs-on: ${{ matrix.config.runner-os }}
+    container: ${{ matrix.config.container-image }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        config:
+          - { runner-os: ubuntu-22.04, os: linux, architecture: x64, container-image: dockcross/linux-x64 }
+          - { runner-os: ubuntu-22.04, os: linux, architecture: aarch64, container-image: dockcross/linux-arm64 }
+          - { runner-os: macos-15-intel, os: macos, architecture: x64 }
+          - { runner-os: macos-15, os: macos, architecture: aarch64 }
+          - { runner-os: windows-2022, os: windows, architecture: x64 }
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          architecture: ${{ matrix.config.architecture }}
+
+      - name: Build SimpleKtBLE JNI Library
+        uses: ./.github/actions/build-native
+        with:
+          source-dir: "$GITHUB_WORKSPACE/simplektble/cpp"
+          build-dir: "$GITHUB_WORKSPACE/build_simplektble"
+          build-config: "Release"
+          os: "${{ matrix.config.os }}"
+          target-arch: "${{ matrix.config.architecture }}"
+          cmake-options: "-DBUILD_SHARED_LIBS=OFF"
+
+      - name: Upload JNI Library
+        if: matrix.config.os != 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsimplektble-jni_${{ matrix.config.os }}-${{ matrix.config.architecture }}
+          path: build_simplektble/lib/libsimplektble-jni*
+
+      - name: Upload JNI Library
+        if: matrix.config.os == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: libsimplektble-jni_${{ matrix.config.os }}-${{ matrix.config.architecture }}
+          path: build_simplektble/bin/Release/simplektble-jni*
+
+  # Apple targets build only on macOS, so every target is built and published from here.
+  build-library:
+    runs-on: macos-15
+    needs: build-jni
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Download JNI Libraries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'libsimplektble-jni_*'
+          path: jni_download
+
+      - name: Arrange JNI Libraries by Architecture
+        run: |
+          for dir in jni_download/libsimplektble-jni_*; do
+            arch="${dir##*-}"
+            mkdir -p "jni/$arch"
+            mv -v "$dir"/* "jni/$arch/"
+          done
+          find jni -type f -ls
+
+      - name: Build SimpleKtBLE and Publish Locally
+        env:
+          LOCAL_MAVEN_REPOSITORY: ${{ runner.temp }}/simplektble-maven
+        run: |
+          utils/gradle/gradlew -p simplektble -Psimplektble.jvmNativeLibs=$GITHUB_WORKSPACE/jni \
+            -Dmaven.repo.local=$LOCAL_MAVEN_REPOSITORY --no-daemon \
+            :simplektble:verifyJvmNativeLibraries publishToMavenLocal
+
+      - name: Verify Maven Artifacts
+        env:
+          LOCAL_MAVEN_REPOSITORY: ${{ runner.temp }}/simplektble-maven
+        run: |
+          version=$(tr -d ' \t\n\r' < VERSION)
+          repository="$LOCAL_MAVEN_REPOSITORY/org/simpleble"
+          for module in simplektble simplektble-android simplektble-jvm simplektble-iosarm64 \
+                        simplektble-iossimulatorarm64 simplektble-macosarm64 simplektble-android-native; do
+            for suffix in .pom .module -sources.jar -javadoc.jar; do
+              test -s "$repository/$module/$version/$module-$version$suffix"
+            done
+          done
+
+          aar="$repository/simplektble-android-native/$version/simplektble-android-native-$version.aar"
+          for abi in arm64-v8a armeabi-v7a x86 x86_64; do
+            unzip -l "$aar" | grep -F "jni/$abi/libsimplektble-jni.so"
+          done
+
+          for target in iosarm64 iossimulatorarm64 macosarm64; do
+            klib="$repository/simplektble-$target/$version/simplektble-$target-$version-cinterop-simplecble.klib"
+            unzip -l "$klib" | grep -F "libsimplecble.a"
+          done
+
+          for module in simplektble simplektble-jvm; do
+            unzip -l "$repository/$module/$version/$module-$version.jar" | grep -F "META-INF/LICENSE.md"
+          done
+
+          # The Android libraries keep the license in their own directory, since apps reject duplicate paths.
+          unzip -p "$repository/simplektble-android/$version/simplektble-android-$version.aar" classes.jar \
+            > "$RUNNER_TEMP/classes.jar"
+          unzip -l "$RUNNER_TEMP/classes.jar" | grep -F "META-INF/simplektble/LICENSE.md"
+          unzip -p "$repository/simplektble-android-native/$version/simplektble-android-native-$version.aar" classes.jar \
+            > "$RUNNER_TEMP/classes.jar"
+          unzip -l "$RUNNER_TEMP/classes.jar" | grep -F "META-INF/simplektble-android-native/LICENSE.md"
+
+      - name: Package Artifact
+        uses: ./.github/actions/package-native
+        with:
+          source-dir: ${{ runner.temp }}/simplektble-maven
+          output-dir: $GITHUB_WORKSPACE/artifacts
+          archive-name: simplektble
+          os: macos
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: simplektble
+          path: artifacts/simplektble.zip

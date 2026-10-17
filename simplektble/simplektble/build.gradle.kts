@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SourcesJar
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -6,6 +9,7 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.mavenPublish)
 }
 
 group = "org.simpleble"
@@ -169,4 +173,55 @@ fun configureSimpleCBle(target: KotlinNativeTarget) {
         extraOpts("-libraryPath", buildDir.get().dir("lib").asFile.absolutePath)
     }
     tasks.named(cinterop.interopProcessingTaskName) { dependsOn(build) }
+}
+
+mavenPublishing {
+    configure(KotlinMultiplatform(javadocJar = JavadocJar.Empty(), sourcesJar = SourcesJar.Sources()))
+    coordinates(group.toString(), "simplektble", version.toString())
+
+    pom {
+        name.set("SimpleKtBLE")
+        description.set("Kotlin Multiplatform bindings for SimpleBLE on Android, iOS, macOS, Windows and Linux.")
+    }
+}
+
+// Every artifact carries the license, as SimpleJavaBLE's jar does.
+val license = repositoryRoot.resolve("LICENSE.md")
+
+listOf("jvmJar", "allMetadataJar").forEach { name ->
+    tasks.named<Jar>(name) { from(license) { into("META-INF") } }
+}
+
+// NOTE: Android apps fail to build when two dependencies ship META-INF/LICENSE.md, so it goes in its own directory.
+val androidLicense = tasks.register<Copy>("androidLicense") {
+    from(license) { into("META-INF/simplektble") }
+    into(layout.buildDirectory.dir("generated/license/android"))
+}
+kotlin.sourceSets.getByName("androidMain").resources.srcDir(androidLicense)
+
+// The published jar must carry the JNI library of every desktop platform.
+val expectedJvmNativeLibraries = listOf(
+    "native/x64/libsimplektble-jni.so",
+    "native/aarch64/libsimplektble-jni.so",
+    "native/x64/libsimplektble-jni.dylib",
+    "native/aarch64/libsimplektble-jni.dylib",
+    "native/x64/simplektble-jni.dll",
+)
+
+val verifyJvmNativeLibraries = tasks.register("verifyJvmNativeLibraries") {
+    group = "verification"
+    description = "Checks that the jvm jar contains the JNI library of every desktop platform."
+    val jar = tasks.named<Jar>("jvmJar").flatMap { it.archiveFile }
+    inputs.file(jar)
+    doLast {
+        val entries = zipTree(jar).matching { include("native/**") }.files.map { file ->
+            "native/" + file.parentFile.name + "/" + file.name
+        }.toSet()
+        val missing = expectedJvmNativeLibraries.filterNot(entries::contains)
+        check(missing.isEmpty()) { "The jvm jar is missing $missing. Pass -Psimplektble.jvmNativeLibs=<dir>." }
+    }
+}
+
+tasks.matching { it.name == "publishJvmPublicationToMavenCentralRepository" }.configureEach {
+    dependsOn(verifyJvmNativeLibraries)
 }

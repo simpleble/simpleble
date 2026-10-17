@@ -13,7 +13,7 @@ coroutines and flows throughout.
 
 ## Get started
 
-Add SimpleKtBLE to the shared module of your project:
+Use Kotlin 2.3 or newer, and add SimpleKtBLE to the shared module of your project:
 
 ```kotlin
 kotlin {

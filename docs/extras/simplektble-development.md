@@ -23,6 +23,9 @@ simplektble/
 
 Targets: `android`, `jvm`, `iosArm64`, `iosSimulatorArm64`, and `macosArm64`.
 
+The library is built with Kotlin 2.3, the oldest version applications can use. Kotlin/Native refuses klibs made by
+a newer compiler, so building with a newer Kotlin raises that minimum for iOS and macOS. Change it on purpose.
+
 ## How a call reaches SimpleBLE
 
 `Adapter` and `Peripheral` in `commonMain` call the internal `Native` object. `Native` is declared once with `expect`
@@ -77,4 +80,5 @@ On Android they run as device tests, so they need an emulator or device:
 utils/gradle/gradlew -p simplektble :simplektble:connectedAndroidDeviceTest -Psimplektble.plain=true
 ```
 
-See [the PLAIN backend notes](plain-backend.md) for the simulated adapter and peripheral the tests use.
+See [the PLAIN backend notes](plain-backend.md) for the simulated adapter and peripheral the tests use, and the
+[publishing guide](simplektble-publishing.md) for releases.
