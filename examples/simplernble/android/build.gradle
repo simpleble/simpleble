@@ -1,0 +1,24 @@
+// NOTE: Build with the Gradle wrapper for React Native projects:
+//   utils/gradle-react-native/gradlew -p examples/simplernble/android :app:installDebug
+// Add -Psimplernble.plain=true to build against SimpleBLE's PLAIN backend.
+buildscript {
+    ext {
+        buildToolsVersion = "36.0.0"
+        minSdkVersion = 31
+        compileSdkVersion = 36
+        targetSdkVersion = 36
+        ndkVersion = "27.2.12479018"
+        kotlinVersion = "2.2.0"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
