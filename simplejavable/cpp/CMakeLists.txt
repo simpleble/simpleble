@@ -16,7 +16,7 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(${PROJECT_ROOT_DIR}/simpleble ${CMAKE_BINARY_DIR}/simpleble)
 set(BUILD_SHARED_LIBS ON)
 
-find_package(JNI REQUIRED)
+find_package(JNI REQUIRED COMPONENTS JVM)
 
 set(SIMPLEJNI_SOURCES
     ${PROJECT_ROOT_DIR}/dependencies/internal/src/simplejni/Common.cpp
@@ -57,7 +57,8 @@ target_include_directories(
     ${JNI_INCLUDE_DIRS}
 )
 
-target_link_libraries(${CMAKE_PROJECT_NAME} simpleble::simpleble ${JNI_LIBRARIES})
+# NOTE: Only libjvm. Nothing here uses AWT, and runtimes built without java.desktop have no libjawt.
+target_link_libraries(${CMAKE_PROJECT_NAME} simpleble::simpleble ${JAVA_JVM_LIBRARY})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     if(MSVC AND NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
