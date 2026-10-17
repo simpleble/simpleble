@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -223,6 +223,36 @@ async fn main() {
             peripheral.address().unwrap()
         );
     }
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+Install the package:
+
+```sh
+npm install simplejsble
+```
+
+Then save this as `scan.mjs` and run `node scan.mjs`:
+
+```js
+import { Adapter } from 'simplejsble';
+
+const [adapter] = await Adapter.getAdapters();
+console.log(`Using adapter: ${adapter.identifier()} [${adapter.address()}]`);
+
+adapter.on('scanFound', peripheral => {
+  console.log(`Found: ${peripheral.identifier()} [${peripheral.address()}] ${peripheral.rssi()} dBm`);
+});
+
+await adapter.scanFor(5000);
+
+console.log('Scan results:');
+for (const peripheral of adapter.scanGetResults()) {
+  const state = peripheral.isConnectable() ? 'connectable' : 'not connectable';
+  console.log(`- ${peripheral.identifier()} [${peripheral.address()}] ${state}`);
 }
 ```
 

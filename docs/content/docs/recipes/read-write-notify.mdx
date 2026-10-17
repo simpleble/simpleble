@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -76,6 +76,14 @@ println!("Read: {:?}", value);
 ```
 
 </Tab>
+<Tab value="Node.js">
+
+```js
+const value = await peripheral.read(serviceUuid, characteristicUuid);
+console.log('Read:', value);
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -88,7 +96,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -152,6 +160,19 @@ peripheral.write_command(&service_uuid, &characteristic_uuid, &payload).unwrap()
 ```
 
 </Tab>
+<Tab value="Node.js">
+
+```js
+const payload = Buffer.from([0x01, 0x02, 0x03]);
+
+// Acknowledged write.
+await peripheral.writeRequest(serviceUuid, characteristicUuid, payload);
+
+// Unacknowledged write.
+await peripheral.writeCommand(serviceUuid, characteristicUuid, payload);
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -166,7 +187,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -257,6 +278,19 @@ tokio::spawn(async move {
 std::thread::sleep(std::time::Duration::from_secs(10));
 
 peripheral.unsubscribe(&service_uuid, &characteristic_uuid).unwrap();
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { setTimeout as sleep } from 'node:timers/promises';
+
+await peripheral.notify(serviceUuid, characteristicUuid, data => console.log('Notification:', data));
+
+await sleep(10_000);
+
+await peripheral.unsubscribe(serviceUuid, characteristicUuid);
 ```
 
 </Tab>

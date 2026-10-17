@@ -94,6 +94,13 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/simplersble/examples",
   },
   {
+    eyebrow: "Node.js",
+    title: "SimpleJSBLE",
+    description:
+      "Node.js and Electron bindings with promises, events, and TypeScript types.",
+    href: "/simplejsble/usage",
+  },
+  {
     eyebrow: "Android",
     title: "SimpledroidBLE",
     description:

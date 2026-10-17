@@ -18,7 +18,7 @@ Scanning is the first real interaction with the Bluetooth stack. A scan listens 
 
 ## Core scan call
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -132,6 +132,21 @@ for peripheral in adapter.scan_get_results().unwrap() {
         peripheral.identifier().unwrap(),
         peripheral.address().unwrap()
     );
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+const [adapter] = await Adapter.getAdapters();
+
+adapter.on('scanFound', peripheral => console.log(`Found ${peripheral.identifier()} [${peripheral.address()}]`));
+
+await adapter.scanFor(5000);
+
+for (const peripheral of adapter.scanGetResults()) {
+  if (peripheral.isConnectable()) console.log(`${peripheral.identifier()} is connectable`);
 }
 ```
 
