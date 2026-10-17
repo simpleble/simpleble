@@ -2,10 +2,13 @@
 #include <cmath>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <simpleble/Advanced.h>
 
 #include "Handles.h"
 
@@ -83,6 +86,8 @@ Napi::Function LocalPeripheralHandle::define(Napi::Env env) {
                            InstanceMethod<&LocalPeripheralHandle::set_advertised_manufacturer_data>(
                                "setAdvertisedManufacturerData"),
                            InstanceMethod<&LocalPeripheralHandle::set_connectable>("setConnectable"),
+                           InstanceMethod<&LocalPeripheralHandle::set_advertisement_local_name>(
+                               "setAdvertisementLocalName"),
                            InstanceMethod<&LocalPeripheralHandle::add_service>("addService"),
                            InstanceMethod<&LocalPeripheralHandle::services>("services"),
                            InstanceMethod<&LocalPeripheralHandle::remove_all_services>("removeAllServices"),
@@ -155,6 +160,23 @@ Napi::Value LocalPeripheralHandle::set_connectable(const Napi::CallbackInfo& inf
     return guard(info.Env(), [&] {
         peripheral_.set_connectable(info[0].As<Napi::Boolean>().Value());
         return info.Env().Undefined();
+    });
+}
+
+// NOTE: Only BlueZ and CoreBluetooth let the advertisement carry its own local name.
+Napi::Value LocalPeripheralHandle::set_advertisement_local_name(const Napi::CallbackInfo& info) {
+    std::optional<std::string> name;
+    if (!info[0].IsNull()) name = string_argument(info, 0, "name must be a string or null");
+    return guard(info.Env(), [&]() -> Napi::Value {
+#if SIMPLEBLE_BACKEND_MACOS
+        SimpleBLE::Advanced::MacOS::set_advertisement_local_name(peripheral_, name);
+        return info.Env().Undefined();
+#elif SIMPLEBLE_BACKEND_LINUX
+        SimpleBLE::Advanced::Linux::set_advertisement_local_name(peripheral_, name);
+        return info.Env().Undefined();
+#else
+        throw SimpleBLE::Exception::OperationNotSupported();
+#endif
     });
 }
 

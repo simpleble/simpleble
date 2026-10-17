@@ -62,6 +62,7 @@ class AdapterHandle : public Napi::ObjectWrap<AdapterHandle> {
     Napi::Value scan_get_results(const Napi::CallbackInfo& info);
     Napi::Value get_paired_peripherals(const Napi::CallbackInfo& info);
     Napi::Value get_connected_peripherals(const Napi::CallbackInfo& info);
+    Napi::Value retrieve_cached_peripherals(const Napi::CallbackInfo& info);
     Napi::Value subscribe(const Napi::CallbackInfo& info);
     Napi::Value create_local_peripheral(const Napi::CallbackInfo& info);
     Napi::Value connections(const Napi::CallbackInfo& info);
@@ -145,6 +146,7 @@ class LocalPeripheralHandle : public Napi::ObjectWrap<LocalPeripheralHandle> {
     Napi::Value add_advertised_service(const Napi::CallbackInfo& info);
     Napi::Value set_advertised_manufacturer_data(const Napi::CallbackInfo& info);
     Napi::Value set_connectable(const Napi::CallbackInfo& info);
+    Napi::Value set_advertisement_local_name(const Napi::CallbackInfo& info);
     Napi::Value add_service(const Napi::CallbackInfo& info);
     Napi::Value services(const Napi::CallbackInfo& info);
     Napi::Value remove_all_services(const Napi::CallbackInfo& info);

@@ -56,6 +56,15 @@ export class LocalPeripheral extends EventEmitter<LocalPeripheralEvents> {
     this.#handle.setConnectable(connectable);
   }
 
+  /**
+   * Sets the local name in the advertisement on macOS and Linux, or removes it
+   * with null. This changes only the advertisement, not the system's Bluetooth
+   * name. Other platforms throw OPERATION_NOT_SUPPORTED.
+   */
+  setAdvertisementLocalName(name: string | null): void {
+    this.#handle.setAdvertisementLocalName(name);
+  }
+
   addService(uuid: string): LocalService {
     return LocalService.wrap(this.#handle.addService(uuid));
   }

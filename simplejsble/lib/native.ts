@@ -27,6 +27,7 @@ export interface AdapterHandle {
   scanGetResults(): PeripheralHandle[];
   getPairedPeripherals(): Promise<PeripheralHandle[]>;
   getConnectedPeripherals(): Promise<PeripheralHandle[]>;
+  retrieveCachedPeripherals(identifiers: readonly string[]): Promise<PeripheralHandle[]>;
   subscribe(): void;
   createLocalPeripheral(): LocalPeripheralHandle;
   connections(): PeripheralHandle[];
@@ -74,6 +75,7 @@ export interface LocalPeripheralHandle {
   addAdvertisedService(uuid: string | readonly string[]): void;
   setAdvertisedManufacturerData(companyId: number, data: Uint8Array): void;
   setConnectable(connectable: boolean): void;
+  setAdvertisementLocalName(name: string | null): void;
   addService(uuid: string): LocalServiceHandle;
   services(): LocalServiceHandle[];
   removeAllServices(): void;

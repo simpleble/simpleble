@@ -150,6 +150,11 @@ await peripheral.connect();
 
 Passing `null` removes a handler. A request without a handler is rejected, and peripherals of other adapters reject the setters with `OPERATION_NOT_SUPPORTED`.
 
+## Platform-specific features
+
+- On macOS and Linux, `host.setAdvertisementLocalName('Name')` sets the local name in a local peripheral's advertisement before `start()`, and `null` removes it. This changes only the advertisement, not the system Bluetooth name.
+- On macOS, `await adapter.retrieveCachedPeripherals(identifiers)` returns the peripherals CoreBluetooth already knows, by the identifiers `address()` returned earlier, without scanning. Unknown identifiers are skipped, and each peripheral is the same object a scan returns. `connect()` then reaches it if it is in range.
+
 ## Electron
 
 Use SimpleJSBLE from the main process, and send plain data to renderers over IPC rather than SimpleJSBLE objects. When packaging, unpack `*.node` files from the ASAR archive, for example with `asarUnpack: ['**/*.node']` in electron-builder.

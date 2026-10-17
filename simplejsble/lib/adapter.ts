@@ -108,6 +108,16 @@ export class Adapter extends EventEmitter<AdapterEvents> {
     return this.#handle.getConnectedPeripherals().then(handles => handles.map(Peripheral.wrap));
   }
 
+  /**
+   * The peripherals CoreBluetooth already knows on macOS, by the identifiers
+   * address() returned earlier, without scanning. Unknown identifiers are
+   * skipped, and a returned peripheral might be out of range. Other platforms
+   * reject with OPERATION_NOT_SUPPORTED.
+   */
+  async retrieveCachedPeripherals(identifiers: readonly string[]): Promise<Peripheral[]> {
+    return (await this.#handle.retrieveCachedPeripherals(identifiers)).map(Peripheral.wrap);
+  }
+
   /** A host for GATT services of this process, advertised by this adapter. */
   createLocalPeripheral(): LocalPeripheral {
     return LocalPeripheral.wrap(this.#handle.createLocalPeripheral());

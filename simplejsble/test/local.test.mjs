@@ -105,3 +105,11 @@ test('read handlers answer reads with a value or a promise until cleared', async
   await assert.rejects(value.setReadHandler('value'), TypeError);
   await peer.disconnect();
 });
+
+test('platform-specific calls check their arguments and report other platforms as unsupported', async () => {
+  const unsupported = { name: 'SimpleBLEError', code: 'OPERATION_NOT_SUPPORTED' };
+  assert.throws(() => host.setAdvertisementLocalName('Name'), unsupported);
+  assert.throws(() => host.setAdvertisementLocalName(5), TypeError);
+  await assert.rejects(adapter.retrieveCachedPeripherals([peer.address()]), unsupported);
+  await assert.rejects(adapter.retrieveCachedPeripherals([5]), TypeError);
+});

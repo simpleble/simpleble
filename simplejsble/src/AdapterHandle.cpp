@@ -1,6 +1,10 @@
+#include <simpleble/Advanced.h>
+
 #include "Handles.h"
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace SimpleJSBLE {
 
@@ -35,6 +39,7 @@ Napi::Function AdapterHandle::define(Napi::Env env) {
                            InstanceMethod<&AdapterHandle::scan_get_results>("scanGetResults"),
                            InstanceMethod<&AdapterHandle::get_paired_peripherals>("getPairedPeripherals"),
                            InstanceMethod<&AdapterHandle::get_connected_peripherals>("getConnectedPeripherals"),
+                           InstanceMethod<&AdapterHandle::retrieve_cached_peripherals>("retrieveCachedPeripherals"),
                            InstanceMethod<&AdapterHandle::subscribe>("subscribe"),
                            InstanceMethod<&AdapterHandle::create_local_peripheral>("createLocalPeripheral"),
                            InstanceMethod<&AdapterHandle::connections>("connections"),
@@ -176,6 +181,29 @@ Napi::Value AdapterHandle::get_connected_peripherals(const Napi::CallbackInfo& i
         auto peripherals = adapter.get_connected_peripherals();
         return [peripherals, owner](Napi::Env env) { return wrap_peripherals(env, peripherals, owner); };
     });
+}
+
+// NOTE: Only CoreBluetooth on macOS keeps a cache of known peripherals.
+Napi::Value AdapterHandle::retrieve_cached_peripherals(const Napi::CallbackInfo& info) {
+    if (!info[0].IsArray()) throw Napi::TypeError::New(info.Env(), "identifiers must be an array of strings");
+    std::vector<SimpleBLE::BluetoothAddress> identifiers;
+    auto array = info[0].As<Napi::Array>();
+    for (uint32_t i = 0; i < array.Length(); i++) {
+        Napi::Value item = array.Get(i);
+        if (!item.IsString()) throw Napi::TypeError::New(info.Env(), "identifiers must be an array of strings");
+        identifiers.push_back(item.As<Napi::String>().Utf8Value());
+    }
+
+#if SIMPLEBLE_BACKEND_MACOS
+    auto adapter = adapter_;
+    const void* owner = Internal<SimpleBLE::Adapter>::of(adapter_);
+    return run(info.Env(), strand(), [adapter, owner, identifiers]() mutable -> Finisher {
+        auto peripherals = SimpleBLE::Advanced::MacOS::retrieve_cached_peripherals(adapter, identifiers);
+        return [peripherals, owner](Napi::Env env) { return wrap_peripherals(env, peripherals, owner); };
+    });
+#else
+    return run(info.Env(), strand(), []() -> Finisher { throw SimpleBLE::Exception::OperationNotSupported(); });
+#endif
 }
 
 // Called once, when the TypeScript Adapter is created. Events are queued even

@@ -59,6 +59,7 @@ await peripheral.indicate('service', 'characteristic', (data: string) => {});
 // @ts-expect-error Service trees are read-only.
 peripheral.services()[0].uuid = 'changed';
 const paired: Peripheral[] = await adapter.getPairedPeripherals();
+const cached: Peripheral[] = await adapter.retrieveCachedPeripherals([peripheral.address()]);
 
 await peripheral.setPasskeyRequestHandler(async () => '123456');
 await peripheral.setNumericComparisonHandler((passkey: string) => passkey === '123456');
@@ -78,6 +79,8 @@ host.on('clientConected', () => {});
 await localValue.setReadHandler(async () => new Uint8Array([1]));
 // @ts-expect-error Read handlers return bytes.
 await localValue.setReadHandler(() => 'text');
+host.setAdvertisementLocalName('Name');
+host.setAdvertisementLocalName(null);
 await host.start();
 const advertising: boolean = await host.isAdvertising();
 
