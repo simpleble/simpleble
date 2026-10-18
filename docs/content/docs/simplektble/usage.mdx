@@ -1,0 +1,223 @@
+---
+title: Usage
+description: Install and use SimpleKtBLE, the Kotlin Multiplatform binding, on Android, iOS, macOS, Windows, and Linux.
+---
+
+SimpleKtBLE brings SimpleBLE to Kotlin Multiplatform. Write your Bluetooth code once in `commonMain`, with coroutines and flows, and run it on Android, iOS, macOS, Windows, and Linux.
+
+## Requirements
+
+- Kotlin 2.3 or newer.
+- One of the platforms below. Windows and Linux use the `jvm` target, which needs Java 17 or newer.
+- On Linux, BlueZ and the D-Bus library (`libdbus-1-3` on Debian and Ubuntu).
+
+| Platform | Kotlin targets | Architectures |
+| --- | --- | --- |
+| Android 12 (API 31) or newer | `android` | arm64-v8a, armeabi-v7a, x86, x86_64 |
+| iOS 15.8 or newer | `iosArm64`, `iosSimulatorArm64` | arm64 |
+| macOS 13.0 or newer | `jvm`, `macosArm64` | x64 and arm64 on the JVM, arm64 native |
+| Windows 10 or newer | `jvm` | x64 |
+| Linux with glibc 2.28 or newer | `jvm` | x64, arm64 |
+
+## Install from Maven Central
+
+Add SimpleKtBLE to the shared module of your project:
+
+```kotlin
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("org.simpleble:simplektble:<version>")
+        }
+    }
+}
+```
+
+Each target's artifact includes the native SimpleBLE library it needs, so nothing is compiled during your build. Android-only and JVM-only projects add the same coordinates to their `dependencies` block.
+
+SimpleKtBLE follows SimpleBLE's release versions. Development builds of the main branch are published to Maven Central with a `-devN` suffix, such as `1.2.1-dev90`.
+
+## Permissions
+
+On Android, SimpleKtBLE declares the Bluetooth permissions it needs in its manifest: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`. Request them at runtime before using an adapter:
+
+```kotlin
+import org.simplektble.SimpleKtBle
+import org.simplektble.hasPermissions
+import org.simplektble.requestPermissions
+
+if (!SimpleKtBle.hasPermissions(activity)) {
+    SimpleKtBle.requestPermissions(activity)
+}
+```
+
+`hasPermissions` and `requestPermissions` cover scanning and connecting. To host a local peripheral, use `hasPeripheralPermissions` and `requestPeripheralPermissions`, which cover advertising and client connections. The result arrives in the activity's `onRequestPermissionsResult`.
+
+To use `ActivityResultContracts.RequestMultiplePermissions()` instead, pass it `SimpleKtBle.requiredPermissions`, `SimpleKtBle.requiredPeripheralPermissions`, or both arrays combined if your app scans and hosts.
+
+On iOS and macOS, add an `NSBluetoothAlwaysUsageDescription` entry to your app's `Info.plist`. The system asks the user the first time your app uses Bluetooth. On the JVM, permission belongs to the app that runs Java: from a terminal, macOS asks for permission for the terminal app.
+
+On Linux, SimpleKtBLE talks to BlueZ over the D-Bus system bus, so the user needs access to it. See [Bluetooth Permissions](../fundamentals/permissions) for every platform.
+
+## First scan
+
+```kotlin
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.simplektble.Adapter
+
+suspend fun scan() = coroutineScope {
+    val adapter = Adapter.getAdapters().first()
+
+    val found = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { peripheral ->
+            println("${peripheral.identifier} [${peripheral.address}] ${peripheral.rssi} dBm")
+        }
+    }
+    adapter.scanFor(5000)
+    found.cancel()
+}
+```
+
+`scan()` is shared code: call it from a coroutine on any target, such as `lifecycleScope` on Android or `runBlocking` in a JVM `main`. For more, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleKtBLE Examples](./examples).
+
+## Calls, events, and lifetime
+
+Calls that talk to the Bluetooth stack, such as `connect()` or `read()`, are `suspend` functions that run on `Dispatchers.IO`, so you can call them from the main thread. Data the library already holds, such as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned directly.
+
+Events are flows. An adapter has `onScanStart`, `onScanStop`, `onScanActive`, `onScanFound`, and `onScanUpdated`; a peripheral has `onConnected`, `onDisconnected`, and `onConnectionActive`. Every event reaches each active collector, in the order it happened. Collect in a scope that lives as long as you need the events, such as a `viewModelScope`, and start the collector with `CoroutineStart.UNDISPATCHED` so it is already collecting when the call that produces the events begins.
+
+Use `scanStart()` and `scanStop()` when your application controls scan timing, and `scanGetResults()` for the peripherals seen by the last scan. `scanFor(timeoutMs)` scans for that many milliseconds and returns when the scan ends.
+
+Every call to `Adapter.getAdapters()` returns the same `Adapter` object for an adapter, and an adapter always gives you the same `Peripheral` object for the same device, whether it came from a flow or from a list. Compare them with `==` and keep state on them.
+
+Failures are thrown as `SimpleKtBleException`.
+
+## Connect and use GATT
+
+```kotlin
+import org.simplektble.BluetoothUUID
+
+val batteryService = BluetoothUUID("0000180f-0000-1000-8000-00805f9b34fb")
+val batteryLevel = BluetoothUUID("00002a19-0000-1000-8000-00805f9b34fb")
+
+val peripheral = adapter.scanGetResults().first { it.identifier == "My Sensor" }
+peripheral.connect()
+
+for (service in peripheral.services()) {
+    println("${service.uuid}: ${service.characteristics.map { it.uuid }}")
+}
+
+val level = peripheral.read(batteryService, batteryLevel)
+println("Battery: ${level[0]}%")
+
+peripheral.notify(batteryService, batteryLevel).collect { value ->
+    println("Battery: ${value[0]}%")
+}
+```
+
+UUIDs are `BluetoothUUID` values holding the full 128-bit string, and values are `ByteArray`s. `services()` lists the services, characteristics, and descriptors of a connected peripheral, and each characteristic reports what it supports with `canRead`, `canWriteRequest`, `canWriteCommand`, `canNotify`, and `canIndicate`.
+
+`writeRequest()` waits for the peripheral to confirm, while `writeCommand()` does not. `read()` and `write()` with a descriptor UUID access descriptors:
+
+```kotlin
+val userDescription = BluetoothUUID("00002901-0000-1000-8000-00805f9b34fb")
+
+val description = peripheral.read(batteryService, batteryLevel, userDescription)
+println("Description: ${description.decodeToString()}")
+```
+
+`notify()` and `indicate()` return a flow that subscribes when collected and unsubscribes when the collection ends, for example when its coroutine is cancelled or a `withTimeout` expires. Each value reaches the collector in the order it arrived.
+
+When the peripheral disconnects, the flow delivers the values received before the disconnection and then completes, so `collect` returns. After you reconnect, collect the flow again to subscribe again. Call `disconnect()` when you are done with the peripheral.
+
+## Host a local peripheral
+
+`adapter.createLocalPeripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Add the advertised services, services, and characteristics, then call `start()`. On Android, request the [peripheral permissions](#permissions) first. Below, `scope` is the `CoroutineScope` that owns the host, such as a `viewModelScope`:
+
+```kotlin
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import org.simplektble.BluetoothUUID
+import org.simplektble.LocalCharacteristicCapability
+
+val echoService = BluetoothUUID("12345678-1234-5678-1234-56789abcdef0")
+val echoCharacteristic = BluetoothUUID("12345678-1234-5678-1234-56789abcdef1")
+
+val host = adapter.createLocalPeripheral()
+host.addAdvertisedService(echoService)
+
+val echo = host.addService(echoService).addCharacteristic(
+    echoCharacteristic,
+    LocalCharacteristicCapability.Read,
+    LocalCharacteristicCapability.WriteRequest,
+    LocalCharacteristicCapability.Notify
+)
+echo.value = "ready".encodeToByteArray()
+
+// Echo each write to subscribed clients.
+scope.launch(start = CoroutineStart.UNDISPATCHED) {
+    echo.onWrite.collect { value -> echo.value = value }
+}
+scope.launch(start = CoroutineStart.UNDISPATCHED) {
+    host.onClientConnected.collect { address -> println("$address connected") }
+}
+
+host.start()
+```
+
+Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`. Setting `value` updates the stored value and notifies subscribers. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
+
+To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value, until you pass `null`:
+
+```kotlin
+var reads = 0
+echo.setReadHandler { "read ${++reads}".encodeToByteArray() }
+```
+
+`setWriteHandler` takes a function that receives every accepted write, before `onWrite` emits it. Both handlers run on a SimpleBLE thread, so return promptly.
+
+Configure services before `start()`. Call `stop()` before changing them, and when you no longer want to advertise.
+
+## Configure backends
+
+`Config` holds the Dongl, BlueZ, and WinRT backend settings, grouped as `Config.Dongl`, `Config.SimpleBluez`, and `Config.WinRT`. Set them at startup, before the first call that reaches a backend:
+
+```kotlin
+import kotlin.time.Duration.Companion.seconds
+import org.simplektble.Config
+
+Config.SimpleBluez.connectionTimeout = 5.seconds
+```
+
+Each group has a `reset()` that restores its defaults, and `Config.resetAll()` restores them all.
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE, available on macOS, Windows, and Linux. Its backend is on by default, so `Adapter.getAdapters()` includes Dongl adapters. To use only them, take the adapters of the Dongl backend:
+
+```kotlin
+import org.simplektble.Backend
+
+val dongl = Backend.getDongl()
+val adapter = dongl.getAdapters().first()
+```
+
+A Dongl adapter works like any other adapter. To leave Dongls out, set `Config.Dongl.useDonglBackend = false` before the first call that reaches a backend. `Backend.getBackends()` lists every active backend, each with its `identifier` and `getAdapters()`.
+
+Pairing through a Dongl happens without the operating system, so your application answers pairing requests. Set the handlers your device needs on the peripheral before `connect()`, since pairing can start as soon as the link is up:
+
+- `setPasskeyRequestHandler`: return the six digits the device shows, as typed by the user, or `null` to reject.
+- `setPasskeyDisplayHandler`: show the passkey so the user can type it on the device.
+- `setNumericComparisonHandler`: return `true` only if the device shows the same six digits.
+
+```kotlin
+peripheral.setNumericComparisonHandler { passkey ->
+    print("Does the device show $passkey? [y/N] ")
+    readln().trim() == "y"
+}
+peripheral.connect()
+```
+
+The handlers run while `connect()` waits, so they can take as long as the user needs to answer. Passing `null` removes a handler, and a request without a handler is rejected.

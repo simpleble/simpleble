@@ -11,7 +11,7 @@ Advertising is how this host is found. A local peripheral serves GATT, sends adv
 `SimpleBLE::Peripheral` is a remote device. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from an `Adapter`, the same object used to scan.
 
 <Callout type="info" title="Available on all supported platforms">
-SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`.
+SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`, and SimpleKtBLE does it for you without one.
 </Callout>
 
 ## Flow
@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -230,6 +230,39 @@ await peripheral.start();
 On Android, request `BLUETOOTH_ADVERTISE` and `BLUETOOTH_CONNECT` at runtime first.
 
 </Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+val peripheral = adapter.createLocalPeripheral()
+
+peripheral.addAdvertisedService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+
+val characteristic = peripheral
+    .addService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
+    .addCharacteristic(
+        BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
+        LocalCharacteristicCapability.Read,
+        LocalCharacteristicCapability.WriteRequest,
+        LocalCharacteristicCapability.Notify
+    )
+characteristic.value = "ready".encodeToByteArray()
+
+coroutineScope {
+    // Echo the written value to subscribed clients.
+    launch(start = CoroutineStart.UNDISPATCHED) {
+        characteristic.onWrite.collect { value -> characteristic.value = value }
+    }
+
+    launch(start = CoroutineStart.UNDISPATCHED) {
+        peripheral.onClientConnected.collect { address -> println("Client connected: $address") }
+    }
+
+    peripheral.start()
+}
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -415,6 +448,7 @@ SimpleCBLE provides the same local-hosting flow through owned local peripheral, 
 - On Linux, BlueZ must be running and the process must have D-Bus access, as with scanning.
 - On macOS, CoreBluetooth reports client connection and disconnection callbacks when the client first subscribes and finally unsubscribes.
 - On Windows, the adapter and driver must support the peripheral role. Applications distributed as AppX/MSIX packages should declare `<DeviceCapability Name="bluetooth" />` in `Package.appxmanifest`; ordinary unpackaged executables do not need this manifest declaration. Windows controls the advertised Bluetooth name.
+- On Android, request `BLUETOOTH_ADVERTISE` and `BLUETOOTH_CONNECT` at runtime before `start()`.
 - On Android, SimpleBLE includes the adapter's system Bluetooth name. Android's public advertising API cannot set an arbitrary per-advertisement name.
 - Linux, macOS, and iOS callers that need a platform-specific advertised name can use `set_advertisement_local_name()` from the corresponding `SimpleBLE::Advanced` platform namespace, or its binding equivalent, before `start()`.
 

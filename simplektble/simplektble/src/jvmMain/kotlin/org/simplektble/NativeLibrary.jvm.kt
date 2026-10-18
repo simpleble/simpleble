@@ -49,3 +49,5 @@ internal actual fun loadNativeLibrary() {
         Files.deleteIfExists(directory)
     }
 }
+
+internal actual fun platformContext(): Any? = null

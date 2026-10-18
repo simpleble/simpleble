@@ -1,0 +1,32 @@
+---
+title: Examples
+description: Runnable Bluetooth client and GATT hosting examples for SimpleKtBLE.
+---
+
+The [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplektble)
+live alongside the other SimpleBLE binding examples:
+
+- **ListAdapters**: Check whether Bluetooth is enabled and print each adapter.
+- **ListBackends**: Enumerate backends and list the adapters provided by each one.
+- **Scan**: Scan for five seconds, printing peripherals with their signal strength as they are found and updated, then whether each is connectable and its manufacturer data.
+- **Connect**: Connect to a peripheral and list its services, characteristics with their capabilities, and descriptors.
+- **Read**: Connect to a peripheral and print a GATT characteristic in hex.
+- **Write**: Connect to a peripheral and write text to a GATT characteristic.
+- **Notify**: Connect to a peripheral and print the notifications of a characteristic for five seconds.
+- **Peripheral**: Host a GATT service that echoes writes to subscribed clients and prints client and subscription events.
+- **Dongl**: Scan with a Dongl adapter, then connect and answer pairing requests.
+
+The examples are a Gradle project for the `jvm` target that builds SimpleKtBLE
+from the checkout. Run one from the repository root with its task:
+
+```sh
+utils/gradle/gradlew -p examples/simplektble runScan
+```
+
+Each example has a task named after it, from `runListAdapters` to `runDongl`.
+The examples ask for their choices on the console, and `runPeripheral` runs
+until you press Ctrl+C.
+
+For binding development, see the
+[development guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplektble-development.md).
+For events, lifetime, and handlers, see [Usage](./usage).

@@ -96,6 +96,7 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.startup.runtime)
             implementation(project(":simplektble-android-native"))
         }
         getByName("androidDeviceTest").dependencies {
@@ -143,7 +144,8 @@ tasks.named<ProcessResources>("jvmProcessResources") {
     }
 }
 
-// Apple: SimpleCBLE is built as static libraries for each target, which the cinterop klib embeds.
+// Apple: SimpleCBLE and the identity functions in ../cpp/apple are built as static libraries for each target, which
+// the cinterop klib embeds.
 fun configureSimpleCBle(target: KotlinNativeTarget) {
     val platformArguments = when (target.konanTarget) {
         KonanTarget.IOS_ARM64 -> listOf(
@@ -161,7 +163,7 @@ fun configureSimpleCBle(target: KotlinNativeTarget) {
     val buildDir = layout.buildDirectory.dir("native/${target.name}-$flavor")
     val build = registerCMakeBuild(
         "SimpleCBle${target.name.replaceFirstChar(Char::uppercase)}",
-        repositoryRoot.resolve("simplecble"),
+        file("../cpp/apple"),
         buildDir,
         listOf("-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=OFF") + platformArguments
     )
@@ -169,7 +171,11 @@ fun configureSimpleCBle(target: KotlinNativeTarget) {
     val cinterop = target.compilations.getByName("main").cinterops.create("simplecble") {
         definitionFile.set(file("src/nativeInterop/cinterop/simplecble.def"))
         packageName("org.simplektble.cinterop")
-        includeDirs(repositoryRoot.resolve("simplecble/include"), buildDir.get().dir("export").asFile)
+        includeDirs(
+            repositoryRoot.resolve("simplecble/include"),
+            buildDir.get().dir("simplecble/export").asFile,
+            file("../cpp/apple/include")
+        )
         extraOpts("-libraryPath", buildDir.get().dir("lib").asFile.absolutePath)
     }
     tasks.named(cinterop.interopProcessingTaskName) { dependsOn(build) }

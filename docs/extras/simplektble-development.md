@@ -18,6 +18,7 @@ simplektble/
 │       └── commonTest/           Tests every target runs, against PLAIN
 ├── simplektble-android-native/   Android library that builds and ships the JNI library
 ├── cpp/                          JNI layer over SimpleBLE (libsimplektble-jni)
+│   └── apple/                    Identity functions SimpleCBLE lacks, built with it for Apple targets
 └── gradle/libs.versions.toml     Dependency versions
 ```
 
@@ -28,17 +29,30 @@ a newer compiler, so building with a newer Kotlin raises that minimum for iOS an
 
 ## How a call reaches SimpleBLE
 
-`Adapter` and `Peripheral` in `commonMain` call the internal `Native` object. `Native` is declared once with `expect`
-and implemented twice. Adapters and peripherals are passed around as `Long` IDs that the native side assigns, and the
-shared classes keep one Kotlin object per ID.
+`Adapter`, `Peripheral` and the local GATT classes in `commonMain` call the internal `Native` object. `Native` is
+declared once with `expect` and implemented twice. Objects are passed around as `Long` IDs that the native side
+assigns, and the shared classes keep one Kotlin object per ID. Backends are named by their identifier instead, since
+SimpleBLE has one backend per identifier.
+
+An adapter's or peripheral's ID is the address of SimpleBLE's own object behind it, read through `cpp/Internal.h` the
+way SimpleJSBLE does. SimpleBLE keeps one such object per adapter and per device, so the same device always comes
+back as the same Kotlin object. `underlying()` cannot stand in for it: it returns the operating system's object, which
+the Dongl and simulated backends do not have. Local GATT objects are numbered as they are created.
+
+Every flow buffers without limit, so each event reaches each active collector in order.
 
 - **JNI (Android and the JVM).** `Native` is a set of `external` functions implemented in `cpp/simplektble.cpp`.
   `NativeCache` maps the IDs to SimpleBLE objects. SimpleBLE callbacks go to `ThreadRunner`, which calls the Kotlin
-  callback interfaces from one thread attached to the JVM. Each platform supplies `loadNativeLibrary()`: Android
-  uses `System.loadLibrary`, and the JVM copies the library for its OS and architecture out of the jar.
+  callback interfaces from one thread attached to the JVM. Read handlers and Dongl pairing handlers instead run on the
+  SimpleBLE thread that waits for their answer. Every thread attaches as a daemon (`cpp/Jvm.h`), since a desktop JVM
+  waits for its non-daemon threads before exiting. Each platform supplies `loadNativeLibrary()`: Android uses
+  `System.loadLibrary`, and the JVM copies the library for its OS and architecture out of the jar.
+- **Android context.** Hosting a GATT server needs the application context. An androidx.startup initializer keeps
+  it when the app starts, and `createLocalPeripheral()` passes it to SimpleBLE.
 - **C API (iOS and macOS).** `appleMain` calls SimpleCBLE through cinterop. SimpleCBLE returns a new handle every
-  time, so each adapter and peripheral is identified by the SimpleBLE object behind it: the first handle is kept and
-  later ones are released. Callbacks receive the ID as userdata and are queued onto one coroutine, in order.
+  time and has no identity function, so `cpp/apple` adds `simplektble_adapter_identity` and
+  `simplektble_peripheral_identity`: the first handle for an ID is kept and later ones are released. Callbacks receive
+  the ID as userdata and are queued onto one coroutine, in order; read and pairing handlers run on the calling thread.
 
 `ThreadRunner` and `NativeCache` are never destroyed. On the JVM, static destructors run at exit, when the callback
 thread can no longer detach, and joining it hangs the process.
@@ -56,8 +70,9 @@ Gradle runs CMake for every native library, with separate build directories unde
   package every platform, build the libraries elsewhere and pass a directory laid out as `<arch>/<library>` with
   `-Psimplektble.jvmNativeLibs=<dir>`. The library links only `libjvm`: nothing in it uses AWT, and Java
   runtimes built without the `java.desktop` module have no `libjawt` to load.
-- **Apple.** `buildSimpleCBle<Target>` builds SimpleCBLE and SimpleBLE as static libraries for each target, and the
-  cinterop klib embeds them along with the frameworks they need. The Apple targets build only on macOS.
+- **Apple.** `buildSimpleCBle<Target>` builds `cpp/apple`, which includes SimpleCBLE and SimpleBLE, as static
+  libraries for each target, and the cinterop klib embeds them along with the frameworks they need. The Apple targets
+  build only on macOS.
 
 ## Building and testing
 
@@ -78,6 +93,12 @@ On Android they run as device tests, so they need an emulator or device:
 
 ```bash
 utils/gradle/gradlew -p simplektble :simplektble:connectedAndroidDeviceTest -Psimplektble.plain=true
+```
+
+The examples in `examples/simplektble` build SimpleKtBLE from this checkout:
+
+```bash
+utils/gradle/gradlew -p examples/simplektble runScan
 ```
 
 See [the PLAIN backend notes](plain-backend.md) for the simulated adapter and peripheral the tests use, and the

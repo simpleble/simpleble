@@ -3,6 +3,9 @@ package org.simplektble
 /** Loads the JNI library, which each platform ships differently. */
 internal expect fun loadNativeLibrary()
 
+/** The Android application context, which hosting needs, or null where there is none. */
+internal expect fun platformContext(): Any?
+
 internal actual object Native {
     init {
         loadNativeLibrary()
@@ -114,4 +117,74 @@ internal actual object Native {
         descriptor: String,
         data: ByteArray
     )
+
+    actual fun adapterCreateLocalPeripheral(adapterId: Long): Long {
+        return adapterCreateLocalPeripheralWithContext(adapterId, platformContext())
+    }
+
+    private external fun adapterCreateLocalPeripheralWithContext(adapterId: Long, context: Any?): Long
+
+    actual external fun localPeripheralRegister(peripheralId: Long, callback: LocalPeripheralCallback)
+
+    actual external fun localPeripheralAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>)
+
+    actual external fun localPeripheralSetAdvertisedManufacturerData(peripheralId: Long, companyId: Int, data: ByteArray)
+
+    actual external fun localPeripheralSetConnectable(peripheralId: Long, connectable: Boolean)
+
+    actual external fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
+
+    actual external fun localPeripheralRemoveAllServices(peripheralId: Long)
+
+    actual external fun localPeripheralStart(peripheralId: Long)
+
+    actual external fun localPeripheralStop(peripheralId: Long)
+
+    actual external fun localPeripheralIsStarted(peripheralId: Long): Boolean
+
+    actual external fun localPeripheralIsAdvertising(peripheralId: Long): Boolean
+
+    actual external fun localServiceUuid(serviceId: Long): String
+
+    actual external fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long
+
+    actual external fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback)
+
+    actual external fun localCharacteristicUuid(characteristicId: Long): String
+
+    actual external fun localCharacteristicCapabilities(characteristicId: Long): Int
+
+    actual external fun localCharacteristicValue(characteristicId: Long): ByteArray
+
+    actual external fun localCharacteristicSetValue(characteristicId: Long, value: ByteArray)
+
+    actual external fun localCharacteristicSetReadHandler(characteristicId: Long, enabled: Boolean)
+
+    actual external fun peripheralSetPasskeyRequestHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
+
+    actual external fun peripheralSetPasskeyDisplayHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
+
+    actual external fun peripheralSetNumericComparisonHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
+
+    actual external fun getBackends(): List<String>
+
+    actual external fun getNativeBackend(): String
+
+    actual external fun getDonglBackend(): String
+
+    actual external fun getSimulatorBackend(): String
+
+    actual external fun backendIsBluetoothEnabled(backend: String): Boolean
+
+    actual external fun backendGetAdapters(backend: String): LongArray
+
+    actual external fun configReset(group: Int)
+
+    actual external fun configGetBoolean(key: Int): Boolean
+
+    actual external fun configSetBoolean(key: Int, value: Boolean)
+
+    actual external fun configGetMilliseconds(key: Int): Long
+
+    actual external fun configSetMilliseconds(key: Int, value: Long)
 }

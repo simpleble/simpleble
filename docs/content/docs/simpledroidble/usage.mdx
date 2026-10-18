@@ -3,9 +3,26 @@ title: Usage
 description: Build and use SimpleDroidBLE in Android/Kotlin applications.
 ---
 
-SimpleDroidBLE is the Android/Kotlin wrapper around the SimpleBLE Android backend. Use it when your application is a normal Android app and you want Kotlin APIs, Android runtime permission helpers, coroutine-friendly operations, and flows for scan, connection, and notification events.
+<Callout type="warn" title="SimpleDroidBLE is deprecated">
+Use [SimpleKtBLE](/simplektble/usage) instead. It has the same Kotlin API on Android, and the same code also runs on
+iOS, macOS, Windows, and Linux. New features land in SimpleKtBLE.
+</Callout>
 
-If you are already writing native C++ inside an Android app, use SimpleBLE directly and include `simpledroidbridge`. SimpleDroidBLE is for Android-first app code.
+## Migrate to SimpleKtBLE
+
+- Depend on `org.simpleble:simplektble` instead of `org.simpleble:simpledroidble`, and import `org.simplektble`
+  instead of `org.simpleble.android`.
+- `adapter.createLocalPeripheral()` takes no `Context`; SimpleKtBLE gets the application context on its own.
+- `SimpleDroidBle.hasPermissions` and the other permission helpers become `SimpleKtBle.hasPermissions` and so on, and
+  `SimpleDroidBle.getVersion()` becomes `SimpleKtBle.version`.
+- Errors are `SimpleKtBleException`. Flows never drop events: a slow notification collector keeps receiving values
+  instead of failing with a buffer overflow.
+
+## About SimpleDroidBLE
+
+SimpleDroidBLE is the Android/Kotlin wrapper around the SimpleBLE Android backend, with Kotlin APIs, Android runtime permission helpers, coroutine-friendly operations, and flows for scan, connection, and notification events.
+
+If you are writing native C++ inside an Android app, use SimpleBLE directly and include `simpledroidbridge`.
 
 ## Requirements
 

@@ -12,6 +12,7 @@
 #include <thread>
 #include <utility>
 
+#include "Jvm.h"
 #include "simplejni/Common.hpp"
 #include "simplejni/VM.hpp"
 
@@ -25,7 +26,7 @@ namespace SimpleKtBLE {
  * runner may be destroyed from one of its own functions. On top of that, it does what a JNI callback thread needs:
  * - The thread starts on the first enqueue, since the JavaVM is only known after JNI_OnLoad.
  * - The thread stays attached as "SimpleKtBLE", the name debuggers and ANR traces show, and detaches before it ends,
- *   as ART requires.
+ *   as ART requires. It attaches as a daemon, so it does not keep a desktop JVM from exiting.
  * - A function that throws, or that leaves a Java exception pending, is logged and the thread carries on.
  */
 class ThreadRunner final {
@@ -108,7 +109,7 @@ class ThreadRunner final {
 
     static void thread_func(std::shared_ptr<state> shared) noexcept {
         try {
-            SimpleJNI::VM::attach("SimpleKtBLE");
+            attach_as_daemon("SimpleKtBLE");
         } catch (const std::exception& exception) {
             log_error(std::string("Failed to attach callback thread: ") + exception.what());
 

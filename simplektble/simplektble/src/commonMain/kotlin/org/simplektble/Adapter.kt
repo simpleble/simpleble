@@ -4,18 +4,16 @@ import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.withContext
 import kotlin.jvm.JvmStatic
 
 public class Adapter private constructor(private val instanceId: Long) {
-    private val _onScanStart = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanStop = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanUpdated = MutableSharedFlow<Peripheral>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanFound = MutableSharedFlow<Peripheral>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val _onScanStart = eventFlow<Unit>()
+    private val _onScanStop = eventFlow<Unit>()
+    private val _onScanActive = eventFlow<Boolean>(replay = 1)
+    private val _onScanUpdated = eventFlow<Peripheral>()
+    private val _onScanFound = eventFlow<Peripheral>()
 
     private val peripheralsLock = SynchronizedObject()
     private val peripherals = mutableMapOf<Long, Peripheral>()
@@ -88,6 +86,14 @@ public class Adapter private constructor(private val instanceId: Long) {
         return Native.adapterGetPairedPeripherals(instanceId).map(::peripheral)
     }
 
+    /**
+     * Creates a GATT server hosted by this application. Configure its services and advertising data before starting
+     * it.
+     */
+    public fun createLocalPeripheral(): LocalPeripheral {
+        return LocalPeripheral(Native.adapterCreateLocalPeripheral(instanceId))
+    }
+
     public companion object {
         private val adapterCacheLock = SynchronizedObject()
         private val adapterCache = mutableMapOf<Long, Adapter>()
@@ -99,11 +105,12 @@ public class Adapter private constructor(private val instanceId: Long) {
 
         @JvmStatic
         public fun getAdapters(): List<Adapter> {
-            return Native.getAdapters().map { adapterId ->
-                synchronized(adapterCacheLock) {
-                    adapterCache.getOrPut(adapterId) { Adapter(adapterId) }
-                }
-            }
+            return Native.getAdapters().map(::forId)
+        }
+
+        /** The one Adapter object for a native adapter, wherever its ID came from. */
+        internal fun forId(adapterId: Long): Adapter {
+            return synchronized(adapterCacheLock) { adapterCache.getOrPut(adapterId) { Adapter(adapterId) } }
         }
     }
 }

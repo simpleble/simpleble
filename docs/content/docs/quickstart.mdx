@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -309,6 +309,51 @@ export default function App() {
   );
 }
 ```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+Add the dependency to your shared module:
+
+```kotlin
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("org.simpleble:simplektble:<version>")
+        }
+    }
+}
+```
+
+Then scan from shared code:
+
+```kotlin
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.simplektble.Adapter
+
+suspend fun scan() = coroutineScope {
+    val adapter = Adapter.getAdapters().first()
+    println("Using adapter: ${adapter.identifier} [${adapter.address}]")
+
+    val found = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { peripheral ->
+            println("Found: ${peripheral.identifier} [${peripheral.address}] ${peripheral.rssi} dBm")
+        }
+    }
+    adapter.scanFor(5000)
+    found.cancel()
+
+    println("Scan results:")
+    for (peripheral in adapter.scanGetResults()) {
+        val state = if (peripheral.isConnectable) "connectable" else "not connectable"
+        println("- ${peripheral.identifier} [${peripheral.address}] $state")
+    }
+}
+```
+
+Call `scan()` from a coroutine, such as `lifecycleScope.launch { scan() }` on Android or `suspend fun main() = scan()` on the JVM. On Android, request the Bluetooth permissions first with `SimpleKtBle.requestPermissions(activity)`. On iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleKtBLE Usage](./simplektble/usage) for details.
 
 </Tab>
 <Tab value="Android">

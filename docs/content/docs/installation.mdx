@@ -20,6 +20,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleRsBLE](./simplersble/usage) | Rust | Production-ready | Rust applications and async workflows | crates.io or local path |
 | [SimpleJSBLE](./simplejsble/usage) | JavaScript / TypeScript | Production-ready | Node.js and Electron apps | npm |
 | [SimpleRnBLE](./simplernble/usage) | JavaScript / TypeScript | Production-ready | React Native apps on iOS and Android | npm |
+| [SimpleKtBLE](./simplektble/usage) | Kotlin Multiplatform | Production-ready | Shared Kotlin code for Android, iOS, and desktop | Maven Central |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
@@ -41,7 +42,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Android", "Unity", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -205,6 +206,25 @@ runtime; see
 [SimpleRnBLE Usage](./simplernble/usage) for permissions and Expo.
 
 </Tab>
+<Tab value="Kotlin Multiplatform">
+
+Add SimpleKtBLE to the shared module of your project, with Kotlin 2.3 or newer:
+
+```kotlin
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("org.simpleble:simplektble:<version>")
+        }
+    }
+}
+```
+
+Each target's artifact includes the native SimpleBLE library it needs, for Android, iOS, macOS, Windows, and
+Linux, so nothing is compiled during your build. See [SimpleKtBLE Usage](./simplektble/usage) for permissions
+and supported targets.
+
+</Tab>
 <Tab value="Android">
 
 Add SimpleDroidBLE to your app module:
@@ -269,7 +289,7 @@ See [MCP Server](./simpleaible/mcp) and [HTTP Server](./simpleaible/http) for ag
 
 The fastest smoke test is to scan for nearby devices:
 
-- C++, C, Python, Java, Rust, and Android users can start with [Quickstart](./quickstart).
+- C++, C, Python, Java, Rust, Kotlin Multiplatform, and Android users can start with [Quickstart](./quickstart).
 - C# users can start with the scan example in [SimpleSharpBLE Usage](./simplesharpble/usage).
 - CMake users can build the repository examples from [SimpleBLE Examples](./simpleble/examples) or [SimpleCBLE Examples](./simplecble/examples).
 - Python users can run the examples under `examples/simplepyble`.

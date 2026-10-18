@@ -6,13 +6,18 @@
 
 #include <fmt/format.h>
 #include <simpleble/Advanced.h>
+#include <simpleble/Backend.h>
+#include <simpleble/Config.h>
 #include <simpleble/Logging.h>
 #include <simpleble/SimpleBLE.h>
 #include <simpleble/Utils.h>
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
+#include <set>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -539,4 +544,394 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralDescript
             .peripheral(adapter_id, peripheral_id)
             .write(service.str(), characteristic.str(), descriptor.str(), data.bytes());
     });
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_adapterCreateLocalPeripheralWithContext(
+    JNIEnv* env, jobject, jlong adapter_id, jobject application_context) {
+    return call(env, [adapter_id, application_context] {
+#if defined(__ANDROID__) && !SIMPLEKTBLE_PLAIN
+        SimpleBLE::Advanced::Android::set_context(application_context);
+#else
+        (void)application_context;
+#endif
+        auto peripheral = NativeCache::get().adapter(adapter_id).create_local_peripheral();
+        return static_cast<jlong>(NativeCache::get().add_local_peripheral(std::move(peripheral)));
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralRegister(
+    JNIEnv* env, jobject, jlong peripheral_id, jobject callback) {
+    call(env, [peripheral_id, callback] {
+        NativeCache::get().set_local_peripheral_callback(peripheral_id, callback);
+        auto peripheral = NativeCache::get().local_peripheral(peripheral_id);
+        peripheral.set_callback_on_client_connected([peripheral_id](SimpleBLE::BluetoothAddress address) {
+            callback_runner.enqueue([peripheral_id, address = std::move(address)] {
+                if (auto callback = NativeCache::get().local_peripheral_callback(peripheral_id)) {
+                    callback->on_client_connected(address);
+                }
+            });
+        });
+        peripheral.set_callback_on_client_disconnected([peripheral_id](SimpleBLE::BluetoothAddress address) {
+            callback_runner.enqueue([peripheral_id, address = std::move(address)] {
+                if (auto callback = NativeCache::get().local_peripheral_callback(peripheral_id)) {
+                    callback->on_client_disconnected(address);
+                }
+            });
+        });
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralAddAdvertisedService(
+    JNIEnv* env, jobject, jlong peripheral_id, jobjectArray service_uuids) {
+    call(env, [env, peripheral_id, service_uuids] {
+        std::vector<SimpleBLE::BluetoothUUID> advertised_service_uuids;
+        if (service_uuids != nullptr) {
+            const jsize count = env->GetArrayLength(service_uuids);
+            advertised_service_uuids.reserve(count);
+            for (jsize index = 0; index < count; ++index) {
+                auto value = static_cast<jstring>(env->GetObjectArrayElement(service_uuids, index));
+                SimpleJNI::Exception::check(env);
+                advertised_service_uuids.push_back(SimpleJNI::String<SimpleJNI::LocalRef>(value).str());
+                env->DeleteLocalRef(value);
+            }
+        }
+        NativeCache::get().local_peripheral(peripheral_id).add_advertised_service(std::move(advertised_service_uuids));
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralSetAdvertisedManufacturerData(
+    JNIEnv* env, jobject, jlong peripheral_id, jint company_id, jbyteArray data) {
+    call(env, [peripheral_id, company_id, data] {
+        NativeCache::get().local_peripheral(peripheral_id).set_advertised_manufacturer_data(
+            static_cast<uint16_t>(company_id), SimpleJNI::ByteArray<SimpleJNI::LocalRef>(data).bytes());
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralSetConnectable(
+    JNIEnv* env, jobject, jlong peripheral_id, jboolean connectable) {
+    call(env, [peripheral_id, connectable] {
+        NativeCache::get().local_peripheral(peripheral_id).set_connectable(connectable);
+    });
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_localPeripheralAddService(
+    JNIEnv* env, jobject, jlong peripheral_id, jstring uuid) {
+    return call(env, [peripheral_id, uuid] {
+        auto service = NativeCache::get().local_peripheral(peripheral_id).add_service(
+            SimpleJNI::String<SimpleJNI::LocalRef>(uuid).str());
+        return static_cast<jlong>(NativeCache::get().add_local_service(std::move(service)));
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralRemoveAllServices(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    call(env, [peripheral_id] { NativeCache::get().local_peripheral(peripheral_id).remove_all_services(); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralStart(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    call(env, [peripheral_id] { NativeCache::get().local_peripheral(peripheral_id).start(); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralStop(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    call(env, [peripheral_id] { NativeCache::get().local_peripheral(peripheral_id).stop(); });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplektble_Native_localPeripheralIsStarted(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    return call(env, [peripheral_id] {
+        return static_cast<jboolean>(NativeCache::get().local_peripheral(peripheral_id).is_started());
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplektble_Native_localPeripheralIsAdvertising(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    return call(env, [peripheral_id] {
+        return static_cast<jboolean>(NativeCache::get().local_peripheral(peripheral_id).is_advertising());
+    });
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_localServiceUuid(
+    JNIEnv* env, jobject, jlong service_id) {
+    return call(env, [service_id] {
+        return SimpleJNI::String<SimpleJNI::ReleasableLocalRef>(
+                   NativeCache::get().local_service(service_id).uuid())
+            .release();
+    });
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_localServiceAddCharacteristic(
+    JNIEnv* env, jobject, jlong service_id, jstring uuid, jint capabilities) {
+    return call(env, [service_id, uuid, capabilities] {
+        using Capability = SimpleBLE::Local::CharacteristicCapability;
+        std::set<Capability> native_capabilities;
+        if ((capabilities & 1) != 0) native_capabilities.insert(Capability::READ);
+        if ((capabilities & 2) != 0) native_capabilities.insert(Capability::WRITE_REQUEST);
+        if ((capabilities & 4) != 0) native_capabilities.insert(Capability::WRITE_COMMAND);
+        if ((capabilities & 8) != 0) native_capabilities.insert(Capability::NOTIFY);
+        if ((capabilities & 16) != 0) native_capabilities.insert(Capability::INDICATE);
+        auto characteristic = NativeCache::get().local_service(service_id).add_characteristic(
+            SimpleJNI::String<SimpleJNI::LocalRef>(uuid).str(), std::move(native_capabilities));
+        return static_cast<jlong>(NativeCache::get().add_local_characteristic(std::move(characteristic)));
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localCharacteristicRegister(
+    JNIEnv* env, jobject, jlong characteristic_id, jobject callback) {
+    call(env, [characteristic_id, callback] {
+        NativeCache::get().set_local_characteristic_callback(characteristic_id, callback);
+        auto characteristic = NativeCache::get().local_characteristic(characteristic_id);
+        characteristic.set_callback_on_write([characteristic_id](SimpleBLE::ByteArray value) {
+            callback_runner.enqueue([characteristic_id, value = std::move(value)] {
+                if (auto callback = NativeCache::get().local_characteristic_callback(characteristic_id)) {
+                    callback->on_write(value);
+                }
+            });
+        });
+        characteristic.set_callback_on_subscribed([characteristic_id] {
+            callback_runner.enqueue([characteristic_id] {
+                if (auto callback = NativeCache::get().local_characteristic_callback(characteristic_id)) {
+                    callback->on_subscribed();
+                }
+            });
+        });
+        characteristic.set_callback_on_unsubscribed([characteristic_id] {
+            callback_runner.enqueue([characteristic_id] {
+                if (auto callback = NativeCache::get().local_characteristic_callback(characteristic_id)) {
+                    callback->on_unsubscribed();
+                }
+            });
+        });
+    });
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_localCharacteristicUuid(
+    JNIEnv* env, jobject, jlong characteristic_id) {
+    return call(env, [characteristic_id] {
+        return SimpleJNI::String<SimpleJNI::ReleasableLocalRef>(
+                   NativeCache::get().local_characteristic(characteristic_id).uuid())
+            .release();
+    });
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_org_simplektble_Native_localCharacteristicCapabilities(
+    JNIEnv* env, jobject, jlong characteristic_id) {
+    return call(env, [characteristic_id] {
+        using Capability = SimpleBLE::Local::CharacteristicCapability;
+        const auto capabilities = NativeCache::get().local_characteristic(characteristic_id).capabilities();
+        jint mask = 0;
+        if (capabilities.count(Capability::READ) > 0) mask |= 1;
+        if (capabilities.count(Capability::WRITE_REQUEST) > 0) mask |= 2;
+        if (capabilities.count(Capability::WRITE_COMMAND) > 0) mask |= 4;
+        if (capabilities.count(Capability::NOTIFY) > 0) mask |= 8;
+        if (capabilities.count(Capability::INDICATE) > 0) mask |= 16;
+        return mask;
+    });
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL Java_org_simplektble_Native_localCharacteristicValue(
+    JNIEnv* env, jobject, jlong characteristic_id) {
+    return call(env, [characteristic_id] {
+        return SimpleJNI::ByteArray<SimpleJNI::ReleasableLocalRef>(
+                   NativeCache::get().local_characteristic(characteristic_id).value())
+            .release();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localCharacteristicSetValue(
+    JNIEnv* env, jobject, jlong characteristic_id, jbyteArray value) {
+    call(env, [characteristic_id, value] {
+        NativeCache::get().local_characteristic(characteristic_id).set_value(
+            SimpleJNI::ByteArray<SimpleJNI::LocalRef>(value).bytes());
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localCharacteristicSetReadHandler(
+    JNIEnv* env, jobject, jlong characteristic_id, jboolean enabled) {
+    call(env, [characteristic_id, enabled] {
+        auto characteristic = NativeCache::get().local_characteristic(characteristic_id);
+        if (enabled) {
+            characteristic.set_callback_on_read([characteristic_id] {
+                auto callback = NativeCache::get().local_characteristic_callback(characteristic_id);
+                if (!callback) throw std::runtime_error("The local characteristic callback is unavailable.");
+                return callback->on_read();
+            });
+        } else {
+            characteristic.set_callback_on_read({});
+        }
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralSetPasskeyRequestHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jlong peripheral_id, jboolean enabled) {
+    call(env, [adapter_id, peripheral_id, enabled] {
+        auto peripheral = NativeCache::get().peripheral(adapter_id, peripheral_id);
+        if (!enabled) {
+            SimpleBLE::Advanced::Dongl::set_passkey_request_callback(peripheral, nullptr);
+            return;
+        }
+        SimpleBLE::Advanced::Dongl::set_passkey_request_callback(
+            peripheral, [adapter_id, peripheral_id]() -> std::optional<std::string> {
+                auto callback = NativeCache::get().peripheral_callback(adapter_id, peripheral_id);
+                if (!callback) return std::nullopt;
+                return callback->on_passkey_request();
+            });
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralSetPasskeyDisplayHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jlong peripheral_id, jboolean enabled) {
+    call(env, [adapter_id, peripheral_id, enabled] {
+        auto peripheral = NativeCache::get().peripheral(adapter_id, peripheral_id);
+        if (!enabled) {
+            SimpleBLE::Advanced::Dongl::set_passkey_display_callback(peripheral, nullptr);
+            return;
+        }
+        SimpleBLE::Advanced::Dongl::set_passkey_display_callback(
+            peripheral, [adapter_id, peripheral_id](const std::string& passkey) {
+                if (auto callback = NativeCache::get().peripheral_callback(adapter_id, peripheral_id)) {
+                    callback->on_passkey_display(passkey);
+                }
+            });
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralSetNumericComparisonHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jlong peripheral_id, jboolean enabled) {
+    call(env, [adapter_id, peripheral_id, enabled] {
+        auto peripheral = NativeCache::get().peripheral(adapter_id, peripheral_id);
+        if (!enabled) {
+            SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, nullptr);
+            return;
+        }
+        SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(
+            peripheral, [adapter_id, peripheral_id](const std::string& passkey) {
+                auto callback = NativeCache::get().peripheral_callback(adapter_id, peripheral_id);
+                return callback && callback->on_numeric_comparison(passkey);
+            });
+    });
+}
+
+extern "C" JNIEXPORT jobject JNICALL Java_org_simplektble_Native_getBackends(JNIEnv* env, jobject) {
+    return call(env, [] {
+        SimpleJNI::Java::Util::ArrayList identifiers;
+        for (auto backend : SimpleBLE::Backend::get_backends()) {
+            SimpleJNI::String<SimpleJNI::LocalRef> identifier(NativeCache::get().add_backend(std::move(backend)));
+            identifiers.add(identifier.get());
+        }
+        return identifiers.release();
+    });
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_getNativeBackend(JNIEnv* env, jobject) {
+    return call(env, [] {
+        auto identifier = NativeCache::get().add_backend(SimpleBLE::Backend::get_native());
+        return SimpleJNI::String<SimpleJNI::ReleasableLocalRef>(identifier).release();
+    });
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_getDonglBackend(JNIEnv* env, jobject) {
+    return call(env, [] {
+        auto identifier = NativeCache::get().add_backend(SimpleBLE::Backend::get_dongl());
+        return SimpleJNI::String<SimpleJNI::ReleasableLocalRef>(identifier).release();
+    });
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_getSimulatorBackend(JNIEnv* env, jobject) {
+    return call(env, [] {
+        auto identifier = NativeCache::get().add_backend(SimpleBLE::Backend::get_simulator());
+        return SimpleJNI::String<SimpleJNI::ReleasableLocalRef>(identifier).release();
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplektble_Native_backendIsBluetoothEnabled(JNIEnv* env, jobject,
+                                                                                          jstring j_backend) {
+    return call(env, [j_backend] {
+        SimpleJNI::String<SimpleJNI::LocalRef> identifier(j_backend);
+        return static_cast<jboolean>(NativeCache::get().backend(identifier.str()).bluetooth_enabled());
+    });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_backendGetAdapters(JNIEnv* env, jobject,
+                                                                                      jstring j_backend) {
+    return call(env, [j_backend] {
+        SimpleJNI::String<SimpleJNI::LocalRef> identifier(j_backend);
+        std::vector<int64_t> adapter_ids;
+        for (auto adapter : NativeCache::get().backend(identifier.str()).adapters()) {
+            adapter_ids.push_back(NativeCache::get().add_adapter(std::move(adapter)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(adapter_ids).release();
+    });
+}
+
+namespace {
+
+// The keys and groups match ConfigKey and ConfigGroup in Config.kt.
+bool& config_boolean(jint key) {
+    switch (key) {
+        case 0:
+            return SimpleBLE::Config::SimpleBluez::use_system_bus;
+        case 3:
+            return SimpleBLE::Config::WinRT::experimental_reinitialize_winrt_apartment_on_main_thread;
+        case 4:
+            return SimpleBLE::Config::WinRT::use_deferred_disconnect;
+        case 5:
+            return SimpleBLE::Config::Dongl::use_dongl_backend;
+        case 6:
+            return SimpleBLE::Config::Dongl::auto_update;
+        case 7:
+            return SimpleBLE::Config::Dongl::force_update;
+    }
+    throw std::invalid_argument("Unknown boolean setting");
+}
+
+std::chrono::steady_clock::duration& config_duration(jint key) {
+    switch (key) {
+        case 1:
+            return SimpleBLE::Config::SimpleBluez::connection_timeout;
+        case 2:
+            return SimpleBLE::Config::SimpleBluez::disconnection_timeout;
+    }
+    throw std::invalid_argument("Unknown duration setting");
+}
+
+}  // namespace
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_configReset(JNIEnv* env, jobject, jint group) {
+    call(env, [group] {
+        switch (group) {
+            case 0:
+                return SimpleBLE::Config::Base::reset_all();
+            case 1:
+                return SimpleBLE::Config::SimpleBluez::reset();
+            case 2:
+                return SimpleBLE::Config::WinRT::reset();
+            case 3:
+                return SimpleBLE::Config::CoreBluetooth::reset();
+            case 4:
+                return SimpleBLE::Config::Dongl::reset();
+        }
+        throw std::invalid_argument("Unknown settings group");
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplektble_Native_configGetBoolean(JNIEnv* env, jobject, jint key) {
+    return call(env, [key] { return static_cast<jboolean>(config_boolean(key)); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_configSetBoolean(JNIEnv* env, jobject, jint key,
+                                                                              jboolean value) {
+    call(env, [key, value] { config_boolean(key) = value; });
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_configGetMilliseconds(JNIEnv* env, jobject, jint key) {
+    return call(env, [key] {
+        return static_cast<jlong>(std::chrono::duration_cast<std::chrono::milliseconds>(config_duration(key)).count());
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_configSetMilliseconds(JNIEnv* env, jobject, jint key,
+                                                                                   jlong value) {
+    call(env, [key, value] { config_duration(key) = std::chrono::milliseconds(value); });
 }

@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+@Deprecated("SimpleDroidBLE is deprecated. Use SimpleKtBLE (org.simpleble:simplektble) instead.")
 class SimpleDroidBle private constructor() {
     companion object {
         const val DEFAULT_PERMISSION_REQUEST_CODE = 7101

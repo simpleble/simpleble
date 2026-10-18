@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -92,6 +92,14 @@ console.log('Read:', value);
 ```
 
 </Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+val value = peripheral.read(serviceUuid, characteristicUuid)
+println("Read: ${value.toHexString()}")
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -104,7 +112,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -194,6 +202,19 @@ await peripheral.writeCommand(serviceUuid, characteristicUuid, payload);
 ```
 
 </Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+val payload = byteArrayOf(0x01, 0x02, 0x03)
+
+// Acknowledged write.
+peripheral.writeRequest(serviceUuid, characteristicUuid, payload)
+
+// Unacknowledged write.
+peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -208,7 +229,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -326,6 +347,18 @@ await peripheral.unsubscribe(serviceUuid, characteristicUuid);
 ```
 
 </Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+// Collecting subscribes. When the timeout ends the collection, the flow unsubscribes.
+withTimeoutOrNull(10_000) {
+    peripheral.notify(serviceUuid, characteristicUuid).collect { payload ->
+        println("Notification: ${payload.toHexString()}")
+    }
+}
+```
+
+</Tab>
 <Tab value="Android">
 
 ```kotlin
@@ -340,6 +373,8 @@ withTimeoutOrNull(10_000) {
 </Tabs>
 
 On Android, collecting the flow subscribes to the characteristic. When collection is cancelled or completes, SimpleDroidBLE unsubscribes and waits for native cleanup to finish. The timeout above is only a compact way to demonstrate a ten-second subscription.
+
+With SimpleKtBLE, collecting the flow subscribes and ending the collection unsubscribes in the same way. When the peripheral disconnects, the flow completes, and you collect it again after reconnecting.
 
 ## Production Android apps
 

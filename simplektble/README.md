@@ -64,6 +64,10 @@ if (!SimpleKtBle.hasPermissions(activity)) {
 }
 ```
 
+`hasPermissions` and `requestPermissions` cover scanning and connecting. To
+host a local peripheral, use `hasPeripheralPermissions` and
+`requestPeripheralPermissions`, which cover advertising and client connections.
+
 On iOS and macOS, add an `NSBluetoothAlwaysUsageDescription` entry to your
 app's `Info.plist`. The system asks the user the first time your app uses
 Bluetooth.
@@ -108,8 +112,9 @@ peripheral.notify(batteryService, batteryLevel).collect { value ->
 descriptors of a connected peripheral. `read`, `writeRequest`, and
 `writeCommand` access characteristic values, and `read` and `write` with a
 descriptor UUID access descriptors. `notify` and `indicate` return a flow that
-subscribes when collected and unsubscribes when the collection ends. Failures
-are thrown as `SimpleKtBleException`.
+subscribes when collected and unsubscribes when the collection ends. When the
+peripheral disconnects, the flow completes; collect it again after
+reconnecting. Failures are thrown as `SimpleKtBleException`.
 
 ## Host a GATT service
 

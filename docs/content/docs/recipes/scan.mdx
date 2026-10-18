@@ -18,7 +18,7 @@ Scanning is the first real interaction with the Bluetooth stack. A scan listens 
 
 ## Core scan call
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -162,6 +162,27 @@ await adapter.scanFor(5000);
 
 for (const peripheral of adapter.scanGetResults()) {
   if (peripheral.isConnectable()) console.log(`${peripheral.identifier()} is connectable`);
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+
+coroutineScope {
+    val found = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { peripheral ->
+            println("Found ${peripheral.identifier} [${peripheral.address}]")
+        }
+    }
+    adapter.scanFor(5000)
+    found.cancel()
+}
+
+for (peripheral in adapter.scanGetResults()) {
+    if (peripheral.isConnectable) println("${peripheral.identifier} is connectable")
 }
 ```
 

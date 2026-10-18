@@ -10,17 +10,35 @@ internal interface AdapterCallback {
 internal interface PeripheralCallback {
     fun onConnected()
     fun onDisconnected()
+
+    /** The Dongl pairing callbacks run on a SimpleBLE thread, which waits for the answer. */
+    fun onPasskeyRequest(): String?
+    fun onPasskeyDisplay(passkey: String)
+    fun onNumericComparison(passkey: String): Boolean
 }
 
 internal interface DataCallback {
     fun onDataReceived(data: ByteArray)
 }
 
+internal interface LocalPeripheralCallback {
+    fun onClientConnected(address: String)
+    fun onClientDisconnected(address: String)
+}
+
+internal interface LocalCharacteristicCallback {
+    /** Runs on a SimpleBLE thread, which waits for the value. */
+    fun onRead(): ByteArray
+    fun onWrite(value: ByteArray)
+    fun onSubscribed()
+    fun onUnsubscribed()
+}
+
 /**
  * The calls into SimpleBLE behind the public classes, implemented once per platform.
  *
- * Adapters and peripherals are named by IDs the native side assigns, and a peripheral ID only has meaning together
- * with its adapter ID. Failures are thrown as [SimpleKtBleException].
+ * Adapters, peripherals and local GATT objects are named by IDs the native side assigns, and a peripheral ID only has
+ * meaning together with its adapter ID. Failures are thrown as [SimpleKtBleException].
  */
 internal expect object Native {
     fun version(): String
@@ -129,4 +147,70 @@ internal expect object Native {
         descriptor: String,
         data: ByteArray
     )
+
+    fun adapterCreateLocalPeripheral(adapterId: Long): Long
+
+    fun localPeripheralRegister(peripheralId: Long, callback: LocalPeripheralCallback)
+
+    fun localPeripheralAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>)
+
+    fun localPeripheralSetAdvertisedManufacturerData(peripheralId: Long, companyId: Int, data: ByteArray)
+
+    fun localPeripheralSetConnectable(peripheralId: Long, connectable: Boolean)
+
+    fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
+
+    fun localPeripheralRemoveAllServices(peripheralId: Long)
+
+    fun localPeripheralStart(peripheralId: Long)
+
+    fun localPeripheralStop(peripheralId: Long)
+
+    fun localPeripheralIsStarted(peripheralId: Long): Boolean
+
+    fun localPeripheralIsAdvertising(peripheralId: Long): Boolean
+
+    fun localServiceUuid(serviceId: Long): String
+
+    fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long
+
+    fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback)
+
+    fun localCharacteristicUuid(characteristicId: Long): String
+
+    fun localCharacteristicCapabilities(characteristicId: Long): Int
+
+    fun localCharacteristicValue(characteristicId: Long): ByteArray
+
+    fun localCharacteristicSetValue(characteristicId: Long, value: ByteArray)
+
+    fun localCharacteristicSetReadHandler(characteristicId: Long, enabled: Boolean)
+
+    fun peripheralSetPasskeyRequestHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
+
+    fun peripheralSetPasskeyDisplayHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
+
+    fun peripheralSetNumericComparisonHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
+
+    fun getBackends(): List<String>
+
+    fun getNativeBackend(): String
+
+    fun getDonglBackend(): String
+
+    fun getSimulatorBackend(): String
+
+    fun backendIsBluetoothEnabled(backend: String): Boolean
+
+    fun backendGetAdapters(backend: String): LongArray
+
+    fun configReset(group: Int)
+
+    fun configGetBoolean(key: Int): Boolean
+
+    fun configSetBoolean(key: Int, value: Boolean)
+
+    fun configGetMilliseconds(key: Int): Long
+
+    fun configSetMilliseconds(key: Int, value: Long)
 }

@@ -108,6 +108,13 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/simplernble/usage",
   },
   {
+    eyebrow: "Kotlin Multiplatform",
+    title: "SimpleKtBLE",
+    description:
+      "Kotlin Multiplatform bindings with coroutines and flows for Android, iOS, and desktop.",
+    href: "/simplektble/usage",
+  },
+  {
     eyebrow: "Android",
     title: "SimpledroidBLE",
     description:

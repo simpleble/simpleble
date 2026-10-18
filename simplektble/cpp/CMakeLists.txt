@@ -29,6 +29,8 @@ add_library(
     org/simplektble/Characteristic.cpp
     org/simplektble/DataCallback.cpp
     org/simplektble/Descriptor.cpp
+    org/simplektble/LocalCharacteristicCallback.cpp
+    org/simplektble/LocalPeripheralCallback.cpp
     org/simplektble/PeripheralCallback.cpp
     org/simplektble/Service.cpp
     org/simplektble/SimpleKtBleException.cpp

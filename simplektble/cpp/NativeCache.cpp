@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <tuple>
 
+#include "Internal.h"
+
 namespace Org {
 namespace SimpleKtBLE {
 
@@ -12,12 +14,28 @@ NativeCache& NativeCache::get() {
     return cache;
 }
 
+// IDs are the addresses of SimpleBLE's own objects, so the same adapter or device always has the same ID. The cache
+// keeps those objects alive, so an address is never reused while its ID is in use.
 int64_t NativeCache::adapter_id(SimpleBLE::Adapter& adapter) {
-    return static_cast<int64_t>(std::hash<std::string>{}(adapter.identifier()));
+    return reinterpret_cast<int64_t>(Internal<SimpleBLE::Adapter>::of(adapter));
 }
 
 int64_t NativeCache::peripheral_id(SimpleBLE::Peripheral& peripheral) {
-    return static_cast<int64_t>(std::hash<std::string>{}(peripheral.address()));
+    return reinterpret_cast<int64_t>(Internal<SimpleBLE::Peripheral>::of(peripheral));
+}
+
+std::string NativeCache::add_backend(SimpleBLE::Backend backend) {
+    std::string identifier = backend.identifier();
+    std::lock_guard<std::mutex> lock(_mutex);
+    _backends.try_emplace(identifier, std::move(backend));
+    return identifier;
+}
+
+SimpleBLE::Backend NativeCache::backend(const std::string& identifier) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto backend = _backends.find(identifier);
+    if (backend == _backends.end()) throw std::runtime_error("Unknown backend");
+    return backend->second;
 }
 
 int64_t NativeCache::add_adapter(SimpleBLE::Adapter adapter) {
@@ -51,6 +69,78 @@ SimpleBLE::Peripheral NativeCache::peripheral(int64_t adapter_id, int64_t periph
     auto peripheral = adapter->second.find(peripheral_id);
     if (peripheral == adapter->second.end()) throw std::runtime_error("Unknown peripheral");
     return peripheral->second.peripheral;
+}
+
+int64_t NativeCache::add_local_peripheral(SimpleBLE::Local::Peripheral peripheral) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    const int64_t id = _next_local_id++;
+    _local_peripherals.emplace(id, LocalPeripheralEntry{std::move(peripheral), nullptr});
+    return id;
+}
+
+int64_t NativeCache::add_local_service(SimpleBLE::Local::Service service) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    const int64_t id = _next_local_id++;
+    _local_services.emplace(id, std::move(service));
+    return id;
+}
+
+int64_t NativeCache::add_local_characteristic(SimpleBLE::Local::Characteristic characteristic) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    const int64_t id = _next_local_id++;
+    _local_characteristics.emplace(id, LocalCharacteristicEntry{std::move(characteristic), nullptr});
+    return id;
+}
+
+SimpleBLE::Local::Peripheral NativeCache::local_peripheral(int64_t peripheral_id) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_peripherals.find(peripheral_id);
+    if (item == _local_peripherals.end()) throw std::runtime_error("Unknown local peripheral");
+    return item->second.peripheral;
+}
+
+SimpleBLE::Local::Service NativeCache::local_service(int64_t service_id) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_services.find(service_id);
+    if (item == _local_services.end()) throw std::runtime_error("Unknown local service");
+    return item->second;
+}
+
+SimpleBLE::Local::Characteristic NativeCache::local_characteristic(int64_t characteristic_id) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_characteristics.find(characteristic_id);
+    if (item == _local_characteristics.end()) throw std::runtime_error("Unknown local characteristic");
+    return item->second.characteristic;
+}
+
+void NativeCache::set_local_peripheral_callback(int64_t peripheral_id, jobject callback) {
+    auto wrapper = std::make_shared<Org::SimpleKtBLE::LocalPeripheralCallback>(callback);
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_peripherals.find(peripheral_id);
+    if (item == _local_peripherals.end()) throw std::runtime_error("Unknown local peripheral");
+    item->second.callback = std::move(wrapper);
+}
+
+std::shared_ptr<Org::SimpleKtBLE::LocalPeripheralCallback> NativeCache::local_peripheral_callback(
+    int64_t peripheral_id) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_peripherals.find(peripheral_id);
+    return item == _local_peripherals.end() ? nullptr : item->second.callback;
+}
+
+void NativeCache::set_local_characteristic_callback(int64_t characteristic_id, jobject callback) {
+    auto wrapper = std::make_shared<Org::SimpleKtBLE::LocalCharacteristicCallback>(callback);
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_characteristics.find(characteristic_id);
+    if (item == _local_characteristics.end()) throw std::runtime_error("Unknown local characteristic");
+    item->second.callback = std::move(wrapper);
+}
+
+std::shared_ptr<Org::SimpleKtBLE::LocalCharacteristicCallback>
+NativeCache::local_characteristic_callback(int64_t characteristic_id) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    auto item = _local_characteristics.find(characteristic_id);
+    return item == _local_characteristics.end() ? nullptr : item->second.callback;
 }
 
 void NativeCache::set_adapter_callback(int64_t adapter_id, jobject callback) {

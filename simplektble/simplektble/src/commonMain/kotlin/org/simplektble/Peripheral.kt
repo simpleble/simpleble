@@ -1,23 +1,37 @@
 package org.simplektble
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.Volatile
 
 public class Peripheral internal constructor(
     private val adapterId: Long,
     private val instanceId: Long
 ) {
 
-    private val _onConnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val _onConnectionActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1)
-    private val _onDisconnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _onConnected = eventFlow<Unit>()
+    private val _onConnectionActive = eventFlow<Boolean>(replay = 1)
+    private val _onDisconnected = eventFlow<Unit>()
+
+    @Volatile
+    private var passkeyRequestHandler: (() -> String?)? = null
+
+    @Volatile
+    private var passkeyDisplayHandler: ((String) -> Unit)? = null
+
+    @Volatile
+    private var numericComparisonHandler: ((String) -> Boolean)? = null
 
     private val callbacks = object : PeripheralCallback {
         override fun onConnected() {
@@ -29,6 +43,14 @@ public class Peripheral internal constructor(
             _onDisconnected.tryEmit(Unit)
             _onConnectionActive.tryEmit(false)
         }
+
+        override fun onPasskeyRequest(): String? = passkeyRequestHandler?.invoke()
+
+        override fun onPasskeyDisplay(passkey: String) {
+            passkeyDisplayHandler?.invoke(passkey)
+        }
+
+        override fun onNumericComparison(passkey: String): Boolean = numericComparisonHandler?.invoke(passkey) ?: false
     }
 
     init { Native.peripheralRegister(adapterId, instanceId, callbacks) }
@@ -107,63 +129,57 @@ public class Peripheral internal constructor(
         }
     }
 
-    public fun notify(
+    public fun notify(service: BluetoothUUID, characteristic: BluetoothUUID): Flow<ByteArray> {
+        return subscription(service, characteristic, indicate = false)
+    }
+
+    public fun indicate(service: BluetoothUUID, characteristic: BluetoothUUID): Flow<ByteArray> {
+        return subscription(service, characteristic, indicate = true)
+    }
+
+    // Collecting subscribes, and the subscription ends when the collection ends or the peripheral disconnects.
+    private fun subscription(
         service: BluetoothUUID,
-        characteristic: BluetoothUUID
+        characteristic: BluetoothUUID,
+        indicate: Boolean
     ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                val result = trySend(data)
-                if (result.isFailure && !result.isClosed) {
-                    close(SimpleKtBleException("Notification buffer overflow for $service/$characteristic"))
-                }
+                trySend(data)
             }
+        }
+
+        // NOTE: Values and the disconnection arrive in order, so the flow delivers what came before it, then completes.
+        val disconnection = launch(start = CoroutineStart.UNDISPATCHED) {
+            _onDisconnected.first()
+            close()
         }
 
         var subscribed = false
         try {
             withContext(NonCancellable + Dispatchers.IO) {
-                Native.peripheralNotify(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
+                if (indicate) {
+                    Native.peripheralIndicate(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
+                } else {
+                    Native.peripheralNotify(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
+                }
                 subscribed = true
             }
             awaitClose {}
         } finally {
+            disconnection.cancel()
             if (subscribed) {
                 withContext(NonCancellable) {
-                    unsubscribe(service, characteristic)
+                    try {
+                        unsubscribe(service, characteristic)
+                    } catch (exception: SimpleKtBleException) {
+                        // After a disconnection there is no subscription left to end.
+                        if (isConnected) throw exception
+                    }
                 }
             }
         }
-    }
-
-    public fun indicate(
-        service: BluetoothUUID,
-        characteristic: BluetoothUUID
-    ): Flow<ByteArray> = callbackFlow {
-        val dataCallback = object : DataCallback {
-            override fun onDataReceived(data: ByteArray) {
-                val result = trySend(data)
-                if (result.isFailure && !result.isClosed) {
-                    close(SimpleKtBleException("Indication buffer overflow for $service/$characteristic"))
-                }
-            }
-        }
-
-        var subscribed = false
-        try {
-            withContext(NonCancellable + Dispatchers.IO) {
-                Native.peripheralIndicate(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
-                subscribed = true
-            }
-            awaitClose {}
-        } finally {
-            if (subscribed) {
-                withContext(NonCancellable) {
-                    unsubscribe(service, characteristic)
-                }
-            }
-        }
-    }
+    }.buffer(Channel.UNLIMITED)
 
     public suspend fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
         withContext(Dispatchers.IO) {
@@ -203,6 +219,31 @@ public class Peripheral internal constructor(
                 data
             )
         }
+    }
+
+    /**
+     * Answers a Dongl's request for the passkey the peer displays: six decimal digits, or null to reject pairing.
+     * Pairing can begin as soon as the peripheral connects, so set it before [connect]. Pass null to remove it.
+     * The handler runs on a SimpleBLE thread, which waits for it.
+     */
+    public fun setPasskeyRequestHandler(handler: (() -> String?)?) {
+        passkeyRequestHandler = handler
+        Native.peripheralSetPasskeyRequestHandler(adapterId, instanceId, handler != null)
+    }
+
+    /** Receives the six-digit passkey a Dongl asks the user to enter on the peer. Set it before [connect]. */
+    public fun setPasskeyDisplayHandler(handler: ((String) -> Unit)?) {
+        passkeyDisplayHandler = handler
+        Native.peripheralSetPasskeyDisplayHandler(adapterId, instanceId, handler != null)
+    }
+
+    /**
+     * Confirms whether the six-digit passkey a Dongl shows matches the peer's. Return true to accept pairing.
+     * Set it before [connect]. The handler runs on a SimpleBLE thread, which waits for it.
+     */
+    public fun setNumericComparisonHandler(handler: ((String) -> Boolean)?) {
+        numericComparisonHandler = handler
+        Native.peripheralSetNumericComparisonHandler(adapterId, instanceId, handler != null)
     }
 
     public val onConnected: SharedFlow<Unit> get() = _onConnected

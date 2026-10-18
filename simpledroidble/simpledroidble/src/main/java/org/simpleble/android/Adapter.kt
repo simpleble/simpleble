@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package org.simpleble.android
 
 import android.content.Context
@@ -8,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@Deprecated("SimpleDroidBLE is deprecated. Use SimpleKtBLE (org.simpleble:simplektble) instead.")
 class Adapter private constructor(private val instanceId: Long) {
     private val _onScanStart = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val _onScanStop = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)

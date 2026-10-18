@@ -20,7 +20,7 @@ Connecting moves from BLE advertisements into the GATT database. Once connected,
 
 ## Connect and list GATT objects
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -184,6 +184,26 @@ for (const service of peripheral.services()) {
 }
 
 await peripheral.disconnect();
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+val peripheral = adapter.scanGetResults()[selectedIndex]
+
+peripheral.connect()
+
+println("MTU: ${peripheral.mtu}")
+for (service in peripheral.services()) {
+    println("Service: ${service.uuid}")
+    for (characteristic in service.characteristics) {
+        println("  Characteristic: ${characteristic.uuid}")
+        println("    notify=${characteristic.canNotify} read=${characteristic.canRead}")
+    }
+}
+
+peripheral.disconnect()
 ```
 
 </Tab>
