@@ -19,6 +19,8 @@ npm install simplernble react-native-nitro-modules
 cd ios && pod install
 ```
 
+Your app targets the same platform versions: set `minSdkVersion = 31` in `android/build.gradle`, and `platform :ios, '15.8'` in `ios/Podfile`.
+
 The package carries SimpleBLE prebuilt for iOS, and its sources for Android, which your app's first Android build compiles with the NDK. Development builds of the main branch are published under the `dev` tag:
 
 ```bash
@@ -27,7 +29,7 @@ npm install simplernble@dev
 
 ### Expo
 
-SimpleRnBLE contains native code, so Expo Go cannot load it. Use a [development build](https://docs.expo.dev/develop/development-builds/introduction/), created with `npx expo prebuild` or EAS Build, and add the iOS permission text in `app.json`:
+SimpleRnBLE contains native code, so Expo Go cannot load it. Use a [development build](https://docs.expo.dev/develop/development-builds/introduction/), created with `npx expo prebuild` or EAS Build. Install the packages with `npx expo install simplernble react-native-nitro-modules expo-build-properties`, then set the platform versions and the iOS permission text in `app.json`:
 
 ```json
 {
@@ -36,7 +38,10 @@ SimpleRnBLE contains native code, so Expo Go cannot load it. Use a [development 
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to your devices."
       }
-    }
+    },
+    "plugins": [
+      ["expo-build-properties", { "android": { "minSdkVersion": 31 }, "ios": { "deploymentTarget": "15.8" } }]
+    ]
   }
 }
 ```

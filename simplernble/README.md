@@ -22,7 +22,9 @@ cd ios && pod install
 ```
 
 SimpleBLE comes prebuilt for iOS, and your app's Android build compiles it with
-the NDK. In Expo, use a development build.
+the NDK. Set your app's targets to match: `minSdkVersion = 31` in
+`android/build.gradle`, and `platform :ios, '15.8'` in `ios/Podfile`. In Expo,
+use a development build and set both with `expo-build-properties`.
 
 Declare Bluetooth usage with `NSBluetoothAlwaysUsageDescription` in your iOS
 `Info.plist`. On Android, request `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` at

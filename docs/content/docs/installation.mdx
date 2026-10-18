@@ -199,8 +199,9 @@ cd ios && pod install
 ```
 
 The package includes SimpleBLE prebuilt for iOS, and compiles it with the NDK
-in your app's Android build. Apps declare Bluetooth usage in `Info.plist` and
-request the Android permissions at runtime; see
+in your app's Android build. Apps target iOS 15.8 and Android API 31 or newer,
+declare Bluetooth usage in `Info.plist`, and request the Android permissions at
+runtime; see
 [SimpleRnBLE Usage](./simplernble/usage) for permissions and Expo.
 
 </Tab>
