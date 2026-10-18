@@ -18,7 +18,7 @@ simplektble/
 │       └── commonTest/           Tests every target runs, against PLAIN
 ├── simplektble-android-native/   Android library that builds and ships the JNI library
 ├── cpp/                          JNI layer over SimpleBLE (libsimplektble-jni)
-│   └── apple/                    Identity and snapshot functions SimpleCBLE lacks, built with it for Apple targets
+│   └── apple/                    Functions SimpleCBLE lacks, built with it for Apple targets
 └── gradle/libs.versions.toml     Dependency versions
 ```
 
@@ -62,9 +62,13 @@ or is missing serves the stored value, as in SimpleJavaBLE.
 - **C API (iOS and macOS).** `appleMain` calls SimpleCBLE through cinterop. SimpleCBLE returns a new handle every
   time and has no identity function, so `cpp/apple` adds `simplektble_adapter_identity` and
   `simplektble_peripheral_identity`: the first handle for an ID is kept and later ones are released. SimpleCBLE also
-  reads a list again for each index, which a scan can shift, so the scan results and paired peripherals come from
-  `simplektble/snapshot.h`. Callbacks receive the ID as userdata and are queued onto one coroutine, in order; read and
-  pairing handlers run on the calling thread.
+  reads a list again for each index, which a scan can shift, so the scan results and the paired and connected
+  peripherals come from `simplektble/snapshot.h`. SimpleCBLE's advanced functions are named differently on iOS and
+  macOS and exist only with the CoreBluetooth backend, so `cpp/apple` also provides the cached peripherals and the
+  advertised local name, and reports `OPERATION_NOT_SUPPORTED` without that backend, as the JNI layer does. Callbacks
+  receive the ID as userdata and are queued onto one coroutine, in order; read and pairing handlers run on the calling
+  thread. Their failures go to SimpleBLE's logger through `simplektble/logging.h`, since SimpleCBLE cannot log a
+  message.
 
 `ThreadRunner` and `NativeCache` are never destroyed. On the JVM, static destructors run at exit, when the callback
 thread can no longer detach, and joining it hangs the process.

@@ -5,7 +5,6 @@ import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.awaitClose
@@ -86,9 +85,10 @@ public class Peripheral internal constructor(
         }
     }
 
+    /** Disconnects. It finishes even when the calling coroutine is cancelled, so it can run in a finally block. */
     @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun disconnect() {
-        withContext(Dispatchers.IO) {
+        runToEnd {
             Native.peripheralDisconnect(adapterId, instanceId)
         }
     }
@@ -109,9 +109,12 @@ public class Peripheral internal constructor(
         }
     }
 
-    @Throws(SimpleKtBleException::class)
-    public fun unpair() {
-        Native.peripheralUnpair(adapterId, instanceId)
+    /** Removes the pairing. On Linux BlueZ removes the device, and a Dongl deletes its bond. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun unpair() {
+        withContext(Dispatchers.IO) {
+            Native.peripheralUnpair(adapterId, instanceId)
+        }
     }
 
     @Throws(SimpleKtBleException::class)
@@ -176,11 +179,12 @@ public class Peripheral internal constructor(
         val claimed = synchronized(subscriptionsLock) { subscriptions.getOrPut(key) { channel } === channel }
         if (!claimed) {
             val kind = if (indicate) "An indication" else "A notification"
-            throw SimpleKtBleException("$kind collector is already active for characteristic $characteristic")
+            val message = "$kind collector is already active for characteristic $characteristic"
+            throw SimpleKtBleException(ErrorCode.OPERATION_FAILED, message)
         }
 
         try {
-            withContext(NonCancellable + Dispatchers.IO) {
+            runToEnd {
                 if (indicate) {
                     Native.peripheralIndicate(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
                 } else {
@@ -198,7 +202,7 @@ public class Peripheral internal constructor(
             // Only a collection that ended on its own still owns the subscription. After a disconnection or
             // unsubscribe(), the next subscription may already be another collector's.
             if (release(key, channel)) {
-                withContext(NonCancellable + Dispatchers.IO) {
+                runToEnd {
                     try {
                         Native.peripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
                     } catch (exception: SimpleKtBleException) {
@@ -216,12 +220,15 @@ public class Peripheral internal constructor(
         }
     }
 
-    /** Ends the subscription to a characteristic, and completes the flow that collects it. */
+    /**
+     * Ends the subscription to a characteristic, and completes the flow that collects it. It finishes even when the
+     * calling coroutine is cancelled.
+     */
     @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
         val collector = synchronized(subscriptionsLock) { subscriptions.remove(service to characteristic) }
         try {
-            withContext(Dispatchers.IO) {
+            runToEnd {
                 Native.peripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
             }
         } finally {

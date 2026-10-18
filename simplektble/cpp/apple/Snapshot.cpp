@@ -1,10 +1,12 @@
 #include <simplektble/snapshot.h>
 
 #include <simplecble/error.h>
+#include <simpleble/Advanced.h>
 #include <simpleble/SimpleBLE.h>
 
 #include <cstdlib>
 #include <memory>
+#include <string>
 #include <vector>
 
 // NOTE: A SimpleCBLE handle points to the public SimpleBLE object it wraps.
@@ -62,4 +64,31 @@ simpleble_peripheral_t* simplektble_adapter_get_paired_peripherals(simpleble_ada
                                                                    simpleble_error_t** out_error) {
     return snapshot(handle, out_count, out_error,
                     [](SimpleBLE::Adapter& adapter) { return adapter.get_paired_peripherals(); });
+}
+
+simpleble_peripheral_t* simplektble_adapter_get_connected_peripherals(simpleble_adapter_t handle, size_t* out_count,
+                                                                      simpleble_error_t** out_error) {
+    return snapshot(handle, out_count, out_error,
+                    [](SimpleBLE::Adapter& adapter) { return adapter.get_connected_peripherals(); });
+}
+
+simpleble_peripheral_t* simplektble_adapter_retrieve_cached_peripherals(simpleble_adapter_t handle,
+                                                                        const char* const* identifiers,
+                                                                        size_t identifier_count, size_t* out_count,
+                                                                        simpleble_error_t** out_error) {
+    auto retrieve = [identifiers, identifier_count](SimpleBLE::Adapter& adapter) -> std::vector<SimpleBLE::Peripheral> {
+        std::vector<SimpleBLE::BluetoothAddress> addresses;
+        for (size_t index = 0; index < identifier_count; index++) {
+            if (identifiers[index] != nullptr) addresses.emplace_back(identifiers[index]);
+        }
+#if SIMPLEBLE_BACKEND_MACOS
+        return SimpleBLE::Advanced::MacOS::retrieve_cached_peripherals(adapter, addresses);
+#elif SIMPLEBLE_BACKEND_IOS
+        return SimpleBLE::Advanced::iOS::retrieve_cached_peripherals(adapter, addresses);
+#else
+        (void)adapter;
+        throw SimpleBLE::Exception::OperationNotSupported();
+#endif
+    };
+    return snapshot(handle, out_count, out_error, retrieve);
 }

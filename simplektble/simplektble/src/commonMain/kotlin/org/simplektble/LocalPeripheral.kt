@@ -51,6 +51,16 @@ public class LocalPeripheral internal constructor(private val instanceId: Long) 
         Native.localPeripheralSetConnectable(instanceId, connectable)
     }
 
+    /**
+     * Sets the local name in the advertisement on iOS, macOS and Linux, or removes it with null. This changes only the
+     * advertisement, not the system's Bluetooth name, and iOS leaves it out while the app is in the background. Other
+     * platforms throw [ErrorCode.OPERATION_NOT_SUPPORTED].
+     */
+    @Throws(SimpleKtBleException::class)
+    public fun setAdvertisementLocalName(name: String?) {
+        Native.localPeripheralSetAdvertisementLocalName(instanceId, name)
+    }
+
     public val services: List<LocalService>
         get() = synchronized(servicesLock) { configuredServices.toList() }
 
@@ -87,8 +97,9 @@ public class LocalPeripheral internal constructor(private val instanceId: Long) 
         withContext(Dispatchers.IO) { Native.localPeripheralStart(instanceId) }
     }
 
+    /** Stops advertising and hosting. It finishes even when the calling coroutine is cancelled. */
     @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun stop() {
-        withContext(Dispatchers.IO) { Native.localPeripheralStop(instanceId) }
+        runToEnd { Native.localPeripheralStop(instanceId) }
     }
 }

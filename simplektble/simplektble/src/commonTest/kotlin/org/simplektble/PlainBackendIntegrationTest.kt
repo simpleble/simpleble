@@ -8,10 +8,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -151,6 +154,30 @@ class PlainBackendIntegrationTest {
         }
         assertContentEquals(byteArrayOf(100), afterReconnection)
         activePeripheral.disconnect()
+    }
+
+    @Test
+    fun teardownFinishesInACancelledCoroutine() = runBlocking {
+        val activeAdapter = Adapter.getAdapters().single()
+        adapter = activeAdapter
+        activeAdapter.scanFor(250)
+        val target = activeAdapter.scanGetResults().single { it.identifier == "Plain Peripheral" }
+        peripheral = target
+        target.connect()
+        activeAdapter.scanStart()
+
+        val owner = launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                awaitCancellation()
+            } finally {
+                activeAdapter.scanStop()
+                target.disconnect()
+            }
+        }
+        owner.cancelAndJoin()
+
+        assertFalse(activeAdapter.scanIsActive())
+        assertFalse(target.isConnected)
     }
 
     @Test

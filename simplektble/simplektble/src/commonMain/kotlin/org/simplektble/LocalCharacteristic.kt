@@ -15,16 +15,11 @@ public class LocalCharacteristic internal constructor(private val instanceId: Lo
     @Volatile
     private var readHandler: (() -> ByteArray)? = null
 
-    @Volatile
-    private var writeHandler: ((ByteArray) -> Unit)? = null
-
     private val callbacks = object : LocalCharacteristicCallback {
         override fun onRead(): ByteArray? = readHandler?.invoke()?.copyOf()
 
         override fun onWrite(value: ByteArray) {
-            val snapshot = value.copyOf()
-            writeHandler?.invoke(snapshot.copyOf())
-            _onWrite.tryEmit(snapshot)
+            _onWrite.tryEmit(value)
         }
 
         override fun onSubscribed() {
@@ -79,13 +74,5 @@ public class LocalCharacteristic internal constructor(private val instanceId: Lo
             readHandler = handler
             Native.localCharacteristicSetReadHandler(instanceId, true)
         }
-    }
-
-    /**
-     * Receives every accepted write on the callback thread, before [onWrite] emits it.
-     * The handler should return promptly.
-     */
-    public fun setWriteHandler(handler: ((ByteArray) -> Unit)?) {
-        writeHandler = handler
     }
 }

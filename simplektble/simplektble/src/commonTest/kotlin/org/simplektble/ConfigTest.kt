@@ -1,13 +1,12 @@
 package org.simplektble
 
+import org.simplektble.Config.Android.ConnectionPriorityRequest
 import kotlin.reflect.KMutableProperty0
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 class ConfigTest {
     /** A setting, the group that resets it, and a change away from its default. */
@@ -16,16 +15,22 @@ class ConfigTest {
     private fun boolean(group: String, property: KMutableProperty0<Boolean>) =
         Setting("$group.${property.name}", group, { property.get() }) { property.set(!property.get()) }
 
-    private fun duration(group: String, property: KMutableProperty0<Duration>, changed: Duration) =
+    private fun milliseconds(group: String, property: KMutableProperty0<Long>, changed: Long) =
         Setting("$group.${property.name}", group, { property.get() }) { property.set(changed) }
+
+    private fun <T : Enum<T>> choice(group: String, property: KMutableProperty0<T>, entries: List<T>) =
+        Setting("$group.${property.name}", group, { property.get() }) {
+            property.set(entries[(property.get().ordinal + 1) % entries.size])
+        }
 
     // NOTE: Every setting is checked against all the others, so a key or group mixed up on the native side shows up.
     private val settings = listOf(
         boolean("SimpleBluez", Config.SimpleBluez::useSystemBus),
-        duration("SimpleBluez", Config.SimpleBluez::connectionTimeout, 1234.milliseconds),
-        duration("SimpleBluez", Config.SimpleBluez::disconnectionTimeout, 4321.milliseconds),
+        milliseconds("SimpleBluez", Config.SimpleBluez::connectionTimeoutMs, 1234),
+        milliseconds("SimpleBluez", Config.SimpleBluez::disconnectionTimeoutMs, 4321),
         boolean("WinRT", Config.WinRT::experimentalReinitializeWinrtApartmentOnMainThread),
         boolean("WinRT", Config.WinRT::useDeferredDisconnect),
+        choice("Android", Config.Android::connectionPriorityRequest, ConnectionPriorityRequest.entries),
         boolean("Dongl", Config.Dongl::useDonglBackend),
         boolean("Dongl", Config.Dongl::autoUpdate),
         boolean("Dongl", Config.Dongl::forceUpdate)
@@ -35,6 +40,7 @@ class ConfigTest {
         "SimpleBluez" to Config.SimpleBluez::reset,
         "WinRT" to Config.WinRT::reset,
         "CoreBluetooth" to Config.CoreBluetooth::reset,
+        "Android" to Config.Android::reset,
         "Dongl" to Config.Dongl::reset
     )
 
@@ -87,10 +93,18 @@ class ConfigTest {
     }
 
     @Test
+    fun everyConnectionPriorityReachesSimpleBle() {
+        for (priority in ConnectionPriorityRequest.entries) {
+            Config.Android.connectionPriorityRequest = priority
+            assertEquals(priority, Config.Android.connectionPriorityRequest)
+        }
+    }
+
+    @Test
     fun timeoutsMustFitSimpleBle() {
-        assertFailsWith<IllegalArgumentException> { Config.SimpleBluez.connectionTimeout = (-1).milliseconds }
-        assertFailsWith<IllegalArgumentException> { Config.SimpleBluez.disconnectionTimeout = Duration.INFINITE }
-        Config.SimpleBluez.connectionTimeout = Duration.ZERO
-        assertEquals(Duration.ZERO, Config.SimpleBluez.connectionTimeout)
+        assertFailsWith<IllegalArgumentException> { Config.SimpleBluez.connectionTimeoutMs = -1 }
+        assertFailsWith<IllegalArgumentException> { Config.SimpleBluez.disconnectionTimeoutMs = Long.MAX_VALUE }
+        Config.SimpleBluez.connectionTimeoutMs = 0
+        assertEquals(0L, Config.SimpleBluez.connectionTimeoutMs)
     }
 }

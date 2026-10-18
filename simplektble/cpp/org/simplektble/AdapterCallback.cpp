@@ -5,6 +5,8 @@
 namespace Org {
 namespace SimpleKtBLE {
 
+jmethodID AdapterCallback::_method_on_power_on = nullptr;
+jmethodID AdapterCallback::_method_on_power_off = nullptr;
 jmethodID AdapterCallback::_method_on_scan_start = nullptr;
 jmethodID AdapterCallback::_method_on_scan_stop = nullptr;
 jmethodID AdapterCallback::_method_on_scan_updated = nullptr;
@@ -13,7 +15,9 @@ jmethodID AdapterCallback::_method_on_scan_found = nullptr;
 const SimpleJNI::JNIDescriptor AdapterCallback::descriptor{
     "org/simplektble/AdapterCallback",
     nullptr,
-    {{"onScanStart", "()V", &_method_on_scan_start},
+    {{"onPowerOn", "()V", &_method_on_power_on},
+     {"onPowerOff", "()V", &_method_on_power_off},
+     {"onScanStart", "()V", &_method_on_scan_start},
      {"onScanStop", "()V", &_method_on_scan_stop},
      {"onScanUpdated", "(J)V", &_method_on_scan_updated},
      {"onScanFound", "(J)V", &_method_on_scan_found}}};
@@ -21,6 +25,18 @@ const SimpleJNI::JNIDescriptor AdapterCallback::descriptor{
 const SimpleJNI::AutoRegister<AdapterCallback> AdapterCallback::registrar{&descriptor};
 
 AdapterCallback::AdapterCallback(jobject callback) : _obj(callback) {}
+
+void AdapterCallback::on_power_on() const noexcept {
+    invoke_callback(__func__, [this] {
+        if (_obj.is_valid()) _obj.to_local().call_void_method(_method_on_power_on);
+    });
+}
+
+void AdapterCallback::on_power_off() const noexcept {
+    invoke_callback(__func__, [this] {
+        if (_obj.is_valid()) _obj.to_local().call_void_method(_method_on_power_off);
+    });
+}
 
 void AdapterCallback::on_scan_start() const noexcept {
     invoke_callback(__func__, [this] {

@@ -15,6 +15,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <optional>
 #include <stdexcept>
 #include <set>
@@ -42,6 +43,14 @@ namespace Kt = Org::SimpleKtBLE;
 using Kt::NativeCache;
 using Kt::ThreadRunner;
 
+SimpleBLE::ErrorCode error_code(const SimpleBLE::Exception::BaseException& exception) noexcept {
+    try {
+        return exception.make_error()->code;
+    } catch (...) {
+        return SimpleBLE::ErrorCode::OUT_OF_MEMORY;
+    }
+}
+
 template <typename Func>
 auto call(JNIEnv* env, Func&& func) noexcept {
     using ReturnType = decltype(func());
@@ -53,10 +62,14 @@ auto call(JNIEnv* env, Func&& func) noexcept {
         } else {
             return std::forward<Func>(func)();
         }
+    } catch (const SimpleBLE::Exception::BaseException& exception) {
+        Kt::SimpleKtBleException::throw_new(env, error_code(exception), exception.what());
+    } catch (const std::bad_alloc& exception) {
+        Kt::SimpleKtBleException::throw_new(env, SimpleBLE::ErrorCode::OUT_OF_MEMORY, exception.what());
     } catch (const std::exception& exception) {
-        Kt::SimpleKtBleException::throw_new(env, exception.what());
+        Kt::SimpleKtBleException::throw_new(env, SimpleBLE::ErrorCode::UNCLASSIFIED_EXCEPTION, exception.what());
     } catch (...) {
-        Kt::SimpleKtBleException::throw_new(env, "Unknown native error");
+        Kt::SimpleKtBleException::throw_new(env, SimpleBLE::ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown native error");
     }
 
     if constexpr (!std::is_void_v<ReturnType>) return ReturnType{};
@@ -65,7 +78,7 @@ auto call(JNIEnv* env, Func&& func) noexcept {
 // NOTE: Never destroyed. At JVM exit its thread cannot detach, so joining it from a static destructor hangs.
 ThreadRunner& callback_runner = *new ThreadRunner();
 
-void dispatch_scan_event(int64_t adapter_id, void (Kt::AdapterCallback::*event)() const noexcept) {
+void dispatch_adapter_event(int64_t adapter_id, void (Kt::AdapterCallback::*event)() const noexcept) {
     callback_runner.enqueue([adapter_id, event] {
         if (auto callback = NativeCache::get().adapter_callback(adapter_id)) {
             (callback.get()->*event)();
@@ -96,8 +109,9 @@ void subscribe(int64_t adapter_id, int64_t peripheral_id, const std::string& ser
     auto data_callback = NativeCache::get().add_data_callback(adapter_id, peripheral_id, service, characteristic,
                                                               callback);
     if (!data_callback) {
-        throw std::runtime_error(std::string(indicate ? "An indication" : "A notification") +
-                                 " collector is already active for characteristic " + characteristic);
+        throw SimpleBLE::Exception::OperationFailed(std::string(indicate ? "An indication" : "A notification") +
+                                                    " collector is already active for characteristic " +
+                                                    characteristic);
     }
 
     std::weak_ptr<Kt::DataCallback> weak_callback = data_callback;
@@ -118,6 +132,30 @@ void subscribe(int64_t adapter_id, int64_t peripheral_id, const std::string& ser
         NativeCache::get().remove_data_callback(adapter_id, peripheral_id, service, characteristic, data_callback);
         throw;
     }
+}
+
+// NOTE: These are SimpleBLE's advanced functions, which only the platforms' own backends have.
+std::vector<SimpleBLE::Peripheral> retrieve_cached_peripherals(
+    SimpleBLE::Adapter& adapter, const std::vector<SimpleBLE::BluetoothAddress>& identifiers) {
+#if SIMPLEBLE_BACKEND_MACOS
+    return SimpleBLE::Advanced::MacOS::retrieve_cached_peripherals(adapter, identifiers);
+#else
+    (void)adapter;
+    (void)identifiers;
+    throw SimpleBLE::Exception::OperationNotSupported();
+#endif
+}
+
+void set_advertisement_local_name(SimpleBLE::Local::Peripheral& peripheral, std::optional<std::string> name) {
+#if SIMPLEBLE_BACKEND_MACOS
+    SimpleBLE::Advanced::MacOS::set_advertisement_local_name(peripheral, std::move(name));
+#elif SIMPLEBLE_BACKEND_LINUX
+    SimpleBLE::Advanced::Linux::set_advertisement_local_name(peripheral, std::move(name));
+#else
+    (void)peripheral;
+    (void)name;
+    throw SimpleBLE::Exception::OperationNotSupported();
+#endif
 }
 
 #if defined(__ANDROID__)
@@ -212,10 +250,14 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterRegister(JN
     call(env, [adapter_id, callback] {
         NativeCache::get().set_adapter_callback(adapter_id, callback);
         auto adapter = NativeCache::get().adapter(adapter_id);
+        adapter.set_callback_on_power_on(
+            [adapter_id] { dispatch_adapter_event(adapter_id, &Kt::AdapterCallback::on_power_on); });
+        adapter.set_callback_on_power_off(
+            [adapter_id] { dispatch_adapter_event(adapter_id, &Kt::AdapterCallback::on_power_off); });
         adapter.set_callback_on_scan_start(
-            [adapter_id] { dispatch_scan_event(adapter_id, &Kt::AdapterCallback::on_scan_start); });
+            [adapter_id] { dispatch_adapter_event(adapter_id, &Kt::AdapterCallback::on_scan_start); });
         adapter.set_callback_on_scan_stop(
-            [adapter_id] { dispatch_scan_event(adapter_id, &Kt::AdapterCallback::on_scan_stop); });
+            [adapter_id] { dispatch_adapter_event(adapter_id, &Kt::AdapterCallback::on_scan_stop); });
         adapter.set_callback_on_scan_found(
             [adapter_id](SimpleBLE::Peripheral peripheral) { dispatch_scan_peripheral(adapter_id, peripheral, true); });
         adapter.set_callback_on_scan_updated([adapter_id](SimpleBLE::Peripheral peripheral) {
@@ -238,6 +280,20 @@ extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_adapterAddress(
         auto adapter = NativeCache::get().adapter(adapter_id);
         return SimpleJNI::String<SimpleJNI::ReleasableLocalRef>(adapter.address()).release();
     });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplektble_Native_adapterIsPowered(JNIEnv* env, jobject,
+                                                                                  jlong adapter_id) {
+    return call(
+        env, [adapter_id] { return static_cast<jboolean>(NativeCache::get().adapter(adapter_id).is_powered()); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterPowerOn(JNIEnv* env, jobject, jlong adapter_id) {
+    call(env, [adapter_id] { NativeCache::get().adapter(adapter_id).power_on(); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterPowerOff(JNIEnv* env, jobject, jlong adapter_id) {
+    call(env, [adapter_id] { NativeCache::get().adapter(adapter_id).power_off(); });
 }
 
 extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterScanStart(JNIEnv* env, jobject,
@@ -280,6 +336,39 @@ Java_org_simplektble_Native_adapterGetPairedPeripherals(JNIEnv* env, jobject, jl
         std::vector<int64_t> peripheral_ids;
         auto adapter = NativeCache::get().adapter(adapter_id);
         for (auto peripheral : adapter.get_paired_peripherals()) {
+            peripheral_ids.push_back(NativeCache::get().add_peripheral(adapter_id, std::move(peripheral)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(peripheral_ids).release();
+    });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_org_simplektble_Native_adapterGetConnectedPeripherals(JNIEnv* env, jobject, jlong adapter_id) {
+    return call(env, [adapter_id] {
+        std::vector<int64_t> peripheral_ids;
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        for (auto peripheral : adapter.get_connected_peripherals()) {
+            peripheral_ids.push_back(NativeCache::get().add_peripheral(adapter_id, std::move(peripheral)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(peripheral_ids).release();
+    });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_adapterRetrieveCachedPeripherals(
+    JNIEnv* env, jobject, jlong adapter_id, jobjectArray j_identifiers) {
+    return call(env, [env, adapter_id, j_identifiers] {
+        std::vector<SimpleBLE::BluetoothAddress> identifiers;
+        const jsize count = env->GetArrayLength(j_identifiers);
+        for (jsize index = 0; index < count; ++index) {
+            auto value = static_cast<jstring>(env->GetObjectArrayElement(j_identifiers, index));
+            SimpleJNI::Exception::check(env);
+            identifiers.push_back(SimpleJNI::String<SimpleJNI::LocalRef>(value).str());
+            env->DeleteLocalRef(value);
+        }
+
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        std::vector<int64_t> peripheral_ids;
+        for (auto peripheral : retrieve_cached_peripherals(adapter, identifiers)) {
             peripheral_ids.push_back(NativeCache::get().add_peripheral(adapter_id, std::move(peripheral)));
         }
         return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(peripheral_ids).release();
@@ -423,7 +512,8 @@ extern "C" JNIEXPORT jobject JNICALL Java_org_simplektble_Native_peripheralServi
                 characteristics.add(characteristic_object);
             }
 
-            Kt::Service service_object(service.uuid(), characteristics);
+            Kt::Service service_object(service.uuid(), SimpleJNI::ByteArray<SimpleJNI::LocalRef>(service.data()),
+                                       characteristics);
             services.add(service_object);
         }
 
@@ -614,6 +704,17 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralSet
     JNIEnv* env, jobject, jlong peripheral_id, jboolean connectable) {
     call(env, [peripheral_id, connectable] {
         NativeCache::get().local_peripheral(peripheral_id).set_connectable(connectable);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralSetAdvertisementLocalName(
+    JNIEnv* env, jobject, jlong peripheral_id, jstring j_name) {
+    call(env, [peripheral_id, j_name] {
+        std::optional<std::string> name;
+        if (j_name != nullptr) name = SimpleJNI::String<SimpleJNI::LocalRef>(j_name).str();
+
+        auto peripheral = NativeCache::get().local_peripheral(peripheral_id);
+        set_advertisement_local_name(peripheral, std::move(name));
     });
 }
 
@@ -891,6 +992,11 @@ bool& config_boolean(jint key) {
     throw std::invalid_argument("Unknown boolean setting");
 }
 
+SimpleBLE::Config::Android::ConnectionPriorityRequest& config_connection_priority(jint key) {
+    if (key == 8) return SimpleBLE::Config::Android::connection_priority_request;
+    throw std::invalid_argument("Unknown integer setting");
+}
+
 std::chrono::steady_clock::duration& config_duration(jint key) {
     switch (key) {
         case 1:
@@ -916,6 +1022,8 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_configReset(JNIEnv
                 return SimpleBLE::Config::CoreBluetooth::reset();
             case 4:
                 return SimpleBLE::Config::Dongl::reset();
+            case 5:
+                return SimpleBLE::Config::Android::reset();
         }
         throw std::invalid_argument("Unknown settings group");
     });
@@ -928,6 +1036,17 @@ extern "C" JNIEXPORT jboolean JNICALL Java_org_simplektble_Native_configGetBoole
 extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_configSetBoolean(JNIEnv* env, jobject, jint key,
                                                                               jboolean value) {
     call(env, [key, value] { config_boolean(key) = value; });
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_org_simplektble_Native_configGetInt(JNIEnv* env, jobject, jint key) {
+    return call(env, [key] { return static_cast<jint>(config_connection_priority(key)); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_configSetInt(JNIEnv* env, jobject, jint key,
+                                                                          jint value) {
+    call(env, [key, value] {
+        config_connection_priority(key) = static_cast<SimpleBLE::Config::Android::ConnectionPriorityRequest>(value);
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_configGetMilliseconds(JNIEnv* env, jobject, jint key) {

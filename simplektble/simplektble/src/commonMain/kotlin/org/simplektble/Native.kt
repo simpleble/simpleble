@@ -1,6 +1,8 @@
 package org.simplektble
 
 internal interface AdapterCallback {
+    fun onPowerOn()
+    fun onPowerOff()
     fun onScanStart()
     fun onScanStop()
     fun onScanUpdated(peripheralId: Long)
@@ -56,6 +58,12 @@ internal expect object Native {
 
     fun adapterAddress(adapterId: Long): String
 
+    fun adapterIsPowered(adapterId: Long): Boolean
+
+    fun adapterPowerOn(adapterId: Long)
+
+    fun adapterPowerOff(adapterId: Long)
+
     fun adapterScanStart(adapterId: Long)
 
     fun adapterScanStop(adapterId: Long)
@@ -67,6 +75,10 @@ internal expect object Native {
     fun adapterScanGetResults(adapterId: Long): LongArray
 
     fun adapterGetPairedPeripherals(adapterId: Long): LongArray
+
+    fun adapterGetConnectedPeripherals(adapterId: Long): LongArray
+
+    fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray
 
     fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback)
 
@@ -161,6 +173,8 @@ internal expect object Native {
 
     fun localPeripheralSetConnectable(peripheralId: Long, connectable: Boolean)
 
+    fun localPeripheralSetAdvertisementLocalName(peripheralId: Long, name: String?)
+
     fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
 
     fun localPeripheralRemoveAllServices(peripheralId: Long)
@@ -212,6 +226,10 @@ internal expect object Native {
     fun configGetBoolean(key: Int): Boolean
 
     fun configSetBoolean(key: Int, value: Boolean)
+
+    fun configGetInt(key: Int): Int
+
+    fun configSetInt(key: Int, value: Int)
 
     fun configGetMilliseconds(key: Int): Long
 

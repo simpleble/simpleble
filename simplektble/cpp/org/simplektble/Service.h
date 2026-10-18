@@ -9,7 +9,7 @@ namespace SimpleKtBLE {
 
 class Service {
   public:
-    Service(const SimpleJNI::String<SimpleJNI::LocalRef>& uuid,
+    Service(const SimpleJNI::String<SimpleJNI::LocalRef>& uuid, const SimpleJNI::ByteArray<SimpleJNI::LocalRef>& data,
             const SimpleJNI::Java::Util::ArrayList& characteristics);
 
     operator SimpleJNI::Object<SimpleJNI::ReleasableLocalRef, jobject>() const;

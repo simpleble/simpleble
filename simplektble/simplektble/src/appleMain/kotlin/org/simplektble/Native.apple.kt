@@ -16,8 +16,10 @@ import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.cValue
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.cstr
 import kotlinx.cinterop.free
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
@@ -83,7 +85,7 @@ internal actual object Native {
                 try {
                     event()
                 } catch (exception: Throwable) {
-                    println("SimpleKtBLE: callback failed: $exception")
+                    logError("dispatch", "Callback failed: $exception")
                 }
             }
         }
@@ -106,6 +108,8 @@ internal actual object Native {
         val handle = adapter(adapterId)
         synchronized(lock) { adapterCallbacks[adapterId] = callback }
         val userdata = adapterId.toCPointer<CPointed>()
+        simpleble_adapter_set_callback_on_power_on(handle, onPowerOn, userdata)
+        simpleble_adapter_set_callback_on_power_off(handle, onPowerOff, userdata)
         simpleble_adapter_set_callback_on_scan_start(handle, onScanStart, userdata)
         simpleble_adapter_set_callback_on_scan_stop(handle, onScanStop, userdata)
         simpleble_adapter_set_callback_on_scan_updated(handle, onScanUpdated, userdata)
@@ -120,6 +124,21 @@ internal actual object Native {
     actual fun adapterAddress(adapterId: Long): String {
         val handle = adapter(adapterId)
         return call { simpleble_adapter_address(handle, it) }.consume()
+    }
+
+    actual fun adapterIsPowered(adapterId: Long): Boolean {
+        val handle = adapter(adapterId)
+        return call { simpleble_adapter_is_powered(handle, it) }
+    }
+
+    actual fun adapterPowerOn(adapterId: Long) {
+        val handle = adapter(adapterId)
+        call { simpleble_adapter_power_on(handle, it) }
+    }
+
+    actual fun adapterPowerOff(adapterId: Long) {
+        val handle = adapter(adapterId)
+        call { simpleble_adapter_power_off(handle, it) }
     }
 
     actual fun adapterScanStart(adapterId: Long) {
@@ -150,6 +169,22 @@ internal actual object Native {
     actual fun adapterGetPairedPeripherals(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
         return internPeripherals { count, error -> simplektble_adapter_get_paired_peripherals(handle, count, error) }
+    }
+
+    actual fun adapterGetConnectedPeripherals(adapterId: Long): LongArray {
+        val handle = adapter(adapterId)
+        return internPeripherals { count, error -> simplektble_adapter_get_connected_peripherals(handle, count, error) }
+    }
+
+    actual fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray {
+        val handle = adapter(adapterId)
+        return memScoped {
+            val values = allocArrayOf(identifiers.map { it.cstr.ptr })
+            val size = identifiers.size.toULong()
+            internPeripherals { count, error ->
+                simplektble_adapter_retrieve_cached_peripherals(handle, values, size, count, error)
+            }
+        }
     }
 
     actual fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback) {
@@ -243,7 +278,11 @@ internal actual object Native {
                             characteristic.can_indicate
                         )
                     }
-                    Service(service.uuid.value.toKString(), characteristics)
+                    Service(
+                        service.uuid.value.toKString(),
+                        service.data.toByteArray(service.data_length.toInt()),
+                        characteristics
+                    )
                 } finally {
                     simpleble_service_release(service.ptr)
                 }
@@ -385,7 +424,7 @@ internal actual object Native {
     actual fun adapterCreateLocalPeripheral(adapterId: Long): Long {
         val handle = adapter(adapterId)
         val local = call { simpleble_adapter_create_local_peripheral(handle, it) }
-            ?: throw SimpleKtBleException("SimpleBLE returned no local peripheral")
+            ?: throw unclassified("SimpleBLE returned no local peripheral")
         return addLocal(localPeripherals, local)
     }
 
@@ -420,10 +459,15 @@ internal actual object Native {
         call { simpleble_local_peripheral_set_connectable(handle, connectable, it) }
     }
 
+    actual fun localPeripheralSetAdvertisementLocalName(peripheralId: Long, name: String?) {
+        val handle = localPeripheral(peripheralId)
+        call { simplektble_local_peripheral_set_advertisement_local_name(handle, name, it) }
+    }
+
     actual fun localPeripheralAddService(peripheralId: Long, uuid: String): Long {
         val handle = localPeripheral(peripheralId)
         val service = call { simpleble_local_peripheral_add_service(handle, uuid(uuid), it) }
-            ?: throw SimpleKtBleException("SimpleBLE returned no local service")
+            ?: throw unclassified("SimpleBLE returned no local service")
         return addLocal(localServices, service)
     }
 
@@ -465,7 +509,7 @@ internal actual object Native {
         val handle = local(localServices, serviceId, "local service")
         val characteristic = call {
             simpleble_local_service_add_characteristic(handle, uuid(uuid), capabilities.toUInt(), it)
-        } ?: throw SimpleKtBleException("SimpleBLE returned no local characteristic")
+        } ?: throw unclassified("SimpleBLE returned no local characteristic")
         return addLocal(localCharacteristics, characteristic)
     }
 
@@ -578,7 +622,8 @@ internal actual object Native {
             ConfigGroup.WINRT -> simpleble_config_winrt_reset()
             ConfigGroup.COREBLUETOOTH -> simpleble_config_corebluetooth_reset()
             ConfigGroup.DONGL -> simpleble_config_dongl_reset()
-            else -> throw SimpleKtBleException("Unknown settings group")
+            ConfigGroup.ANDROID -> simpleble_config_android_reset()
+            else -> throw unclassified("Unknown settings group")
         }
     }
 
@@ -590,7 +635,7 @@ internal actual object Native {
         ConfigKey.DONGL_USE_DONGL_BACKEND -> simpleble_config_dongl_get_use_dongl_backend()
         ConfigKey.DONGL_AUTO_UPDATE -> simpleble_config_dongl_get_auto_update()
         ConfigKey.DONGL_FORCE_UPDATE -> simpleble_config_dongl_get_force_update()
-        else -> throw SimpleKtBleException("Unknown boolean setting")
+        else -> throw unclassified("Unknown boolean setting")
     }
 
     actual fun configSetBoolean(key: Int, value: Boolean) {
@@ -602,14 +647,26 @@ internal actual object Native {
             ConfigKey.DONGL_USE_DONGL_BACKEND -> simpleble_config_dongl_set_use_dongl_backend(value)
             ConfigKey.DONGL_AUTO_UPDATE -> simpleble_config_dongl_set_auto_update(value)
             ConfigKey.DONGL_FORCE_UPDATE -> simpleble_config_dongl_set_force_update(value)
-            else -> throw SimpleKtBleException("Unknown boolean setting")
+            else -> throw unclassified("Unknown boolean setting")
+        }
+    }
+
+    actual fun configGetInt(key: Int): Int = when (key) {
+        ConfigKey.ANDROID_CONNECTION_PRIORITY -> simpleble_config_android_get_connection_priority()
+        else -> throw unclassified("Unknown integer setting")
+    }
+
+    actual fun configSetInt(key: Int, value: Int) {
+        when (key) {
+            ConfigKey.ANDROID_CONNECTION_PRIORITY -> simpleble_config_android_set_connection_priority(value)
+            else -> throw unclassified("Unknown integer setting")
         }
     }
 
     actual fun configGetMilliseconds(key: Int): Long = when (key) {
         ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT -> simpleble_config_simplebluez_get_connection_timeout_ms()
         ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT -> simpleble_config_simplebluez_get_disconnection_timeout_ms()
-        else -> throw SimpleKtBleException("Unknown duration setting")
+        else -> throw unclassified("Unknown duration setting")
     }
 
     actual fun configSetMilliseconds(key: Int, value: Long) {
@@ -617,7 +674,7 @@ internal actual object Native {
             ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT -> simpleble_config_simplebluez_set_connection_timeout_ms(value)
             ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT ->
                 simpleble_config_simplebluez_set_disconnection_timeout_ms(value)
-            else -> throw SimpleKtBleException("Unknown duration setting")
+            else -> throw unclassified("Unknown duration setting")
         }
     }
 
@@ -635,7 +692,8 @@ internal actual object Native {
         val subscriptionId = synchronized(lock) {
             if (subscription in subscriptions) {
                 val kind = if (indicate) "An indication" else "A notification"
-                throw SimpleKtBleException("$kind collector is already active for characteristic $characteristic")
+                val message = "$kind collector is already active for characteristic $characteristic"
+                throw SimpleKtBleException(ErrorCode.OPERATION_FAILED, message)
             }
             val id = nextSubscriptionId++
             subscriptions[subscription] = id
@@ -662,11 +720,11 @@ internal actual object Native {
     }
 
     private fun backend(identifier: String): simpleble_backend_t {
-        return synchronized(lock) { backends[identifier] } ?: throw SimpleKtBleException("Unknown backend")
+        return synchronized(lock) { backends[identifier] } ?: throw unclassified("Unknown backend")
     }
 
     private fun internBackend(handle: simpleble_backend_t?): String {
-        if (handle == null) throw SimpleKtBleException("SimpleBLE returned no backend")
+        if (handle == null) throw unclassified("SimpleBLE returned no backend")
         val identifier = call { simpleble_backend_identifier(handle, it) }.consume()
         val known = synchronized(lock) { backends.getOrPut(identifier) { handle } != handle }
         if (known) simpleble_backend_release_handle(handle)
@@ -679,15 +737,15 @@ internal actual object Native {
     }
 
     private fun adapter(adapterId: Long): simpleble_adapter_t {
-        return synchronized(lock) { adapters[adapterId] } ?: throw SimpleKtBleException("Unknown adapter")
+        return synchronized(lock) { adapters[adapterId] } ?: throw unclassified("Unknown adapter")
     }
 
     private fun peripheral(peripheralId: Long): simpleble_peripheral_t {
-        return synchronized(lock) { peripherals[peripheralId] } ?: throw SimpleKtBleException("Unknown peripheral")
+        return synchronized(lock) { peripherals[peripheralId] } ?: throw unclassified("Unknown peripheral")
     }
 
     private fun internAdapter(handle: simpleble_adapter_t?): Long {
-        if (handle == null) throw SimpleKtBleException("SimpleBLE returned no adapter")
+        if (handle == null) throw unclassified("SimpleBLE returned no adapter")
         val id = simplektble_adapter_identity(handle).toLong()
         val known = synchronized(lock) { adapters.getOrPut(id) { handle } != handle }
         if (known) simpleble_adapter_release_handle(handle)
@@ -695,7 +753,7 @@ internal actual object Native {
     }
 
     internal fun internPeripheral(handle: simpleble_peripheral_t?): Long {
-        if (handle == null) throw SimpleKtBleException("SimpleBLE returned no peripheral")
+        if (handle == null) throw unclassified("SimpleBLE returned no peripheral")
         val id = simplektble_peripheral_identity(handle).toLong()
         val known = synchronized(lock) { peripherals.getOrPut(id) { handle } != handle }
         if (known) simpleble_peripheral_release_handle(handle)
@@ -743,7 +801,7 @@ internal actual object Native {
     }
 
     private fun <T : Any> local(objects: Map<Long, T>, id: Long, kind: String): T {
-        return synchronized(lock) { objects[id] } ?: throw SimpleKtBleException("Unknown $kind")
+        return synchronized(lock) { objects[id] } ?: throw unclassified("Unknown $kind")
     }
 
     private fun localPeripheral(peripheralId: Long) = local(localPeripherals, peripheralId, "local peripheral")
@@ -771,7 +829,7 @@ internal actual object Native {
         val value = try {
             callback?.onRead()
         } catch (exception: Exception) {
-            println("SimpleKtBLE: read handler failed: $exception")
+            logError("onLocalRead", "Read handler failed: $exception")
             null
         } ?: localCharacteristicValue(characteristicId)
         val buffer = nativeHeap.allocArray<UByteVar>(maxOf(value.size, 1))
@@ -785,6 +843,14 @@ internal actual object Native {
         val callback = synchronized(lock) { dataCallbacks[subscriptionId] } ?: return
         dispatch { callback.onDataReceived(data) }
     }
+}
+
+private val onPowerOn = staticCFunction { _: simpleble_adapter_t?, userdata: COpaquePointer? ->
+    guarded { Native.onAdapterEvent(userdata.toLong()) { it.onPowerOn() } }
+}
+
+private val onPowerOff = staticCFunction { _: simpleble_adapter_t?, userdata: COpaquePointer? ->
+    guarded { Native.onAdapterEvent(userdata.toLong()) { it.onPowerOff() } }
 }
 
 private val onScanStart = staticCFunction { _: simpleble_adapter_t?, userdata: COpaquePointer? ->
@@ -845,7 +911,7 @@ private val onLocalRead = staticCFunction { _: simpleble_local_characteristic_t?
     try {
         Native.onLocalRead(userdata.toLong(), length)
     } catch (exception: Throwable) {
-        println("SimpleKtBLE: read handler failed: $exception")
+        logError("onLocalRead", "Read handler failed: $exception")
         null
     }
 }
@@ -877,7 +943,7 @@ private val onPasskeyRequest = staticCFunction { _: simpleble_peripheral_t?, pas
             true
         }
     } catch (exception: Throwable) {
-        println("SimpleKtBLE: passkey request handler failed: $exception")
+        logError("onPasskeyRequest", "Passkey request handler failed: $exception")
         false
     }
 }
@@ -890,9 +956,14 @@ private val onNumericComparison = staticCFunction { _: simpleble_peripheral_t?, 
     try {
         Native.peripheralCallback(userdata.toLong())?.onNumericComparison(passkey?.toKString() ?: "") ?: false
     } catch (exception: Throwable) {
-        println("SimpleKtBLE: numeric comparison handler failed: $exception")
+        logError("onNumericComparison", "Numeric comparison handler failed: $exception")
         false
     }
+}
+
+/** Logs through SimpleBLE's logger, where the JNI layer logs its callback failures. */
+private fun logError(function: String, message: String) {
+    simplektble_log_error(function, message)
 }
 
 /** Exceptions must not cross back into C. */
@@ -900,7 +971,7 @@ private inline fun guarded(block: () -> Unit) {
     try {
         block()
     } catch (exception: Throwable) {
-        println("SimpleKtBLE: native callback failed: $exception")
+        logError("guarded", "Native callback failed: $exception")
     }
 }
 
@@ -910,16 +981,22 @@ private inline fun <T> call(block: (CPointer<CPointerVar<simpleble_error_t>>) ->
     error.value = null
     val result = block(error.ptr)
     error.value?.let { raised ->
+        val code = ErrorCode.fromValue(simpleble_error_code(raised).toInt())
         val message = simpleble_error_message(raised)?.toKString() ?: "Unknown native error"
         simpleble_error_release(error.ptr)
-        throw SimpleKtBleException(message)
+        throw SimpleKtBleException(code, message)
     }
     result
 }
 
+/** A failure in this bridge, which the JNI side raises as a plain C++ exception. */
+private fun unclassified(message: String) = SimpleKtBleException(ErrorCode.UNCLASSIFIED_EXCEPTION, message)
+
 private fun uuid(value: String): CValue<simpleble_uuid_t> {
     val bytes = value.encodeToByteArray()
-    if (bytes.size >= SIMPLEBLE_UUID_STR_LEN) throw SimpleKtBleException("Invalid UUID: $value")
+    if (bytes.size >= SIMPLEBLE_UUID_STR_LEN) {
+        throw SimpleKtBleException(ErrorCode.INVALID_ARGUMENT, "Invalid UUID: $value")
+    }
     return cValue {
         bytes.forEachIndexed { index, byte -> this.value[index] = byte }
         this.value[bytes.size] = 0

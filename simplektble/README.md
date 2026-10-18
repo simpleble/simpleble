@@ -84,22 +84,30 @@ Bluetooth.
 
 ## Scanning and events
 
-Events are flows. An adapter has `onScanStart`, `onScanStop`, `onScanActive`,
-`onScanFound`, and `onScanUpdated`; a peripheral has `onConnected`,
-`onDisconnected`, and `onConnectionActive`. Every event reaches each active
-collector, in the order it happened.
+Events are flows. An adapter has `onPowerOn`, `onPowerOff`, `onScanStart`,
+`onScanStop`, `onScanActive`, `onScanFound`, and `onScanUpdated`; a peripheral
+has `onConnected`, `onDisconnected`, and `onConnectionActive`. Every event
+reaches each active collector, in the order it happened.
 
 Use `scanStart()` and `scanStop()` when your application controls scan timing,
 and `scanGetResults()` for the peripherals seen by the last scan. An adapter
 always gives you the same `Peripheral` object for the same device, whether it
-came from a flow or from a list.
+came from a flow or from a list. On iOS and macOS,
+`retrieveCachedPeripherals()` returns peripherals the system already knows,
+without scanning.
 
 Calls that wait on a device or the Bluetooth stack, such as `connect()`,
-`read()`, `scanFor()`, or `isPaired()`, are `suspend` functions that run on
-`Dispatchers.IO`. `scanStart()`, `scanStop()`, `getAdapters()`,
-`getPairedPeripherals()`, and `unpair()` call the Bluetooth stack directly. Data
-the library already holds, such as a peripheral's `identifier`, `rssi`, or
-`manufacturerData()`, is a property and returned directly.
+`read()`, `scanFor()`, `getPairedPeripherals()`, `unpair()`, or `powerOn()`,
+are `suspend` functions that run on `Dispatchers.IO`. `scanStart()`,
+`scanStop()`, `getAdapters()`, and `retrieveCachedPeripherals()` call the
+Bluetooth stack directly. Data the library already holds, such as a
+peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned
+directly.
+
+A cancelled call, for example with `withTimeout`, returns once the Bluetooth
+stack finishes: `scanFor()` when its scan ends, and `connect()` when the
+attempt is done. `disconnect()`, `unsubscribe()`, and `stop()` finish even in
+a cancelled coroutine, so they work in `finally` blocks.
 
 ## Connect and use GATT
 
@@ -121,12 +129,13 @@ peripheral.notify(batteryService, batteryLevel).collect { value ->
 ```
 
 `services()` lists the services, characteristics, capabilities, and
-descriptors of a connected peripheral. `read`, `writeRequest`, and
-`writeCommand` access characteristic values, and `read` and `write` with a
-descriptor UUID access descriptors. `notify` and `indicate` return a flow that
-subscribes when collected and unsubscribes when the collection ends. When the
-peripheral disconnects, the flow completes; collect it again after
-reconnecting. Failures are thrown as `SimpleKtBleException`.
+descriptors of a connected peripheral, and before connecting, the advertised
+services with their `data`. `read`, `writeRequest`, and `writeCommand` access
+characteristic values, and `read` and `write` with a descriptor UUID access
+descriptors. `notify` and `indicate` return a flow that subscribes when
+collected and unsubscribes when the collection ends. When the peripheral
+disconnects, the flow completes; collect it again after reconnecting. Failures
+are thrown as `SimpleKtBleException`, whose `code` is SimpleBLE's `ErrorCode`.
 
 ## Host a GATT service
 
@@ -150,8 +159,9 @@ host.start()
 `setValue()` updates the stored value and notifies subscribers. A local
 characteristic has `onWrite`, `onSubscribed`, and `onUnsubscribed` flows, and
 `setReadHandler` computes a value for each read. The local peripheral has
-`onClientConnected` and `onClientDisconnected`. Configure services before
-`start()`; call `stop()` before changing them.
+`onClientConnected` and `onClientDisconnected`. On iOS, macOS, and Linux,
+`setAdvertisementLocalName()` sets the advertised name. Configure services
+before `start()`; call `stop()` before changing them.
 
 ## Use a Dongl
 
@@ -164,9 +174,9 @@ val dongl = Backend.getDongl()
 val adapter = dongl.getAdapters().first()
 ```
 
-`Config` holds the Dongl, BlueZ, and WinRT backend settings; set them before
-the first call that reaches a backend. Pairing through a Dongl happens without
-the operating system: set `setPasskeyRequestHandler`,
+`Config` holds the Android, Dongl, BlueZ, and WinRT backend settings; set them
+before the first call that reaches a backend. Pairing through a Dongl happens
+without the operating system: set `setPasskeyRequestHandler`,
 `setPasskeyDisplayHandler`, or `setNumericComparisonHandler` on the peripheral
 before `connect()`.
 

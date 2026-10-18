@@ -2,6 +2,7 @@ package org.simplektble
 
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
@@ -29,8 +30,11 @@ class DonglPairingTest {
         activeAdapter.scanStop()
 
         // Only Dongl peripherals pair through these handlers, so PLAIN's peripheral rejects each of them.
-        assertFailsWith<SimpleKtBleException> { peripheral.setPasskeyRequestHandler { "123456" } }
-        assertFailsWith<SimpleKtBleException> { peripheral.setPasskeyDisplayHandler { } }
-        assertFailsWith<SimpleKtBleException> { peripheral.setNumericComparisonHandler { true } }
+        val rejections = listOf(
+            assertFailsWith<SimpleKtBleException> { peripheral.setPasskeyRequestHandler { "123456" } },
+            assertFailsWith<SimpleKtBleException> { peripheral.setPasskeyDisplayHandler { } },
+            assertFailsWith<SimpleKtBleException> { peripheral.setNumericComparisonHandler { true } }
+        )
+        rejections.forEach { assertEquals(ErrorCode.OPERATION_NOT_SUPPORTED, it.code) }
     }
 }

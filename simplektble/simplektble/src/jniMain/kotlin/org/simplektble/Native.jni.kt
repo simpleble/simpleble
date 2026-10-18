@@ -23,6 +23,12 @@ internal actual object Native {
 
     actual external fun adapterAddress(adapterId: Long): String
 
+    actual external fun adapterIsPowered(adapterId: Long): Boolean
+
+    actual external fun adapterPowerOn(adapterId: Long)
+
+    actual external fun adapterPowerOff(adapterId: Long)
+
     actual external fun adapterScanStart(adapterId: Long)
 
     actual external fun adapterScanStop(adapterId: Long)
@@ -34,6 +40,10 @@ internal actual object Native {
     actual external fun adapterScanGetResults(adapterId: Long): LongArray
 
     actual external fun adapterGetPairedPeripherals(adapterId: Long): LongArray
+
+    actual external fun adapterGetConnectedPeripherals(adapterId: Long): LongArray
+
+    actual external fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray
 
     actual external fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback)
 
@@ -132,6 +142,8 @@ internal actual object Native {
 
     actual external fun localPeripheralSetConnectable(peripheralId: Long, connectable: Boolean)
 
+    actual external fun localPeripheralSetAdvertisementLocalName(peripheralId: Long, name: String?)
+
     actual external fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
 
     actual external fun localPeripheralRemoveAllServices(peripheralId: Long)
@@ -183,6 +195,10 @@ internal actual object Native {
     actual external fun configGetBoolean(key: Int): Boolean
 
     actual external fun configSetBoolean(key: Int, value: Boolean)
+
+    actual external fun configGetInt(key: Int): Int
+
+    actual external fun configSetInt(key: Int, value: Int)
 
     actual external fun configGetMilliseconds(key: Int): Long
 

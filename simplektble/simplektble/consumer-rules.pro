@@ -1,9 +1,9 @@
 # The JNI library looks these types and callback methods up by name.
 -keep class org.simplektble.SimpleKtBleException {
-    <init>(java.lang.String);
+    <init>(int, java.lang.String);
 }
 -keep class org.simplektble.Service {
-    <init>(java.lang.String, java.util.List);
+    <init>(java.lang.String, byte[], java.util.List);
 }
 -keep class org.simplektble.Characteristic {
     <init>(java.lang.String, java.util.List, boolean, boolean, boolean, boolean, boolean);

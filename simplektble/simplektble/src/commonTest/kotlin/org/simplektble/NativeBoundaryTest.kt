@@ -53,6 +53,15 @@ class NativeBoundaryTest {
         assertEquals(5, peripheral.txPower)
         assertTrue(peripheral.isConnectable)
 
+        // Before connecting, services() lists the advertised services with their data.
+        val advertised = peripheral.services()
+        assertContentEquals(
+            byteArrayOf(0x00, 0x7f, 0x80.toByte(), 0xff.toByte()),
+            advertised.single { it.uuid == BluetoothUUID(TEST_SERVICE) }.data
+        )
+        assertContentEquals(byteArrayOf(), advertised.single { it.uuid == BluetoothUUID(BATTERY_SERVICE) }.data)
+        assertTrue(adapter.getConnectedPeripherals().isEmpty())
+
         val connected = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(2_000) { peripheral.onConnected.first() }
         }
@@ -62,6 +71,7 @@ class NativeBoundaryTest {
         assertTrue(peripheral.isPaired())
         assertEquals(244, peripheral.mtu)
         assertSame(peripheral, adapter.getPairedPeripherals().single { it.address == peripheral.address })
+        assertSame(peripheral, adapter.getConnectedPeripherals().single())
 
         val services = peripheral.services()
         assertEquals(2, services.size)
@@ -91,10 +101,12 @@ class NativeBoundaryTest {
         peripheral.disconnect()
         disconnected.await()
         assertFalse(peripheral.isConnected)
+        assertTrue(adapter.getConnectedPeripherals().isEmpty())
     }
 
     private companion object {
         const val BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
+        const val TEST_SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb"
         const val BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
         const val CLIENT_CONFIGURATION_DESCRIPTOR = "00002902-0000-1000-8000-00805f9b34fb"
     }

@@ -1,9 +1,6 @@
 package org.simplektble
 
 import kotlin.jvm.JvmStatic
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.nanoseconds
 
 /** Backend settings. Set them before the first call that reaches a backend. */
 public object Config {
@@ -14,21 +11,22 @@ public object Config {
     }
 
     public object SimpleBluez {
+        @JvmStatic
         public var useSystemBus: Boolean
             get() = Native.configGetBoolean(ConfigKey.SIMPLEBLUEZ_USE_SYSTEM_BUS)
             set(value) = Native.configSetBoolean(ConfigKey.SIMPLEBLUEZ_USE_SYSTEM_BUS, value)
 
-        public var connectionTimeout: Duration
-            get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT).milliseconds
-            set(value) {
-                Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT, value.toTimeoutMilliseconds())
-            }
+        /** How long connecting waits for BlueZ, in milliseconds. */
+        @JvmStatic
+        public var connectionTimeoutMs: Long
+            get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT)
+            set(value) = Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT, checkTimeout(value))
 
-        public var disconnectionTimeout: Duration
-            get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT).milliseconds
-            set(value) {
-                Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT, value.toTimeoutMilliseconds())
-            }
+        /** How long disconnecting waits for BlueZ, in milliseconds. */
+        @JvmStatic
+        public var disconnectionTimeoutMs: Long
+            get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT)
+            set(value) = Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT, checkTimeout(value))
 
         @JvmStatic
         @Throws(SimpleKtBleException::class)
@@ -38,10 +36,12 @@ public object Config {
     }
 
     public object WinRT {
+        @JvmStatic
         public var experimentalReinitializeWinrtApartmentOnMainThread: Boolean
             get() = Native.configGetBoolean(ConfigKey.WINRT_REINITIALIZE_APARTMENT_ON_MAIN_THREAD)
             set(value) = Native.configSetBoolean(ConfigKey.WINRT_REINITIALIZE_APARTMENT_ON_MAIN_THREAD, value)
 
+        @JvmStatic
         public var useDeferredDisconnect: Boolean
             get() = Native.configGetBoolean(ConfigKey.WINRT_USE_DEFERRED_DISCONNECT)
             set(value) = Native.configSetBoolean(ConfigKey.WINRT_USE_DEFERRED_DISCONNECT, value)
@@ -61,15 +61,45 @@ public object Config {
         }
     }
 
+    public object Android {
+        /** What each connection asks Android for once connected. [ConnectionPriorityRequest.DISABLED] asks nothing. */
+        @JvmStatic
+        public var connectionPriorityRequest: ConnectionPriorityRequest
+            get() = ConnectionPriorityRequest.fromValue(Native.configGetInt(ConfigKey.ANDROID_CONNECTION_PRIORITY))
+            set(value) = Native.configSetInt(ConfigKey.ANDROID_CONNECTION_PRIORITY, value.value)
+
+        @JvmStatic
+        @Throws(SimpleKtBleException::class)
+        public fun reset() {
+            Native.configReset(ConfigGroup.ANDROID)
+        }
+
+        /** The connection priorities of Android's `BluetoothGatt.requestConnectionPriority()`. */
+        public enum class ConnectionPriorityRequest(internal val value: Int) {
+            DISABLED(-1),
+            BALANCED(0),
+            HIGH(1),
+            LOW_POWER(2),
+            DCK(3);
+
+            internal companion object {
+                fun fromValue(value: Int): ConnectionPriorityRequest = entries.first { it.value == value }
+            }
+        }
+    }
+
     public object Dongl {
+        @JvmStatic
         public var useDonglBackend: Boolean
             get() = Native.configGetBoolean(ConfigKey.DONGL_USE_DONGL_BACKEND)
             set(value) = Native.configSetBoolean(ConfigKey.DONGL_USE_DONGL_BACKEND, value)
 
+        @JvmStatic
         public var autoUpdate: Boolean
             get() = Native.configGetBoolean(ConfigKey.DONGL_AUTO_UPDATE)
             set(value) = Native.configSetBoolean(ConfigKey.DONGL_AUTO_UPDATE, value)
 
+        @JvmStatic
         public var forceUpdate: Boolean
             get() = Native.configGetBoolean(ConfigKey.DONGL_FORCE_UPDATE)
             set(value) = Native.configSetBoolean(ConfigKey.DONGL_FORCE_UPDATE, value)
@@ -92,6 +122,7 @@ internal object ConfigKey {
     const val DONGL_USE_DONGL_BACKEND = 5
     const val DONGL_AUTO_UPDATE = 6
     const val DONGL_FORCE_UPDATE = 7
+    const val ANDROID_CONNECTION_PRIORITY = 8
 }
 
 /** The groups Native resets. The native side uses the same numbers. */
@@ -101,12 +132,13 @@ internal object ConfigGroup {
     const val WINRT = 2
     const val COREBLUETOOTH = 3
     const val DONGL = 4
+    const val ANDROID = 5
 }
 
 // SimpleBLE keeps timeouts in nanoseconds, so longer ones do not fit.
-private val maxTimeout = Long.MAX_VALUE.nanoseconds
+private const val MAX_TIMEOUT_MS = Long.MAX_VALUE / 1_000_000
 
-private fun Duration.toTimeoutMilliseconds(): Long {
-    require(this in Duration.ZERO..maxTimeout) { "Timeouts must be between zero and $maxTimeout" }
-    return inWholeMilliseconds
+private fun checkTimeout(milliseconds: Long): Long {
+    require(milliseconds in 0..MAX_TIMEOUT_MS) { "Timeouts must be between 0 and $MAX_TIMEOUT_MS milliseconds" }
+    return milliseconds
 }

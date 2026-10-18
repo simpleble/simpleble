@@ -10,6 +10,8 @@ import kotlinx.coroutines.withContext
 import kotlin.jvm.JvmStatic
 
 public class Adapter private constructor(private val instanceId: Long) {
+    private val _onPowerOn = eventFlow<Unit>()
+    private val _onPowerOff = eventFlow<Unit>()
     private val _onScanStart = eventFlow<Unit>()
     private val _onScanStop = eventFlow<Unit>()
     private val _onScanActive = eventFlow<Boolean>(replay = 1)
@@ -26,6 +28,14 @@ public class Adapter private constructor(private val instanceId: Long) {
     }
 
     private val callbacks = object : AdapterCallback {
+        override fun onPowerOn() {
+            _onPowerOn.tryEmit(Unit)
+        }
+
+        override fun onPowerOff() {
+            _onPowerOff.tryEmit(Unit)
+        }
+
         override fun onScanStart() {
             _onScanStart.tryEmit(Unit)
             _onScanActive.tryEmit(true)
@@ -50,6 +60,34 @@ public class Adapter private constructor(private val instanceId: Long) {
     public val identifier: String get() = Native.adapterIdentifier(instanceId)
 
     public val address: BluetoothAddress get() = BluetoothAddress(Native.adapterAddress(instanceId))
+
+    /** Asks the Bluetooth stack whether this adapter is powered on. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun isPowered(): Boolean {
+        return withContext(Dispatchers.IO) {
+            Native.adapterIsPowered(instanceId)
+        }
+    }
+
+    /** Asks the Bluetooth stack to power this adapter on, where the platform lets applications do it. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun powerOn() {
+        withContext(Dispatchers.IO) {
+            Native.adapterPowerOn(instanceId)
+        }
+    }
+
+    /** Asks the Bluetooth stack to power this adapter off, where the platform lets applications do it. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun powerOff() {
+        withContext(Dispatchers.IO) {
+            Native.adapterPowerOff(instanceId)
+        }
+    }
+
+    public val onPowerOn: SharedFlow<Unit> get() = _onPowerOn
+
+    public val onPowerOff: SharedFlow<Unit> get() = _onPowerOff
 
     @Throws(SimpleKtBleException::class)
     public fun scanStart() {
@@ -91,9 +129,29 @@ public class Adapter private constructor(private val instanceId: Long) {
 
     public val onScanFound: SharedFlow<Peripheral> get() = _onScanFound
 
+    /** The peripherals paired with this adapter. Windows looks them up among the system's devices. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun getPairedPeripherals(): List<Peripheral> {
+        val peripheralIds = withContext(Dispatchers.IO) { Native.adapterGetPairedPeripherals(instanceId) }
+        return peripheralIds.map(::peripheral)
+    }
+
+    /** The peripherals connected to this adapter. Windows looks them up among the system's devices. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun getConnectedPeripherals(): List<Peripheral> {
+        val peripheralIds = withContext(Dispatchers.IO) { Native.adapterGetConnectedPeripherals(instanceId) }
+        return peripheralIds.map(::peripheral)
+    }
+
+    /**
+     * The peripherals CoreBluetooth already knows on iOS and macOS, by the identifiers [Peripheral.address] returned
+     * earlier, without scanning. Unknown identifiers are skipped, and a returned peripheral might be out of range. The
+     * adapter must be powered on. Other platforms throw [ErrorCode.OPERATION_NOT_SUPPORTED].
+     */
     @Throws(SimpleKtBleException::class)
-    public fun getPairedPeripherals(): List<Peripheral> {
-        return Native.adapterGetPairedPeripherals(instanceId).map(::peripheral)
+    public fun retrieveCachedPeripherals(identifiers: List<BluetoothAddress>): List<Peripheral> {
+        val values = identifiers.map(BluetoothAddress::value).toTypedArray()
+        return Native.adapterRetrieveCachedPeripherals(instanceId, values).map(::peripheral)
     }
 
     /**
