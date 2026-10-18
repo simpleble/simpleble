@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   ios:
+    timeout-minutes: 60
     runs-on: macos-15
     defaults:
       run:
@@ -64,6 +65,7 @@ jobs:
           if-no-files-found: error
 
   android:
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
     defaults:
       run:

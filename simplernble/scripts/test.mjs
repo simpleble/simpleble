@@ -54,11 +54,27 @@ const server = createServer((request, response) => {
 });
 server.listen(REPORT_PORT);
 
-// A Metro of its own, which serves the tests in place of the example.
+// A Metro of its own, which serves the tests in place of the example. It runs
+// in a process group of its own, so stopping the group stops npx's children too.
 const metro = spawn('npx', ['react-native', 'start', '--port', '8081', '--reset-cache'], {
   cwd: EXAMPLE,
   env: { ...process.env, SIMPLERNBLE_TESTS: '1' },
   stdio: ['ignore', 'pipe', 'inherit'],
+  detached: true,
+});
+const metroExited = once(metro, 'exit');
+
+// NOTE: A Metro left behind keeps this script's output open, which hangs CI steps.
+function stopMetro() {
+  try {
+    process.kill(-metro.pid, 'SIGTERM');
+  } catch {
+    // The group has already exited.
+  }
+}
+process.on('SIGINT', () => {
+  stopMetro();
+  process.exit(130);
 });
 let metroOutput = '';
 metro.stdout.on('data', chunk => (metroOutput += chunk));
@@ -118,7 +134,7 @@ try {
   console.error(error.message);
 } finally {
   server.close();
-  metro.kill();
-  await once(metro, 'exit').catch(() => {});
+  stopMetro();
+  await metroExited.catch(() => {});
 }
 process.exit(exitCode);
