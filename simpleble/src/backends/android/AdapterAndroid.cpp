@@ -21,14 +21,8 @@ AdapterAndroid::AdapterAndroid() {
     _btScanCallback.set_callback_onScanResult([this](Android::ScanResult scan_result) {
         std::string address = scan_result.getDevice().getAddress();
 
-        if (this->peripherals_.count(address) == 0) {
-            // If the incoming peripheral has never been seen before, create and save a reference to it.
-            auto base_peripheral = std::make_shared<PeripheralAndroid>(scan_result.getDevice());
-            this->peripherals_.insert(std::make_pair(address, base_peripheral));
-        }
-
         // Update the received advertising data.
-        auto base_peripheral = this->peripherals_.at(address);
+        auto base_peripheral = this->cached_peripheral(scan_result.getDevice());
         base_peripheral->update_advertising_data(scan_result);
 
         // Convert the base object into an external-facing Peripheral object
@@ -101,10 +95,22 @@ SharedPtrVector<PeripheralBase> AdapterAndroid::get_paired_peripherals() {
 
     auto paired_list = _btAdapter.getBondedDevices();
     for (auto& device : paired_list) {
-        peripherals.push_back(std::make_shared<PeripheralAndroid>(device));
+        // Reuse the wrapper a scan made, so that callbacks set on it keep working.
+        peripherals.push_back(cached_peripheral(device));
     }
 
     return peripherals;
+}
+
+std::shared_ptr<PeripheralAndroid> AdapterAndroid::cached_peripheral(const Android::BluetoothDevice& device) {
+    std::string address = device.getAddress();
+
+    std::scoped_lock lock(peripherals_mutex_);
+    if (peripherals_.count(address) == 0) {
+        // If the peripheral has never been seen before, create and save a reference to it.
+        peripherals_.insert(std::make_pair(address, std::make_shared<PeripheralAndroid>(device)));
+    }
+    return peripherals_.at(address);
 }
 
 std::shared_ptr<Local::PeripheralBase> AdapterAndroid::create_local_peripheral() {

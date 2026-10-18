@@ -10,6 +10,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,10 @@ class AdapterAndroid : public AdapterBase {
     Android::BluetoothScanner _btScanner = _btAdapter.getBluetoothLeScanner();
     Android::Bridge::ScanCallback _btScanCallback;
 
+    // Returns the wrapper for a device, creating it the first time, so that scans and the paired list share it.
+    std::shared_ptr<PeripheralAndroid> cached_peripheral(const Android::BluetoothDevice& device);
+
+    std::mutex peripherals_mutex_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralAndroid>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralAndroid>> seen_peripherals_;
 
