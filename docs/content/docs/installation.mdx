@@ -21,7 +21,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleJSBLE](./simplejsble/usage) | JavaScript / TypeScript | Production-ready | Node.js and Electron apps | npm |
 | [SimpleRnBLE](./simplernble/usage) | JavaScript / TypeScript | Production-ready | React Native apps on iOS and Android | npm |
 | [SimpleKtBLE](./simplektble/usage) | Kotlin Multiplatform | Production-ready | Shared Kotlin code for Android, iOS, and desktop | Maven Central |
-| [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Beta | Android-only applications | Maven Central or local composite build |
+| [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Deprecated | Existing Android-only applications; new ones use SimpleKtBLE | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
 | [SimpleBluez](./simplebluez/usage) | C++ | Lower-level utility | Direct BlueZ integration on Linux | CMake from source |
@@ -42,7 +42,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android", "Unity", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -225,7 +225,7 @@ Linux, so nothing is compiled during your build. See [SimpleKtBLE Usage](./simpl
 and supported targets.
 
 </Tab>
-<Tab value="Android">
+<Tab value="Android (deprecated)">
 
 Add SimpleDroidBLE to your app module:
 

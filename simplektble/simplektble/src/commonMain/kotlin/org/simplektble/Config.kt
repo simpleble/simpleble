@@ -3,10 +3,12 @@ package org.simplektble
 import kotlin.jvm.JvmStatic
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.nanoseconds
 
 /** Backend settings. Set them before the first call that reaches a backend. */
 public object Config {
     @JvmStatic
+    @Throws(SimpleKtBleException::class)
     public fun resetAll() {
         Native.configReset(ConfigGroup.ALL)
     }
@@ -18,13 +20,18 @@ public object Config {
 
         public var connectionTimeout: Duration
             get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT).milliseconds
-            set(value) = Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT, value.inWholeMilliseconds)
+            set(value) {
+                Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_CONNECTION_TIMEOUT, value.toTimeoutMilliseconds())
+            }
 
         public var disconnectionTimeout: Duration
             get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT).milliseconds
-            set(value) = Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT, value.inWholeMilliseconds)
+            set(value) {
+                Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT, value.toTimeoutMilliseconds())
+            }
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun reset() {
             Native.configReset(ConfigGroup.SIMPLEBLUEZ)
         }
@@ -40,6 +47,7 @@ public object Config {
             set(value) = Native.configSetBoolean(ConfigKey.WINRT_USE_DEFERRED_DISCONNECT, value)
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun reset() {
             Native.configReset(ConfigGroup.WINRT)
         }
@@ -47,6 +55,7 @@ public object Config {
 
     public object CoreBluetooth {
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun reset() {
             Native.configReset(ConfigGroup.COREBLUETOOTH)
         }
@@ -66,6 +75,7 @@ public object Config {
             set(value) = Native.configSetBoolean(ConfigKey.DONGL_FORCE_UPDATE, value)
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun reset() {
             Native.configReset(ConfigGroup.DONGL)
         }
@@ -91,4 +101,12 @@ internal object ConfigGroup {
     const val WINRT = 2
     const val COREBLUETOOTH = 3
     const val DONGL = 4
+}
+
+// SimpleBLE keeps timeouts in nanoseconds, so longer ones do not fit.
+private val maxTimeout = Long.MAX_VALUE.nanoseconds
+
+private fun Duration.toTimeoutMilliseconds(): Long {
+    require(this in Duration.ZERO..maxTimeout) { "Timeouts must be between zero and $maxTimeout" }
+    return inWholeMilliseconds
 }

@@ -1,4 +1,4 @@
-headers = simplecble/simplecble.h simplektble/identity.h
+headers = simplecble/simplecble.h simplektble/identity.h simplektble/snapshot.h
 headerFilter = simplecble/* simplecble/local/* simplektble/*
 staticLibraries = libsimplektble-apple.a libsimplecble.a libsimpleble.a
 linkerOpts.ios = -lc++ -lobjc -framework Foundation -framework CoreBluetooth

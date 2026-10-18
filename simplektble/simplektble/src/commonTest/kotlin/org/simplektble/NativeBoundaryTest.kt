@@ -37,7 +37,7 @@ class NativeBoundaryTest {
         scanStarted.await()
         val peripheral = scanFound.await()
         assertSame(peripheral, scanUpdated.await())
-        assertTrue(adapter.scanIsActive)
+        assertTrue(adapter.scanIsActive())
         assertSame(peripheral, adapter.scanGetResults().single())
 
         val scanStopped = async(start = CoroutineStart.UNDISPATCHED) {
@@ -45,7 +45,7 @@ class NativeBoundaryTest {
         }
         adapter.scanStop()
         scanStopped.await()
-        assertFalse(adapter.scanIsActive)
+        assertFalse(adapter.scanIsActive())
 
         assertEquals("Plain Peripheral", peripheral.identifier)
         assertEquals(BluetoothAddress("11:22:33:44:55:66"), peripheral.address)
@@ -59,7 +59,7 @@ class NativeBoundaryTest {
         peripheral.connect()
         connected.await()
         assertTrue(peripheral.isConnected)
-        assertTrue(peripheral.isPaired)
+        assertTrue(peripheral.isPaired())
         assertEquals(244, peripheral.mtu)
         assertSame(peripheral, adapter.getPairedPeripherals().single { it.address == peripheral.address })
 

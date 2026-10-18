@@ -1,17 +1,18 @@
 package org.simplektble
 
-import kotlinx.coroutines.CoroutineStart
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.concurrent.Volatile
 
@@ -23,6 +24,9 @@ public class Peripheral internal constructor(
     private val _onConnected = eventFlow<Unit>()
     private val _onConnectionActive = eventFlow<Boolean>(replay = 1)
     private val _onDisconnected = eventFlow<Unit>()
+
+    private val subscriptionsLock = SynchronizedObject()
+    private val subscriptions = mutableMapOf<Pair<BluetoothUUID, BluetoothUUID>, SendChannel<ByteArray>>()
 
     @Volatile
     private var passkeyRequestHandler: (() -> String?)? = null
@@ -75,12 +79,14 @@ public class Peripheral internal constructor(
         return Native.peripheralMtu(adapterId, instanceId)
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun connect() {
         withContext(Dispatchers.IO) {
             Native.peripheralConnect(adapterId, instanceId)
         }
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun disconnect() {
         withContext(Dispatchers.IO) {
             Native.peripheralDisconnect(adapterId, instanceId)
@@ -95,34 +101,44 @@ public class Peripheral internal constructor(
         return Native.peripheralIsConnectable(adapterId, instanceId)
     }
 
-    public val isPaired: Boolean get() {
-        return Native.peripheralIsPaired(adapterId, instanceId)
+    /** Asks the Bluetooth stack whether the peripheral is paired. macOS and iOS do not report pairing, so there it throws. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun isPaired(): Boolean {
+        return withContext(Dispatchers.IO) {
+            Native.peripheralIsPaired(adapterId, instanceId)
+        }
     }
 
+    @Throws(SimpleKtBleException::class)
     public fun unpair() {
         Native.peripheralUnpair(adapterId, instanceId)
     }
 
+    @Throws(SimpleKtBleException::class)
     public fun services(): List<Service> {
         return Native.peripheralServices(adapterId, instanceId)
     }
 
+    @Throws(SimpleKtBleException::class)
     public fun manufacturerData(): Map<Int, ByteArray> {
         return Native.peripheralManufacturerData(adapterId, instanceId)
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun read(service: BluetoothUUID, characteristic: BluetoothUUID): ByteArray {
         return withContext(Dispatchers.IO) {
             Native.peripheralRead(adapterId, instanceId, service.toString(), characteristic.toString())
         }
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun writeRequest(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
         withContext(Dispatchers.IO) {
             Native.peripheralWriteRequest(adapterId, instanceId, service.toString(), characteristic.toString(), data)
         }
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun writeCommand(service: BluetoothUUID, characteristic: BluetoothUUID, data: ByteArray) {
         withContext(Dispatchers.IO) {
             Native.peripheralWriteCommand(adapterId, instanceId, service.toString(), characteristic.toString(), data)
@@ -137,25 +153,32 @@ public class Peripheral internal constructor(
         return subscription(service, characteristic, indicate = true)
     }
 
-    // Collecting subscribes, and the subscription ends when the collection ends or the peripheral disconnects.
+    // Collecting subscribes, and the subscription ends when the collection ends, the peripheral disconnects, or
+    // unsubscribe() is called. Each characteristic has one subscription at a time, owned by the collector that made it.
     private fun subscription(
         service: BluetoothUUID,
         characteristic: BluetoothUUID,
         indicate: Boolean
     ): Flow<ByteArray> = callbackFlow {
+        val key = service to characteristic
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
                 trySend(data)
             }
+
+            // NOTE: Values and the disconnection arrive in order, so the flow delivers what came first, then ends.
+            override fun onEnded() {
+                release(key, channel)
+                close()
+            }
         }
 
-        // NOTE: Values and the disconnection arrive in order, so the flow delivers what came before it, then completes.
-        val disconnection = launch(start = CoroutineStart.UNDISPATCHED) {
-            _onDisconnected.first()
-            close()
+        val claimed = synchronized(subscriptionsLock) { subscriptions.getOrPut(key) { channel } === channel }
+        if (!claimed) {
+            val kind = if (indicate) "An indication" else "A notification"
+            throw SimpleKtBleException("$kind collector is already active for characteristic $characteristic")
         }
 
-        var subscribed = false
         try {
             withContext(NonCancellable + Dispatchers.IO) {
                 if (indicate) {
@@ -163,17 +186,22 @@ public class Peripheral internal constructor(
                 } else {
                     Native.peripheralNotify(adapterId, instanceId, service.toString(), characteristic.toString(), dataCallback)
                 }
-                subscribed = true
             }
+        } catch (exception: Throwable) {
+            release(key, channel)
+            throw exception
+        }
+
+        try {
             awaitClose {}
         } finally {
-            disconnection.cancel()
-            if (subscribed) {
-                withContext(NonCancellable) {
+            // Only a collection that ended on its own still owns the subscription. After a disconnection or
+            // unsubscribe(), the next subscription may already be another collector's.
+            if (release(key, channel)) {
+                withContext(NonCancellable + Dispatchers.IO) {
                     try {
-                        unsubscribe(service, characteristic)
+                        Native.peripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
                     } catch (exception: SimpleKtBleException) {
-                        // After a disconnection there is no subscription left to end.
                         if (isConnected) throw exception
                     }
                 }
@@ -181,12 +209,27 @@ public class Peripheral internal constructor(
         }
     }.buffer(Channel.UNLIMITED)
 
-    public suspend fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
-        withContext(Dispatchers.IO) {
-            Native.peripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
+    /** Gives up ownership of a subscription, and returns whether [collector] still had it. */
+    private fun release(key: Pair<BluetoothUUID, BluetoothUUID>, collector: SendChannel<ByteArray>): Boolean {
+        return synchronized(subscriptionsLock) {
+            (subscriptions[key] === collector).also { owned -> if (owned) subscriptions.remove(key) }
         }
     }
 
+    /** Ends the subscription to a characteristic, and completes the flow that collects it. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
+        val collector = synchronized(subscriptionsLock) { subscriptions.remove(service to characteristic) }
+        try {
+            withContext(Dispatchers.IO) {
+                Native.peripheralUnsubscribe(adapterId, instanceId, service.toString(), characteristic.toString())
+            }
+        } finally {
+            collector?.close()
+        }
+    }
+
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun read(
         service: BluetoothUUID,
         characteristic: BluetoothUUID,
@@ -203,6 +246,7 @@ public class Peripheral internal constructor(
         }
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun write(
         service: BluetoothUUID,
         characteristic: BluetoothUUID,
@@ -226,12 +270,14 @@ public class Peripheral internal constructor(
      * Pairing can begin as soon as the peripheral connects, so set it before [connect]. Pass null to remove it.
      * The handler runs on a SimpleBLE thread, which waits for it.
      */
+    @Throws(SimpleKtBleException::class)
     public fun setPasskeyRequestHandler(handler: (() -> String?)?) {
         passkeyRequestHandler = handler
         Native.peripheralSetPasskeyRequestHandler(adapterId, instanceId, handler != null)
     }
 
     /** Receives the six-digit passkey a Dongl asks the user to enter on the peer. Set it before [connect]. */
+    @Throws(SimpleKtBleException::class)
     public fun setPasskeyDisplayHandler(handler: ((String) -> Unit)?) {
         passkeyDisplayHandler = handler
         Native.peripheralSetPasskeyDisplayHandler(adapterId, instanceId, handler != null)
@@ -241,6 +287,7 @@ public class Peripheral internal constructor(
      * Confirms whether the six-digit passkey a Dongl shows matches the peer's. Return true to accept pairing.
      * Set it before [connect]. The handler runs on a SimpleBLE thread, which waits for it.
      */
+    @Throws(SimpleKtBleException::class)
     public fun setNumericComparisonHandler(handler: ((String) -> Boolean)?) {
         numericComparisonHandler = handler
         Native.peripheralSetNumericComparisonHandler(adapterId, instanceId, handler != null)

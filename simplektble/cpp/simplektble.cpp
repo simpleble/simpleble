@@ -301,7 +301,10 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralRegister
             });
         });
         peripheral.set_callback_on_disconnected([adapter_id, peripheral_id] {
-            callback_runner.enqueue([adapter_id, peripheral_id] {
+            // NOTE: The disconnection ends the subscriptions it had, and only those, after the values queued before it.
+            auto ended = NativeCache::get().take_data_callbacks(adapter_id, peripheral_id);
+            callback_runner.enqueue([adapter_id, peripheral_id, ended = std::move(ended)] {
+                for (const auto& data_callback : ended) data_callback->on_ended();
                 if (auto callback = NativeCache::get().peripheral_callback(adapter_id, peripheral_id)) {
                     callback->on_disconnected();
                 }
@@ -753,9 +756,11 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localCharacteristi
         auto characteristic = NativeCache::get().local_characteristic(characteristic_id);
         if (enabled) {
             characteristic.set_callback_on_read([characteristic_id] {
-                auto callback = NativeCache::get().local_characteristic_callback(characteristic_id);
-                if (!callback) throw std::runtime_error("The local characteristic callback is unavailable.");
-                return callback->on_read();
+                // If the handler fails or returns null, serve the stored value instead.
+                if (auto callback = NativeCache::get().local_characteristic_callback(characteristic_id)) {
+                    if (auto value = callback->on_read()) return *value;
+                }
+                return NativeCache::get().local_characteristic(characteristic_id).value();
             });
         } else {
             characteristic.set_callback_on_read({});

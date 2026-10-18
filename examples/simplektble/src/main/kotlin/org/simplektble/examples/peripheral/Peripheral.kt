@@ -1,5 +1,6 @@
 package org.simplektble.examples.peripheral
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -26,19 +27,27 @@ fun main(): Unit = runBlocking {
         LocalCharacteristicCapability.Notify,
         LocalCharacteristicCapability.Indicate
     )
-    characteristic.value = "ready".encodeToByteArray()
+    characteristic.setValue("ready".encodeToByteArray())
 
-    launch {
+    launch(start = CoroutineStart.UNDISPATCHED) {
         characteristic.onWrite.collect { value ->
             println("Write: ${value.toHex()}")
             // Echo the written value to subscribed clients.
-            characteristic.value = value
+            characteristic.setValue(value)
         }
     }
-    launch { characteristic.onSubscribed.collect { println("Client subscribed.") } }
-    launch { characteristic.onUnsubscribed.collect { println("Client unsubscribed.") } }
-    launch { host.onClientConnected.collect { println("Client connected: $it") } }
-    launch { host.onClientDisconnected.collect { println("Client disconnected: $it") } }
+    launch(start = CoroutineStart.UNDISPATCHED) {
+        characteristic.onSubscribed.collect { println("Client subscribed.") }
+    }
+    launch(start = CoroutineStart.UNDISPATCHED) {
+        characteristic.onUnsubscribed.collect { println("Client unsubscribed.") }
+    }
+    launch(start = CoroutineStart.UNDISPATCHED) {
+        host.onClientConnected.collect { println("Client connected: $it") }
+    }
+    launch(start = CoroutineStart.UNDISPATCHED) {
+        host.onClientDisconnected.collect { println("Client disconnected: $it") }
+    }
 
     host.start()
     println("Advertising. Press Ctrl+C to stop.")

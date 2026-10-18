@@ -10,11 +10,13 @@ import kotlin.jvm.JvmStatic
  * SimpleBLE has one backend per identifier, and each is represented by one Backend object.
  */
 public class Backend private constructor(public val identifier: String) {
+    @Throws(SimpleKtBleException::class)
     public fun isBluetoothEnabled(): Boolean {
         return Native.backendIsBluetoothEnabled(identifier)
     }
 
     /** The adapters of this backend, the same objects [Adapter.getAdapters] returns. */
+    @Throws(SimpleKtBleException::class)
     public fun getAdapters(): List<Adapter> {
         return Native.backendGetAdapters(identifier).map(Adapter::forId)
     }
@@ -28,22 +30,26 @@ public class Backend private constructor(public val identifier: String) {
         }
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun getBackends(): List<Backend> {
             return Native.getBackends().map(::backend)
         }
 
         /** The operating system's Bluetooth stack. */
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun getNative(): Backend {
             return backend(Native.getNativeBackend())
         }
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun getDongl(): Backend {
             return backend(Native.getDonglBackend())
         }
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun getSimulator(): Backend {
             return backend(Native.getSimulatorBackend())
         }

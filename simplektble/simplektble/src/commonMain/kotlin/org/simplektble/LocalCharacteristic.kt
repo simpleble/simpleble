@@ -1,7 +1,11 @@
 package org.simplektble
 
 import kotlin.concurrent.Volatile
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.withContext
 
 public class LocalCharacteristic internal constructor(private val instanceId: Long) {
     private val _onWrite = eventFlow<ByteArray>()
@@ -15,11 +19,7 @@ public class LocalCharacteristic internal constructor(private val instanceId: Lo
     private var writeHandler: ((ByteArray) -> Unit)? = null
 
     private val callbacks = object : LocalCharacteristicCallback {
-        override fun onRead(): ByteArray {
-            return requireNotNull(readHandler) { "No local characteristic read handler is configured." }
-                .invoke()
-                .copyOf()
-        }
+        override fun onRead(): ByteArray? = readHandler?.invoke()?.copyOf()
 
         override fun onWrite(value: ByteArray) {
             val snapshot = value.copyOf()
@@ -45,10 +45,16 @@ public class LocalCharacteristic internal constructor(private val instanceId: Lo
     public val capabilities: Set<LocalCharacteristicCapability> = Native.localCharacteristicCapabilities(instanceId)
         .let { mask -> LocalCharacteristicCapability.entries.filterTo(linkedSetOf()) { mask and it.bit != 0 } }
 
-    /** The stored value. Setting it notifies or indicates subscribed clients. */
-    public var value: ByteArray
+    /** The stored value, which [setValue] changes. */
+    public val value: ByteArray
         get() = Native.localCharacteristicValue(instanceId).copyOf()
-        set(value) = Native.localCharacteristicSetValue(instanceId, value.copyOf())
+
+    /** Stores a new value, and notifies or indicates subscribed clients, which can wait on the Bluetooth stack. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun setValue(value: ByteArray) {
+        val copy = value.copyOf()
+        withContext(Dispatchers.IO) { Native.localCharacteristicSetValue(instanceId, copy) }
+    }
 
     public val onWrite: SharedFlow<ByteArray>
         get() = _onWrite
@@ -60,12 +66,19 @@ public class LocalCharacteristic internal constructor(private val instanceId: Lo
         get() = _onUnsubscribed
 
     /**
-     * Computes the value for each read. Pass null to serve [value] directly.
+     * Computes the value for each read. Pass null to serve [value] directly, which is also served if the handler throws.
      * The handler runs on a SimpleBLE thread and should return promptly.
      */
+    @Throws(SimpleKtBleException::class)
     public fun setReadHandler(handler: (() -> ByteArray)?) {
-        readHandler = handler
-        Native.localCharacteristicSetReadHandler(instanceId, handler != null)
+        // NOTE: The native handler is turned off first, so no read finds it on without a Kotlin handler.
+        if (handler == null) {
+            Native.localCharacteristicSetReadHandler(instanceId, false)
+            readHandler = null
+        } else {
+            readHandler = handler
+            Native.localCharacteristicSetReadHandler(instanceId, true)
+        }
     }
 
     /**

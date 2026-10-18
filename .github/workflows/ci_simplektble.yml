@@ -170,6 +170,11 @@ jobs:
             > "$RUNNER_TEMP/classes.jar"
           unzip -l "$RUNNER_TEMP/classes.jar" | grep -F "META-INF/simplektble-android-native/LICENSE.md"
 
+          # Apps that shrink with R8 need the keep rules for the classes JNI looks up by name.
+          for module in simplektble-android simplektble-android-native; do
+            unzip -l "$repository/$module/$version/$module-$version.aar" | grep -F "proguard.txt"
+          done
+
       - name: Package Artifact
         uses: ./.github/actions/package-native
         with:

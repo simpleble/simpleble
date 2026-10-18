@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 class PlainBackendIntegrationTest {
     private var adapter: Adapter? = null
@@ -23,7 +25,7 @@ class PlainBackendIntegrationTest {
     @AfterTest
     fun cleanUp() {
         runBlocking {
-            runCatching { adapter?.takeIf { it.scanIsActive }?.scanStop() }
+            runCatching { adapter?.let { if (it.scanIsActive()) it.scanStop() } }
             runCatching { peripheral?.takeIf { it.isConnected }?.disconnect() }
         }
     }
@@ -105,15 +107,17 @@ class PlainBackendIntegrationTest {
         }
         assertContentEquals(byteArrayOf(100), firstPayload)
 
-        // A collector that falls behind keeps receiving values instead of failing.
-        var payloadCount = 0
-        withTimeout(5_000) {
-            activePeripheral.notify(service.uuid, characteristic.uuid).take(3).collect {
-                payloadCount++
-                delay(500)
+        // A collector that falls behind gets every value sent meanwhile, at once, instead of losing them.
+        val arrivals = mutableListOf<TimeSource.Monotonic.ValueTimeMark>()
+        withTimeout(10_000) {
+            activePeripheral.notify(service.uuid, characteristic.uuid).take(4).collect {
+                arrivals += TimeSource.Monotonic.markNow()
+                // PLAIN notifies once a second, so this falls about three values behind.
+                if (arrivals.size == 1) delay(3_500)
             }
         }
-        assertEquals(3, payloadCount)
+        val catchUp = arrivals[3] - arrivals[1]
+        assertTrue(catchUp < 500.milliseconds, "The values sent during the delay took $catchUp to arrive")
 
         val secondPayload = withTimeout(3_000) {
             activePeripheral.notify(
@@ -122,6 +126,14 @@ class PlainBackendIntegrationTest {
             ).first()
         }
         assertContentEquals(byteArrayOf(100), secondPayload)
+
+        // unsubscribe() ends the subscription from outside its collector, and completes the flow.
+        val beforeUnsubscribe = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(5_000) { activePeripheral.notify(service.uuid, characteristic.uuid).toList() }
+        }
+        delay(1_500)
+        activePeripheral.unsubscribe(service.uuid, characteristic.uuid)
+        assertTrue(beforeUnsubscribe.await().isNotEmpty())
 
         // A disconnection completes the flow, after the values received before it.
         val beforeDisconnection = async(start = CoroutineStart.UNDISPATCHED) {
@@ -174,12 +186,12 @@ class PlainBackendIntegrationTest {
             LocalCharacteristicCapability.Notify
         )
         val payload = byteArrayOf(0x00, 0xff.toByte(), 0x80.toByte())
-        value.value = payload
+        value.setValue(payload)
         local.addAdvertisedService(serviceUuid)
         try {
             local.start()
             assertTrue(local.isStarted)
-            assertTrue(local.isAdvertising)
+            assertTrue(local.isAdvertising())
             activeAdapter.scanFor(250)
             val peer = activeAdapter.scanGetResults().single { it.identifier == "Plain Adapter Peripheral" }
             peripheral = peer
@@ -187,14 +199,19 @@ class PlainBackendIntegrationTest {
             assertContentEquals(payload, peer.read(serviceUuid, valueUuid))
             value.setReadHandler { byteArrayOf(0x42) }
             assertContentEquals(byteArrayOf(0x42), peer.read(serviceUuid, valueUuid))
+            // A read handler that throws serves the stored value.
+            value.setReadHandler { error("The read handler failed") }
+            assertContentEquals(payload, peer.read(serviceUuid, valueUuid))
             value.setReadHandler(null)
+            peer.writeRequest(serviceUuid, valueUuid, byteArrayOf())
+            assertContentEquals(byteArrayOf(), value.value)
             peer.writeRequest(serviceUuid, valueUuid, byteArrayOf(0x12))
             assertContentEquals(byteArrayOf(0x12), value.value)
 
             val subscribed = async { withTimeout(2_000) { value.onSubscribed.first() } }
             val notification = async { withTimeout(3_000) { peer.notify(serviceUuid, valueUuid).first() } }
             subscribed.await()
-            value.value = payload
+            value.setValue(payload)
             assertContentEquals(payload, notification.await())
             local.stop()
             assertTrue(!peer.isConnected)

@@ -14,7 +14,8 @@ class LocalPeripheralCallback {
     void on_client_disconnected(const std::string& address) const noexcept;
 
   private:
-    SimpleJNI::Object<SimpleJNI::WeakRef> _obj;
+    // NOTE: A strong reference, since nothing else keeps the Kotlin object alive while the peripheral is hosted.
+    SimpleJNI::Object<SimpleJNI::GlobalRef> _obj;
     static jmethodID _on_client_connected;
     static jmethodID _on_client_disconnected;
     static const SimpleJNI::JNIDescriptor descriptor;

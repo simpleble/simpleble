@@ -116,9 +116,9 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
   },
   {
     eyebrow: "Android",
-    title: "SimpledroidBLE",
+    title: "SimpleDroidBLE",
     description:
-      "Android-only bindings for native Android BLE development.",
+      "Deprecated Android-only bindings. New Android apps use SimpleKtBLE.",
     href: "/simpledroidble/usage",
   },
   {

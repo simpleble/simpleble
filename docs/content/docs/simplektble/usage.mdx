@@ -17,7 +17,7 @@ SimpleKtBLE brings SimpleBLE to Kotlin Multiplatform. Write your Bluetooth code 
 | iOS 15.8 or newer | `iosArm64`, `iosSimulatorArm64` | arm64 |
 | macOS 13.0 or newer | `jvm`, `macosArm64` | x64 and arm64 on the JVM, arm64 native |
 | Windows 10 or newer | `jvm` | x64 |
-| Linux with glibc 2.28 or newer | `jvm` | x64, arm64 |
+| Linux | `jvm` | x64, arm64 |
 
 ## Install from Maven Central
 
@@ -33,13 +33,23 @@ kotlin {
 }
 ```
 
-Each target's artifact includes the native SimpleBLE library it needs, so nothing is compiled during your build. Android-only and JVM-only projects add the same coordinates to their `dependencies` block.
+Each target's artifact includes the native SimpleBLE library it needs, so nothing is compiled during your build. Android-only and JVM-only Gradle projects add the same coordinates to their `dependencies` block. Maven reads no Kotlin Multiplatform metadata, so Maven projects use `org.simpleble:simplektble-jvm`.
 
 SimpleKtBLE follows SimpleBLE's release versions. Development builds of the main branch are published to Maven Central with a `-devN` suffix, such as `1.2.1-dev90`.
 
 ## Permissions
 
-On Android, SimpleKtBLE declares the Bluetooth permissions it needs in its manifest: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`. Request them at runtime before using an adapter:
+On Android, SimpleKtBLE declares the Bluetooth permissions it needs in its manifest: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`. Android delivers scan results only to apps that also hold `ACCESS_FINE_LOCATION`, unless the app states that it never derives location from them. If yours doesn't, say so in your app's manifest:
+
+```xml
+<uses-permission
+    android:name="android.permission.BLUETOOTH_SCAN"
+    android:usesPermissionFlags="neverForLocation" />
+```
+
+If your app uses BLE scans to infer physical location, review Android location policy before using `neverForLocation`.
+
+Request the permissions at runtime before using an adapter:
 
 ```kotlin
 import org.simplektble.SimpleKtBle
@@ -84,7 +94,7 @@ suspend fun scan() = coroutineScope {
 
 ## Calls, events, and lifetime
 
-Calls that talk to the Bluetooth stack, such as `connect()` or `read()`, are `suspend` functions that run on `Dispatchers.IO`, so you can call them from the main thread. Data the library already holds, such as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned directly.
+Calls that wait on a device or the Bluetooth stack, such as `connect()`, `read()`, `scanFor()`, or `isPaired()`, are `suspend` functions that run on `Dispatchers.IO`, so you can call them from the main thread. `scanStart()`, `scanStop()`, `getAdapters()`, `getPairedPeripherals()`, and `unpair()` are regular functions that call the Bluetooth stack directly, so call them from a background dispatcher where a short wait matters. Data the library already holds, such as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is a property and returned directly.
 
 Events are flows. An adapter has `onScanStart`, `onScanStop`, `onScanActive`, `onScanFound`, and `onScanUpdated`; a peripheral has `onConnected`, `onDisconnected`, and `onConnectionActive`. Every event reaches each active collector, in the order it happened. Collect in a scope that lives as long as you need the events, such as a `viewModelScope`, and start the collector with `CoroutineStart.UNDISPATCHED` so it is already collecting when the call that produces the events begins.
 
@@ -92,7 +102,7 @@ Use `scanStart()` and `scanStop()` when your application controls scan timing, a
 
 Every call to `Adapter.getAdapters()` returns the same `Adapter` object for an adapter, and an adapter always gives you the same `Peripheral` object for the same device, whether it came from a flow or from a list. Compare them with `==` and keep state on them.
 
-Failures are thrown as `SimpleKtBleException`.
+Failures are thrown as `SimpleKtBleException`. Functions declare it with `@Throws`, so Swift calls them with `try`. Properties return state the library already holds.
 
 ## Connect and use GATT
 
@@ -130,7 +140,7 @@ println("Description: ${description.decodeToString()}")
 
 `notify()` and `indicate()` return a flow that subscribes when collected and unsubscribes when the collection ends, for example when its coroutine is cancelled or a `withTimeout` expires. Each value reaches the collector in the order it arrived.
 
-When the peripheral disconnects, the flow delivers the values received before the disconnection and then completes, so `collect` returns. After you reconnect, collect the flow again to subscribe again. Call `disconnect()` when you are done with the peripheral.
+When the peripheral disconnects, the flow delivers the values received before the disconnection and then completes, so `collect` returns. After you reconnect, collect the flow again to subscribe again. `unsubscribe()` ends a subscription from outside its collector and completes its flow. A characteristic has one subscription at a time, so collecting it while another collector is active throws `SimpleKtBleException`. Call `disconnect()` when you are done with the peripheral.
 
 ## Host a local peripheral
 
@@ -154,11 +164,11 @@ val echo = host.addService(echoService).addCharacteristic(
     LocalCharacteristicCapability.WriteRequest,
     LocalCharacteristicCapability.Notify
 )
-echo.value = "ready".encodeToByteArray()
+echo.setValue("ready".encodeToByteArray())
 
 // Echo each write to subscribed clients.
 scope.launch(start = CoroutineStart.UNDISPATCHED) {
-    echo.onWrite.collect { value -> echo.value = value }
+    echo.onWrite.collect { value -> echo.setValue(value) }
 }
 scope.launch(start = CoroutineStart.UNDISPATCHED) {
     host.onClientConnected.collect { address -> println("$address connected") }
@@ -167,16 +177,18 @@ scope.launch(start = CoroutineStart.UNDISPATCHED) {
 host.start()
 ```
 
-Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`. Setting `value` updates the stored value and notifies subscribers. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
+Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`. `setValue()` updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
 
-To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value, until you pass `null`:
+To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value, until you pass `null`. If the function throws, the read gets the stored value:
 
 ```kotlin
 var reads = 0
 echo.setReadHandler { "read ${++reads}".encodeToByteArray() }
 ```
 
-`setWriteHandler` takes a function that receives every accepted write, before `onWrite` emits it. Both handlers run on a SimpleBLE thread, so return promptly.
+`setWriteHandler` takes a function that receives every accepted write, before `onWrite` emits it. The read handler runs on a SimpleBLE thread and the write handler on the thread that delivers every event, so both should return promptly.
+
+`setAdvertisedManufacturerData(companyId, data)` adds manufacturer data to the advertisement, and `setConnectable(false)` advertises without accepting connections, as a beacon does. See [Advertise a beacon](../recipes/advertise#advertise-a-beacon).
 
 Configure services before `start()`. Call `stop()` before changing them, and when you no longer want to advertise.
 

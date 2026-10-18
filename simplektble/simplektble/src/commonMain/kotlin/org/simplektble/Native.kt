@@ -19,6 +19,9 @@ internal interface PeripheralCallback {
 
 internal interface DataCallback {
     fun onDataReceived(data: ByteArray)
+
+    /** The peripheral disconnected, which ended the subscription. Runs after every value received before it. */
+    fun onEnded()
 }
 
 internal interface LocalPeripheralCallback {
@@ -27,8 +30,8 @@ internal interface LocalPeripheralCallback {
 }
 
 internal interface LocalCharacteristicCallback {
-    /** Runs on a SimpleBLE thread, which waits for the value. */
-    fun onRead(): ByteArray
+    /** Runs on a SimpleBLE thread, which waits for the value. Returns null to serve the stored value. */
+    fun onRead(): ByteArray?
     fun onWrite(value: ByteArray)
     fun onSubscribed()
     fun onUnsubscribed()

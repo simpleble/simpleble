@@ -201,5 +201,20 @@ void NativeCache::remove_data_callback(int64_t adapter_id, int64_t peripheral_id
     _data_callbacks.erase(callback);
 }
 
+std::vector<std::shared_ptr<Org::SimpleKtBLE::DataCallback>> NativeCache::take_data_callbacks(int64_t adapter_id,
+                                                                                             int64_t peripheral_id) {
+    std::vector<std::shared_ptr<Org::SimpleKtBLE::DataCallback>> taken;
+    std::lock_guard<std::mutex> lock(_mutex);
+    for (auto entry = _data_callbacks.begin(); entry != _data_callbacks.end();) {
+        if (entry->first.adapter_id == adapter_id && entry->first.peripheral_id == peripheral_id) {
+            taken.push_back(std::move(entry->second));
+            entry = _data_callbacks.erase(entry);
+        } else {
+            ++entry;
+        }
+    }
+    return taken;
+}
+
 }  // namespace SimpleKtBLE
 }  // namespace Org

@@ -12,10 +12,10 @@ project(
 
 include(${PROJECT_ROOT_DIR}/cmake/epilogue.cmake)
 
-# SimpleKtBLE calls SimpleCBLE on Apple platforms, plus the identity functions SimpleCBLE does not have.
+# SimpleKtBLE calls SimpleCBLE on Apple platforms, plus the identity and snapshot functions SimpleCBLE does not have.
 add_subdirectory(${PROJECT_ROOT_DIR}/simplecble ${CMAKE_BINARY_DIR}/simplecble)
 
-add_library(simplektble-apple STATIC Identity.cpp)
+add_library(simplektble-apple STATIC Identity.cpp Snapshot.cpp)
 
 set_target_properties(
     simplektble-apple PROPERTIES

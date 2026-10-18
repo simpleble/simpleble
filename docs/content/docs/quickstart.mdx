@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -356,7 +356,7 @@ suspend fun scan() = coroutineScope {
 Call `scan()` from a coroutine, such as `lifecycleScope.launch { scan() }` on Android or `suspend fun main() = scan()` on the JVM. On Android, request the Bluetooth permissions first with `SimpleKtBle.requestPermissions(activity)`. On iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleKtBLE Usage](./simplektble/usage) for details.
 
 </Tab>
-<Tab value="Android">
+<Tab value="Android (deprecated)">
 
 Declare Bluetooth permissions and request them at runtime before calling the adapter APIs. A minimal Compose scan flow looks like this:
 

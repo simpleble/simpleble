@@ -6,6 +6,7 @@ import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.COpaquePointerVar
 import kotlinx.cinterop.CPointed
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
@@ -45,8 +46,9 @@ import platform.posix.size_tVar
  * Native over the SimpleCBLE C API.
  *
  * SimpleCBLE hands out a new handle every time it returns an adapter or peripheral, so each one is identified by the
- * SimpleBLE object behind it, which simplektble/identity.h reads. The first handle is kept and later ones are released. Callbacks receive the ID as
- * their userdata and run, in order, on one coroutine, the same way the JNI layer runs them on one thread.
+ * SimpleBLE object behind it, which simplektble/identity.h reads. The first handle is kept and later ones are released.
+ * Callbacks receive the ID as their userdata and run, in order, on one coroutine, the same way the JNI layer runs them
+ * on one thread.
  */
 internal actual object Native {
     private data class Subscription(val peripheralId: Long, val service: String, val characteristic: String)
@@ -142,18 +144,12 @@ internal actual object Native {
 
     actual fun adapterScanGetResults(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        val count = call { simpleble_adapter_scan_get_results_count(handle, it) }.toInt()
-        return LongArray(count) { index ->
-            internPeripheral(call { simpleble_adapter_scan_get_results_handle(handle, index.convert(), it) })
-        }
+        return internPeripherals { count, error -> simplektble_adapter_scan_get_results(handle, count, error) }
     }
 
     actual fun adapterGetPairedPeripherals(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        val count = call { simpleble_adapter_get_paired_peripherals_count(handle, it) }.toInt()
-        return LongArray(count) { index ->
-            internPeripheral(call { simpleble_adapter_get_paired_peripherals_handle(handle, index.convert(), it) })
-        }
+        return internPeripherals { count, error -> simplektble_adapter_get_paired_peripherals(handle, count, error) }
     }
 
     actual fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback) {
@@ -706,6 +702,19 @@ internal actual object Native {
         return id
     }
 
+    /** Interns every handle in an array from simplektble/snapshot.h, and frees the array. */
+    private inline fun internPeripherals(
+        snapshot: (CPointer<size_tVar>, CPointer<CPointerVar<simpleble_error_t>>) -> CPointer<COpaquePointerVar>?
+    ): LongArray = memScoped {
+        val count = alloc<size_tVar>()
+        val handles = call { snapshot(count.ptr, it) }
+        try {
+            LongArray(count.value.toInt()) { index -> internPeripheral(handles!![index]) }
+        } finally {
+            simpleble_free(handles)
+        }
+    }
+
     internal fun onAdapterEvent(adapterId: Long, event: (AdapterCallback) -> Unit) {
         val callback = synchronized(lock) { adapterCallbacks[adapterId] } ?: return
         dispatch { event(callback) }
@@ -714,6 +723,19 @@ internal actual object Native {
     internal fun onPeripheralEvent(peripheralId: Long, event: (PeripheralCallback) -> Unit) {
         val callback = synchronized(lock) { peripheralCallbacks[peripheralId] } ?: return
         dispatch { event(callback) }
+    }
+
+    // NOTE: The disconnection ends the subscriptions it had, and only those, after the values queued before it.
+    internal fun onPeripheralDisconnected(peripheralId: Long) {
+        val (ended, callback) = synchronized(lock) {
+            val keys = subscriptions.keys.filter { it.peripheralId == peripheralId }
+            keys.mapNotNull { key -> subscriptions.remove(key)?.let(dataCallbacks::remove) } to
+                peripheralCallbacks[peripheralId]
+        }
+        dispatch {
+            ended.forEach(DataCallback::onEnded)
+            callback?.onDisconnected()
+        }
     }
 
     private fun <T> addLocal(objects: MutableMap<Long, T>, handle: T): Long {
@@ -739,11 +761,19 @@ internal actual object Native {
         dispatch { event(callback) }
     }
 
-    /** Runs on the SimpleBLE thread that serves the read, which waits for the value. */
+    /**
+     * Runs on the SimpleBLE thread that serves the read, which waits for the value.
+     * If the handler fails or returns null, the stored value is served instead, as on the JNI side.
+     */
     internal fun onLocalRead(characteristicId: Long, length: CPointer<size_tVar>?): CPointer<UByteVar>? {
         length?.pointed?.value = 0u
-        val callback = synchronized(lock) { localCharacteristicCallbacks[characteristicId] } ?: return null
-        val value = callback.onRead()
+        val callback = synchronized(lock) { localCharacteristicCallbacks[characteristicId] }
+        val value = try {
+            callback?.onRead()
+        } catch (exception: Exception) {
+            println("SimpleKtBLE: read handler failed: $exception")
+            null
+        } ?: localCharacteristicValue(characteristicId)
         val buffer = nativeHeap.allocArray<UByteVar>(maxOf(value.size, 1))
         value.forEachIndexed { index, byte -> buffer[index] = byte.toUByte() }
         synchronized(lock) { readBuffers.put(characteristicId, buffer) }?.let(nativeHeap::free)
@@ -784,7 +814,7 @@ private val onConnected = staticCFunction { _: simpleble_peripheral_t?, userdata
 }
 
 private val onDisconnected = staticCFunction { _: simpleble_peripheral_t?, userdata: COpaquePointer? ->
-    guarded { Native.onPeripheralEvent(userdata.toLong()) { it.onDisconnected() } }
+    guarded { Native.onPeripheralDisconnected(userdata.toLong()) }
 }
 
 private val onData = staticCFunction {
@@ -910,7 +940,8 @@ private fun CPointer<UByteVar>?.toByteArray(length: Int): ByteArray {
     return reinterpret<ByteVar>().readBytes(length)
 }
 
-private inline fun ByteArray.withPointer(block: (CPointer<UByteVar>?, ULong) -> Unit) {
-    if (isEmpty()) return block(null, 0u)
-    usePinned { pinned -> block(pinned.addressOf(0).reinterpret(), size.toULong()) }
+private inline fun ByteArray.withPointer(block: (CPointer<UByteVar>, ULong) -> Unit) {
+    // NOTE: SimpleCBLE's writes reject a NULL pointer even when the length is zero.
+    val bytes = if (isEmpty()) ByteArray(1) else this
+    bytes.usePinned { pinned -> block(pinned.addressOf(0).reinterpret(), size.toULong()) }
 }

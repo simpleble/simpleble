@@ -18,7 +18,7 @@ simplektble/
 │       └── commonTest/           Tests every target runs, against PLAIN
 ├── simplektble-android-native/   Android library that builds and ships the JNI library
 ├── cpp/                          JNI layer over SimpleBLE (libsimplektble-jni)
-│   └── apple/                    Identity functions SimpleCBLE lacks, built with it for Apple targets
+│   └── apple/                    Identity and snapshot functions SimpleCBLE lacks, built with it for Apple targets
 └── gradle/libs.versions.toml     Dependency versions
 ```
 
@@ -39,7 +39,15 @@ way SimpleJSBLE does. SimpleBLE keeps one such object per adapter and per device
 back as the same Kotlin object. `underlying()` cannot stand in for it: it returns the operating system's object, which
 the Dongl and simulated backends do not have. Local GATT objects are numbered as they are created.
 
-Every flow buffers without limit, so each event reaches each active collector in order.
+Properties return state that is already known, and anything that waits on the Bluetooth stack or can fail at run
+time on iOS and macOS is a function. Kotlin/Native lets only functions declare `@Throws`, and an undeclared exception
+that reaches Swift ends the app. On Android, reading a name or an address without `BLUETOOTH_CONNECT` still throws,
+which only Kotlin code sees.
+
+Every flow buffers without limit, so each event reaches each active collector in order. A disconnection ends, in
+both bridges, the subscriptions the peripheral had at that moment, queued after their last values: a flow does not
+watch `onDisconnected`, which could still hold a disconnection from before a reconnection. A read handler that throws
+or is missing serves the stored value, as in SimpleJavaBLE.
 
 - **JNI (Android and the JVM).** `Native` is a set of `external` functions implemented in `cpp/simplektble.cpp`.
   `NativeCache` maps the IDs to SimpleBLE objects. SimpleBLE callbacks go to `ThreadRunner`, which calls the Kotlin
@@ -49,10 +57,14 @@ Every flow buffers without limit, so each event reaches each active collector in
   `System.loadLibrary`, and the JVM copies the library for its OS and architecture out of the jar.
 - **Android context.** Hosting a GATT server needs the application context. An androidx.startup initializer keeps
   it when the app starts, and `createLocalPeripheral()` passes it to SimpleBLE.
+- **Android shrinking.** The JNI library and the SimpleBLE Android backend look classes and methods up by name, so
+  both Android libraries publish consumer keep rules (`consumer-rules.pro`) for apps that run R8.
 - **C API (iOS and macOS).** `appleMain` calls SimpleCBLE through cinterop. SimpleCBLE returns a new handle every
   time and has no identity function, so `cpp/apple` adds `simplektble_adapter_identity` and
-  `simplektble_peripheral_identity`: the first handle for an ID is kept and later ones are released. Callbacks receive
-  the ID as userdata and are queued onto one coroutine, in order; read and pairing handlers run on the calling thread.
+  `simplektble_peripheral_identity`: the first handle for an ID is kept and later ones are released. SimpleCBLE also
+  reads a list again for each index, which a scan can shift, so the scan results and paired peripherals come from
+  `simplektble/snapshot.h`. Callbacks receive the ID as userdata and are queued onto one coroutine, in order; read and
+  pairing handlers run on the calling thread.
 
 `ThreadRunner` and `NativeCache` are never destroyed. On the JVM, static destructors run at exit, when the callback
 thread can no longer detach, and joining it hangs the process.

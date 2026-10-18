@@ -13,9 +13,11 @@ class DataCallback {
     explicit DataCallback(jobject callback);
 
     void on_data_received(const ::SimpleBLE::ByteArray& data) const noexcept;
+    void on_ended() const noexcept;
 
   private:
     static jmethodID _method_on_data_received;
+    static jmethodID _method_on_ended;
     static const SimpleJNI::JNIDescriptor descriptor;
     static const SimpleJNI::AutoRegister<DataCallback> registrar;
 

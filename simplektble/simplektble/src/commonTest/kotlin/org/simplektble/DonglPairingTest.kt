@@ -14,7 +14,7 @@ class DonglPairingTest {
 
     @AfterTest
     fun cleanUp() {
-        runCatching { adapter?.takeIf { it.scanIsActive }?.scanStop() }
+        runBlocking { runCatching { adapter?.let { if (it.scanIsActive()) it.scanStop() } } }
     }
 
     @Test

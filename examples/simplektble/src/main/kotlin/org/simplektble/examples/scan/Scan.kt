@@ -11,10 +11,14 @@ fun main() = runBlocking {
     val adapter = chooseAdapter()
 
     val events = launch(start = CoroutineStart.UNDISPATCHED) {
-        launch { adapter.onScanStart.collect { println("Scan started.") } }
-        launch { adapter.onScanStop.collect { println("Scan complete.") } }
-        launch { adapter.onScanFound.collect { println("Found ${it.describe()} ${it.rssi} dBm") } }
-        launch { adapter.onScanUpdated.collect { println("Updated ${it.describe()} ${it.rssi} dBm") } }
+        launch(start = CoroutineStart.UNDISPATCHED) { adapter.onScanStart.collect { println("Scan started.") } }
+        launch(start = CoroutineStart.UNDISPATCHED) { adapter.onScanStop.collect { println("Scan complete.") } }
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            adapter.onScanFound.collect { println("Found ${it.describe()} ${it.rssi} dBm") }
+        }
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            adapter.onScanUpdated.collect { println("Updated ${it.describe()} ${it.rssi} dBm") }
+        }
     }
 
     // Scan for 5 seconds

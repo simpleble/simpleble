@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "org/simplektble/AdapterCallback.h"
 #include "org/simplektble/DataCallback.h"
@@ -62,6 +63,9 @@ class NativeCache {
     void remove_data_callback(int64_t adapter_id, int64_t peripheral_id, const std::string& service,
                               const std::string& characteristic,
                               const std::shared_ptr<Org::SimpleKtBLE::DataCallback>& expected = nullptr);
+    /** Removes and returns every data callback of a peripheral. */
+    std::vector<std::shared_ptr<Org::SimpleKtBLE::DataCallback>> take_data_callbacks(int64_t adapter_id,
+                                                                                    int64_t peripheral_id);
 
   private:
     struct AdapterEntry {

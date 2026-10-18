@@ -51,8 +51,18 @@ suspend fun scan() = coroutineScope {
 
 ## Permissions
 
-On Android, SimpleKtBLE declares the Bluetooth permissions it needs. Request
-them at runtime before using an adapter:
+On Android, SimpleKtBLE declares the Bluetooth permissions it needs. Android
+delivers scan results only to apps that also hold `ACCESS_FINE_LOCATION`,
+unless the app states that it never derives location from them. If yours
+doesn't, say so in your app's manifest:
+
+```xml
+<uses-permission
+    android:name="android.permission.BLUETOOTH_SCAN"
+    android:usesPermissionFlags="neverForLocation" />
+```
+
+Request the permissions at runtime before using an adapter:
 
 ```kotlin
 import org.simplektble.SimpleKtBle
@@ -84,10 +94,12 @@ and `scanGetResults()` for the peripherals seen by the last scan. An adapter
 always gives you the same `Peripheral` object for the same device, whether it
 came from a flow or from a list.
 
-Calls that talk to the Bluetooth stack, such as `connect()` or `read()`, are
-`suspend` functions that run on `Dispatchers.IO`. Data the library already
-holds, such as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is
-returned directly.
+Calls that wait on a device or the Bluetooth stack, such as `connect()`,
+`read()`, `scanFor()`, or `isPaired()`, are `suspend` functions that run on
+`Dispatchers.IO`. `scanStart()`, `scanStop()`, `getAdapters()`,
+`getPairedPeripherals()`, and `unpair()` call the Bluetooth stack directly. Data
+the library already holds, such as a peripheral's `identifier`, `rssi`, or
+`manufacturerData()`, is a property and returned directly.
 
 ## Connect and use GATT
 
@@ -130,12 +142,12 @@ val battery = host.addService(batteryService).addCharacteristic(
     LocalCharacteristicCapability.Read,
     LocalCharacteristicCapability.Notify
 )
-battery.value = byteArrayOf(100)
+battery.setValue(byteArrayOf(100))
 
 host.start()
 ```
 
-Setting `value` updates the stored value and notifies subscribers. A local
+`setValue()` updates the stored value and notifies subscribers. A local
 characteristic has `onWrite`, `onSubscribed`, and `onUnsubscribed` flows, and
 `setReadHandler` computes a value for each read. The local peripheral has
 `onClientConnected` and `onClientDisconnected`. Configure services before
@@ -166,7 +178,7 @@ before `connect()`.
 | iOS 15.8 or newer | `iosArm64`, `iosSimulatorArm64` | arm64 |
 | macOS 13.0 or newer | `jvm`, `macosArm64` | x64 and arm64 on the JVM, arm64 native |
 | Windows 10 or newer | `jvm` | x64 |
-| Linux with glibc 2.28 or newer, BlueZ and D-Bus | `jvm` | x64, arm64 |
+| Linux with BlueZ and D-Bus | `jvm` | x64, arm64 |
 
 ## Versions
 

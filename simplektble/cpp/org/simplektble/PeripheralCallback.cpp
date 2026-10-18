@@ -38,27 +38,27 @@ void PeripheralCallback::on_disconnected() const noexcept {
 }
 
 std::optional<std::string> PeripheralCallback::on_passkey_request() const {
+    // The pairing calls run on SimpleBLE threads. Attach first, since any other JNI call would attach as a non-daemon.
+    attach_as_daemon();
+
     // Returning nothing rejects the request, and SimpleBLE validates the six digits.
     if (!_obj.is_valid()) return std::nullopt;
-
-    // The pairing calls run on SimpleBLE threads.
-    attach_as_daemon();
     auto result = _obj.to_local().call_object_method(_method_on_passkey_request);
     if (!result) return std::nullopt;
     return SimpleJNI::String<SimpleJNI::LocalRef>(static_cast<jstring>(result.get())).str();
 }
 
 void PeripheralCallback::on_passkey_display(const std::string& passkey) const {
-    if (!_obj.is_valid()) return;
     attach_as_daemon();
+    if (!_obj.is_valid()) return;
 
     SimpleJNI::String<SimpleJNI::LocalRef> value(passkey);
     _obj.to_local().call_void_method(_method_on_passkey_display, value.get());
 }
 
 bool PeripheralCallback::on_numeric_comparison(const std::string& passkey) const {
-    if (!_obj.is_valid()) return false;
     attach_as_daemon();
+    if (!_obj.is_valid()) return false;
 
     SimpleJNI::String<SimpleJNI::LocalRef> value(passkey);
     return _obj.to_local().call_boolean_method(_method_on_numeric_comparison, value.get());

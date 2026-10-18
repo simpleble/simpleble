@@ -67,6 +67,11 @@ kotlin {
         compileSdk = 35
         minSdk = 31
 
+        optimization {
+            consumerKeepRules.publish = true
+            consumerKeepRules.file("consumer-rules.pro")
+        }
+
         withDeviceTestBuilder {
             sourceSetTreeName = "test"
         }.configure {
@@ -160,7 +165,8 @@ fun configureSimpleCBle(target: KotlinNativeTarget) {
         else -> error("Unsupported Apple target ${target.name}")
     }
 
-    val buildDir = layout.buildDirectory.dir("native/${target.name}-$flavor")
+    // NOTE: Named after cpp/apple, since a cache configured from another source directory is never reconfigured.
+    val buildDir = layout.buildDirectory.dir("native/${target.name}-apple-$flavor")
     val build = registerCMakeBuild(
         "SimpleCBle${target.name.replaceFirstChar(Char::uppercase)}",
         file("../cpp/apple"),

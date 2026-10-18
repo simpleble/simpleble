@@ -17,7 +17,7 @@ LocalPeripheralCallback::LocalPeripheralCallback(jobject callback) : _obj(callba
 
 void LocalPeripheralCallback::on_client_connected(const std::string& address) const noexcept {
     invoke_callback(__func__, [this, &address] {
-        if (!_obj.is_valid()) return;
+        if (!_obj) return;
         SimpleJNI::String<SimpleJNI::LocalRef> value(address);
         _obj.to_local().call_void_method(_on_client_connected, value.get());
     });
@@ -25,7 +25,7 @@ void LocalPeripheralCallback::on_client_connected(const std::string& address) co
 
 void LocalPeripheralCallback::on_client_disconnected(const std::string& address) const noexcept {
     invoke_callback(__func__, [this, &address] {
-        if (!_obj.is_valid()) return;
+        if (!_obj) return;
         SimpleJNI::String<SimpleJNI::LocalRef> value(address);
         _obj.to_local().call_void_method(_on_client_disconnected, value.get());
     });

@@ -7,7 +7,7 @@ import org.simplektble.examples.describe
 import org.simplektble.examples.scanAndChoose
 
 fun main() = runBlocking {
-    val adapter = choose("a Dongl", Backend.getDongl().getAdapters()) { it.describe() }
+    val adapter = choose("a Dongl", "No Dongl found", Backend.getDongl().getAdapters()) { it.describe() }
     println("Selected Dongl: ${adapter.describe()}")
 
     val peripheral = scanAndChoose(adapter)

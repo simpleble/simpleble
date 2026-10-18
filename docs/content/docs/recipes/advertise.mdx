@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -246,24 +246,21 @@ val characteristic = peripheral
         LocalCharacteristicCapability.WriteRequest,
         LocalCharacteristicCapability.Notify
     )
-characteristic.value = "ready".encodeToByteArray()
+characteristic.setValue("ready".encodeToByteArray())
 
-coroutineScope {
-    // Echo the written value to subscribed clients.
-    launch(start = CoroutineStart.UNDISPATCHED) {
-        characteristic.onWrite.collect { value -> characteristic.value = value }
-    }
-
-    launch(start = CoroutineStart.UNDISPATCHED) {
-        peripheral.onClientConnected.collect { address -> println("Client connected: $address") }
-    }
-
-    peripheral.start()
+// Echo the written value to subscribed clients. `scope` is the CoroutineScope that owns the host.
+scope.launch(start = CoroutineStart.UNDISPATCHED) {
+    characteristic.onWrite.collect { value -> characteristic.setValue(value) }
 }
+scope.launch(start = CoroutineStart.UNDISPATCHED) {
+    peripheral.onClientConnected.collect { address -> println("Client connected: $address") }
+}
+
+peripheral.start()
 ```
 
 </Tab>
-<Tab value="Android">
+<Tab value="Android (deprecated)">
 
 ```kotlin
 val adapter = Adapter.getAdapters().first()
@@ -308,7 +305,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Android"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -413,7 +410,25 @@ await peripheral.start();
 ```
 
 </Tab>
-<Tab value="Android">
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+val adapter = Adapter.getAdapters().first()
+val peripheral = adapter.createLocalPeripheral()
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+val ibeacon = listOf(
+    0x02, 0x15,
+    0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+    0x00, 0x01, 0x00, 0x02, 0xc5,
+).map { it.toByte() }.toByteArray()
+peripheral.setAdvertisedManufacturerData(0x004c, ibeacon)
+peripheral.setConnectable(false)
+peripheral.start()
+```
+
+</Tab>
+<Tab value="Android (deprecated)">
 
 ```kotlin
 val adapter = Adapter.getAdapters().first()

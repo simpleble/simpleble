@@ -12,6 +12,7 @@ public class LocalService internal constructor(private val instanceId: Long) {
     public val characteristics: List<LocalCharacteristic>
         get() = synchronized(characteristicsLock) { configuredCharacteristics.toList() }
 
+    @Throws(SimpleKtBleException::class, IllegalArgumentException::class)
     public fun addCharacteristic(
         uuid: BluetoothUUID,
         vararg capabilities: LocalCharacteristicCapability

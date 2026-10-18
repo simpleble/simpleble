@@ -2,6 +2,7 @@ package org.simplektble
 
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharedFlow
@@ -50,24 +51,32 @@ public class Adapter private constructor(private val instanceId: Long) {
 
     public val address: BluetoothAddress get() = BluetoothAddress(Native.adapterAddress(instanceId))
 
+    @Throws(SimpleKtBleException::class)
     public fun scanStart() {
         Native.adapterScanStart(instanceId)
     }
 
+    @Throws(SimpleKtBleException::class)
     public fun scanStop() {
         Native.adapterScanStop(instanceId)
     }
 
+    @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun scanFor(timeoutMs: Int) {
         withContext(Dispatchers.IO) {
             Native.adapterScanFor(instanceId, timeoutMs)
         }
     }
 
-    public val scanIsActive: Boolean get() {
-        return Native.adapterScanIsActive(instanceId)
+    /** Asks the Bluetooth stack whether this adapter is scanning. */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun scanIsActive(): Boolean {
+        return withContext(Dispatchers.IO) {
+            Native.adapterScanIsActive(instanceId)
+        }
     }
 
+    @Throws(SimpleKtBleException::class)
     public fun scanGetResults(): List<Peripheral> {
         return Native.adapterScanGetResults(instanceId).map(::peripheral)
     }
@@ -82,6 +91,7 @@ public class Adapter private constructor(private val instanceId: Long) {
 
     public val onScanFound: SharedFlow<Peripheral> get() = _onScanFound
 
+    @Throws(SimpleKtBleException::class)
     public fun getPairedPeripherals(): List<Peripheral> {
         return Native.adapterGetPairedPeripherals(instanceId).map(::peripheral)
     }
@@ -90,6 +100,7 @@ public class Adapter private constructor(private val instanceId: Long) {
      * Creates a GATT server hosted by this application. Configure its services and advertising data before starting
      * it.
      */
+    @Throws(SimpleKtBleException::class)
     public fun createLocalPeripheral(): LocalPeripheral {
         return LocalPeripheral(Native.adapterCreateLocalPeripheral(instanceId))
     }
@@ -99,11 +110,13 @@ public class Adapter private constructor(private val instanceId: Long) {
         private val adapterCache = mutableMapOf<Long, Adapter>()
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun isBluetoothEnabled(): Boolean {
             return Native.isBluetoothEnabled()
         }
 
         @JvmStatic
+        @Throws(SimpleKtBleException::class)
         public fun getAdapters(): List<Adapter> {
             return Native.getAdapters().map(::forId)
         }
