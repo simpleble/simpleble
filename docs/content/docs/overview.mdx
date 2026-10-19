@@ -3,7 +3,7 @@ title: SimpleBLE
 description: Build Bluetooth once. Ship it everywhere.
 ---
 
-SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, Linux, iOS, and Android. Use it from C++, C, C#, Python, Java, Rust, or Kotlin Multiplatform, with a dedicated API for Unreal Engine.
+SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, Linux, iOS, and Android. Use it from C++, C, C#, Python, Java, Kotlin, Go, Rust, JavaScript, or React Native, with a dedicated API for Unreal Engine.
 
 > **New in v1.2**
 >
@@ -23,6 +23,7 @@ SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, L
 * **C# (SimpleSharpBLE):** .NET bindings available from [NuGet](https://www.nuget.org/packages/SimpleSharpBLE/).
 * **Python (SimplePyBLE):** Python bindings available from [PyPI](https://pypi.org/project/simplepyble/).
 * **Java (SimpleJavaBLE):** Java bindings available from Maven Central with bundled desktop native libraries.
+* **Go (SimpleGoBLE):** Go bindings without cgo, available as a [Go module](https://pkg.go.dev/github.com/simpleble/simplegoble).
 * **Rust (SimpleRsBLE):** Rust bindings available from [crates.io](https://crates.io/crates/simplersble).
 * **JavaScript (SimpleJSBLE):** Node.js and Electron bindings with TypeScript types, available from [npm](https://www.npmjs.com/package/simplejsble).
 * **React Native (SimpleRnBLE):** iOS and Android bindings for React Native with TypeScript types, available from [npm](https://www.npmjs.com/package/simplernble).
@@ -37,22 +38,19 @@ SimplePyBLE has surpassed 3.5 million downloads on PyPI.
 
 New to SimpleBLE or Bluetooth LE? Start with the shortest path that matches where you are:
 
-* **Need to install a binding?** Use the [Installation](./installation) guide to choose the right package or source build path for C++, C, C#, Python, Java, Rust, Kotlin Multiplatform, Android, Unreal Engine, and agent tooling.
+* **Need to install a binding?** Use the [Installation](./installation) guide to choose the right package or source build path for C++, C, C#, Python, Java, Go, Rust, JavaScript, React Native, Kotlin Multiplatform, Android, Unreal Engine, and agent tooling.
 * **Need a first working program?** Use the [Quickstart](./quickstart) to scan for nearby BLE devices with copy/paste snippets for each supported binding.
 * **Need to build a real workflow?** Use the [Recipes](./recipes/scan) for scanning, connecting, and GATT operations like read, write, and notify.
 * **New to BLE concepts?** Read [Fundamentals](./fundamentals) for Bluetooth LE basics, permissions, concurrency, and CMake setup.
 
-### Support & Resources
+### Support and resources
 
-We're here to help you succeed with SimpleBLE:
-
-* **Documentation**: Start with [Installation](./installation), [Quickstart](./quickstart), and the task-based [Recipes](./recipes/scan).
-* **Community**: Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
-* **Commercial Support**: Check out [our website](https://simpleble.org?utm_source=docs&utm_medium=referral&utm_campaign=readme) or [email us](mailto:contact@simpleble.org) for licensing and professional services.
-* **Extension Libraries**: Learn about [SimpleBluez](https://github.com/simpleble/simpleble/tree/main/simplebluez), our BlueZ abstraction layer, and [SimpleDBus](https://github.com/simpleble/simpleble/tree/main/simpledbus), our DBus object hierarchy handler.
-
-**Don't hesitate to reach out if you need assistance - we're happy to help!**
+* **Documentation:** Start with [Installation](./installation), [Quickstart](./quickstart), and the task-based [Recipes](./recipes/scan).
+* **Commercial support:** Visit [simpleble.org](https://simpleble.org?utm_source=docs&utm_medium=referral&utm_campaign=docs_overview&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
+* **Community:** Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
+* **Dongl:** Prototype and ship with the [official SimpleBLE USB adapter](https://www.simpleble.org/dongl?utm_source=docs&utm_medium=referral&utm_campaign=docs_overview&utm_content=support).
+* **Lower-level libraries:** [SimpleBluez](./simplebluez/usage) wraps BlueZ, and [SimpleDBus](./simpledbus/usage) wraps the D-Bus object model.
 
 ---
 
-**SimpleBLE** is a project powered by **[The California Open Source Company](https://californiaopensource.com/?utm_source=docs&utm_medium=referral&utm_campaign=readme)**.
+**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=docs&utm_medium=referral&utm_campaign=docs_overview&utm_content=footer).

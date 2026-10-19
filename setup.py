@@ -58,7 +58,7 @@ skbuild.setup(
     author="Kevin Dewald",
     author_email="kevin@simpleble.org",
     url="https://github.com/simpleble/simpleble",
-    description="The ultimate fully-fledged cross-platform BLE library, designed for simplicity and ease of use. Free for non-commercial use; commercial use requires a license.",
+    description="Python bindings for the cross-platform SimpleBLE Bluetooth Low Energy library, for Windows, macOS, and Linux. Free for non-commercial use; commercial use requires a license.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     license_expression="BUSL-1.1",

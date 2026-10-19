@@ -5,7 +5,7 @@ name = "simplersble"
 version = "1.2.1-dev1"
 rust-version = "1.82"
 license = "BUSL-1.1"
-description = "The all-in-one Bluetooth library that makes it easy to add wireless connectivity to your projects."
+description = "Rust bindings for the cross-platform SimpleBLE Bluetooth Low Energy library, for Windows, macOS, and Linux. Free for non-commercial use; commercial use requires a license."
 readme = "simplersble/README.md"
 repository = "https://github.com/simpleble/simpleble"
 

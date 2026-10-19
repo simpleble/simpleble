@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "simpleaible"
 version = "1.2.1-dev1"
-description = "SimpleAIBLE is an AI-friendly BLE toolkit (MCP server & REST API) powered by SimplePyBLE. Free for non-commercial use; commercial use requires a license."
-readme = "README.rst"
+description = "An MCP server, HTTP API, and agent skills that let AI agents use Bluetooth Low Energy devices through SimpleBLE. Free for non-commercial use; commercial use requires a license."
+readme = "README.md"
 license = "BUSL-1.1"
 requires-python = ">=3.10"
 authors = [{ name = "Kevin Dewald", email = "kevin@simpleble.org" }]
