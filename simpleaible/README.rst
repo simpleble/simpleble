@@ -70,7 +70,7 @@ Run ``simpleaible uninstall`` to remove the skill again. For other agents, use t
 See the `Agent Skills docs`_ for more details.
 
 License
-=======
+-------
 
 SimpleAIBLE follows the `SimpleBLE license`_, the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial
 use, and commercial use needs a commercial license. We offer free commercial licenses for small projects and early-stage
