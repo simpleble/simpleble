@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - (Android) Fixed compilation with NDK 30 by updating vendored fmt.
 - (Android) Fixed paired peripherals not sharing callbacks with the same scanned device.
+- (Android) Fixed `is_connectable()` returning an undefined value for paired peripherals that were never scanned.
 - (Python) Fixed GIL deadlocks when replacing or clearing callbacks.
 - (SimpleSharpBLE) Fixed local read handlers attaching to the wrong characteristic on the PLAIN backend.
 - (SimpleSharpBLE) Fixed iOS and Mac Catalyst minimum versions.

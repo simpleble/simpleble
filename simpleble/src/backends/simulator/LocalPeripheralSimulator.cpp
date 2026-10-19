@@ -473,7 +473,14 @@ class PeripheralSimulator final : public PeripheralBase {
         return device_->started && environment && environment->is_active();
     }
 
-    bool is_advertising() override { return is_started() && device_->connections().size() < 8; }
+    bool is_advertising() override {
+        if (!is_started()) return false;
+
+        // Same rule as the environment: the device stops advertising once it has as many connections as it accepts.
+        auto core = device_->internal();
+        std::lock_guard<std::mutex> lock(core->mutex);
+        return core->connections.size() < core->settings.max_connections;
+    }
 
     void set_callback_on_client_connected(std::function<void(BluetoothAddress)> callback) override {
         if (callback) {

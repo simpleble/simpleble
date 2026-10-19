@@ -66,8 +66,9 @@ class PeripheralAndroid : public PeripheralBase {
 
     int16_t rssi_ = INT16_MIN;
     int16_t tx_power_ = INT16_MIN;
-    uint16_t mtu_;
-    bool connectable_;
+
+    // NOTE: A bonded device has no advertisement until it is scanned. Like Windows, assume it is connectable.
+    bool connectable_ = true;
 
     std::vector<std::string> advertised_services_;
     std::map<uint16_t, kvn::bytearray> manufacturer_data_;
