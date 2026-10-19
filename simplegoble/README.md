@@ -280,8 +280,12 @@ Go selects stable releases for `@latest`.
 ## License
 
 SimpleGoBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleble/blob/main/LICENSE.md),
-the Business Source License 1.1 (BUSL-1.1). See the included [LICENSE](LICENSE)
-for the complete terms.
+the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
+and commercial use needs a commercial license. We offer free commercial licenses
+for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
+or [leave us a message](https://www.simpleble.org/contact) to discuss your use
+case. Commercial licenses carry no royalties or revenue sharing; see the
+[licensing page](https://docs.simpleble.org/licensing) for terms.
 
 ---
 

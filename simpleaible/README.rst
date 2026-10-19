@@ -72,26 +72,10 @@ See the `Agent Skills docs`_ for more details.
 License
 =======
 
-SimpleAIBLE is available under the Business Source License 1.1 (BUSL-1.1). Each
-version of SimpleAIBLE will convert to the GNU General Public License version 3 after four years of its initial release.
-Qualifying non-commercial users may instead continue using and distributing that version under the original
-BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
-
-The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
-also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!
-
-**Why purchase a commercial license?**
-
-- Build and deploy unlimited commercial applications
-- Use across your entire development team
-- Zero revenue sharing or royalty payments
-- Choose features that match your needs and budget
-- Priority technical support included
-- Clear terms for integrating into MIT-licensed projects
-
-**Looking for information on pricing and commercial terms of service?** Visit |website-url|_ for more details.
-
-For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the specifics of your situation.
+SimpleAIBLE follows the `SimpleBLE license`_, the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial
+use, and commercial use needs a commercial license. We offer free commercial licenses for small projects and early-stage
+companies: |email|_ or |leavemessage|_ to discuss your use case. Commercial licenses carry no royalties or revenue
+sharing; see the `licensing page`_ for terms.
 
 ----
 
@@ -102,19 +86,20 @@ For further enquiries, please |email|_ or |leavemessage|_ and we can discuss the
 .. |email| replace:: email us
 .. _email: mailto:contact@simpleble.org
 
-.. |leavemessage| replace:: leave us a message on our website
+.. |leavemessage| replace:: leave us a message
 .. _leavemessage: https://www.simpleble.org/contact?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
 
 .. |website| replace:: our website
 .. _website: https://simpleble.org?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
 
-.. |website-url| replace:: www.simpleble.org
-.. _website-url: https://simpleble.org?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
-
 .. |caos| replace:: **The California Open Source Company**
 .. _caos: https://californiaopensource.com?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
 
 .. _SimpleBLE: https://github.com/simpleble/simpleble/
+
+.. _SimpleBLE license: https://github.com/simpleble/simpleble/blob/main/LICENSE.md
+
+.. _licensing page: https://docs.simpleble.org/licensing
 
 .. _official SimpleBLE Bluetooth dongle: https://www.simpleble.org/dongl?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=dongl_launch
 

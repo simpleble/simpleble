@@ -91,26 +91,12 @@ async fn main() {
 
 # License
 
-Since January 20th 2025, SimpleBLE is now available under the Business Source License 1.1 (BUSL-1.1). Each
-version of SimpleBLE will convert to the GNU General Public License version 3 after four years of its initial release.
-Qualifying non-commercial users may instead continue using and distributing that version under the original
-BUSL-1.1 terms under the Non-Commercial Perpetual Use Grant in `LICENSE.md`.
-
-The project is free to use for non-commercial purposes, but requires a commercial license for commercial use. We
-also offer FREE commercial licenses for small projects and early-stage companies - reach out to discuss your use case!
-
-**Why purchase a commercial license?**
-
-- Build and deploy unlimited commercial applications
-- Use across your entire development team
-- Zero revenue sharing or royalty payments
-- Choose features that match your needs and budget
-- Priority technical support included
-- Clear terms for integrating into MIT-licensed projects
-
-**Looking for information on pricing and commercial terms of service?** Visit [our website](https://simpleble.org?utm_source=crates_io&utm_medium=referral&utm_campaign=simplersble_readme) for more details.
-
-For further enquiries, please [email us](mailto:contact@simpleble.org) or [leave us a message on our website](https://www.simpleble.org/contact?utm_source=crates_io&utm_medium=referral&utm_campaign=simplersble_readme) and we can discuss the specifics of your situation.
+SimpleRsBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleble/blob/main/LICENSE.md), the Business
+Source License 1.1 (BUSL-1.1). It is free for non-commercial use, and commercial use needs a commercial license. We offer
+free commercial licenses for small projects and early-stage companies: [email us](mailto:contact@simpleble.org) or
+[leave us a message](https://www.simpleble.org/contact?utm_source=crates_io&utm_medium=referral&utm_campaign=simplersble_readme)
+to discuss your use case. Commercial licenses carry no royalties or revenue sharing; see the
+[licensing page](https://docs.simpleble.org/licensing) for terms.
 
 ---
 

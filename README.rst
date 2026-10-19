@@ -61,8 +61,9 @@ and requires a commercial license for commercial use. Each version converts to t
 four years after its initial release. Qualifying non-commercial users may instead continue using and distributing that
 version under the original BUSL-1.1 terms through the Non-Commercial Perpetual Use Grant in ``LICENSE.md``.
 
-Free commercial licenses are available for qualifying small projects and early-stage companies. See |website-url|_ for
-pricing and commercial terms, or |leavemessage|_ to discuss your use case.
+Free commercial licenses are available for qualifying small projects and early-stage companies, and commercial licenses
+carry no royalties or revenue sharing. See |website-url|_ for pricing and commercial terms, or |leavemessage|_ to
+discuss your use case.
 
 ----
 
@@ -104,8 +105,8 @@ pricing and commercial terms, or |leavemessage|_ to discuss your use case.
 .. _Discord: https://discord.gg/N9HqNEcvP3
 .. _Dongl: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=dongl_launch
 .. _SimpleBLE Store: https://simpleble.store?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
-.. _SimpleBluez: https://github.com/simpleble/simpleble/tree/main/simplebluez
-.. _SimpleDBus: https://github.com/simpleble/simpleble/tree/main/simpledbus
+.. _SimpleBluez: https://docs.simpleble.org/simplebluez/usage
+.. _SimpleDBus: https://docs.simpleble.org/simpledbus/usage
 .. _security policy: https://github.com/simpleble/simpleble/blob/main/SECURITY.md
 .. _contribute: https://github.com/simpleble/simpleble/blob/main/CONTRIBUTING.md
 .. _Installation: https://docs.simpleble.org/installation
