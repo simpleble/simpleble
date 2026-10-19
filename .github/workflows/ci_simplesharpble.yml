@@ -67,7 +67,8 @@ jobs:
           $logo = '![SimpleBLE](https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleble-logo-adaptive.svg)'
           $readme = $readme -replace '(?s)<p align="center">.*?</p>', $logo
           $readme = $readme.Replace('utm_source=github', 'utm_source=nuget')
-          Set-Content -NoNewline simplesharpble/README.md $readme
+          # NOTE: Set-Content rejected -NoNewline on the Windows runner, so the file is written directly.
+          [System.IO.File]::WriteAllText((Resolve-Path simplesharpble/README.md).Path, $readme)
       - name: Pack native libraries
         run: dotnet pack simplesharpble -c Release "-p:NativeLibrariesDirectory=$pwd/native" -o simplesharpble/artifacts
       - name: Build examples
