@@ -1,14 +1,33 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png#gh-light-mode-only" alt="SimpleBLE" width="360">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png#gh-dark-mode-only" alt="SimpleBLE" width="360">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png">
+    <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png" alt="SimpleBLE" width="360">
+  </picture>
 </p>
 
 # SimpleJSBLE
+
+**Build Bluetooth once. Ship it everywhere.**
 
 SimpleJSBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to Node.js
 and Electron on Windows, macOS, and Linux. Discover and connect Bluetooth
 peripherals, read and write GATT values, subscribe to notifications, and host
 local GATT services through one API, with TypeScript types included.
+
+## Why SimpleJSBLE
+
+- **One cross-platform API:** Keep your Bluetooth code the same in Node.js and Electron on Windows, macOS, and Linux.
+- **Native underneath:** Use WinRT, CoreBluetooth, and BlueZ through one maintained stack.
+- **Built for real products:** Act as a central or a peripheral on every supported platform.
+- **Commercially supported:** Ship proprietary applications with commercial licensing and direct technical support from the team that builds SimpleBLE.
+
+## Support and resources
+
+- **Documentation:** The [usage guide](https://docs.simpleble.org/simplejsble/usage?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=support) and [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplejsble) cover every API.
+- **Commercial support:** Visit [simpleble.org](https://simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
+- **Community:** Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
+- **Dongl:** Prototype and ship with the [official SimpleBLE USB adapter](https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=support).
+- **Contribute:** Send changes to [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplejsble); the [publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplejsble-publishing.md) covers builds and releases.
 
 ## Get started
 
@@ -29,7 +48,7 @@ import { Adapter } from 'simplejsble';
 const [adapter] = await Adapter.getAdapters();
 
 adapter.on('scanFound', peripheral => {
-  console.log(peripheral.identifier(), peripheral.address(), peripheral.rssi());
+  console.log(`${peripheral.identifier()} [${peripheral.address()}] ${peripheral.rssi()} dBm`);
 });
 await adapter.scanFor(5000);
 ```
@@ -101,7 +120,7 @@ changing them.
 
 ## Use a Dongl
 
-A [Dongl](https://docs.simpleble.org/dongl) is a USB Bluetooth adapter made for
+A [Dongl](https://docs.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=dongl) is a USB Bluetooth adapter made for
 SimpleBLE. Its backend is on by default; use the adapters of the Dongl backend:
 
 ```js
@@ -137,8 +156,8 @@ apps need an `NSBluetoothAlwaysUsageDescription` entry in their `Info.plist`.
 | Windows 10 or newer | x64, arm64 | |
 | Linux with glibc 2.28 or newer | x64, arm64 | BlueZ and the D-Bus library |
 
-See the [usage guide](https://docs.simpleble.org/simplejsble/usage) for
-Bluetooth permissions and platform details.
+See [Bluetooth permissions](https://docs.simpleble.org/fundamentals/permissions?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=platforms)
+for the setup each platform needs.
 
 ## Versions
 
@@ -149,24 +168,16 @@ under the `latest` tag, and development builds of the main branch under `dev`:
 npm install simplejsble@dev
 ```
 
-## Documentation and support
-
-- Read the [SimpleJSBLE usage guide](https://docs.simpleble.org/simplejsble/usage).
-- Browse the [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplejsble).
-- Join the [Discord community](https://discord.gg/N9HqNEcvP3).
-- Contribute in [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplejsble); see the [development and publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplejsble-publishing.md).
-- Visit [simpleble.org](https://simpleble.org/) for commercial licensing and professional services.
-
 ## License
 
 SimpleJSBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleble/blob/main/LICENSE.md),
 the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
 and commercial use needs a commercial license. We offer free commercial licenses
 for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
-or [leave us a message](https://www.simpleble.org/contact) to discuss your use
+or [leave us a message](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=license) to discuss your use
 case. Commercial licenses carry no royalties or revenue sharing; see the
-[licensing page](https://docs.simpleble.org/licensing) for terms.
+[licensing page](https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=license) for terms.
 
 ---
 
-**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/).
+**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=github&utm_medium=referral&utm_campaign=simplejsble_readme&utm_content=footer).

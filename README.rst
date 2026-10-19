@@ -46,8 +46,9 @@ Use Dongl when you want firmware visibility, customizability, and direct support
 Documentation and Support
 -------------------------
 
-* Read the `Documentation`_ and `Announcements`_.
-* Join the `Discord`_ community.
+* Read the `Documentation <https://docs.simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=support>`__
+  and `Announcements`_.
+* Ask questions and share projects in `GitHub Discussions`_.
 * Review the `security policy`_ or learn how to `contribute`_.
 * Explore the lower-level `SimpleBluez`_ and `SimpleDBus`_ libraries.
 * Visit |website|_ or |email|_ about commercial licensing and professional services.
@@ -89,25 +90,25 @@ discuss your use case.
 .. _email: mailto:contact@simpleble.org
 
 .. |leavemessage| replace:: leave us a message
-.. _leavemessage: https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
+.. _leavemessage: https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=license
 
 .. |website| replace:: our website
-.. _website: https://simpleble.org?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
+.. _website: https://simpleble.org?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=support
 
 .. |website-url| replace:: www.simpleble.org
-.. _website-url: https://simpleble.org?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
+.. _website-url: https://simpleble.org?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=license
 
 .. |caos| replace:: **The California Open Source Company**
-.. _caos: https://californiaopensource.com?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
+.. _caos: https://californiaopensource.com?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=footer
 
-.. _Announcements: https://simpleble.org/blog/news?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
-.. _Documentation: https://docs.simpleble.org/
-.. _Discord: https://discord.gg/N9HqNEcvP3
-.. _Dongl: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=dongl_launch
-.. _SimpleBLE Store: https://simpleble.store?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme
-.. _SimpleBluez: https://docs.simpleble.org/simplebluez/usage
-.. _SimpleDBus: https://docs.simpleble.org/simpledbus/usage
+.. _Announcements: https://simpleble.org/blog/news?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=support
+.. _Documentation: https://docs.simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=get_started
+.. _GitHub Discussions: https://github.com/simpleble/simpleble/discussions
+.. _Dongl: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=dongl
+.. _SimpleBLE Store: https://simpleble.store?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=support
+.. _SimpleBluez: https://docs.simpleble.org/simplebluez/usage?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=support
+.. _SimpleDBus: https://docs.simpleble.org/simpledbus/usage?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=support
 .. _security policy: https://github.com/simpleble/simpleble/blob/main/SECURITY.md
 .. _contribute: https://github.com/simpleble/simpleble/blob/main/CONTRIBUTING.md
-.. _Installation: https://docs.simpleble.org/installation
-.. _Quickstart: https://docs.simpleble.org/quickstart
+.. _Installation: https://docs.simpleble.org/installation?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=get_started
+.. _Quickstart: https://docs.simpleble.org/quickstart?utm_source=github&utm_medium=referral&utm_campaign=simpleble_readme&utm_content=get_started

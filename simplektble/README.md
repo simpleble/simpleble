@@ -1,15 +1,34 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png#gh-light-mode-only" alt="SimpleBLE" width="360">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png#gh-dark-mode-only" alt="SimpleBLE" width="360">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png">
+    <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png" alt="SimpleBLE" width="360">
+  </picture>
 </p>
 
 # SimpleKtBLE
+
+**Build Bluetooth once. Ship it everywhere.**
 
 SimpleKtBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to
 Kotlin Multiplatform on Android, iOS, macOS, Windows, and Linux. Discover and
 connect Bluetooth peripherals, read and write GATT values, follow
 notifications, and host local GATT services from your shared Kotlin code, with
 coroutines and flows throughout.
+
+## Why SimpleKtBLE
+
+- **One cross-platform API:** Keep your Bluetooth code in shared Kotlin for Android, iOS, macOS, Windows, and Linux.
+- **Native underneath:** Use Android Bluetooth, CoreBluetooth, WinRT, and BlueZ through one maintained stack.
+- **Built for real products:** Act as a central or a peripheral on every supported platform.
+- **Commercially supported:** Ship proprietary applications with commercial licensing and direct technical support from the team that builds SimpleBLE.
+
+## Support and resources
+
+- **Documentation:** The [usage guide](https://docs.simpleble.org/simplektble/usage?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=support) and [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplektble) cover every API.
+- **Commercial support:** Visit [simpleble.org](https://simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
+- **Community:** Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
+- **Dongl:** Prototype and ship with the [official SimpleBLE USB adapter](https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=support).
+- **Contribute:** Send changes to [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplektble); the [development guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplektble-development.md) covers builds and tests.
 
 ## Get started
 
@@ -97,17 +116,12 @@ came from a flow or from a list. On iOS and macOS,
 without scanning.
 
 Calls that wait on a device or the Bluetooth stack, such as `connect()`,
-`read()`, `scanFor()`, `getPairedPeripherals()`, `unpair()`, or `powerOn()`,
-are `suspend` functions that run on `Dispatchers.IO`. `scanStart()`,
-`scanStop()`, `getAdapters()`, and `retrieveCachedPeripherals()` call the
-Bluetooth stack directly. Data the library already holds, such as a
-peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned
-directly.
-
-A cancelled call, for example with `withTimeout`, returns once the Bluetooth
-stack finishes: `scanFor()` when its scan ends, and `connect()` when the
-attempt is done. `disconnect()`, `unsubscribe()`, and `stop()` finish even in
-a cancelled coroutine, so they work in `finally` blocks.
+`read()`, and `scanFor()`, are `suspend` functions that run on
+`Dispatchers.IO`, so you can call them from the main thread. Data the library
+already holds, such as a peripheral's `identifier`, `rssi`, or
+`manufacturerData()`, is returned directly. The
+[usage guide](https://docs.simpleble.org/simplektble/usage?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=scanning) covers
+cancellation.
 
 ## Connect and use GATT
 
@@ -165,7 +179,7 @@ before `start()`; call `stop()` before changing them.
 
 ## Use a Dongl
 
-A [Dongl](https://docs.simpleble.org/dongl) is a USB Bluetooth adapter made for
+A [Dongl](https://docs.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=dongl) is a USB Bluetooth adapter made for
 SimpleBLE, available on macOS, Windows, and Linux. Its backend is on by
 default; use the adapters of the Dongl backend:
 
@@ -192,14 +206,9 @@ before `connect()`.
 
 ## Versions
 
-SimpleKtBLE follows SimpleBLE's release versions.
-
-## Documentation and support
-
-- Read the [SimpleBLE documentation](https://docs.simpleble.org).
-- Join the [Discord community](https://discord.gg/N9HqNEcvP3).
-- Contribute in [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplektble); see the [development guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplektble-development.md).
-- Visit [simpleble.org](https://simpleble.org/) for commercial licensing and professional services.
+SimpleKtBLE follows SimpleBLE's release versions. Stable releases use
+`X.Y.Z`, and development builds of the main branch are published as
+`X.Y.Z-devN`.
 
 ## License
 
@@ -207,10 +216,10 @@ SimpleKtBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleb
 the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
 and commercial use needs a commercial license. We offer free commercial licenses
 for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
-or [leave us a message](https://www.simpleble.org/contact) to discuss your use
+or [leave us a message](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=license) to discuss your use
 case. Commercial licenses carry no royalties or revenue sharing; see the
-[licensing page](https://docs.simpleble.org/licensing) for terms.
+[licensing page](https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=license) for terms.
 
 ---
 
-**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/).
+**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=footer).

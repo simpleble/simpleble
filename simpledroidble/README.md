@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png#gh-light-mode-only" alt="SimpleBLE" width="360">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png#gh-dark-mode-only" alt="SimpleBLE" width="360">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png">
+    <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png" alt="SimpleBLE" width="360">
+  </picture>
 </p>
 
 # SimpleDroidBLE
@@ -10,10 +12,17 @@ Kotlin on Android. Discover and connect Bluetooth peripherals, read and write
 GATT values, follow notifications, and host local GATT services, with
 coroutines and flows throughout.
 
-New apps use [SimpleKtBLE](https://docs.simpleble.org/simplektble/usage), which
+New apps use [SimpleKtBLE](https://docs.simpleble.org/simplektble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=intro), which
 has the same Kotlin API on Android and also runs on iOS, macOS, Windows, and
-Linux. The [usage guide](https://docs.simpleble.org/simpledroidble/usage#migrate-to-simplektble)
+Linux. The [usage guide](https://docs.simpleble.org/simpledroidble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=intro#migrate-to-simplektble)
 lists the steps to move over.
+
+## Support and resources
+
+- **Documentation:** The [usage guide](https://docs.simpleble.org/simpledroidble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=support) and [example app](https://github.com/simpleble/simpleble/tree/main/examples/simpleble-android) cover every API.
+- **Commercial support:** Visit [simpleble.org](https://simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
+- **Community:** Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
+- **Contribute:** Send changes to [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simpledroidble); the [publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpledroidble-publishing.md) covers builds and releases.
 
 ## Get started
 
@@ -159,24 +168,16 @@ SimpleDroidBLE follows SimpleBLE's release versions. Stable releases use
 `X.Y.Z`, and development builds of the main branch are published as
 `X.Y.Z-devN`.
 
-## Documentation and support
-
-- Read the [SimpleDroidBLE usage guide](https://docs.simpleble.org/simpledroidble/usage).
-- Try the [example app](https://github.com/simpleble/simpleble/tree/main/examples/simpleble-android).
-- Join the [Discord community](https://discord.gg/N9HqNEcvP3).
-- Contribute in [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simpledroidble); see the [publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpledroidble-publishing.md).
-- Visit [simpleble.org](https://simpleble.org/) for commercial licensing and professional services.
-
 ## License
 
 SimpleDroidBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleble/blob/main/LICENSE.md),
 the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
 and commercial use needs a commercial license. We offer free commercial licenses
 for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
-or [leave us a message](https://www.simpleble.org/contact) to discuss your use
+or [leave us a message](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=license) to discuss your use
 case. Commercial licenses carry no royalties or revenue sharing; see the
-[licensing page](https://docs.simpleble.org/licensing) for terms.
+[licensing page](https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=license) for terms.
 
 ---
 
-**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/).
+**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=footer).

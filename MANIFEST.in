@@ -382,7 +382,7 @@ include simpledbus/src/interfaces/Introspectable.cpp
 include simpledbus/src/interfaces/ObjectManager.cpp
 include simpledbus/src/interfaces/Properties.cpp
 include simplepyble/CMakeLists.txt
-include simplepyble/README.rst
+include simplepyble/README.md
 include simplepyble/requirements.txt
 include simplepyble/src/main.cpp
 include simplepyble/src/simplepyble/__init__.py

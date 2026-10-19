@@ -568,6 +568,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Attribute README links to crates.io
+        run: sed -i 's/utm_source=github/utm_source=crates_io/g' simplersble/README.md
+
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

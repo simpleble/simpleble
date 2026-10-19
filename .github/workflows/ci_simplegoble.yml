@@ -68,6 +68,7 @@ jobs:
           package_dir=build_simplegoble_package
           mkdir -p "$package_dir/examples"
           cp simplegoble/*.go simplegoble/go.mod simplegoble/go.sum simplegoble/README.md "$package_dir/"
+          sed -i 's/utm_source=github/utm_source=pkg_go_dev/g' "$package_dir/README.md"
           cp -R simplegoble/internal simplegoble/tests "$package_dir/"
           cp LICENSE.md "$package_dir/LICENSE"
           cp VERSION "$package_dir/VERSION"

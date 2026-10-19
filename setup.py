@@ -33,7 +33,9 @@ root = pathlib.Path(__file__).parent.resolve()
 version_str = (root / "VERSION").read_text(encoding="utf-8").strip()
 
 # Get the long description from the README file
-long_description = (root / "simplepyble" / "README.rst").read_text(encoding="utf-8")
+long_description = (root / "simplepyble" / "README.md").read_text(encoding="utf-8")
+# The README links say they come from GitHub; the PyPI copy says PyPI.
+long_description = long_description.replace("utm_source=github", "utm_source=pypi_simplepyble")
 
 cmake_options = []
 cmake_options.append(f"-Dpybind11_DIR={pybind11.get_cmake_dir()}")
@@ -58,7 +60,7 @@ skbuild.setup(
     url="https://github.com/simpleble/simpleble",
     description="The ultimate fully-fledged cross-platform BLE library, designed for simplicity and ease of use. Free for non-commercial use; commercial use requires a license.",
     long_description=long_description,
-    long_description_content_type="text/x-rst",
+    long_description_content_type="text/markdown",
     license_expression="BUSL-1.1",
     license_files=["LICENSE.md"],
     packages=["simplepyble"],

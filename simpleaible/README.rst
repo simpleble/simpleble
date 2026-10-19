@@ -20,7 +20,7 @@ We're here to help you succeed with SimpleAIBLE:
 
 * **Documentation**: Visit our `docs`_ page for comprehensive guides
 * **Commercial Support**: Check out |website|_ or |email|_ about licensing and professional services.
-* **Community**: Join our `Discord`_ server for discussions and help
+* **Community**: Ask questions and share projects in `GitHub Discussions`_
 * **Dongl**: Pair AI-driven BLE workflows with the `official SimpleBLE Bluetooth dongle`_.
 
 **Don't hesitate to reach out if you need assistance - we're happy to help!**
@@ -87,30 +87,30 @@ sharing; see the `licensing page`_ for terms.
 .. _email: mailto:contact@simpleble.org
 
 .. |leavemessage| replace:: leave us a message
-.. _leavemessage: https://www.simpleble.org/contact?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
+.. _leavemessage: https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=license
 
 .. |website| replace:: our website
-.. _website: https://simpleble.org?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
+.. _website: https://simpleble.org?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=support
 
 .. |caos| replace:: **The California Open Source Company**
-.. _caos: https://californiaopensource.com?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=simpleaible_readme
+.. _caos: https://californiaopensource.com?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=footer
 
 .. _SimpleBLE: https://github.com/simpleble/simpleble/
 
 .. _SimpleBLE license: https://github.com/simpleble/simpleble/blob/main/LICENSE.md
 
-.. _licensing page: https://docs.simpleble.org/licensing
+.. _licensing page: https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=license
 
-.. _official SimpleBLE Bluetooth dongle: https://www.simpleble.org/dongl?utm_source=pypi_simpleaible&utm_medium=referral&utm_campaign=dongl_launch
+.. _official SimpleBLE Bluetooth dongle: https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=support
 
-.. _docs: https://docs.simpleble.org/
+.. _docs: https://docs.simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=support
 
-.. _Discord: https://discord.gg/N9HqNEcvP3
+.. _GitHub Discussions: https://github.com/simpleble/simpleble/discussions
 
-.. _MCP Server docs: https://docs.simpleble.org/simpleaible/mcp
+.. _MCP Server docs: https://docs.simpleble.org/simpleaible/mcp?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=mcp
 
-.. _HTTP Server docs: https://docs.simpleble.org/simpleaible/http
+.. _HTTP Server docs: https://docs.simpleble.org/simpleaible/http?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=http
 
-.. _Agent Skills docs: https://docs.simpleble.org/simpleaible/skills
+.. _Agent Skills docs: https://docs.simpleble.org/simpleaible/skills?utm_source=github&utm_medium=referral&utm_campaign=simpleaible_readme&utm_content=skills
 
 .. |PyPI Licence| image:: https://img.shields.io/pypi/l/simpleaible

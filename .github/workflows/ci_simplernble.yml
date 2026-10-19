@@ -51,6 +51,9 @@ jobs:
           xcrun simctl boot "$device"
           SIMULATOR="$device" npm run test:ios
 
+      - name: Attribute README links to npm
+        run: sed -i '' 's/utm_source=github/utm_source=npm/g' README.md
+
       - name: Pack
         run: |
           mkdir -p ../package

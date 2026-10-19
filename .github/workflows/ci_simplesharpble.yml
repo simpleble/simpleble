@@ -59,6 +59,8 @@ jobs:
             New-Item -ItemType Directory -Path $destination -Force | Out-Null
             Copy-Item "$output/SimpleSharpBLE.dll" -Destination $destination
           }
+      - name: Attribute README links to NuGet
+        run: (Get-Content simplesharpble/README.md -Raw).Replace('utm_source=github', 'utm_source=nuget') | Set-Content -NoNewline simplesharpble/README.md
       - name: Pack native libraries
         run: dotnet pack simplesharpble -c Release "-p:NativeLibrariesDirectory=$pwd/native" -o simplesharpble/artifacts
       - name: Build examples

@@ -28,6 +28,9 @@ jobs:
       - name: Add License
         run: cp LICENSE.md simpleaible/LICENSE.md
 
+      - name: Attribute README links to PyPI
+        run: sed -i 's/utm_source=github/utm_source=pypi_simpleaible/g' simpleaible/README.rst
+
       - name: Build
         run: python3 -m build simpleaible
 

@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png#gh-light-mode-only" alt="SimpleBLE" width="360">
-  <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png#gh-dark-mode-only" alt="SimpleBLE" width="360">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo.png">
+    <img src="https://raw.githubusercontent.com/simpleble/simpleble/main/docs/public/simpleBLE-logo-dark.png" alt="SimpleBLE" width="360">
+  </picture>
 </p>
 
 # SimpleGoBLE
@@ -9,12 +11,23 @@
 
 SimpleGoBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to Go on
 Windows, macOS, and Linux. Discover and connect Bluetooth peripherals, read and
-write GATT values, subscribe to notifications, and host local GATT services through one API.
+write GATT values, subscribe to notifications, and host local GATT services
+through one API, without cgo.
 
 ## Why SimpleGoBLE
 
-- **One cross-platform API:** Keep your Bluetooth client and hosting logic consistent across desktop platforms.
-- **Native underneath:** Use WinRT, CoreBluetooth, and BlueZ through SimpleBLE.
+- **One cross-platform API:** Keep your Bluetooth client and hosting logic the same on Windows, macOS, and Linux.
+- **Native underneath:** Use WinRT, CoreBluetooth, and BlueZ through one maintained stack.
+- **Built for real products:** Act as a central or a peripheral on every supported platform.
+- **Commercially supported:** Ship proprietary applications with commercial licensing and direct technical support from the team that builds SimpleBLE.
+
+## Support and resources
+
+- **Documentation:** The [usage guide](https://docs.simpleble.org/simplegoble/usage?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=support), [API reference](https://pkg.go.dev/github.com/simpleble/simplegoble), and [examples](https://github.com/simpleble/simpleble/tree/main/examples/simplegoble) cover every API.
+- **Commercial support:** Visit [simpleble.org](https://simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
+- **Community:** Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
+- **Dongl:** Prototype and ship with the [official SimpleBLE USB adapter](https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=support).
+- **Contribute:** Send changes to [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplegoble); the [publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplegoble-publishing.md) covers builds and releases.
 
 ## Get started
 
@@ -24,7 +37,10 @@ Use Go 1.25 or newer:
 go get github.com/simpleble/simplegoble
 ```
 
-List your Bluetooth adapters:
+The module embeds the native SimpleBLE library for every supported platform and
+loads it without cgo, so no C compiler is needed.
+
+Scan for five seconds and print what was found:
 
 ```go
 package main
@@ -32,146 +48,77 @@ package main
 import (
     "fmt"
     "log"
-
-    ble "github.com/simpleble/simplegoble"
-)
-
-func main() {
-    if err := run(); err != nil {
-        log.Fatal(err)
-    }
-}
-
-func run() error {
-    adapters, err := ble.GetAdapters()
-    if err != nil {
-        return err
-    }
-    defer func() {
-        for _, adapter := range adapters {
-            _ = adapter.Close()
-        }
-    }()
-
-    for _, adapter := range adapters {
-        name, err := adapter.Identifier()
-        if err != nil {
-            return err
-        }
-        address, err := adapter.Address()
-        if err != nil {
-            return err
-        }
-        powered, err := adapter.IsPowered()
-        if err != nil {
-            return err
-        }
-        fmt.Printf("%s (%s), powered: %t\n", name, address, powered)
-    }
-    return nil
-}
-```
-
-Build your application:
-
-```sh
-go build ./...
-```
-
-You can also run the included adapter listing example directly:
-
-```sh
-go run github.com/simpleble/simplegoble/examples/list_adapters
-```
-
-## Scan control and callbacks
-
-Register callbacks on an adapter, then scan for a fixed duration:
-
-```go
-package main
-
-import (
-    "fmt"
     "time"
 
     ble "github.com/simpleble/simplegoble"
 )
 
-func scan(adapter *ble.Adapter) error {
-    if err := adapter.SetCallbackOnScanStart(func() {
-        fmt.Println("Scan started")
-    }); err != nil {
-        return err
+func main() {
+    adapters, err := ble.GetAdapters()
+    if err != nil {
+        log.Fatal(err)
     }
-    if err := adapter.SetCallbackOnScanStop(func() {
-        fmt.Println("Scan stopped")
-    }); err != nil {
-        return err
+    adapter := adapters[0]
+
+    adapter.SetCallbackOnScanFound(func(peripheral *ble.Peripheral) {
+        defer peripheral.Close()
+        identifier, _ := peripheral.Identifier()
+        address, _ := peripheral.Address()
+        rssi, _ := peripheral.RSSI()
+        fmt.Printf("%s [%s] %d dBm\n", identifier, address, rssi)
+    })
+    if err := adapter.ScanFor(5 * time.Second); err != nil {
+        log.Fatal(err)
     }
-    return adapter.ScanFor(5 * time.Second)
 }
 ```
 
-`ScanFor` waits for the requested duration while other goroutines remain runnable.
-Use `ScanStart` and `ScanStop` when your application controls scan timing.
-Power callbacks use `SetCallbackOnPowerOn` and `SetCallbackOnPowerOff`.
-Pass `nil` to a callback setter to clear it.
+## Scanning and events
 
-After scanning, call `adapter.ScanGetResults()` to get peripherals. Use
-`SetCallbackOnScanFound` and `SetCallbackOnScanUpdated` for live discovery;
-close each peripheral handle passed to your handler when finished.
+An adapter takes callbacks through `SetCallbackOnScanStart`,
+`SetCallbackOnScanStop`, `SetCallbackOnScanFound`, `SetCallbackOnScanUpdated`,
+`SetCallbackOnPowerOn`, and `SetCallbackOnPowerOff`; a peripheral takes
+`SetCallbackOnConnected` and `SetCallbackOnDisconnected`. Pass `nil` to clear a
+callback. Callbacks run one at a time on each handle's goroutine, so keep them
+short. Each peripheral passed to a callback is a handle you close when finished.
+
+Use `ScanStart` and `ScanStop` when your application controls scan timing, and
+`ScanGetResults` for the peripherals seen by the last scan.
 
 ## Connect and use GATT
 
-Read the battery level from a peripheral discovered during scanning:
+Read the battery level of a peripheral and follow its notifications:
 
 ```go
-package main
-
-import (
-    "fmt"
-
-    ble "github.com/simpleble/simplegoble"
+const (
+    batteryService = "0000180f-0000-1000-8000-00805f9b34fb"
+    batteryLevel   = "00002a19-0000-1000-8000-00805f9b34fb"
 )
 
-func readBattery(peripheral *ble.Peripheral) error {
+func followBattery(peripheral *ble.Peripheral) error {
+    peripheral.SetCallbackOnDisconnected(func() { fmt.Println("Disconnected") })
     if err := peripheral.Connect(); err != nil {
         return err
     }
-    defer peripheral.Disconnect()
 
-    value, err := peripheral.Read("0000180f-0000-1000-8000-00805f9b34fb", "00002a19-0000-1000-8000-00805f9b34fb")
+    level, err := peripheral.Read(batteryService, batteryLevel)
     if err != nil {
         return err
     }
-    fmt.Printf("Battery value: %X\n", value)
-    return nil
+    fmt.Printf("Battery: %d%%\n", level[0])
+
+    return peripheral.Notify(batteryService, batteryLevel, func(value []byte) {
+        fmt.Printf("Battery: %d%%\n", value[0])
+    })
 }
 ```
 
-Use `Services()` to inspect characteristics, their capabilities, and descriptors.
-`Read`, `WriteRequest`, and `WriteCommand` access characteristic values;
-`ReadDescriptor` and `WriteDescriptor` access descriptors. UUIDs are full
-128-bit UUIDs.
-
-`Notify` and `Indicate` deliver Go-owned byte slices to your handler.
-`Unsubscribe` stops a subscription. `ManufacturerData` returns advertisement
-payloads indexed by company ID.
-
-Run the scan and read examples:
-
-```sh
-go run github.com/simpleble/simplegoble/examples/scan
-go run github.com/simpleble/simplegoble/examples/read
-```
-
-For backend-specific enumeration, call `GetBackends()` and then
-`backend.Adapters()`. Close every backend, adapter, and peripheral handle when
-finished. Peripheral handles remain usable after the adapter closes. `Close`
-releases a handle; call `Disconnect` to end a connection. Client callbacks run serially
-on each wrapper's Go worker and can call its methods. Keep handlers short.
-Methods are safe for concurrent use.
+`Services` lists the services, characteristics, capabilities, and descriptors
+of a connected peripheral. `Read`, `WriteRequest`, and `WriteCommand` access
+characteristic values; `ReadDescriptor` and `WriteDescriptor` access
+descriptors. `Notify` and `Indicate` call your function with each value as a
+byte slice, and `Unsubscribe` stops them. Failures are `*ble.Error` values with
+SimpleBLE's error code in `Code`.
 
 ## Host a GATT service
 
@@ -179,55 +126,35 @@ Create a local peripheral from an adapter, add services and characteristics,
 then start advertising:
 
 ```go
-func hostBattery(adapter *ble.Adapter, done <-chan struct{}) error {
-    host, err := adapter.CreateLocalPeripheral()
-    if err != nil {
-        return err
-    }
-    defer host.Close()
-    if err := host.AddAdvertisedService("0000180f-0000-1000-8000-00805f9b34fb"); err != nil {
-        return err
-    }
-    service, err := host.AddService("0000180f-0000-1000-8000-00805f9b34fb")
-    if err != nil {
-        return err
-    }
-    defer service.Close()
-    battery, err := service.AddCharacteristic("00002a19-0000-1000-8000-00805f9b34fb", ble.CapabilityRead|ble.CapabilityNotify)
-    if err != nil {
-        return err
-    }
-    defer battery.Close()
-    if err := battery.SetValue([]byte{100}); err != nil {
-        return err
-    }
-    if err := host.Start(); err != nil {
-        return err
-    }
-    defer host.Stop()
-    <-done
-    return nil
+host, err := adapter.CreateLocalPeripheral()
+if err != nil {
+    return err
 }
+defer host.Close()
+host.AddAdvertisedService(batteryService)
+
+service, err := host.AddService(batteryService)
+if err != nil {
+    return err
+}
+battery, err := service.AddCharacteristic(batteryLevel, ble.CapabilityRead|ble.CapabilityNotify)
+if err != nil {
+    return err
+}
+battery.SetValue([]byte{100})
+
+host.SetCallbackOnClientConnected(func(address string) { fmt.Println(address, "connected") })
+return host.Start()
 ```
 
-`SetValue` updates the stored characteristic value and publishes it to subscribers.
-Observe writes with `SetCallbackOnWrite` and clients with
-`SetCallbackOnClientConnected` and `SetCallbackOnClientDisconnected`.
-Configure services before `Start`; call `Stop` before changing the GATT layout.
-Close each local handle when finished. Hosting support follows the native backend.
-
-Run the echo server:
-
-```sh
-go run github.com/simpleble/simplegoble/examples/peripheral
-```
-
-See the [usage guide](https://docs.simpleble.org/simplegoble/usage) for dynamic
-reads, subscription callbacks, and handle ownership.
+`SetValue` updates the stored value and publishes it to subscribers.
+Characteristics take `SetCallbackOnWrite`, `SetCallbackOnSubscribed`, and
+`SetCallbackOnUnsubscribed`, and `SetCallbackOnRead` computes a value for each
+read. Configure services before `Start`; call `Stop` before changing them.
 
 ## Use a Dongl
 
-A [Dongl](https://docs.simpleble.org/dongl) is a USB Bluetooth adapter made for
+A [Dongl](https://docs.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=dongl) is a USB Bluetooth adapter made for
 SimpleBLE. Its backend is on by default; use the adapters of the Dongl backend:
 
 ```go
@@ -235,47 +162,35 @@ dongl, err := ble.GetDonglBackend()
 if err != nil {
     return err
 }
-defer dongl.Close()
-adapters, err := dongl.Adapters() // Close each adapter when finished.
+adapters, err := dongl.Adapters()
 ```
 
-`ble.Config` also holds the BlueZ and WinRT backend settings. Pairing through a
-Dongl happens without the operating system: register
-`SetCallbackOnPasskeyRequest`, `SetCallbackOnPasskeyDisplay`, or
-`SetCallbackOnNumericComparison` on the peripheral before `Connect`.
-
-```sh
-go run github.com/simpleble/simplegoble/examples/dongl
-```
+`ble.Config` holds the Dongl, BlueZ, and WinRT backend settings; set them
+before the first call that reaches a backend. Pairing through a Dongl happens
+without the operating system: register `SetCallbackOnPasskeyRequest`,
+`SetCallbackOnPasskeyDisplay`, or `SetCallbackOnNumericComparison` on the
+peripheral before `Connect`.
 
 ## Platforms
 
-SimpleGoBLE supports Windows, macOS, and Linux on amd64 and arm64.
-See the [usage guide](https://docs.simpleble.org/simplegoble/usage) for Bluetooth
-permissions and platform requirements.
+| Platform | Architectures | Requirements |
+| --- | --- | --- |
+| macOS 13.0 or newer | x64, arm64 | Bluetooth permission for the app that runs your program |
+| Windows 10 or newer | x64, arm64 | |
+| Linux | x64, arm64 | BlueZ and the D-Bus library |
+
+See [Bluetooth permissions](https://docs.simpleble.org/fundamentals/permissions?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=platforms)
+for the setup each platform needs.
 
 ## Versions
 
-SimpleGoBLE follows SimpleBLE's release versions. Pin a stable release or use
-the latest development build:
+SimpleGoBLE follows SimpleBLE's release versions. `go get` picks the latest
+stable release, `vX.Y.Z`, and development builds of the main branch are tagged
+`vX.Y.Z-devN`:
 
 ```sh
-go get github.com/simpleble/simplegoble@v1.2.1
 go get github.com/simpleble/simplegoble@main
 ```
-
-Stable tags use `vX.Y.Z`; development tags use `vX.Y.Z-devN`. Each module includes
-`VERSION` and `SOURCE_REVISION` to identify its native build and source commit.
-Go selects stable releases for `@latest`.
-
-## Documentation and support
-
-- Browse the [Go API reference](https://pkg.go.dev/github.com/simpleble/simplegoble).
-- Read the [SimpleGoBLE usage guide](https://docs.simpleble.org/simplegoble/usage).
-- Join the [Discord community](https://discord.gg/N9HqNEcvP3).
-- Browse the [runnable examples](https://github.com/simpleble/simpleble/tree/main/examples/simplegoble).
-- Contribute bindings and tests in [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplegoble); see the [development and publishing guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simplegoble-publishing.md).
-- Visit [simpleble.org](https://simpleble.org/) for commercial licensing and professional services.
 
 ## License
 
@@ -283,10 +198,10 @@ SimpleGoBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleb
 the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
 and commercial use needs a commercial license. We offer free commercial licenses
 for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
-or [leave us a message](https://www.simpleble.org/contact) to discuss your use
+or [leave us a message](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=license) to discuss your use
 case. Commercial licenses carry no royalties or revenue sharing; see the
-[licensing page](https://docs.simpleble.org/licensing) for terms.
+[licensing page](https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=license) for terms.
 
 ---
 
-**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/).
+**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=github&utm_medium=referral&utm_campaign=simplegoble_readme&utm_content=footer).
