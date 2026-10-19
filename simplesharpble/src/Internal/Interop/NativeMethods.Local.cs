@@ -31,10 +31,13 @@ internal static partial class NativeMethods
     internal static extern nint simpleble_local_peripheral_add_service(nint h, NativeUuid uuid, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_local_peripheral_services_count(nint h, ref nint error);
+    internal static extern nuint simpleble_local_peripheral_services(nint h, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_local_peripheral_services_get(nint h, nuint index, ref nint error);
+    internal static extern nint simpleble_local_service_list_get(nint list, nuint index, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_local_service_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_local_peripheral_remove_all_services(nint h, ref nint error);
@@ -63,10 +66,13 @@ internal static partial class NativeMethods
     internal static extern void simpleble_local_service_uuid(nint h, out NativeUuid uuid, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_local_service_characteristics_count(nint h, ref nint error);
+    internal static extern nuint simpleble_local_service_characteristics(nint h, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_local_service_characteristics_get(nint h, nuint index, ref nint error);
+    internal static extern nint simpleble_local_characteristic_list_get(nint list, nuint index, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_local_characteristic_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern nint simpleble_local_service_add_characteristic(nint h, NativeUuid uuid, uint capabilities, ref nint error);

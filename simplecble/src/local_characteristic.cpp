@@ -7,11 +7,26 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "list_handle.hpp"
+
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
 
 void simpleble_local_characteristic_release_handle(simpleble_local_characteristic_t handle) {
     delete (SimpleBLE::Local::Characteristic*)handle;
+}
+
+size_t simpleble_local_characteristic_list_count(simpleble_local_characteristic_list_t list) {
+    return SimpleCBLE::List::count<SimpleBLE::Local::Characteristic>(list);
+}
+
+simpleble_local_characteristic_t simpleble_local_characteristic_list_get(simpleble_local_characteristic_list_t list,
+                                                                         size_t index, simpleble_error_t** out_error) {
+    return SimpleCBLE::List::get<SimpleBLE::Local::Characteristic>(list, index, out_error);
+}
+
+void simpleble_local_characteristic_list_release(simpleble_local_characteristic_list_t list) {
+    SimpleCBLE::List::release<SimpleBLE::Local::Characteristic>(list);
 }
 
 void simpleble_local_characteristic_uuid(simpleble_local_characteristic_t handle, simpleble_uuid_t* out_uuid,

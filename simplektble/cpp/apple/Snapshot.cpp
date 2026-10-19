@@ -54,24 +54,6 @@ simpleble_peripheral_t* snapshot(simpleble_adapter_t handle, size_t* out_count, 
 
 }  // namespace
 
-simpleble_peripheral_t* simplektble_adapter_scan_get_results(simpleble_adapter_t handle, size_t* out_count,
-                                                             simpleble_error_t** out_error) {
-    return snapshot(handle, out_count, out_error,
-                    [](SimpleBLE::Adapter& adapter) { return adapter.scan_get_results(); });
-}
-
-simpleble_peripheral_t* simplektble_adapter_get_paired_peripherals(simpleble_adapter_t handle, size_t* out_count,
-                                                                   simpleble_error_t** out_error) {
-    return snapshot(handle, out_count, out_error,
-                    [](SimpleBLE::Adapter& adapter) { return adapter.get_paired_peripherals(); });
-}
-
-simpleble_peripheral_t* simplektble_adapter_get_connected_peripherals(simpleble_adapter_t handle, size_t* out_count,
-                                                                      simpleble_error_t** out_error) {
-    return snapshot(handle, out_count, out_error,
-                    [](SimpleBLE::Adapter& adapter) { return adapter.get_connected_peripherals(); });
-}
-
 simpleble_peripheral_t* simplektble_adapter_retrieve_cached_peripherals(simpleble_adapter_t handle,
                                                                         const char* const* identifiers,
                                                                         size_t identifier_count, size_t* out_count,

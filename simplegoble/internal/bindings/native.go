@@ -17,18 +17,19 @@ type NativeAPI struct {
 	ErrorCode                         func(uintptr) uint32
 	ErrorMessage                      func(uintptr) string
 	ErrorRelease                      func(*uintptr)
-	BackendCount                      func(*uintptr) uintptr
-	BackendGet                        func(uintptr, *uintptr) uintptr
+	Backends                          func(*uintptr, *uintptr) uintptr
+	BackendListGet                    func(uintptr, uintptr, *uintptr) uintptr
+	BackendListRelease                func(uintptr)
 	BackendNative                     func(*uintptr) uintptr
 	BackendDongl                      func(*uintptr) uintptr
 	BackendSimulator                  func(*uintptr) uintptr
 	BackendRelease                    func(uintptr)
 	BackendIdentifier                 func(uintptr, *uintptr) *byte
 	BackendEnabled                    func(uintptr, *uintptr) bool
-	BackendAdapterCount               func(uintptr, *uintptr) uintptr
-	BackendAdapterGet                 func(uintptr, uintptr, *uintptr) uintptr
-	AdapterCount                      func(*uintptr) uintptr
-	AdapterGet                        func(uintptr, *uintptr) uintptr
+	BackendAdapters                   func(uintptr, *uintptr, *uintptr) uintptr
+	Adapters                          func(*uintptr, *uintptr) uintptr
+	AdapterListGet                    func(uintptr, uintptr, *uintptr) uintptr
+	AdapterListRelease                func(uintptr)
 	AdapterRelease                    func(uintptr)
 	AdapterEnabled                    func(*uintptr) bool
 	AdapterIdentifier                 func(uintptr, *uintptr) *byte
@@ -41,12 +42,11 @@ type NativeAPI struct {
 	AdapterScanFor                    func(uintptr, int32, *uintptr)
 	AdapterScanActive                 func(uintptr, *uintptr) bool
 	SetCallbacks                      [4]func(uintptr, uintptr, uintptr)
-	AdapterScanCount                  func(uintptr, *uintptr) uintptr
-	AdapterScanGet                    func(uintptr, uintptr, *uintptr) uintptr
-	AdapterPairedCount                func(uintptr, *uintptr) uintptr
-	AdapterPairedGet                  func(uintptr, uintptr, *uintptr) uintptr
-	AdapterConnectedCount             func(uintptr, *uintptr) uintptr
-	AdapterConnectedGet               func(uintptr, uintptr, *uintptr) uintptr
+	AdapterScanResults                func(uintptr, *uintptr, *uintptr) uintptr
+	AdapterPaired                     func(uintptr, *uintptr, *uintptr) uintptr
+	AdapterConnected                  func(uintptr, *uintptr, *uintptr) uintptr
+	PeripheralListGet                 func(uintptr, uintptr, *uintptr) uintptr
+	PeripheralListRelease             func(uintptr)
 	AdapterScanFound                  func(uintptr, uintptr, uintptr)
 	AdapterScanUpdated                func(uintptr, uintptr, uintptr)
 	PeripheralRelease                 func(uintptr)
@@ -62,11 +62,13 @@ type NativeAPI struct {
 	PeripheralConnectable             func(uintptr, *uintptr) bool
 	PeripheralPaired                  func(uintptr, *uintptr) bool
 	PeripheralUnpair                  func(uintptr, *uintptr)
-	PeripheralServiceCount            func(uintptr, *uintptr) uintptr
-	PeripheralServiceGet              func(uintptr, uintptr, *Service, *uintptr)
+	PeripheralServices                func(uintptr, *uintptr, *uintptr) uintptr
+	ServiceListGet                    func(uintptr, uintptr, *Service, *uintptr)
+	ServiceListRelease                func(uintptr)
 	ServiceRelease                    func(*Service)
-	PeripheralManufacturerCount       func(uintptr, *uintptr) uintptr
-	PeripheralManufacturerGet         func(uintptr, uintptr, *ManufacturerData, *uintptr)
+	PeripheralManufacturerData        func(uintptr, *uintptr, *uintptr) uintptr
+	ManufacturerListGet               func(uintptr, uintptr, *ManufacturerData, *uintptr)
+	ManufacturerListRelease           func(uintptr)
 	ManufacturerRelease               func(*ManufacturerData)
 	PeripheralRead                    func(uintptr, UUID, UUID, *uintptr, *uintptr) *byte
 	PeripheralReadDescriptor          func(uintptr, UUID, UUID, UUID, *uintptr, *uintptr) *byte
@@ -84,8 +86,7 @@ type NativeAPI struct {
 	LocalPeripheralManufacturerData   func(uintptr, uint16, *byte, uintptr, *uintptr)
 	LocalPeripheralSetConnectable     func(uintptr, bool, *uintptr)
 	LocalPeripheralAddService         func(uintptr, UUID, *uintptr) uintptr
-	LocalPeripheralServiceCount       func(uintptr, *uintptr) uintptr
-	LocalPeripheralServiceGet         func(uintptr, uintptr, *uintptr) uintptr
+	LocalPeripheralServices           func(uintptr, *uintptr, *uintptr) uintptr
 	LocalPeripheralRemoveServices     func(uintptr, *uintptr)
 	LocalPeripheralStart              func(uintptr, *uintptr)
 	LocalPeripheralStop               func(uintptr, *uintptr)
@@ -94,11 +95,14 @@ type NativeAPI struct {
 	LocalPeripheralOnConnected        func(uintptr, uintptr, uintptr)
 	LocalPeripheralOnDisconnected     func(uintptr, uintptr, uintptr)
 	LocalServiceRelease               func(uintptr)
+	LocalServiceListGet               func(uintptr, uintptr, *uintptr) uintptr
+	LocalServiceListRelease           func(uintptr)
 	LocalServiceUUID                  func(uintptr, *UUID, *uintptr)
 	LocalServiceAddCharacteristic     func(uintptr, UUID, uint32, *uintptr) uintptr
-	LocalServiceCharacteristicCount   func(uintptr, *uintptr) uintptr
-	LocalServiceCharacteristicGet     func(uintptr, uintptr, *uintptr) uintptr
+	LocalServiceCharacteristics       func(uintptr, *uintptr, *uintptr) uintptr
 	LocalCharacteristicRelease        func(uintptr)
+	LocalCharacteristicListGet        func(uintptr, uintptr, *uintptr) uintptr
+	LocalCharacteristicListRelease    func(uintptr)
 	LocalCharacteristicUUID           func(uintptr, *UUID, *uintptr)
 	LocalCharacteristicCapabilities   func(uintptr, *uintptr) uint32
 	LocalCharacteristicValue          func(uintptr, *uintptr, *uintptr) *byte
@@ -182,18 +186,19 @@ func Load(path string) error {
 		{"simpleble_error_code", &native.ErrorCode},
 		{"simpleble_error_message", &native.ErrorMessage},
 		{"simpleble_error_release", &native.ErrorRelease},
-		{"simpleble_backend_get_count", &native.BackendCount},
-		{"simpleble_backend_get_handle", &native.BackendGet},
+		{"simpleble_backend_get_backends", &native.Backends},
+		{"simpleble_backend_list_get", &native.BackendListGet},
+		{"simpleble_backend_list_release", &native.BackendListRelease},
 		{"simpleble_backend_get_native", &native.BackendNative},
 		{"simpleble_backend_get_dongl", &native.BackendDongl},
 		{"simpleble_backend_get_simulator", &native.BackendSimulator},
 		{"simpleble_backend_release_handle", &native.BackendRelease},
 		{"simpleble_backend_identifier", &native.BackendIdentifier},
 		{"simpleble_backend_is_bluetooth_enabled", &native.BackendEnabled},
-		{"simpleble_backend_get_adapters_count", &native.BackendAdapterCount},
-		{"simpleble_backend_get_adapters_handle", &native.BackendAdapterGet},
-		{"simpleble_adapter_get_count", &native.AdapterCount},
-		{"simpleble_adapter_get_handle", &native.AdapterGet},
+		{"simpleble_backend_get_adapters", &native.BackendAdapters},
+		{"simpleble_adapter_get_adapters", &native.Adapters},
+		{"simpleble_adapter_list_get", &native.AdapterListGet},
+		{"simpleble_adapter_list_release", &native.AdapterListRelease},
 		{"simpleble_adapter_release_handle", &native.AdapterRelease},
 		{"simpleble_adapter_is_bluetooth_enabled", &native.AdapterEnabled},
 		{"simpleble_adapter_identifier", &native.AdapterIdentifier},
@@ -209,12 +214,11 @@ func Load(path string) error {
 		{"simpleble_adapter_set_callback_on_power_off", &native.SetCallbacks[PowerOff]},
 		{"simpleble_adapter_set_callback_on_scan_start", &native.SetCallbacks[ScanStart]},
 		{"simpleble_adapter_set_callback_on_scan_stop", &native.SetCallbacks[ScanStop]},
-		{"simpleble_adapter_scan_get_results_count", &native.AdapterScanCount},
-		{"simpleble_adapter_scan_get_results_handle", &native.AdapterScanGet},
-		{"simpleble_adapter_get_paired_peripherals_count", &native.AdapterPairedCount},
-		{"simpleble_adapter_get_paired_peripherals_handle", &native.AdapterPairedGet},
-		{"simpleble_adapter_get_connected_peripherals_count", &native.AdapterConnectedCount},
-		{"simpleble_adapter_get_connected_peripherals_handle", &native.AdapterConnectedGet},
+		{"simpleble_adapter_scan_get_results", &native.AdapterScanResults},
+		{"simpleble_adapter_get_paired_peripherals", &native.AdapterPaired},
+		{"simpleble_adapter_get_connected_peripherals", &native.AdapterConnected},
+		{"simpleble_peripheral_list_get", &native.PeripheralListGet},
+		{"simpleble_peripheral_list_release", &native.PeripheralListRelease},
 		{"simpleble_adapter_set_callback_on_scan_found", &native.AdapterScanFound},
 		{"simpleble_adapter_set_callback_on_scan_updated", &native.AdapterScanUpdated},
 		{"simpleble_peripheral_release_handle", &native.PeripheralRelease},
@@ -230,11 +234,13 @@ func Load(path string) error {
 		{"simpleble_peripheral_is_connectable", &native.PeripheralConnectable},
 		{"simpleble_peripheral_is_paired", &native.PeripheralPaired},
 		{"simpleble_peripheral_unpair", &native.PeripheralUnpair},
-		{"simpleble_peripheral_services_count", &native.PeripheralServiceCount},
-		{"simpleble_peripheral_services_get", &native.PeripheralServiceGet},
+		{"simpleble_peripheral_services", &native.PeripheralServices},
+		{"simpleble_service_list_get", &native.ServiceListGet},
+		{"simpleble_service_list_release", &native.ServiceListRelease},
 		{"simpleble_service_release", &native.ServiceRelease},
-		{"simpleble_peripheral_manufacturer_data_count", &native.PeripheralManufacturerCount},
-		{"simpleble_peripheral_manufacturer_data_get", &native.PeripheralManufacturerGet},
+		{"simpleble_peripheral_manufacturer_data", &native.PeripheralManufacturerData},
+		{"simpleble_manufacturer_data_list_get", &native.ManufacturerListGet},
+		{"simpleble_manufacturer_data_list_release", &native.ManufacturerListRelease},
 		{"simpleble_manufacturer_data_release", &native.ManufacturerRelease},
 		{"simpleble_peripheral_read", &native.PeripheralRead},
 		{"simpleble_peripheral_read_descriptor", &native.PeripheralReadDescriptor},
@@ -252,8 +258,7 @@ func Load(path string) error {
 		{"simpleble_local_peripheral_set_advertised_manufacturer_data", &native.LocalPeripheralManufacturerData},
 		{"simpleble_local_peripheral_set_connectable", &native.LocalPeripheralSetConnectable},
 		{"simpleble_local_peripheral_add_service", &native.LocalPeripheralAddService},
-		{"simpleble_local_peripheral_services_count", &native.LocalPeripheralServiceCount},
-		{"simpleble_local_peripheral_services_get", &native.LocalPeripheralServiceGet},
+		{"simpleble_local_peripheral_services", &native.LocalPeripheralServices},
 		{"simpleble_local_peripheral_remove_all_services", &native.LocalPeripheralRemoveServices},
 		{"simpleble_local_peripheral_start", &native.LocalPeripheralStart},
 		{"simpleble_local_peripheral_stop", &native.LocalPeripheralStop},
@@ -262,11 +267,14 @@ func Load(path string) error {
 		{"simpleble_local_peripheral_set_callback_on_client_connected", &native.LocalPeripheralOnConnected},
 		{"simpleble_local_peripheral_set_callback_on_client_disconnected", &native.LocalPeripheralOnDisconnected},
 		{"simpleble_local_service_release_handle", &native.LocalServiceRelease},
+		{"simpleble_local_service_list_get", &native.LocalServiceListGet},
+		{"simpleble_local_service_list_release", &native.LocalServiceListRelease},
 		{"simpleble_local_service_uuid", &native.LocalServiceUUID},
 		{"simpleble_local_service_add_characteristic", &native.LocalServiceAddCharacteristic},
-		{"simpleble_local_service_characteristics_count", &native.LocalServiceCharacteristicCount},
-		{"simpleble_local_service_characteristics_get", &native.LocalServiceCharacteristicGet},
+		{"simpleble_local_service_characteristics", &native.LocalServiceCharacteristics},
 		{"simpleble_local_characteristic_release_handle", &native.LocalCharacteristicRelease},
+		{"simpleble_local_characteristic_list_get", &native.LocalCharacteristicListGet},
+		{"simpleble_local_characteristic_list_release", &native.LocalCharacteristicListRelease},
 		{"simpleble_local_characteristic_uuid", &native.LocalCharacteristicUUID},
 		{"simpleble_local_characteristic_capabilities", &native.LocalCharacteristicCapabilities},
 		{"simpleble_local_characteristic_value", &native.LocalCharacteristicValue},

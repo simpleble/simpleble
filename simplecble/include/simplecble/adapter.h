@@ -22,23 +22,44 @@ extern "C" {
 SIMPLECBLE_EXPORT bool simpleble_adapter_is_bluetooth_enabled(simpleble_error_t** out_error);
 
 /**
- * @brief Counts the available Bluetooth adapters.
+ * @brief Reads the available Bluetooth adapters of every backend into a list.
  *
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_adapter_list_release().
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of available adapters, or zero on failure.
+ * @return The number of adapters in the list, or zero on failure.
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT size_t simpleble_adapter_get_count(simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT size_t simpleble_adapter_get_adapters(simpleble_adapter_list_t* out_list,
+                                                        simpleble_error_t** out_error);
 
 /**
- * @brief Obtains an owned handle for the adapter at the specified index.
+ * @brief Counts the adapters in a list.
  *
- * @param[in] index Zero-based index into the current collection.
+ * @param[in] list An adapter list, or NULL.
+ * @return The number of adapters in the list, or zero for NULL.
+ */
+SIMPLECBLE_EXPORT size_t simpleble_adapter_list_count(simpleble_adapter_list_t list);
+
+/**
+ * @brief Obtains an owned handle for the adapter at the specified index of a list.
+ *
+ * @param[in] list Valid, non-NULL adapter list.
+ * @param[in] index Zero-based index into the list.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @return An owned adapter handle, or NULL on failure. Release with simpleble_adapter_release_handle().
+ * @note The adapter handle remains valid after releasing the list.
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT simpleble_adapter_t simpleble_adapter_get_handle(size_t index, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT simpleble_adapter_t simpleble_adapter_list_get(simpleble_adapter_list_t list, size_t index,
+                                                                 simpleble_error_t** out_error);
+
+/**
+ * @brief Releases an owned adapter list.
+ *
+ * @param[in] list List to release, or NULL for no action.
+ */
+SIMPLECBLE_EXPORT void simpleble_adapter_list_release(simpleble_adapter_list_t list);
 
 /**
  * @brief Releases an owned adapter handle.
@@ -170,75 +191,47 @@ SIMPLECBLE_EXPORT void simpleble_adapter_scan_for(simpleble_adapter_t handle, in
                                                   simpleble_error_t** out_error);
 
 /**
- * @brief Counts the scan results reported by the adapter.
+ * @brief Reads the scan results reported by the adapter into a list.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_peripheral_list_release().
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of scan results, or zero on failure.
+ * @return The number of peripherals in the list, or zero on failure.
+ * @note The list keeps the results it read while scanning continues or restarts.
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle,
+SIMPLECBLE_EXPORT size_t simpleble_adapter_scan_get_results(simpleble_adapter_t handle,
+                                                            simpleble_peripheral_list_t* out_list,
+                                                            simpleble_error_t** out_error);
+
+/**
+ * @brief Reads the paired peripherals reported by the adapter into a list.
+ *
+ * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_peripheral_list_release().
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return The number of peripherals in the list, or zero on failure.
+ * @see simpleble_error_t
+ */
+SIMPLECBLE_EXPORT size_t simpleble_adapter_get_paired_peripherals(simpleble_adapter_t handle,
+                                                                  simpleble_peripheral_list_t* out_list,
                                                                   simpleble_error_t** out_error);
 
 /**
- * @brief Obtains an owned peripheral handle from the scan results.
+ * @brief Reads the connected peripherals reported by the adapter into a list.
  *
  * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] index Zero-based index into the current collection.
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_peripheral_list_release().
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
+ * @return The number of peripherals in the list, or zero on failure.
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle,
-                                                                                   size_t index,
-                                                                                   simpleble_error_t** out_error);
-
-/**
- * @brief Counts the paired peripherals reported by the adapter.
- *
- * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of paired peripherals, or zero on failure.
- * @see simpleble_error_t
- */
-SIMPLECBLE_EXPORT size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle,
-                                                                        simpleble_error_t** out_error);
-
-/**
- * @brief Obtains an owned peripheral handle from the paired peripherals.
- *
- * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] index Zero-based index into the current collection.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
- * @see simpleble_error_t
- */
-SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble_adapter_t handle,
-                                                                                         size_t index,
-                                                                                         simpleble_error_t** out_error);
-
-/**
- * @brief Counts the connected peripherals reported by the adapter.
- *
- * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of connected peripherals, or zero on failure.
- * @see simpleble_error_t
- */
-SIMPLECBLE_EXPORT size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t handle,
-                                                                           simpleble_error_t** out_error);
-
-/**
- * @brief Obtains an owned peripheral handle from the connected peripherals.
- *
- * @param[in] handle Valid, non-NULL adapter handle.
- * @param[in] index Zero-based index into the current collection.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
- * @see simpleble_error_t
- */
-SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle(
-    simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT size_t simpleble_adapter_get_connected_peripherals(simpleble_adapter_t handle,
+                                                                     simpleble_peripheral_list_t* out_list,
+                                                                     simpleble_error_t** out_error);
 
 /**
  * @brief Registers a callback invoked when scanning starts.

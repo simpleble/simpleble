@@ -80,6 +80,23 @@ class MockPeripheral : public SimpleBLE::Peripheral {
     MockPeripheral(std::shared_ptr<SimpleBLE::PeripheralBase> base) { this->internal_ = base; }
 };
 
+// Reads the first service through a service list.
+static void get_first_service(MockPeripheral& peripheral, simpleble_service_t* service, simpleble_error_t** error) {
+    simpleble_service_list_t list = nullptr;
+    simpleble_peripheral_services(&peripheral, &list, error);
+    if (*error == nullptr) simpleble_service_list_get(list, 0, service, error);
+    simpleble_service_list_release(list);
+}
+
+// Reads the first manufacturer data entry through a manufacturer data list.
+static void get_first_manufacturer_data(MockPeripheral& peripheral, simpleble_manufacturer_data_t* data,
+                                        simpleble_error_t** error) {
+    simpleble_manufacturer_data_list_t list = nullptr;
+    simpleble_peripheral_manufacturer_data(&peripheral, &list, error);
+    if (*error == nullptr) simpleble_manufacturer_data_list_get(list, 0, data, error);
+    simpleble_manufacturer_data_list_release(list);
+}
+
 TEST(PeripheralDataTest, CompletePayloadsAndEmptyResults) {
     auto base = std::make_shared<MockPeripheralBaseService>();
     MockPeripheral peripheral(base);
@@ -92,13 +109,13 @@ TEST(PeripheralDataTest, CompletePayloadsAndEmptyResults) {
         base->payload = expected;
 
         simpleble_manufacturer_data_t manufacturer = {};
-        simpleble_peripheral_manufacturer_data_get(&peripheral, 0, &manufacturer, &error);
+        get_first_manufacturer_data(peripheral, &manufacturer, &error);
         ASSERT_EQ(error, nullptr);
         EXPECT_EQ(manufacturer.manufacturer_id, 0x1234);
         ASSERT_EQ(manufacturer.data_length, length);
 
         simpleble_service_t service = {};
-        simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+        get_first_service(peripheral, &service, &error);
         ASSERT_EQ(error, nullptr);
         EXPECT_STREQ(service.uuid.value, "1234");
         ASSERT_EQ(service.data_length, length);
@@ -141,7 +158,7 @@ TEST(PeripheralDataTest, CompleteGattCollectionsAndUUIDs) {
     for (const std::string uuid : {"", "1234", "12345678", "12345678-1234-5678-1234-567812345678"}) {
         SCOPED_TRACE(uuid);
         base->uuid = uuid;
-        simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+        get_first_service(peripheral, &service, &error);
         ASSERT_EQ(error, nullptr);
         EXPECT_STREQ(service.uuid.value, uuid.c_str());
         EXPECT_EQ(service.data_length, 0);
@@ -166,7 +183,7 @@ TEST(PeripheralDataTest, CompleteGattCollectionsAndUUIDs) {
     }
 
     base->descriptor_count = 0;
-    simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+    get_first_service(peripheral, &service, &error);
     ASSERT_EQ(error, nullptr);
     for (size_t i = 0; i < service.characteristic_count; i++) {
         EXPECT_EQ(service.characteristics[i].descriptor_count, 0);
@@ -185,7 +202,7 @@ TEST(PeripheralDataTest, FailedConstructionReleasesPartialService) {
     simpleble_error_t* error = nullptr;
     simpleble_service_t service = {};
 
-    simpleble_peripheral_services_get(&peripheral, 0, &service, &error);
+    get_first_service(peripheral, &service, &error);
     ASSERT_NE(error, nullptr);
     EXPECT_EQ(simpleble_error_code(error), SIMPLEBLE_ERROR_OBJECT_NOT_INITIALIZED);
     EXPECT_EQ(service.uuid.value[0], '\0');

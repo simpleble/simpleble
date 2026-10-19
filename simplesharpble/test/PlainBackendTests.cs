@@ -118,7 +118,11 @@ public sealed class PlainBackendTests
     [Fact]
     public async Task InFlightCallRetainsHandleAcrossConcurrentDisposal()
     {
-        var value = NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_get_handle(0, ref error));
+        nint list = 0;
+        NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_get_adapters(out list, ref error));
+        nint value;
+        try { value = NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_list_get(list, 0, ref error)); }
+        finally { NativeMethods.simpleble_adapter_list_release(list); }
         using var handle = new NativeHandle(value, HandleKind.Adapter);
         using var entered = new ManualResetEventSlim();
         using var resume = new ManualResetEventSlim();

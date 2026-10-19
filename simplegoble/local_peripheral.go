@@ -118,14 +118,16 @@ func (p *LocalPeripheral) Services() ([]*LocalService, error) {
 	p.state.Lock()
 	defer p.state.Unlock()
 	return bindings.Query(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) []*LocalService {
-		count := native.LocalPeripheralServiceCount(nativeHandle, nativeError)
+		var list uintptr
+		count := native.LocalPeripheralServices(nativeHandle, &list, nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
+		defer native.LocalServiceListRelease(list)
 		services := make([]*LocalService, 0, count)
 		seen := make(map[string]int)
 		for i := uintptr(0); i < count; i++ {
-			handle := native.LocalPeripheralServiceGet(nativeHandle, i, nativeError)
+			handle := native.LocalServiceListGet(list, i, nativeError)
 			var uuid bindings.UUID
 			if *nativeError == 0 {
 				native.LocalServiceUUID(handle, &uuid, nativeError)

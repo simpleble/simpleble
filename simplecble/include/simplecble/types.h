@@ -119,6 +119,21 @@ typedef void* simpleble_local_peripheral_t;
 typedef void* simpleble_local_service_t;
 typedef void* simpleble_local_characteristic_t;
 
+/**
+ * @brief Owned lists of collections read at one point in time.
+ *
+ * The call that reads a collection returns its size and stores a new list in out_list. Counting and
+ * indexing the list doesn't read the collection again, so it stays the same until it is released.
+ * Release each list with its matching simpleble_*_list_release() function.
+ */
+typedef void* simpleble_backend_list_t;
+typedef void* simpleble_adapter_list_t;
+typedef void* simpleble_peripheral_list_t;
+typedef void* simpleble_service_list_t;
+typedef void* simpleble_manufacturer_data_list_t;
+typedef void* simpleble_local_service_list_t;
+typedef void* simpleble_local_characteristic_list_t;
+
 /** @brief Local characteristic capability flags; combine with bitwise OR. */
 typedef enum {
     SIMPLEBLE_LOCAL_CHARACTERISTIC_READ = 1u << 0,

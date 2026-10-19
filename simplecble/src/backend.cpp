@@ -7,47 +7,26 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "list_handle.hpp"
+
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
 
-size_t simpleble_backend_get_count(simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    try {
-        return SimpleBLE::Backend::get_backends().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
+size_t simpleble_backend_get_backends(simpleble_backend_list_t* out_list, simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read(out_list, out_error, []() { return SimpleBLE::Backend::get_backends(); });
 }
 
-simpleble_backend_t simpleble_backend_get_handle(size_t index, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
+size_t simpleble_backend_list_count(simpleble_backend_list_t list) {
+    return SimpleCBLE::List::count<SimpleBLE::Backend>(list);
+}
 
-    try {
-        auto backend_list = SimpleBLE::Backend::get_backends();
+simpleble_backend_t simpleble_backend_list_get(simpleble_backend_list_t list, size_t index,
+                                               simpleble_error_t** out_error) {
+    return SimpleCBLE::List::get<SimpleBLE::Backend>(list, index, out_error);
+}
 
-        if (index >= backend_list.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-
-        SimpleBLE::Backend* handle = new SimpleBLE::Backend(backend_list[index]);
-        return (simpleble_backend_t)handle;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+void simpleble_backend_list_release(simpleble_backend_list_t list) {
+    SimpleCBLE::List::release<SimpleBLE::Backend>(list);
 }
 
 // Wraps one of the named backends in an owned handle.
@@ -135,55 +114,8 @@ bool simpleble_backend_is_bluetooth_enabled(simpleble_backend_t handle, simplebl
     return false;
 }
 
-size_t simpleble_backend_get_adapters_count(simpleble_backend_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    SimpleBLE::Backend* backend = (SimpleBLE::Backend*)handle;
-    try {
-        return backend->adapters().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
-}
-
-simpleble_adapter_t simpleble_backend_get_adapters_handle(simpleble_backend_t handle, size_t index,
-                                                          simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return nullptr;
-    }
-
-    SimpleBLE::Backend* backend = (SimpleBLE::Backend*)handle;
-    try {
-        auto results = backend->adapters();
-
-        if (index >= results.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-
-        SimpleBLE::Adapter* adapter_handle = new SimpleBLE::Adapter(results[index]);
-        return (simpleble_adapter_t)adapter_handle;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+size_t simpleble_backend_get_adapters(simpleble_backend_t handle, simpleble_adapter_list_t* out_list,
+                                      simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Backend>(handle, out_list, out_error,
+                                                      [](SimpleBLE::Backend& backend) { return backend.adapters(); });
 }

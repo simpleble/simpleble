@@ -15,10 +15,13 @@ public sealed class Backend : IDisposable
     public bool IsBluetoothEnabled => handle.Query(NativeMethods.simpleble_backend_is_bluetooth_enabled);
 
     /// <summary>Initializes available backends. Dispose each returned backend.</summary>
-    public static IReadOnlyList<Backend> GetBackends() => NativeCall.Collect(
-        NativeCall.Invoke(NativeMethods.simpleble_backend_get_count),
-        index => new Backend(NativeCall.Invoke((ref nint error) =>
-            NativeMethods.simpleble_backend_get_handle(index, ref error))));
+    public static IReadOnlyList<Backend> GetBackends()
+    {
+        nint list = 0;
+        nuint count = NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_backend_get_backends(out list, ref error));
+        return NativeCall.Collect(list, count, NativeMethods.simpleble_backend_list_release, (value, index) =>
+            new Backend(NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_backend_list_get(value, index, ref error))));
+    }
 
     /// <summary>The backend of the operating system's Bluetooth stack. Dispose the returned backend.</summary>
     public static Backend GetNative() => new(NativeCall.Invoke(NativeMethods.simpleble_backend_get_native));
@@ -37,10 +40,16 @@ public sealed class Backend : IDisposable
     public static Backend GetSimulator() => new(NativeCall.Invoke(NativeMethods.simpleble_backend_get_simulator));
 
     /// <summary>Returns independently owned wrappers. Dispose each returned adapter.</summary>
-    public IReadOnlyList<Adapter> Adapters => NativeCall.Collect(
-        handle.Query(NativeMethods.simpleble_backend_get_adapters_count),
-        index => new Adapter(handle.Query((nint value, ref nint error) =>
-            NativeMethods.simpleble_backend_get_adapters_handle(value, index, ref error))));
+    public IReadOnlyList<Adapter> Adapters
+    {
+        get
+        {
+            nint list = 0;
+            nuint count = handle.Query((nint value, ref nint error) => NativeMethods.simpleble_backend_get_adapters(value, out list, ref error));
+            return NativeCall.Collect(list, count, NativeMethods.simpleble_adapter_list_release, (value, index) =>
+                new Adapter(NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_list_get(value, index, ref error))));
+        }
+    }
 
     /// <summary>Releases this wrapper.</summary>
     public void Dispose() => handle.Dispose();

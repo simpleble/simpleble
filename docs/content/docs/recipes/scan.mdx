@@ -49,18 +49,22 @@ for (auto& peripheral : adapter.scan_get_results()) {
 
 int main(void) {
     simpleble_error_t* error = NULL;
-    simpleble_adapter_t adapter = simpleble_adapter_get_handle(0, &error);
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
     if (error) {
         fprintf(stderr, "%s\n", simpleble_error_message(error));
         simpleble_error_release(&error);
         return EXIT_FAILURE;
     }
 
+    simpleble_peripheral_list_t results = NULL;
     simpleble_adapter_scan_for(adapter, 5000, &error);
     if (!error) {
-        size_t count = simpleble_adapter_scan_get_results_count(adapter, &error);
+        size_t count = simpleble_adapter_scan_get_results(adapter, &results, &error);
         for (size_t i = 0; i < count && !error; i++) {
-            simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i, &error);
+            simpleble_peripheral_t peripheral = simpleble_peripheral_list_get(results, i, &error);
             if (error) break;
 
             char* identifier = simpleble_peripheral_identifier(peripheral, &error);
@@ -73,6 +77,7 @@ int main(void) {
     int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
     simpleble_error_release(&error);
+    simpleble_peripheral_list_release(results);
     simpleble_adapter_release_handle(adapter);
     return result;
 }

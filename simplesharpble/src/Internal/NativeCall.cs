@@ -6,6 +6,7 @@ namespace SimpleSharpBLE.Internal;
 internal delegate T NativeQuery<T>(ref nint error);
 internal delegate T HandleQuery<T>(nint handle, ref nint error);
 internal delegate void HandleCommand(nint handle, ref nint error);
+internal delegate void ListRelease(nint list);
 
 internal static class NativeCall
 {
@@ -40,6 +41,14 @@ internal static class NativeCall
         {
             NativeMethods.simpleble_free(value);
         }
+    }
+
+    // Creates an entry for each index of a native list, then releases the list.
+    internal static IReadOnlyList<T> Collect<T>(nint list, nuint count, ListRelease release, Func<nint, nuint, T> create)
+        where T : IDisposable
+    {
+        try { return Collect(count, index => create(list, index)); }
+        finally { release(list); }
     }
 
     // No partial collection escapes if any native retrieval fails.

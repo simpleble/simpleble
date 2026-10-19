@@ -99,10 +99,10 @@ internal actual object Native {
 
     actual fun isBluetoothEnabled(): Boolean = call { simpleble_adapter_is_bluetooth_enabled(it) }
 
-    actual fun getAdapters(): LongArray {
-        val count = call { simpleble_adapter_get_count(it) }.toInt()
-        return LongArray(count) { index -> internAdapter(call { simpleble_adapter_get_handle(index.convert(), it) }) }
-    }
+    actual fun getAdapters(): LongArray = readList(
+        { list, error -> simpleble_adapter_get_adapters(list, error) },
+        { simpleble_adapter_list_release(it) }
+    ) { list, index -> internAdapter(call { simpleble_adapter_list_get(list, index.convert(), it) }) }.toLongArray()
 
     actual fun adapterRegister(adapterId: Long, callback: AdapterCallback) {
         val handle = adapter(adapterId)
@@ -163,17 +163,17 @@ internal actual object Native {
 
     actual fun adapterScanGetResults(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        return internPeripherals { count, error -> simplektble_adapter_scan_get_results(handle, count, error) }
+        return internPeripheralList { list, error -> simpleble_adapter_scan_get_results(handle, list, error) }
     }
 
     actual fun adapterGetPairedPeripherals(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        return internPeripherals { count, error -> simplektble_adapter_get_paired_peripherals(handle, count, error) }
+        return internPeripheralList { list, error -> simpleble_adapter_get_paired_peripherals(handle, list, error) }
     }
 
     actual fun adapterGetConnectedPeripherals(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        return internPeripherals { count, error -> simplektble_adapter_get_connected_peripherals(handle, count, error) }
+        return internPeripheralList { list, error -> simpleble_adapter_get_connected_peripherals(handle, list, error) }
     }
 
     actual fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray {
@@ -257,12 +257,14 @@ internal actual object Native {
 
     actual fun peripheralServices(adapterId: Long, peripheralId: Long): List<Service> {
         val handle = peripheral(peripheralId)
-        val count = call { simpleble_peripheral_services_count(handle, it) }.toInt()
-        return List(count) { index ->
+        return readList(
+            { list, error -> simpleble_peripheral_services(handle, list, error) },
+            { simpleble_service_list_release(it) }
+        ) { list, index ->
             memScoped {
                 val service = alloc<simpleble_service_t>()
                 memset(service.ptr, 0, sizeOf<simpleble_service_t>().convert())
-                call { simpleble_peripheral_services_get(handle, index.convert(), service.ptr, it) }
+                call { simpleble_service_list_get(list, index.convert(), service.ptr, it) }
                 try {
                     val characteristics = List(service.characteristic_count.toInt()) { characteristicIndex ->
                         val characteristic = service.characteristics!![characteristicIndex]
@@ -292,21 +294,21 @@ internal actual object Native {
 
     actual fun peripheralManufacturerData(adapterId: Long, peripheralId: Long): Map<Int, ByteArray> {
         val handle = peripheral(peripheralId)
-        val count = call { simpleble_peripheral_manufacturer_data_count(handle, it) }.toInt()
-        val manufacturerData = mutableMapOf<Int, ByteArray>()
-        for (index in 0 until count) {
+        return readList(
+            { list, error -> simpleble_peripheral_manufacturer_data(handle, list, error) },
+            { simpleble_manufacturer_data_list_release(it) }
+        ) { list, index ->
             memScoped {
                 val data = alloc<simpleble_manufacturer_data_t>()
                 memset(data.ptr, 0, sizeOf<simpleble_manufacturer_data_t>().convert())
-                call { simpleble_peripheral_manufacturer_data_get(handle, index.convert(), data.ptr, it) }
+                call { simpleble_manufacturer_data_list_get(list, index.convert(), data.ptr, it) }
                 try {
-                    manufacturerData[data.manufacturer_id.toInt()] = data.data.toByteArray(data.data_length.toInt())
+                    data.manufacturer_id.toInt() to data.data.toByteArray(data.data_length.toInt())
                 } finally {
                     simpleble_manufacturer_data_release(data.ptr)
                 }
             }
-        }
-        return manufacturerData
+        }.toMap()
     }
 
     actual fun peripheralRead(adapterId: Long, peripheralId: Long, service: String, characteristic: String): ByteArray {
@@ -590,10 +592,10 @@ internal actual object Native {
         }
     }
 
-    actual fun getBackends(): List<String> {
-        val count = call { simpleble_backend_get_count(it) }.toInt()
-        return List(count) { index -> internBackend(call { simpleble_backend_get_handle(index.convert(), it) }) }
-    }
+    actual fun getBackends(): List<String> = readList(
+        { list, error -> simpleble_backend_get_backends(list, error) },
+        { simpleble_backend_list_release(it) }
+    ) { list, index -> internBackend(call { simpleble_backend_list_get(list, index.convert(), it) }) }
 
     actual fun getNativeBackend(): String = internBackend(call { simpleble_backend_get_native(it) })
 
@@ -608,10 +610,10 @@ internal actual object Native {
 
     actual fun backendGetAdapters(backend: String): LongArray {
         val handle = backend(backend)
-        val count = call { simpleble_backend_get_adapters_count(handle, it) }.toInt()
-        return LongArray(count) { index ->
-            internAdapter(call { simpleble_backend_get_adapters_handle(handle, index.convert(), it) })
-        }
+        return readList(
+            { list, error -> simpleble_backend_get_adapters(handle, list, error) },
+            { simpleble_adapter_list_release(it) }
+        ) { list, index -> internAdapter(call { simpleble_adapter_list_get(list, index.convert(), it) }) }.toLongArray()
     }
 
     // The keys and groups match ConfigKey and ConfigGroup in Config.kt.
@@ -759,6 +761,13 @@ internal actual object Native {
         if (known) simpleble_peripheral_release_handle(handle)
         return id
     }
+
+    /** Interns every peripheral in a list that one SimpleCBLE call read. */
+    private inline fun internPeripheralList(
+        read: (CPointer<COpaquePointerVar>, CPointer<CPointerVar<simpleble_error_t>>) -> ULong
+    ): LongArray = readList(read, { simpleble_peripheral_list_release(it) }) { list, index ->
+        internPeripheral(call { simpleble_peripheral_list_get(list, index.convert(), it) })
+    }.toLongArray()
 
     /** Interns every handle in an array from simplektble/snapshot.h, and frees the array. */
     private inline fun internPeripherals(
@@ -987,6 +996,21 @@ private inline fun <T> call(block: (CPointer<CPointerVar<simpleble_error_t>>) ->
         throw SimpleKtBleException(code, message)
     }
     result
+}
+
+/** Reads a SimpleCBLE list once, maps each entry, and releases the list. */
+private inline fun <T> readList(
+    read: (CPointer<COpaquePointerVar>, CPointer<CPointerVar<simpleble_error_t>>) -> ULong,
+    release: (COpaquePointer?) -> Unit,
+    entry: (COpaquePointer?, Int) -> T
+): List<T> = memScoped {
+    val list = alloc<COpaquePointerVar>()
+    val count = call { read(list.ptr, it) }.toInt()
+    try {
+        List(count) { index -> entry(list.value, index) }
+    } finally {
+        release(list.value)
+    }
 }
 
 /** A failure in this bridge, which the JNI side raises as a plain C++ exception. */

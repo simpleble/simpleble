@@ -20,15 +20,18 @@ int main(void) {
 
     int result = EXIT_FAILURE;
     simpleble_error_t* error = NULL;
-    size_t adapter_count = simpleble_adapter_get_count(&error);
+    simpleble_adapter_list_t adapter_list = NULL;
+    size_t adapter_count = simpleble_adapter_get_adapters(&adapter_list, &error);
     if (error) goto cleanup;
     if (adapter_count == 0) {
         printf("No adapter was found.\n");
+        simpleble_adapter_list_release(adapter_list);
         goto cleanup;
     }
 
     // TODO: Allow the user to pick an adapter.
-    adapter = simpleble_adapter_get_handle(0, &error);
+    adapter = simpleble_adapter_list_get(adapter_list, 0, &error);
+    simpleble_adapter_list_release(adapter_list);
     if (error) goto cleanup;
 
     simpleble_adapter_set_callback_on_scan_start(adapter, adapter_on_scan_start, NULL);
@@ -66,12 +69,13 @@ int main(void) {
     simpleble_peripheral_connect(peripheral, &error);
     if (error) goto cleanup;
 
-    size_t services_count = simpleble_peripheral_services_count(peripheral, &error);
+    simpleble_service_list_t service_list = NULL;
+    size_t services_count = simpleble_peripheral_services(peripheral, &service_list, &error);
     printf("Successfully connected, listing %zu services.\n", services_count);
 
     for (size_t i = 0; i < services_count; i++) {
         simpleble_service_t service = {0};
-        simpleble_peripheral_services_get(peripheral, i, &service, &error);
+        simpleble_service_list_get(service_list, i, &service, &error);
         if (error) continue;
 
         printf("Service: %s - (%zu characteristics)\n", service.uuid.value, service.characteristic_count);
@@ -84,6 +88,7 @@ int main(void) {
         }
         simpleble_service_release(&service);
     }
+    simpleble_service_list_release(service_list);
 
     simpleble_peripheral_disconnect(peripheral, &error);
     if (error) goto cleanup;

@@ -60,9 +60,11 @@ std::cout << adapter.identifier() << " [" << adapter.address() << "]" << std::en
 simpleble_error_t* error = NULL;
 simpleble_adapter_t adapter = NULL;
 simpleble_backend_t dongl = simpleble_backend_get_dongl(&error);
-if (dongl && simpleble_backend_get_adapters_count(dongl, &error) > 0) {
-    adapter = simpleble_backend_get_adapters_handle(dongl, 0, &error);
+simpleble_adapter_list_t adapters = NULL;
+if (dongl && simpleble_backend_get_adapters(dongl, &adapters, &error) > 0) {
+    adapter = simpleble_adapter_list_get(adapters, 0, &error);
 }
+simpleble_adapter_list_release(adapters);
 simpleble_backend_release_handle(dongl);
 if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
 simpleble_error_release(&error);
@@ -272,10 +274,11 @@ static void* check(void* arg) {
     simpleble_error_t* error = NULL;
     snprintf(job->result, sizeof(job->result), "not found");
 
+    simpleble_peripheral_list_t results = NULL;
     simpleble_adapter_scan_for(job->adapter, 5000, &error);
-    size_t count = error ? 0 : simpleble_adapter_scan_get_results_count(job->adapter, &error);
+    size_t count = error ? 0 : simpleble_adapter_scan_get_results(job->adapter, &results, &error);
     for (size_t i = 0; i < count && !error; i++) {
-        simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(job->adapter, i, &error);
+        simpleble_peripheral_t peripheral = simpleble_peripheral_list_get(results, i, &error);
         if (error) break;
 
         char* address = simpleble_peripheral_address(peripheral, &error);
@@ -297,6 +300,7 @@ static void* check(void* arg) {
         simpleble_peripheral_release_handle(peripheral);
         if (match) break;
     }
+    simpleble_peripheral_list_release(results);
     if (error) snprintf(job->result, sizeof(job->result), "%s", simpleble_error_message(error));
     simpleble_error_release(&error);
     return NULL;
@@ -308,11 +312,13 @@ int main(void) {
     size_t dongl_count = 0;
     simpleble_backend_t backend = simpleble_backend_get_dongl(&error);
     if (backend) {
-        size_t count = simpleble_backend_get_adapters_count(backend, &error);
+        simpleble_adapter_list_t adapters = NULL;
+        size_t count = simpleble_backend_get_adapters(backend, &adapters, &error);
         for (size_t i = 0; i < count && dongl_count < TARGET_COUNT && !error; i++) {
-            dongls[dongl_count] = simpleble_backend_get_adapters_handle(backend, i, &error);
+            dongls[dongl_count] = simpleble_adapter_list_get(adapters, i, &error);
             if (!error) dongl_count++;
         }
+        simpleble_adapter_list_release(adapters);
         simpleble_backend_release_handle(backend);
     }
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));

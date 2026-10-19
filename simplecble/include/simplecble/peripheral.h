@@ -20,6 +20,34 @@ extern "C" {
 SIMPLECBLE_EXPORT void simpleble_peripheral_release_handle(simpleble_peripheral_t handle);
 
 /**
+ * @brief Counts the peripherals in a list.
+ *
+ * @param[in] list A peripheral list, or NULL.
+ * @return The number of peripherals in the list, or zero for NULL.
+ */
+SIMPLECBLE_EXPORT size_t simpleble_peripheral_list_count(simpleble_peripheral_list_t list);
+
+/**
+ * @brief Obtains an owned handle for the peripheral at the specified index of a list.
+ *
+ * @param[in] list Valid, non-NULL peripheral list.
+ * @param[in] index Zero-based index into the list.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle().
+ * @note The peripheral handle remains valid after releasing the list.
+ * @see simpleble_error_t
+ */
+SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_peripheral_list_get(simpleble_peripheral_list_t list, size_t index,
+                                                                       simpleble_error_t** out_error);
+
+/**
+ * @brief Releases an owned peripheral list.
+ *
+ * @param[in] list List to release, or NULL for no action.
+ */
+SIMPLECBLE_EXPORT void simpleble_peripheral_list_release(simpleble_peripheral_list_t list);
+
+/**
  * @brief Retrieves the underlying OS object or handle.
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
@@ -150,31 +178,49 @@ SIMPLECBLE_EXPORT bool simpleble_peripheral_is_paired(simpleble_peripheral_t han
 SIMPLECBLE_EXPORT void simpleble_peripheral_unpair(simpleble_peripheral_t handle, simpleble_error_t** out_error);
 
 /**
- * @brief Counts the services reported by the peripheral.
+ * @brief Reads the services reported by the peripheral into a list.
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_service_list_release().
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of services, or zero on failure.
+ * @return The number of services in the list, or zero on failure.
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle,
-                                                             simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT size_t simpleble_peripheral_services(simpleble_peripheral_t handle,
+                                                       simpleble_service_list_t* out_list,
+                                                       simpleble_error_t** out_error);
 
 /**
- * @brief Retrieves the service at the specified index.
+ * @brief Counts the services in a list.
  *
- * @param[in] handle Valid, non-NULL peripheral handle.
- * @param[in] index Zero-based index into the current collection.
+ * @param[in] list A service list, or NULL.
+ * @return The number of services in the list, or zero for NULL.
+ */
+SIMPLECBLE_EXPORT size_t simpleble_service_list_count(simpleble_service_list_t list);
+
+/**
+ * @brief Retrieves the service at the specified index of a list.
+ *
+ * @param[in] list Valid, non-NULL service list.
+ * @param[in] index Zero-based index into the list.
  * @param[out] out_service Required caller-owned storage for one service. The library allocates its contents.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Initialize the output to zero and release its contents before reusing it.
  *     Empty arrays have a zero length or count and a NULL pointer.
+ *     The service remains valid after releasing the list.
  * @see simpleble_service_release
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index,
-                                                         simpleble_service_t* out_service,
-                                                         simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_service_list_get(simpleble_service_list_t list, size_t index,
+                                                  simpleble_service_t* out_service, simpleble_error_t** out_error);
+
+/**
+ * @brief Releases an owned service list.
+ *
+ * @param[in] list List to release, or NULL for no action.
+ */
+SIMPLECBLE_EXPORT void simpleble_service_list_release(simpleble_service_list_t list);
 
 /**
  * @brief Releases a service's payload, characteristics, and descriptors, then zeroes the struct.
@@ -185,31 +231,51 @@ SIMPLECBLE_EXPORT void simpleble_peripheral_services_get(simpleble_peripheral_t 
 SIMPLECBLE_EXPORT void simpleble_service_release(simpleble_service_t* service);
 
 /**
- * @brief Counts the manufacturer data entries reported by the peripheral.
+ * @brief Reads the manufacturer data entries reported by the peripheral into a list.
  *
  * @param[in] handle Valid, non-NULL peripheral handle.
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_manufacturer_data_list_release().
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of manufacturer data entries, or zero on failure.
+ * @return The number of entries in the list, or zero on failure.
+ * @note Entries are ordered by manufacturer identifier.
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle,
-                                                                      simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT size_t simpleble_peripheral_manufacturer_data(simpleble_peripheral_t handle,
+                                                                simpleble_manufacturer_data_list_t* out_list,
+                                                                simpleble_error_t** out_error);
 
 /**
- * @brief Retrieves the manufacturer data entry at the specified index.
+ * @brief Counts the manufacturer data entries in a list.
  *
- * @param[in] handle Valid, non-NULL peripheral handle.
- * @param[in] index Zero-based index into the current collection.
+ * @param[in] list A manufacturer data list, or NULL.
+ * @return The number of entries in the list, or zero for NULL.
+ */
+SIMPLECBLE_EXPORT size_t simpleble_manufacturer_data_list_count(simpleble_manufacturer_data_list_t list);
+
+/**
+ * @brief Retrieves the manufacturer data entry at the specified index of a list.
+ *
+ * @param[in] list Valid, non-NULL manufacturer data list.
+ * @param[in] index Zero-based index into the list.
  * @param[out] out_data Required caller-owned storage for one entry. The library allocates its payload.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Initialize the output to zero and release its contents before reusing it.
  *     An empty payload has a zero length and a NULL pointer.
+ *     The entry remains valid after releasing the list.
  * @see simpleble_manufacturer_data_release
  * @see simpleble_error_t
  */
-SIMPLECBLE_EXPORT void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index,
-                                                                  simpleble_manufacturer_data_t* out_data,
-                                                                  simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT void simpleble_manufacturer_data_list_get(simpleble_manufacturer_data_list_t list, size_t index,
+                                                            simpleble_manufacturer_data_t* out_data,
+                                                            simpleble_error_t** out_error);
+
+/**
+ * @brief Releases an owned manufacturer data list.
+ *
+ * @param[in] list List to release, or NULL for no action.
+ */
+SIMPLECBLE_EXPORT void simpleble_manufacturer_data_list_release(simpleble_manufacturer_data_list_t list);
 
 /**
  * @brief Releases a manufacturer payload, then zeroes the struct.

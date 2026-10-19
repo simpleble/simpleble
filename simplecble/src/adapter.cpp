@@ -8,6 +8,8 @@
 #include <cstring>
 #include <vector>
 
+#include "list_handle.hpp"
+
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
 
@@ -27,44 +29,21 @@ bool simpleble_adapter_is_bluetooth_enabled(simpleble_error_t** out_error) {
     return false;
 }
 
-size_t simpleble_adapter_get_count(simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    try {
-        return SimpleBLE::Adapter::get_adapters().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
+size_t simpleble_adapter_get_adapters(simpleble_adapter_list_t* out_list, simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read(out_list, out_error, []() { return SimpleBLE::Adapter::get_adapters(); });
 }
 
-simpleble_adapter_t simpleble_adapter_get_handle(size_t index, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
+size_t simpleble_adapter_list_count(simpleble_adapter_list_t list) {
+    return SimpleCBLE::List::count<SimpleBLE::Adapter>(list);
+}
 
-    try {
-        auto adapter_list = SimpleBLE::Adapter::get_adapters();
+simpleble_adapter_t simpleble_adapter_list_get(simpleble_adapter_list_t list, size_t index,
+                                               simpleble_error_t** out_error) {
+    return SimpleCBLE::List::get<SimpleBLE::Adapter>(list, index, out_error);
+}
 
-        if (index >= adapter_list.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-
-        SimpleBLE::Adapter* handle = new SimpleBLE::Adapter(adapter_list[index]);
-        return (simpleble_adapter_t)handle;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+void simpleble_adapter_list_release(simpleble_adapter_list_t list) {
+    SimpleCBLE::List::release<SimpleBLE::Adapter>(list);
 }
 
 void simpleble_adapter_release_handle(simpleble_adapter_t handle) {
@@ -316,163 +295,22 @@ void simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms, simp
     }
 }
 
-size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
-        return adapter->scan_get_results().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
+size_t simpleble_adapter_scan_get_results(simpleble_adapter_t handle, simpleble_peripheral_list_t* out_list,
+                                          simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Adapter>(
+        handle, out_list, out_error, [](SimpleBLE::Adapter& adapter) { return adapter.scan_get_results(); });
 }
 
-simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle, size_t index,
-                                                                 simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return nullptr;
-    }
-
-    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
-        auto results = adapter->scan_get_results();
-
-        if (index >= results.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-
-        SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(results[index]);
-        return (simpleble_peripheral_t)peripheral_handle;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+size_t simpleble_adapter_get_paired_peripherals(simpleble_adapter_t handle, simpleble_peripheral_list_t* out_list,
+                                                simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Adapter>(
+        handle, out_list, out_error, [](SimpleBLE::Adapter& adapter) { return adapter.get_paired_peripherals(); });
 }
 
-size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
-        return adapter->get_paired_peripherals().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
-}
-
-simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble_adapter_t handle, size_t index,
-                                                                       simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return nullptr;
-    }
-
-    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
-        auto results = adapter->get_paired_peripherals();
-
-        if (index >= results.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-
-        SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(results[index]);
-        return (simpleble_peripheral_t)peripheral_handle;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
-}
-
-size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
-        return adapter->get_connected_peripherals().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
-}
-
-simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle(simpleble_adapter_t handle, size_t index,
-                                                                          simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return nullptr;
-    }
-
-    SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
-    try {
-        auto results = adapter->get_connected_peripherals();
-
-        if (index >= results.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-
-        SimpleBLE::Peripheral* peripheral_handle = new SimpleBLE::Peripheral(results[index]);
-        return (simpleble_peripheral_t)peripheral_handle;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+size_t simpleble_adapter_get_connected_peripherals(simpleble_adapter_t handle, simpleble_peripheral_list_t* out_list,
+                                                   simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Adapter>(
+        handle, out_list, out_error, [](SimpleBLE::Adapter& adapter) { return adapter.get_connected_peripherals(); });
 }
 
 void simpleble_adapter_set_callback_on_scan_start(simpleble_adapter_t handle,

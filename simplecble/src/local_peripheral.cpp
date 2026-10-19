@@ -4,6 +4,8 @@
 #include <simpleble/Exceptions.h>
 #include <simpleble/local/Peripheral.h>
 
+#include "list_handle.hpp"
+
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
 
@@ -126,54 +128,10 @@ simpleble_local_service_t simpleble_local_peripheral_add_service(simpleble_local
     return nullptr;
 }
 
-size_t simpleble_local_peripheral_services_count(simpleble_local_peripheral_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    auto* peripheral = (SimpleBLE::Local::Peripheral*)handle;
-    try {
-        return peripheral->services().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
-}
-
-simpleble_local_service_t simpleble_local_peripheral_services_get(simpleble_local_peripheral_t handle, size_t index,
-                                                                  simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return nullptr;
-    }
-
-    auto* peripheral = (SimpleBLE::Local::Peripheral*)handle;
-    try {
-        auto entries = peripheral->services();
-        if (index >= entries.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-        return new SimpleBLE::Local::Service(entries[index]);
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+size_t simpleble_local_peripheral_services(simpleble_local_peripheral_t handle,
+                                           simpleble_local_service_list_t* out_list, simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Local::Peripheral>(
+        handle, out_list, out_error, [](SimpleBLE::Local::Peripheral& peripheral) { return peripheral.services(); });
 }
 
 void simpleble_local_peripheral_remove_all_services(simpleble_local_peripheral_t handle,

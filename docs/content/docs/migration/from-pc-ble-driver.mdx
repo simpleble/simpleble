@@ -160,9 +160,9 @@ If your application calls pc-ble-driver's C API, from C, C++, or any tool that l
 
 | Task | pc-ble-driver (C) | SimpleCBLE with a Dongl |
 | --- | --- | --- |
-| Open the board | `sd_rpc_physical_layer_create_uart` → `sd_rpc_data_link_layer_create_bt_three_wire` → `sd_rpc_transport_layer_create` → `sd_rpc_adapter_create` → `sd_rpc_open` | `simpleble_backend_get_adapters_handle` on the `Dongl` backend |
+| Open the board | `sd_rpc_physical_layer_create_uart` → `sd_rpc_data_link_layer_create_bt_three_wire` → `sd_rpc_transport_layer_create` → `sd_rpc_adapter_create` → `sd_rpc_open` | `simpleble_backend_get_adapters` on the `Dongl` backend |
 | Configure the stack | `sd_ble_cfg_set`, `sd_ble_enable` | Not needed |
-| Scan | `sd_ble_gap_scan_start`, then `BLE_GAP_EVT_ADV_REPORT` | `simpleble_adapter_scan_for`, then `simpleble_adapter_scan_get_results_handle` |
+| Scan | `sd_ble_gap_scan_start`, then `BLE_GAP_EVT_ADV_REPORT` | `simpleble_adapter_scan_for`, then `simpleble_adapter_scan_get_results` |
 | Connect and discover | `sd_ble_gap_connect`, `sd_ble_gattc_primary_services_discover`, `sd_ble_gattc_characteristics_discover`, `sd_ble_gattc_descriptors_discover` | `simpleble_peripheral_connect` |
 | MTU | `sd_ble_gattc_exchange_mtu_request` | `simpleble_peripheral_mtu` |
 | Read | `sd_ble_gattc_read`, then `BLE_GATTC_EVT_READ_RSP` | `simpleble_peripheral_read` |

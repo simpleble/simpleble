@@ -65,9 +65,11 @@ public sealed class Peripheral : IDisposable
             lock (children)
             {
                 var seen = new Dictionary<string, int>();
-                return NativeCall.Collect(handle.Query(NativeMethods.simpleble_local_peripheral_services_count), index =>
+                nint list = 0;
+                nuint count = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_services(h, out list, ref e));
+                return NativeCall.Collect(list, count, NativeMethods.simpleble_local_service_list_release, (value, index) =>
                 {
-                    nint service = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_services_get(h, index, ref e));
+                    nint service = NativeCall.Invoke((ref nint e) => NativeMethods.simpleble_local_service_list_get(value, index, ref e));
                     NativeUuid uuid = default;
                     try { NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_local_service_uuid(service, out uuid, ref e); return 0; }); }
                     catch { NativeMethods.simpleble_local_service_release_handle(service); throw; }

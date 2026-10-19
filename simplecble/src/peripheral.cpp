@@ -8,9 +8,16 @@
 #include <cstdlib>
 #include <cstring>
 #include <map>
+#include <utility>
+#include <vector>
+
+#include "list_handle.hpp"
 
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
+
+using ManufacturerDataEntry = std::pair<uint16_t, SimpleBLE::ByteArray>;
+using ManufacturerDataEntries = std::vector<ManufacturerDataEntry>;
 
 void simpleble_peripheral_release_handle(simpleble_peripheral_t handle) {
     if (handle == nullptr) {
@@ -19,6 +26,19 @@ void simpleble_peripheral_release_handle(simpleble_peripheral_t handle) {
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     delete peripheral;
+}
+
+size_t simpleble_peripheral_list_count(simpleble_peripheral_list_t list) {
+    return SimpleCBLE::List::count<SimpleBLE::Peripheral>(list);
+}
+
+simpleble_peripheral_t simpleble_peripheral_list_get(simpleble_peripheral_list_t list, size_t index,
+                                                     simpleble_error_t** out_error) {
+    return SimpleCBLE::List::get<SimpleBLE::Peripheral>(list, index, out_error);
+}
+
+void simpleble_peripheral_list_release(simpleble_peripheral_list_t list) {
+    SimpleCBLE::List::release<SimpleBLE::Peripheral>(list);
 }
 
 void* simpleble_peripheral_underlying(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
@@ -309,52 +329,31 @@ void simpleble_peripheral_unpair(simpleble_peripheral_t handle, simpleble_error_
     }
 }
 
-size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
-        return peripheral->services().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
+size_t simpleble_peripheral_services(simpleble_peripheral_t handle, simpleble_service_list_t* out_list,
+                                     simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Peripheral>(
+        handle, out_list, out_error, [](SimpleBLE::Peripheral& peripheral) { return peripheral.services(); });
 }
 
-void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index, simpleble_service_t* out_service,
-                                       simpleble_error_t** out_error) {
+size_t simpleble_service_list_count(simpleble_service_list_t list) {
+    return SimpleCBLE::List::count<SimpleBLE::Service>(list);
+}
+
+void simpleble_service_list_get(simpleble_service_list_t list, size_t index, simpleble_service_t* out_service,
+                                simpleble_error_t** out_error) {
     simpleble_error_release(out_error);
 
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
     if (out_service == nullptr) {
         *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "out_service is NULL");
         return;
     }
     *out_service = {};
 
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
+    SimpleBLE::Service* entry = SimpleCBLE::List::at<SimpleBLE::Service>(list, index, out_error);
+    if (entry == nullptr) return;
+
     try {
-        auto peripheral_services = peripheral->services();
-
-        if (index >= peripheral_services.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return;
-        }
-
-        SimpleBLE::Service service = peripheral_services[index];
+        SimpleBLE::Service service = *entry;
 
         strncpy(out_service->uuid.value, service.uuid().c_str(), SIMPLEBLE_UUID_STR_LEN - 1);
 
@@ -404,6 +403,10 @@ void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t ind
     simpleble_service_release(out_service);
 }
 
+void simpleble_service_list_release(simpleble_service_list_t list) {
+    SimpleCBLE::List::release<SimpleBLE::Service>(list);
+}
+
 void simpleble_service_release(simpleble_service_t* service) {
     if (service == nullptr) return;
 
@@ -415,75 +418,50 @@ void simpleble_service_release(simpleble_service_t* service) {
     *service = {};
 }
 
-size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
-    try {
-        return peripheral->manufacturer_data().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
+size_t simpleble_peripheral_manufacturer_data(simpleble_peripheral_t handle,
+                                              simpleble_manufacturer_data_list_t* out_list,
+                                              simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Peripheral>(handle, out_list, out_error,
+                                                         [](SimpleBLE::Peripheral& peripheral) {
+                                                             auto data = peripheral.manufacturer_data();
+                                                             return ManufacturerDataEntries(data.begin(), data.end());
+                                                         });
 }
 
-void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index,
-                                                simpleble_manufacturer_data_t* out_data,
-                                                simpleble_error_t** out_error) {
+size_t simpleble_manufacturer_data_list_count(simpleble_manufacturer_data_list_t list) {
+    return SimpleCBLE::List::count<ManufacturerDataEntry>(list);
+}
+
+void simpleble_manufacturer_data_list_get(simpleble_manufacturer_data_list_t list, size_t index,
+                                          simpleble_manufacturer_data_t* out_data, simpleble_error_t** out_error) {
     simpleble_error_release(out_error);
 
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return;
-    }
     if (out_data == nullptr) {
         *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "out_data is NULL");
         return;
     }
     *out_data = {};
 
-    SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
+    ManufacturerDataEntry* entry = SimpleCBLE::List::at<ManufacturerDataEntry>(list, index, out_error);
+    if (entry == nullptr) return;
+
     try {
-        auto peripheral_manufacturer_data = peripheral->manufacturer_data();
-
-        if (index >= peripheral_manufacturer_data.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return;
-        }
-
-        // Build an iterator and advance to the expected element
-        std::map<uint16_t, SimpleBLE::ByteArray>::iterator it = peripheral_manufacturer_data.begin();
-        for (size_t i = 0; i < index; i++) {
-            it++;
-        }
-
-        auto& selected_manufacturer_data = *it;
-        out_data->manufacturer_id = selected_manufacturer_data.first;
-        const auto& data = selected_manufacturer_data.second;
+        out_data->manufacturer_id = entry->first;
+        const auto& data = entry->second;
         if (!data.empty()) {
             out_data->data = new uint8_t[data.size()];
             out_data->data_length = data.size();
             memcpy(out_data->data, data.data(), data.size());
         }
         return;
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
     } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+        *out_error = new Error(ErrorCode::OUT_OF_MEMORY, e.what());
     }
     simpleble_manufacturer_data_release(out_data);
+}
+
+void simpleble_manufacturer_data_list_release(simpleble_manufacturer_data_list_t list) {
+    SimpleCBLE::List::release<ManufacturerDataEntry>(list);
 }
 
 void simpleble_manufacturer_data_release(simpleble_manufacturer_data_t* data) {

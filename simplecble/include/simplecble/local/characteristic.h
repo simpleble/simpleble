@@ -16,6 +16,33 @@ extern "C" {
 SIMPLECBLE_EXPORT void simpleble_local_characteristic_release_handle(simpleble_local_characteristic_t handle);
 
 /**
+ * @brief Counts the local characteristics in a list.
+ *
+ * @param[in] list A local characteristic list, or NULL.
+ * @return The number of characteristics in the list, or zero for NULL.
+ */
+SIMPLECBLE_EXPORT size_t simpleble_local_characteristic_list_count(simpleble_local_characteristic_list_t list);
+
+/**
+ * @brief Obtains an owned handle for the local characteristic at the specified index of a list.
+ *
+ * @param[in] list Valid, non-NULL local characteristic list.
+ * @param[in] index Zero-based index into the list.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @return An owned handle, or NULL on failure. Release with simpleble_local_characteristic_release_handle().
+ * @note The handle remains valid after releasing the list.
+ */
+SIMPLECBLE_EXPORT simpleble_local_characteristic_t simpleble_local_characteristic_list_get(
+    simpleble_local_characteristic_list_t list, size_t index, simpleble_error_t** out_error);
+
+/**
+ * @brief Releases an owned local characteristic list.
+ *
+ * @param[in] list List to release, or NULL for no action.
+ */
+SIMPLECBLE_EXPORT void simpleble_local_characteristic_list_release(simpleble_local_characteristic_list_t list);
+
+/**
  * @brief Retrieves the local characteristic UUID.
  *
  * @param[in] handle Valid, non-NULL local characteristic handle.

@@ -8,6 +8,8 @@
 #include <set>
 #include <utility>
 
+#include "list_handle.hpp"
+
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
 
@@ -15,55 +17,24 @@ void simpleble_local_service_release_handle(simpleble_local_service_t handle) {
     delete (SimpleBLE::Local::Service*)handle;
 }
 
-size_t simpleble_local_service_characteristics_count(simpleble_local_service_t handle, simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
-
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return 0;
-    }
-
-    auto* service = (SimpleBLE::Local::Service*)handle;
-    try {
-        return service->characteristics().size();
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return 0;
+size_t simpleble_local_service_list_count(simpleble_local_service_list_t list) {
+    return SimpleCBLE::List::count<SimpleBLE::Local::Service>(list);
 }
 
-simpleble_local_characteristic_t simpleble_local_service_characteristics_get(simpleble_local_service_t handle,
-                                                                             size_t index,
-                                                                             simpleble_error_t** out_error) {
-    simpleble_error_release(out_error);
+simpleble_local_service_t simpleble_local_service_list_get(simpleble_local_service_list_t list, size_t index,
+                                                           simpleble_error_t** out_error) {
+    return SimpleCBLE::List::get<SimpleBLE::Local::Service>(list, index, out_error);
+}
 
-    if (handle == nullptr) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
-        return nullptr;
-    }
+void simpleble_local_service_list_release(simpleble_local_service_list_t list) {
+    SimpleCBLE::List::release<SimpleBLE::Local::Service>(list);
+}
 
-    auto* service = (SimpleBLE::Local::Service*)handle;
-    try {
-        auto entries = service->characteristics();
-        if (index >= entries.size()) {
-            *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "index is out of range");
-            return nullptr;
-        }
-        return new SimpleBLE::Local::Characteristic(entries[index]);
-    } catch (const SimpleBLE::Exception::BaseException& e) {
-        *out_error = e.make_error().release();
-    } catch (const std::exception& e) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
-    } catch (...) {
-        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
-    }
-
-    return nullptr;
+size_t simpleble_local_service_characteristics(simpleble_local_service_t handle,
+                                               simpleble_local_characteristic_list_t* out_list,
+                                               simpleble_error_t** out_error) {
+    return SimpleCBLE::List::read<SimpleBLE::Local::Service>(
+        handle, out_list, out_error, [](SimpleBLE::Local::Service& service) { return service.characteristics(); });
 }
 
 void simpleble_local_service_uuid(simpleble_local_service_t handle, simpleble_uuid_t* out_uuid,

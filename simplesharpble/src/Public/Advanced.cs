@@ -79,7 +79,9 @@ public static class Advanced
                 return 0;
             });
             // Preload Java callback classes on the application thread before worker calls.
-            NativeCall.Invoke(NativeMethods.simpleble_backend_get_count);
+            nint backends = 0;
+            NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_backend_get_backends(out backends, ref error));
+            NativeMethods.simpleble_backend_list_release(backends);
         }
     }
     /// <summary>macOS CoreBluetooth extensions.</summary>

@@ -78,26 +78,17 @@ SIMPLECBLE_EXPORT simpleble_local_service_t simpleble_local_peripheral_add_servi
                                                                                    simpleble_error_t** out_error);
 
 /**
- * @brief Counts the local services.
+ * @brief Reads the local services into a list.
  *
  * @param[in] handle Valid, non-NULL local peripheral handle.
+ * @param[out] out_list Required, non-NULL pointer that receives an owned list, or NULL on failure.
+ *     Release with simpleble_local_service_list_release().
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return The number of entries, or zero on failure.
+ * @return The number of services in the list, or zero on failure.
  */
-SIMPLECBLE_EXPORT size_t simpleble_local_peripheral_services_count(simpleble_local_peripheral_t handle,
-                                                                   simpleble_error_t** out_error);
-
-/**
- * @brief Obtains a local service handle at the specified index.
- *
- * @param[in] handle Valid, non-NULL local peripheral handle.
- * @param[in] index Zero-based index into the current collection.
- * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
- * @return An owned handle, or NULL on failure. Release with simpleble_local_service_release_handle().
- */
-SIMPLECBLE_EXPORT simpleble_local_service_t simpleble_local_peripheral_services_get(simpleble_local_peripheral_t handle,
-                                                                                    size_t index,
-                                                                                    simpleble_error_t** out_error);
+SIMPLECBLE_EXPORT size_t simpleble_local_peripheral_services(simpleble_local_peripheral_t handle,
+                                                             simpleble_local_service_list_t* out_list,
+                                                             simpleble_error_t** out_error);
 
 /**
  * @brief Removes all local GATT services before starting the peripheral.

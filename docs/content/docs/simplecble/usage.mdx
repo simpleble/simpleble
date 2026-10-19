@@ -73,7 +73,9 @@ int main(void) {
     simpleble_config_android_set_connection_priority(SIMPLEBLE_CONFIG_ANDROID_CONNECTION_PRIORITY_HIGH);
 
     simpleble_error_t* error = NULL;
-    size_t count = simpleble_adapter_get_count(&error);
+    simpleble_adapter_list_t adapters = NULL;
+    size_t count = simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_list_release(adapters);
     if (error) {
         fprintf(stderr, "%s\n", simpleble_error_message(error));
         simpleble_error_release(&error);

@@ -24,12 +24,13 @@ func GetAdapters() ([]*Adapter, error) {
 	if err != nil {
 		return nil, err
 	}
-	var nativeError uintptr
-	count := native.AdapterCount(&nativeError)
+	var nativeError, list uintptr
+	count := native.Adapters(&list, &nativeError)
 	if err := native.TakeError(&nativeError); err != nil {
 		return nil, err
 	}
-	adapters := collectAdapters(native, count, func(i uintptr) uintptr { return native.AdapterGet(i, &nativeError) }, &nativeError)
+	defer native.AdapterListRelease(list)
+	adapters := collectAdapters(native, count, func(i uintptr) uintptr { return native.AdapterListGet(list, i, &nativeError) }, &nativeError)
 	return adapters, native.TakeError(&nativeError)
 }
 
@@ -143,7 +144,7 @@ func (a *Adapter) ScanGetResults() ([]*Peripheral, error) {
 	if a.handle == nil {
 		return nil, ErrClosed
 	}
-	return a.peripherals(a.handle.Native.AdapterScanCount, a.handle.Native.AdapterScanGet)
+	return a.peripherals(a.handle.Native.AdapterScanResults)
 }
 
 // GetPairedPeripherals returns owned handles for paired devices.
@@ -151,7 +152,7 @@ func (a *Adapter) GetPairedPeripherals() ([]*Peripheral, error) {
 	if a.handle == nil {
 		return nil, ErrClosed
 	}
-	return a.peripherals(a.handle.Native.AdapterPairedCount, a.handle.Native.AdapterPairedGet)
+	return a.peripherals(a.handle.Native.AdapterPaired)
 }
 
 // GetConnectedPeripherals returns owned handles for connected devices.
@@ -159,18 +160,20 @@ func (a *Adapter) GetConnectedPeripherals() ([]*Peripheral, error) {
 	if a.handle == nil {
 		return nil, ErrClosed
 	}
-	return a.peripherals(a.handle.Native.AdapterConnectedCount, a.handle.Native.AdapterConnectedGet)
+	return a.peripherals(a.handle.Native.AdapterConnected)
 }
 
-func (a *Adapter) peripherals(count func(uintptr, *uintptr) uintptr, get func(uintptr, uintptr, *uintptr) uintptr) ([]*Peripheral, error) {
+func (a *Adapter) peripherals(read func(uintptr, *uintptr, *uintptr) uintptr) ([]*Peripheral, error) {
 	return bindings.Query(a.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) []*Peripheral {
-		length := count(nativeHandle, nativeError)
+		var list uintptr
+		length := read(nativeHandle, &list, nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
+		defer native.PeripheralListRelease(list)
 		peripherals := make([]*Peripheral, 0, length)
 		for i := uintptr(0); i < length; i++ {
-			peripheralHandle := get(nativeHandle, i, nativeError)
+			peripheralHandle := native.PeripheralListGet(list, i, nativeError)
 			if *nativeError != 0 {
 				for _, p := range peripherals {
 					_ = p.Close()

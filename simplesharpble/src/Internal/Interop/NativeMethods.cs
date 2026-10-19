@@ -24,10 +24,13 @@ internal static partial class NativeMethods
     internal static extern void simpleble_error_release(ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_backend_get_count(ref nint error);
+    internal static extern nuint simpleble_backend_get_backends(out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_backend_get_handle(nuint index, ref nint error);
+    internal static extern nint simpleble_backend_list_get(nint list, nuint index, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_backend_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern nint simpleble_backend_get_native(ref nint error);
@@ -49,20 +52,20 @@ internal static partial class NativeMethods
     internal static extern bool simpleble_backend_is_bluetooth_enabled(nint handle, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_backend_get_adapters_count(nint handle, ref nint error);
-
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_backend_get_adapters_handle(nint handle, nuint index, ref nint error);
+    internal static extern nuint simpleble_backend_get_adapters(nint handle, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.I1)]
     internal static extern bool simpleble_adapter_is_bluetooth_enabled(ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_adapter_get_count(ref nint error);
+    internal static extern nuint simpleble_adapter_get_adapters(out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_adapter_get_handle(nuint index, ref nint error);
+    internal static extern nint simpleble_adapter_list_get(nint list, nuint index, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_adapter_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_adapter_release_handle(nint handle);
@@ -97,22 +100,19 @@ internal static partial class NativeMethods
     internal static extern void simpleble_adapter_scan_for(nint handle, int timeoutMs, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_adapter_scan_get_results_count(nint handle, ref nint error);
+    internal static extern nuint simpleble_adapter_scan_get_results(nint handle, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_adapter_scan_get_results_handle(nint handle, nuint index, ref nint error);
+    internal static extern nuint simpleble_adapter_get_paired_peripherals(nint handle, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_adapter_get_paired_peripherals_count(nint handle, ref nint error);
+    internal static extern nuint simpleble_adapter_get_connected_peripherals(nint handle, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_adapter_get_paired_peripherals_handle(nint handle, nuint index, ref nint error);
+    internal static extern nint simpleble_peripheral_list_get(nint list, nuint index, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_adapter_get_connected_peripherals_count(nint handle, ref nint error);
-
-    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nint simpleble_adapter_get_connected_peripherals_handle(nint handle, nuint index, ref nint error);
+    internal static extern void simpleble_peripheral_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_peripheral_release_handle(nint handle);

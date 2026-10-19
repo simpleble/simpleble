@@ -42,8 +42,13 @@ func TestPlainNativeErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var nativeError uintptr
-	if native.BackendGet(^uintptr(0), &nativeError) != 0 {
+	var nativeError, list uintptr
+	native.Backends(&list, &nativeError)
+	if err := native.TakeError(&nativeError); err != nil {
+		t.Fatal(err)
+	}
+	defer native.BackendListRelease(list)
+	if native.BackendListGet(list, ^uintptr(0), &nativeError) != 0 {
 		t.Fatal("invalid index returned a handle")
 	}
 	err = native.TakeError(&nativeError)

@@ -31,19 +31,23 @@ static void adapter_on_scan_updated(simpleble_adapter_t adapter, simpleble_perip
 
 int main(void) {
     simpleble_error_t* error = NULL;
-    size_t adapter_count = simpleble_adapter_get_count(&error);
+    simpleble_adapter_list_t adapter_list = NULL;
+    size_t adapter_count = simpleble_adapter_get_adapters(&adapter_list, &error);
     if (adapter_count == 0) {
         if (error) {
             fprintf(stderr, "%s\n", simpleble_error_message(error));
         } else {
             printf("No adapter was found.\n");
         }
+        simpleble_adapter_list_release(adapter_list);
         simpleble_error_release(&error);
         return EXIT_FAILURE;
     }
 
     // TODO: Allow the user to pick an adapter.
-    simpleble_adapter_t adapter = simpleble_adapter_get_handle(0, &error);
+    simpleble_adapter_t adapter = simpleble_adapter_list_get(adapter_list, 0, &error);
+    simpleble_adapter_list_release(adapter_list);
+    simpleble_peripheral_list_t peripheral_list = NULL;
     int result = EXIT_FAILURE;
     if (error) goto cleanup;
 
@@ -60,10 +64,9 @@ int main(void) {
     // internal peripheral took longer to stop than anticipated.
     SLEEP_SEC(1);
 
-    size_t peripheral_count = simpleble_adapter_scan_get_results_count(adapter, &error);
+    size_t peripheral_count = simpleble_adapter_scan_get_results(adapter, &peripheral_list, &error);
     for (size_t peripheral_index = 0; peripheral_index < peripheral_count; peripheral_index++) {
-        simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, peripheral_index,
-                                                                                      &error);
+        simpleble_peripheral_t peripheral = simpleble_peripheral_list_get(peripheral_list, peripheral_index, &error);
         if (error) continue;
         char* peripheral_identifier = simpleble_peripheral_identifier(peripheral, &error);
         char* peripheral_address = simpleble_peripheral_address(peripheral, &error);
@@ -74,10 +77,11 @@ int main(void) {
                peripheral_address ? peripheral_address : "Unknown", peripheral_rssi,
                peripheral_connectable ? "Connectable" : "Non-Connectable");
 
-        size_t services_count = simpleble_peripheral_services_count(peripheral, &error);
+        simpleble_service_list_t service_list = NULL;
+        size_t services_count = simpleble_peripheral_services(peripheral, &service_list, &error);
         for (size_t service_index = 0; service_index < services_count; service_index++) {
             simpleble_service_t service = {0};
-            simpleble_peripheral_services_get(peripheral, service_index, &service, &error);
+            simpleble_service_list_get(service_list, service_index, &service, &error);
             if (error) continue;
 
             printf("    Service UUID: %s\n", service.uuid.value);
@@ -85,11 +89,13 @@ int main(void) {
             print_buffer_hex(service.data, service.data_length, true);
             simpleble_service_release(&service);
         }
+        simpleble_service_list_release(service_list);
 
-        size_t manufacturer_data_count = simpleble_peripheral_manufacturer_data_count(peripheral, &error);
+        simpleble_manufacturer_data_list_t manuf_data_list = NULL;
+        size_t manufacturer_data_count = simpleble_peripheral_manufacturer_data(peripheral, &manuf_data_list, &error);
         for (size_t manuf_data_index = 0; manuf_data_index < manufacturer_data_count; manuf_data_index++) {
             simpleble_manufacturer_data_t manuf_data = {0};
-            simpleble_peripheral_manufacturer_data_get(peripheral, manuf_data_index, &manuf_data, &error);
+            simpleble_manufacturer_data_list_get(manuf_data_list, manuf_data_index, &manuf_data, &error);
             if (error) continue;
 
             printf("    Manufacturer ID: %04X\n", manuf_data.manufacturer_id);
@@ -97,6 +103,7 @@ int main(void) {
             print_buffer_hex(manuf_data.data, manuf_data.data_length, true);
             simpleble_manufacturer_data_release(&manuf_data);
         }
+        simpleble_manufacturer_data_list_release(manuf_data_list);
 
         simpleble_peripheral_release_handle(peripheral);
         simpleble_free(peripheral_address);
@@ -107,6 +114,7 @@ int main(void) {
 
 cleanup:
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_peripheral_list_release(peripheral_list);
     simpleble_adapter_release_handle(adapter);
     simpleble_error_release(&error);
     return result;

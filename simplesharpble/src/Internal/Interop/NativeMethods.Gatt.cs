@@ -5,19 +5,25 @@ namespace SimpleSharpBLE.Internal.Interop;
 internal static partial class NativeMethods
 {
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_peripheral_services_count(nint h, ref nint error);
+    internal static extern nuint simpleble_peripheral_services(nint h, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern void simpleble_peripheral_services_get(nint h, nuint index, out NativeService value, ref nint error);
+    internal static extern void simpleble_service_list_get(nint list, nuint index, out NativeService value, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_service_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_service_release(ref NativeService value);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern nuint simpleble_peripheral_manufacturer_data_count(nint h, ref nint error);
+    internal static extern nuint simpleble_peripheral_manufacturer_data(nint h, out nint list, ref nint error);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    internal static extern void simpleble_peripheral_manufacturer_data_get(nint h, nuint index, out NativeManufacturerData value, ref nint error);
+    internal static extern void simpleble_manufacturer_data_list_get(nint list, nuint index, out NativeManufacturerData value, ref nint error);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_manufacturer_data_list_release(nint list);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_manufacturer_data_release(ref NativeManufacturerData value);

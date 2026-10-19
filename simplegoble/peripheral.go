@@ -113,14 +113,16 @@ func (p *Peripheral) Unpair() error {
 // services when connected. All returned strings, bytes, and metadata are Go-owned.
 func (p *Peripheral) Services() ([]Service, error) {
 	return bindings.Query(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) []Service {
-		count := native.PeripheralServiceCount(nativeHandle, nativeError)
+		var list uintptr
+		count := native.PeripheralServices(nativeHandle, &list, nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
+		defer native.ServiceListRelease(list)
 		result := make([]Service, 0, count)
 		for i := uintptr(0); i < count; i++ {
 			var value bindings.Service
-			native.PeripheralServiceGet(nativeHandle, i, &value, nativeError)
+			native.ServiceListGet(list, i, &value, nativeError)
 			if *nativeError != 0 {
 				native.ServiceRelease(&value)
 				return nil
@@ -146,14 +148,16 @@ func (p *Peripheral) Services() ([]Service, error) {
 // ManufacturerData returns Go-owned advertisement payloads indexed by company ID.
 func (p *Peripheral) ManufacturerData() (map[uint16][]byte, error) {
 	return bindings.Query(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) map[uint16][]byte {
-		count := native.PeripheralManufacturerCount(nativeHandle, nativeError)
+		var list uintptr
+		count := native.PeripheralManufacturerData(nativeHandle, &list, nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
+		defer native.ManufacturerListRelease(list)
 		result := make(map[uint16][]byte, count)
 		for i := uintptr(0); i < count; i++ {
 			var value bindings.ManufacturerData
-			native.PeripheralManufacturerGet(nativeHandle, i, &value, nativeError)
+			native.ManufacturerListGet(list, i, &value, nativeError)
 			if *nativeError != 0 {
 				native.ManufacturerRelease(&value)
 				return nil

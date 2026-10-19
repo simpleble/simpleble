@@ -13,7 +13,7 @@ Scalar and pointer results carry data directly. An empty collection, `false` sta
 
 ## Scan for devices
 
-This complete program gets the first adapter, scans for five seconds, and prints the results. If no adapter is available, obtaining index zero reports an error. Use `simpleble_adapter_get_count(&error)` when presenting adapter selection to the user.
+This complete program gets the first adapter, scans for five seconds, and prints the results. If no adapter is available, obtaining index zero reports an error. Use the count that `simpleble_adapter_get_adapters()` returns when presenting adapter selection to the user.
 
 ```c
 #include <stdio.h>
@@ -22,18 +22,22 @@ This complete program gets the first adapter, scans for five seconds, and prints
 
 int main(void) {
     simpleble_error_t* error = NULL;
-    simpleble_adapter_t adapter = simpleble_adapter_get_handle(0, &error);
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
     if (error) {
         fprintf(stderr, "%s\n", simpleble_error_message(error));
         simpleble_error_release(&error);
         return EXIT_FAILURE;
     }
 
+    simpleble_peripheral_list_t results = NULL;
     simpleble_adapter_scan_for(adapter, 5000, &error);
     if (!error) {
-        size_t count = simpleble_adapter_scan_get_results_count(adapter, &error);
+        size_t count = simpleble_adapter_scan_get_results(adapter, &results, &error);
         for (size_t i = 0; i < count && !error; i++) {
-            simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i, &error);
+            simpleble_peripheral_t peripheral = simpleble_peripheral_list_get(results, i, &error);
             if (error) break;
 
             char* identifier = simpleble_peripheral_identifier(peripheral, &error);
@@ -46,6 +50,7 @@ int main(void) {
     int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
     simpleble_error_release(&error);
+    simpleble_peripheral_list_release(results);
     simpleble_adapter_release_handle(adapter);
     return result;
 }
@@ -82,7 +87,7 @@ Use a separate error variable inside callbacks. Keep callback userdata alive whi
 
 ## Connect and inspect services
 
-Obtain a peripheral from scan results or retain one passed to a scan callback. This function connects, lists the GATT services, and disconnects. While disconnected, `simpleble_peripheral_services_get()` instead returns advertised services and their service data.
+Obtain a peripheral from scan results or retain one passed to a scan callback. This function connects, lists the GATT services, and disconnects. While disconnected, `simpleble_peripheral_services()` instead reads the advertised services and their service data.
 
 ```c
 bool connect_and_inspect(simpleble_peripheral_t peripheral) {
@@ -94,10 +99,11 @@ bool connect_and_inspect(simpleble_peripheral_t peripheral) {
         return false;
     }
 
-    size_t count = simpleble_peripheral_services_count(peripheral, &error);
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(peripheral, &services, &error);
     for (size_t i = 0; i < count && !error; i++) {
         simpleble_service_t service = {0};
-        simpleble_peripheral_services_get(peripheral, i, &service, &error);
+        simpleble_service_list_get(services, i, &service, &error);
         if (!error) {
             printf("Service: %s\n", service.uuid.value);
             for (size_t j = 0; j < service.characteristic_count; j++) {
@@ -106,6 +112,7 @@ bool connect_and_inspect(simpleble_peripheral_t peripheral) {
         }
         simpleble_service_release(&service);
     }
+    simpleble_service_list_release(services);
 
     bool success = error == NULL;
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
@@ -119,7 +126,7 @@ bool connect_and_inspect(simpleble_peripheral_t peripheral) {
 }
 ```
 
-Each service is an owned snapshot with dynamically allocated data, characteristics, and descriptors. Iterate using the reported lengths and counts. `simpleble_service_release()` frees the entire snapshot's contents and zeroes the struct. For manufacturer advertisements, use `simpleble_peripheral_manufacturer_data_count()` / `_get()` and release each result with `simpleble_manufacturer_data_release()`.
+Each service is an owned snapshot with dynamically allocated data, characteristics, and descriptors. Iterate using the reported lengths and counts. `simpleble_service_release()` frees the entire snapshot's contents and zeroes the struct. For manufacturer advertisements, read a list with `simpleble_peripheral_manufacturer_data()`, take each entry with `simpleble_manufacturer_data_list_get()`, and release each entry with `simpleble_manufacturer_data_release()` and the list with `simpleble_manufacturer_data_list_release()`.
 
 ## Read and write
 
@@ -205,26 +212,28 @@ Use `simpleble_peripheral_indicate()` for a characteristic that supports indicat
 
 ## Choose a backend
 
-Global adapter enumeration remains available. To choose a specific backend, enumerate backend handles and obtain adapters through `simpleble_backend_get_adapters_count()` and `simpleble_backend_get_adapters_handle()`.
+Global adapter enumeration remains available. To choose a specific backend, read the backends with `simpleble_backend_get_backends()` and a backend's adapters with `simpleble_backend_get_adapters()`.
 
 ```c
 void list_backends(void) {
     simpleble_error_t* error = NULL;
-    size_t count = simpleble_backend_get_count(&error);
+    simpleble_backend_list_t backends = NULL;
+    size_t count = simpleble_backend_get_backends(&backends, &error);
     for (size_t i = 0; i < count && !error; i++) {
-        simpleble_backend_t backend = simpleble_backend_get_handle(i, &error);
+        simpleble_backend_t backend = simpleble_backend_list_get(backends, i, &error);
         if (error) break;
         char* identifier = simpleble_backend_identifier(backend, &error);
         if (!error) printf("Backend %zu: %s\n", i, identifier);
         simpleble_free(identifier);
         simpleble_backend_release_handle(backend);
     }
+    simpleble_backend_list_release(backends);
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
     simpleble_error_release(&error);
 }
 ```
 
-Backend and adapter handles are independently owned: releasing the backend handle does not invalidate an adapter obtained from it. Configure the library before the first backend or adapter enumeration.
+Backend and adapter handles are independently owned: releasing the backend handle or a list does not invalidate an adapter obtained from it. Configure the library before the first backend or adapter enumeration.
 
 ## Local peripheral hosting
 
@@ -284,6 +293,7 @@ Platform support follows the selected backend. Android callers must configure th
 | Allocated string, remote read buffer, local characteristic value | `simpleble_free(pointer)` |
 | Backend, adapter, remote peripheral | Matching `simpleble_*_release_handle(handle)` |
 | Local peripheral, service, characteristic | Matching `simpleble_local_*_release_handle(handle)` |
+| List of backends, adapters, peripherals, services, manufacturer data, or local objects | Matching `simpleble_*_list_release(list)` |
 | Service and all nested data | `simpleble_service_release(&service)` |
 | Manufacturer data | `simpleble_manufacturer_data_release(&data)` |
 

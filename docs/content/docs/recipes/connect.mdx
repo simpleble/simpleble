@@ -58,10 +58,11 @@ bool connect_and_inspect(simpleble_peripheral_t peripheral) {
         return false;
     }
 
-    size_t count = simpleble_peripheral_services_count(peripheral, &error);
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(peripheral, &services, &error);
     for (size_t i = 0; i < count && !error; i++) {
         simpleble_service_t service = {0};
-        simpleble_peripheral_services_get(peripheral, i, &service, &error);
+        simpleble_service_list_get(services, i, &service, &error);
         if (!error) {
             printf("Service: %s\n", service.uuid.value);
             for (size_t j = 0; j < service.characteristic_count; j++) {
@@ -70,6 +71,7 @@ bool connect_and_inspect(simpleble_peripheral_t peripheral) {
         }
         simpleble_service_release(&service);
     }
+    simpleble_service_list_release(services);
 
     bool success = error == NULL;
     if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));

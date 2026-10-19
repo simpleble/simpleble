@@ -26,10 +26,13 @@ public sealed class Adapter : IDisposable
     public static bool IsBluetoothEnabled => NativeCall.Invoke(NativeMethods.simpleble_adapter_is_bluetooth_enabled);
 
     /// <summary>Initializes backends and adapters. Dispose every returned adapter.</summary>
-    public static IReadOnlyList<Adapter> GetAdapters() => NativeCall.Collect(
-        NativeCall.Invoke(NativeMethods.simpleble_adapter_get_count),
-        index => new Adapter(NativeCall.Invoke((ref nint error) =>
-            NativeMethods.simpleble_adapter_get_handle(index, ref error))));
+    public static IReadOnlyList<Adapter> GetAdapters()
+    {
+        nint list = 0;
+        nuint count = NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_get_adapters(out list, ref error));
+        return NativeCall.Collect(list, count, NativeMethods.simpleble_adapter_list_release, (value, index) =>
+            new Adapter(NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_adapter_list_get(value, index, ref error))));
+    }
 
     /// <summary>Requests power on. Unsupported native backends may do nothing.</summary>
     public void PowerOn() => handle.Execute(NativeMethods.simpleble_adapter_power_on);
@@ -59,24 +62,24 @@ public sealed class Adapter : IDisposable
         Task.Run(() => ScanFor(duration), cancellationToken);
 
     /// <summary>Returns owned peripheral wrappers. Dispose all entries, including unselected ones.</summary>
-    public IReadOnlyList<Peripheral> ScanGetResults() => GetPeripherals(
-        NativeMethods.simpleble_adapter_scan_get_results_count,
-        NativeMethods.simpleble_adapter_scan_get_results_handle);
+    public IReadOnlyList<Peripheral> ScanGetResults() => GetPeripherals(NativeMethods.simpleble_adapter_scan_get_results);
 
     /// <summary>Returns owned wrappers. Support depends on the native backend.</summary>
-    public IReadOnlyList<Peripheral> GetPairedPeripherals() => GetPeripherals(
-        NativeMethods.simpleble_adapter_get_paired_peripherals_count,
-        NativeMethods.simpleble_adapter_get_paired_peripherals_handle);
+    public IReadOnlyList<Peripheral> GetPairedPeripherals() =>
+        GetPeripherals(NativeMethods.simpleble_adapter_get_paired_peripherals);
 
     /// <summary>Returns owned wrappers. Support depends on the native backend.</summary>
-    public IReadOnlyList<Peripheral> GetConnectedPeripherals() => GetPeripherals(
-        NativeMethods.simpleble_adapter_get_connected_peripherals_count,
-        NativeMethods.simpleble_adapter_get_connected_peripherals_handle);
+    public IReadOnlyList<Peripheral> GetConnectedPeripherals() =>
+        GetPeripherals(NativeMethods.simpleble_adapter_get_connected_peripherals);
 
-    private delegate nint PeripheralAt(nint adapter, nuint index, ref nint error);
-    private IReadOnlyList<Peripheral> GetPeripherals(HandleQuery<nuint> count, PeripheralAt at) =>
-        NativeCall.Collect(handle.Query(count), index => new Peripheral(handle.Query(
-            (nint value, ref nint error) => at(value, index, ref error))));
+    private delegate nuint PeripheralsRead(nint adapter, out nint list, ref nint error);
+    private IReadOnlyList<Peripheral> GetPeripherals(PeripheralsRead read)
+    {
+        nint list = 0;
+        nuint count = handle.Query((nint value, ref nint error) => read(value, out list, ref error));
+        return NativeCall.Collect(list, count, NativeMethods.simpleble_peripheral_list_release, (value, index) =>
+            new Peripheral(NativeCall.Invoke((ref nint error) => NativeMethods.simpleble_peripheral_list_get(value, index, ref error))));
+    }
 
     private readonly object eventGate = new();
     private EventHandler? power_on;

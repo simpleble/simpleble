@@ -21,8 +21,11 @@ Callback setters without `out_error` require valid handles. Pass `NULL` as the c
 | Error object | `simpleble_error_release(&error)` |
 | Backend, adapter, or remote peripheral handle | The matching `simpleble_*_release_handle(handle)` |
 | Local peripheral, service, or characteristic handle | The matching `simpleble_local_*_release_handle(handle)` |
+| List of backends, adapters, peripherals, services, manufacturer data, or local objects | The matching `simpleble_*_list_release(list)` |
 | Service snapshot, including its payload, characteristics, and descriptors | `simpleble_service_release(&service)` |
 | Manufacturer data snapshot | `simpleble_manufacturer_data_release(&data)` |
+
+Collections are read once into an owned list. The reading call returns the number of entries and stores the list in `out_list`; `simpleble_*_list_count()` and `simpleble_*_list_get()` then read that list, never the live collection, so a list stays the same while scanning continues. Handles and structs obtained from a list stay valid after the list is released.
 
 Service and manufacturer structs use allocated arrays with lengths/counts. Empty arrays have a zero count and a `NULL` pointer. Their release functions free the contents and zero the caller-owned struct. Release a result before filling the same struct again. Characteristics and descriptors inside a service belong to that service; copying a struct does not duplicate its allocations.
 
@@ -119,17 +122,31 @@ Error messages, version strings, native pointers, and callback payloads are borr
 <ApiClass name="backend.h">
 
 <ApiMethod
-  signature={"size_t simpleble_backend_get_count(simpleble_error_t** out_error)"}
-  brief={"Counts the available backends, initializing them as needed."}
-  detailed={"Returns: The number of available backends, or zero on failure."}
-  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_backend_get_backends(simpleble_backend_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the available backends into a list, initializing them as needed."}
+  detailed={"Returns: The number of backends in the list, or zero on failure."}
+  parameters={[{"name": "out_list", "type": "simpleble_backend_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_backend_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
-  signature={"simpleble_backend_t simpleble_backend_get_handle(size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains an owned handle for the backend at the specified index."}
-  detailed={"Returns: An owned backend handle, or NULL on failure. Release with simpleble_backend_release_handle()."}
-  parameters={[{"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_backend_list_count(simpleble_backend_list_t list)"}
+  brief={"Counts the backends in a list."}
+  detailed={"Returns: The number of backends in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_backend_list_t", "description": "A backend list, or NULL."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_backend_t simpleble_backend_list_get(simpleble_backend_list_t list, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the backend at the specified index of a list."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_backend_release_handle()."}
+  notes={[{"content": "The handle remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_backend_list_t", "description": "Valid, non-NULL backend list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_backend_list_release(simpleble_backend_list_t list)"}
+  brief={"Releases an owned backend list."}
+  parameters={[{"name": "list", "type": "simpleble_backend_list_t", "description": "List to release, or NULL for no action."}]}
 />
 
 <ApiMethod
@@ -174,18 +191,11 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_backend_get_adapters_count(simpleble_backend_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the available adapters belonging to the backend."}
-  detailed={"Returns: The number of available adapters, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
-/>
-
-<ApiMethod
-  signature={"simpleble_adapter_t simpleble_backend_get_adapters_handle(simpleble_backend_t handle, size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains an owned adapter handle from the backend."}
-  detailed={"Returns: An owned adapter handle, or NULL on failure. Release with simpleble_adapter_release_handle()."}
-  notes={[{"content": "The adapter handle remains valid after releasing the backend handle.", "type": "info"}]}
-  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the backend's current adapter collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_backend_get_adapters(simpleble_backend_t handle, simpleble_adapter_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the adapters belonging to the backend into a list."}
+  detailed={"Returns: The number of adapters in the list, or zero on failure."}
+  notes={[{"content": "The list and its adapter handles remain valid after releasing the backend handle.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_backend_t", "description": "Valid, non-NULL backend handle."}, {"name": "out_list", "type": "simpleble_adapter_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_adapter_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 </ApiClass>
@@ -206,17 +216,31 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_adapter_get_count(simpleble_error_t** out_error)"}
-  brief={"Counts the available Bluetooth adapters."}
-  detailed={"Returns: The number of available adapters, or zero on failure."}
-  parameters={[{"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_adapter_get_adapters(simpleble_adapter_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the available Bluetooth adapters of every backend into a list."}
+  detailed={"Returns: The number of adapters in the list, or zero on failure."}
+  parameters={[{"name": "out_list", "type": "simpleble_adapter_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_adapter_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
-  signature={"simpleble_adapter_t simpleble_adapter_get_handle(size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains an owned handle for the adapter at the specified index."}
-  detailed={"Returns: An owned adapter handle, or NULL on failure. Release with simpleble_adapter_release_handle()."}
-  parameters={[{"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_adapter_list_count(simpleble_adapter_list_t list)"}
+  brief={"Counts the adapters in a list."}
+  detailed={"Returns: The number of adapters in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_adapter_list_t", "description": "A adapter list, or NULL."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_adapter_t simpleble_adapter_list_get(simpleble_adapter_list_t list, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the adapter at the specified index of a list."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_adapter_release_handle()."}
+  notes={[{"content": "The handle remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_adapter_list_t", "description": "Valid, non-NULL adapter list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_adapter_list_release(simpleble_adapter_list_t list)"}
+  brief={"Releases an owned adapter list."}
+  parameters={[{"name": "list", "type": "simpleble_adapter_list_t", "description": "List to release, or NULL for no action."}]}
 />
 
 <ApiMethod
@@ -308,45 +332,25 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_adapter_scan_get_results_count(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the scan results reported by the adapter."}
-  detailed={"Returns: The number of scan results, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_adapter_scan_get_results(simpleble_adapter_t handle, simpleble_peripheral_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the scan results reported by the adapter into a list."}
+  detailed={"Returns: The number of peripherals in the list, or zero on failure."}
+  notes={[{"content": "The list keeps the results it read while scanning continues or restarts.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_list", "type": "simpleble_peripheral_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_peripheral_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
-  signature={"simpleble_peripheral_t simpleble_adapter_scan_get_results_handle(simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains an owned peripheral handle from the scan results."}
-  detailed={"Returns: An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
-  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_adapter_get_paired_peripherals(simpleble_adapter_t handle, simpleble_peripheral_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the paired peripherals reported by the adapter into a list."}
+  detailed={"Returns: The number of peripherals in the list, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_list", "type": "simpleble_peripheral_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_peripheral_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
-  signature={"size_t simpleble_adapter_get_paired_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the paired peripherals reported by the adapter."}
-  detailed={"Returns: The number of paired peripherals, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
-/>
-
-<ApiMethod
-  signature={"simpleble_peripheral_t simpleble_adapter_get_paired_peripherals_handle(simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains an owned peripheral handle from the paired peripherals."}
-  detailed={"Returns: An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
-  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
-/>
-
-<ApiMethod
-  signature={"size_t simpleble_adapter_get_connected_peripherals_count(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the connected peripherals reported by the adapter."}
-  detailed={"Returns: The number of connected peripherals, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
-/>
-
-<ApiMethod
-  signature={"simpleble_peripheral_t simpleble_adapter_get_connected_peripherals_handle( simpleble_adapter_t handle, size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains an owned peripheral handle from the connected peripherals."}
-  detailed={"Returns: An owned peripheral handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
-  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_adapter_get_connected_peripherals(simpleble_adapter_t handle, simpleble_peripheral_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the connected peripherals reported by the adapter into a list."}
+  detailed={"Returns: The number of peripherals in the list, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "out_list", "type": "simpleble_peripheral_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_peripheral_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
@@ -399,6 +403,27 @@ Error messages, version strings, native pointers, and callback payloads are borr
   signature={"void simpleble_peripheral_release_handle(simpleble_peripheral_t handle)"}
   brief={"Releases an owned peripheral handle."}
   parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_peripheral_list_count(simpleble_peripheral_list_t list)"}
+  brief={"Counts the peripherals in a list."}
+  detailed={"Returns: The number of peripherals in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_peripheral_list_t", "description": "A peripheral list, or NULL."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_peripheral_t simpleble_peripheral_list_get(simpleble_peripheral_list_t list, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the peripheral at the specified index of a list."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_peripheral_release_handle()."}
+  notes={[{"content": "The handle remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_peripheral_list_t", "description": "Valid, non-NULL peripheral list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_peripheral_list_release(simpleble_peripheral_list_t list)"}
+  brief={"Releases an owned peripheral list."}
+  parameters={[{"name": "list", "type": "simpleble_peripheral_list_t", "description": "List to release, or NULL for no action."}]}
 />
 
 <ApiMethod
@@ -491,17 +516,30 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_peripheral_services_count(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the services reported by the peripheral."}
-  detailed={"Returns: The number of services, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_peripheral_services(simpleble_peripheral_t handle, simpleble_service_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the services reported by the peripheral into a list."}
+  detailed={"Returns: The number of services in the list, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_list", "type": "simpleble_service_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_service_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
-  signature={"void simpleble_peripheral_services_get(simpleble_peripheral_t handle, size_t index, simpleble_service_t* out_service, simpleble_error_t** out_error)"}
-  brief={"Retrieves the service at the specified index."}
-  notes={[{"content": "Initialize the output to zero and release its contents before reusing it. Empty arrays have a zero length or count and a NULL pointer.", "type": "info"}]}
-  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_service", "type": "simpleble_service_t*", "description": "Required caller-owned storage for one service. The library allocates its contents."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_service_list_count(simpleble_service_list_t list)"}
+  brief={"Counts the services in a list."}
+  detailed={"Returns: The number of services in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_service_list_t", "description": "A service list, or NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_service_list_get(simpleble_service_list_t list, size_t index, simpleble_service_t* out_service, simpleble_error_t** out_error)"}
+  brief={"Retrieves the service at the specified index of a list."}
+  notes={[{"content": "Initialize the output to zero and release its contents before reusing it. Empty arrays have a zero length or count and a NULL pointer. The service remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_service_list_t", "description": "Valid, non-NULL service list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_service", "type": "simpleble_service_t*", "description": "Required caller-owned storage for one service. The library allocates its contents."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_service_list_release(simpleble_service_list_t list)"}
+  brief={"Releases an owned service list."}
+  parameters={[{"name": "list", "type": "simpleble_service_list_t", "description": "List to release, or NULL for no action."}]}
 />
 
 <ApiMethod
@@ -512,17 +550,31 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_peripheral_manufacturer_data_count(simpleble_peripheral_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the manufacturer data entries reported by the peripheral."}
-  detailed={"Returns: The number of manufacturer data entries, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_peripheral_manufacturer_data(simpleble_peripheral_t handle, simpleble_manufacturer_data_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the manufacturer data entries reported by the peripheral into a list."}
+  detailed={"Returns: The number of entries in the list, or zero on failure."}
+  notes={[{"content": "Entries are ordered by manufacturer identifier.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "out_list", "type": "simpleble_manufacturer_data_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_manufacturer_data_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
-  signature={"void simpleble_peripheral_manufacturer_data_get(simpleble_peripheral_t handle, size_t index, simpleble_manufacturer_data_t* out_data, simpleble_error_t** out_error)"}
-  brief={"Retrieves the manufacturer data entry at the specified index."}
-  notes={[{"content": "Initialize the output to zero and release its contents before reusing it. An empty payload has a zero length and a NULL pointer.", "type": "info"}]}
-  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_data", "type": "simpleble_manufacturer_data_t*", "description": "Required caller-owned storage for one entry. The library allocates its payload."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_manufacturer_data_list_count(simpleble_manufacturer_data_list_t list)"}
+  brief={"Counts the manufacturer data entries in a list."}
+  detailed={"Returns: The number of entries in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_manufacturer_data_list_t", "description": "A manufacturer data list, or NULL."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_manufacturer_data_list_get(simpleble_manufacturer_data_list_t list, size_t index, simpleble_manufacturer_data_t* out_data, simpleble_error_t** out_error)"}
+  brief={"Retrieves the manufacturer data entry at the specified index of a list."}
+  notes={[{"content": "Initialize the output to zero and release its contents before reusing it. An empty payload has a zero length and a NULL pointer. The entry remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_manufacturer_data_list_t", "description": "Valid, non-NULL manufacturer data list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_data", "type": "simpleble_manufacturer_data_t*", "description": "Required caller-owned storage for one entry. The library allocates its payload."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_manufacturer_data_list_release(simpleble_manufacturer_data_list_t list)"}
+  brief={"Releases an owned manufacturer data list."}
+  parameters={[{"name": "list", "type": "simpleble_manufacturer_data_list_t", "description": "List to release, or NULL for no action."}]}
 />
 
 <ApiMethod
@@ -654,17 +706,10 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_local_peripheral_services_count(simpleble_local_peripheral_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the local services."}
-  detailed={"Returns: The number of entries, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
-/>
-
-<ApiMethod
-  signature={"simpleble_local_service_t simpleble_local_peripheral_services_get(simpleble_local_peripheral_t handle, size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains a local service handle at the specified index."}
-  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_service_release_handle()."}
-  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_local_peripheral_services(simpleble_local_peripheral_t handle, simpleble_local_service_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the local services into a list."}
+  detailed={"Returns: The number of services in the list, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "out_list", "type": "simpleble_local_service_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_local_service_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
@@ -732,17 +777,31 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
-  signature={"size_t simpleble_local_service_characteristics_count(simpleble_local_service_t handle, simpleble_error_t** out_error)"}
-  brief={"Counts the local characteristics."}
-  detailed={"Returns: The number of entries, or zero on failure."}
-  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"size_t simpleble_local_service_list_count(simpleble_local_service_list_t list)"}
+  brief={"Counts the services in a list."}
+  detailed={"Returns: The number of services in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_local_service_list_t", "description": "A local service list, or NULL."}]}
 />
 
 <ApiMethod
-  signature={"simpleble_local_characteristic_t simpleble_local_service_characteristics_get( simpleble_local_service_t handle, size_t index, simpleble_error_t** out_error)"}
-  brief={"Obtains a local characteristic handle at the specified index."}
-  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_characteristic_release_handle()."}
-  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the current collection."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+  signature={"simpleble_local_service_t simpleble_local_service_list_get(simpleble_local_service_list_t list, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the local service at the specified index of a list."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_service_release_handle()."}
+  notes={[{"content": "The handle remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_local_service_list_t", "description": "Valid, non-NULL local service list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_service_list_release(simpleble_local_service_list_t list)"}
+  brief={"Releases an owned local service list."}
+  parameters={[{"name": "list", "type": "simpleble_local_service_list_t", "description": "List to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_local_service_characteristics(simpleble_local_service_t handle, simpleble_local_characteristic_list_t* out_list, simpleble_error_t** out_error)"}
+  brief={"Reads the local characteristics into a list."}
+  detailed={"Returns: The number of characteristics in the list, or zero on failure."}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "Valid, non-NULL local service handle."}, {"name": "out_list", "type": "simpleble_local_characteristic_list_t*", "description": "Required, non-NULL pointer that receives an owned list, or NULL on failure. Release with simpleble_local_characteristic_list_release()."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
@@ -774,6 +833,27 @@ Error messages, version strings, native pointers, and callback payloads are borr
   brief={"Releases an owned local characteristic handle."}
   notes={[{"content": "Clear callbacks registered with this handle before releasing it.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"size_t simpleble_local_characteristic_list_count(simpleble_local_characteristic_list_t list)"}
+  brief={"Counts the characteristics in a list."}
+  detailed={"Returns: The number of characteristics in the list, or zero for NULL."}
+  parameters={[{"name": "list", "type": "simpleble_local_characteristic_list_t", "description": "A local characteristic list, or NULL."}]}
+/>
+
+<ApiMethod
+  signature={"simpleble_local_characteristic_t simpleble_local_characteristic_list_get(simpleble_local_characteristic_list_t list, size_t index, simpleble_error_t** out_error)"}
+  brief={"Obtains an owned handle for the local characteristic at the specified index of a list."}
+  detailed={"Returns: An owned handle, or NULL on failure. Release with simpleble_local_characteristic_release_handle()."}
+  notes={[{"content": "The handle remains valid after releasing the list.", "type": "info"}]}
+  parameters={[{"name": "list", "type": "simpleble_local_characteristic_list_t", "description": "Valid, non-NULL local characteristic list."}, {"name": "index", "type": "size_t", "description": "Zero-based index into the list."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_local_characteristic_list_release(simpleble_local_characteristic_list_t list)"}
+  brief={"Releases an owned local characteristic list."}
+  parameters={[{"name": "list", "type": "simpleble_local_characteristic_list_t", "description": "List to release, or NULL for no action."}]}
 />
 
 <ApiMethod

@@ -27,7 +27,7 @@ Only a NULL error indicates success. A boolean false, zero count, or NULL read b
 
 <Accordion title="How are collections represented?" id="vectors">
 
-Backend, adapter, peripheral, and local-object lists use count/get functions. Each obtained handle is owned and requires release. These calls read the current collection; a count does not freeze a changing scan result set.
+Backend, adapter, peripheral, service, manufacturer data, and local-object collections are read once into an owned list. The reading call, such as `simpleble_adapter_scan_get_results()`, returns the number of entries and stores the list; `simpleble_*_list_get()` takes entries from that list, so it stays the same while a scan continues or restarts. Release each list with its `simpleble_*_list_release()` function. Each handle obtained from a list is owned, requires release, and stays valid after the list is released.
 
 Remote services are returned as snapshots. Their characteristic and descriptor arrays have explicit counts; service and manufacturer payloads have explicit byte lengths. There are no fixed 16-entry or 27-byte limits in the C structs. Do not use `sizeof(pointer)` to determine an array's length.
 

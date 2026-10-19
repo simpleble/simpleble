@@ -3,7 +3,7 @@ title: Migration Guide
 description: Migrate existing C and FFI callers to the refactored SimpleCBLE API.
 ---
 
-This guide covers the breaking C API refactor following SimpleCBLE 1.1.0, listed in the [1.2.0 changelog](../changelog). It changes function signatures, error reporting, and the layout and ownership of returned data.
+This guide covers the breaking C API refactor following SimpleCBLE 1.1.0, listed in the [1.2.0 changelog](../changelog), and the lists that replace count and index calls, listed in the 1.2.1 changelog. It changes function signatures, error reporting, collections, and the layout and ownership of returned data.
 
 Rebuild C callers against the new headers. For FFI bindings, update function declarations, struct layouts, and cleanup code together before loading the new library. Recompiling an old declaration or keeping the old fixed-array layout is not sufficient.
 
@@ -95,13 +95,57 @@ A false result, zero count, or NULL pointer may be a successful result. Check th
 
 | Operation | New calling pattern |
 | --- | --- |
-| Adapter count | `size_t count = simpleble_adapter_get_count(&error)` |
-| Adapter handle | `simpleble_adapter_t adapter = simpleble_adapter_get_handle(index, &error)` |
+| Adapters | `size_t count = simpleble_adapter_get_adapters(&list, &error)`, then `simpleble_adapter_list_get(list, index, &error)`; see [Read collections into lists](#read-collections-into-lists) |
 | Scan | `simpleble_adapter_scan_for(adapter, timeout_ms, &error)` |
 | Connection query | `bool connected = simpleble_peripheral_is_connected(peripheral, &error)` |
 | Connect/disconnect | `simpleble_peripheral_connect(peripheral, &error)` / `simpleble_peripheral_disconnect(peripheral, &error)` |
 | Identifier/address/RSSI/MTU | Existing result type, with `&error` appended |
-| Service or manufacturer entry | Caller-owned output struct, with `&error` appended; release its allocated contents afterward |
+| Service or manufacturer entry | Caller-owned output struct filled from a list, with `&error` appended; release its allocated contents afterward |
+
+## Read collections into lists
+
+Each collection is read by one call into an owned list. The call returns the number of entries, `simpleble_*_list_get()` takes entries from the list, and `simpleble_*_list_release()` frees it. The list stays the same while a scan continues or restarts, so a walk over it can't repeat, skip, or run past an entry.
+
+Before:
+
+```c title="Before: count, then get by index"
+size_t count = simpleble_adapter_scan_get_results_count(adapter, &error);
+for (size_t i = 0; i < count && !error; i++) {
+    simpleble_peripheral_t peripheral = simpleble_adapter_scan_get_results_handle(adapter, i, &error);
+    if (error) break;
+    // Use the peripheral, then release it.
+    simpleble_peripheral_release_handle(peripheral);
+}
+```
+
+After:
+
+```c title="After: read a list"
+simpleble_peripheral_list_t results = NULL;
+size_t count = simpleble_adapter_scan_get_results(adapter, &results, &error);
+for (size_t i = 0; i < count && !error; i++) {
+    simpleble_peripheral_t peripheral = simpleble_peripheral_list_get(results, i, &error);
+    if (error) break;
+    // Use the peripheral, then release it.
+    simpleble_peripheral_release_handle(peripheral);
+}
+simpleble_peripheral_list_release(results);
+```
+
+| Previous calls | Read the list with | Take entries with |
+| --- | --- | --- |
+| `simpleble_backend_get_count`, `simpleble_backend_get_handle` | `simpleble_backend_get_backends` | `simpleble_backend_list_get` |
+| `simpleble_backend_get_adapters_count`, `simpleble_backend_get_adapters_handle` | `simpleble_backend_get_adapters` | `simpleble_adapter_list_get` |
+| `simpleble_adapter_get_count`, `simpleble_adapter_get_handle` | `simpleble_adapter_get_adapters` | `simpleble_adapter_list_get` |
+| `simpleble_adapter_scan_get_results_count`, `simpleble_adapter_scan_get_results_handle` | `simpleble_adapter_scan_get_results` | `simpleble_peripheral_list_get` |
+| `simpleble_adapter_get_paired_peripherals_count`, `simpleble_adapter_get_paired_peripherals_handle` | `simpleble_adapter_get_paired_peripherals` | `simpleble_peripheral_list_get` |
+| `simpleble_adapter_get_connected_peripherals_count`, `simpleble_adapter_get_connected_peripherals_handle` | `simpleble_adapter_get_connected_peripherals` | `simpleble_peripheral_list_get` |
+| `simpleble_peripheral_services_count`, `simpleble_peripheral_services_get` | `simpleble_peripheral_services` | `simpleble_service_list_get` |
+| `simpleble_peripheral_manufacturer_data_count`, `simpleble_peripheral_manufacturer_data_get` | `simpleble_peripheral_manufacturer_data` | `simpleble_manufacturer_data_list_get` |
+| `simpleble_local_peripheral_services_count`, `simpleble_local_peripheral_services_get` | `simpleble_local_peripheral_services` | `simpleble_local_service_list_get` |
+| `simpleble_local_service_characteristics_count`, `simpleble_local_service_characteristics_get` | `simpleble_local_service_characteristics` | `simpleble_local_characteristic_list_get` |
+
+Each list type also has `simpleble_*_list_count()`. Handles and structs taken from a list stay valid after the list is released, and release as before. In an FFI, declare `out_list` as a pointer to an opaque pointer and release the list once the walk ends, including when an entry fails.
 
 ## Read buffers are returned by value
 
@@ -148,8 +192,12 @@ The getters copy the full data available from SimpleBLE. `SIMPLEBLE_CHARACTERIST
 
 ```c
 simpleble_error_t* error = NULL;
+simpleble_service_list_t services = NULL;
 simpleble_service_t service = {0};
-simpleble_peripheral_services_get(peripheral, 0, &service, &error);
+if (simpleble_peripheral_services(peripheral, &services, &error) > 0) {
+    simpleble_service_list_get(services, 0, &service, &error);
+}
+simpleble_service_list_release(services);
 if (!error) {
     for (size_t i = 0; i < service.characteristic_count; i++) {
         const simpleble_characteristic_t* characteristic = &service.characteristics[i];
@@ -164,8 +212,12 @@ simpleble_error_release(&error);
 
 ```c
 simpleble_error_t* error = NULL;
+simpleble_manufacturer_data_list_t entries = NULL;
 simpleble_manufacturer_data_t manufacturer = {0};
-simpleble_peripheral_manufacturer_data_get(peripheral, 0, &manufacturer, &error);
+if (simpleble_peripheral_manufacturer_data(peripheral, &entries, &error) > 0) {
+    simpleble_manufacturer_data_list_get(entries, 0, &manufacturer, &error);
+}
+simpleble_manufacturer_data_list_release(entries);
 if (!error) {
     printf("Manufacturer %04X: %zu bytes\n", manufacturer.manufacturer_id, manufacturer.data_length);
 }

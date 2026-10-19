@@ -12,14 +12,15 @@ func GetBackends() ([]*Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	var nativeError uintptr
-	count := native.BackendCount(&nativeError)
+	var nativeError, list uintptr
+	count := native.Backends(&list, &nativeError)
 	if err := native.TakeError(&nativeError); err != nil {
 		return nil, err
 	}
+	defer native.BackendListRelease(list)
 	backends := make([]*Backend, 0, count)
 	for i := uintptr(0); i < count; i++ {
-		nativeHandle := native.BackendGet(i, &nativeError)
+		nativeHandle := native.BackendListGet(list, i, &nativeError)
 		if err := native.TakeError(&nativeError); err != nil {
 			for _, b := range backends {
 				_ = b.Close()
@@ -92,10 +93,12 @@ func (b *Backend) BluetoothEnabled() (bool, error) {
 // Adapters returns independently owned handles. Close every returned Adapter.
 func (b *Backend) Adapters() ([]*Adapter, error) {
 	return bindings.Query(b.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) []*Adapter {
-		count := native.BackendAdapterCount(nativeHandle, nativeError)
+		var list uintptr
+		count := native.BackendAdapters(nativeHandle, &list, nativeError)
 		if *nativeError != 0 {
 			return nil
 		}
-		return collectAdapters(native, count, func(i uintptr) uintptr { return native.BackendAdapterGet(nativeHandle, i, nativeError) }, nativeError)
+		defer native.AdapterListRelease(list)
+		return collectAdapters(native, count, func(i uintptr) uintptr { return native.AdapterListGet(list, i, nativeError) }, nativeError)
 	})
 }

@@ -51,24 +51,29 @@ public sealed class Peripheral : IDisposable
     {
         get
         {
-            nuint count = handle.Query(NativeMethods.simpleble_peripheral_services_count);
-            var result = new List<Service>(checked((int)count));
-            for (nuint i = 0; i < count; i++)
+            nint list = 0;
+            nuint count = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_peripheral_services(h, out list, ref e));
+            try
             {
-                NativeService value = default;
-                try
+                var result = new List<Service>(checked((int)count));
+                for (nuint i = 0; i < count; i++)
                 {
-                    handle.Execute((nint h, ref nint e) => NativeMethods.simpleble_peripheral_services_get(h, i, out value, ref e));
-                    var characteristics = Buffers.ReadArray<NativeCharacteristic>(value.Characteristics, value.CharacteristicCount)
-                        .Select(c => new Characteristic(c.Uuid.ToString(), c.CanRead != 0, c.CanWriteRequest != 0,
-                            c.CanWriteCommand != 0, c.CanNotify != 0, c.CanIndicate != 0,
-                            Array.AsReadOnly(Buffers.ReadArray<NativeDescriptor>(c.Descriptors, c.DescriptorCount)
-                                .Select(d => new Descriptor(d.Uuid.ToString())).ToArray()))).ToArray();
-                    result.Add(new Service(value.Uuid.ToString(), Buffers.Copy(value.Data, value.DataLength), Array.AsReadOnly(characteristics)));
+                    NativeService value = default;
+                    try
+                    {
+                        NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_service_list_get(list, i, out value, ref e); return 0; });
+                        var characteristics = Buffers.ReadArray<NativeCharacteristic>(value.Characteristics, value.CharacteristicCount)
+                            .Select(c => new Characteristic(c.Uuid.ToString(), c.CanRead != 0, c.CanWriteRequest != 0,
+                                c.CanWriteCommand != 0, c.CanNotify != 0, c.CanIndicate != 0,
+                                Array.AsReadOnly(Buffers.ReadArray<NativeDescriptor>(c.Descriptors, c.DescriptorCount)
+                                    .Select(d => new Descriptor(d.Uuid.ToString())).ToArray()))).ToArray();
+                        result.Add(new Service(value.Uuid.ToString(), Buffers.Copy(value.Data, value.DataLength), Array.AsReadOnly(characteristics)));
+                    }
+                    finally { NativeMethods.simpleble_service_release(ref value); }
                 }
-                finally { NativeMethods.simpleble_service_release(ref value); }
+                return result.AsReadOnly();
             }
-            return result.AsReadOnly();
+            finally { NativeMethods.simpleble_service_list_release(list); }
         }
     }
 
@@ -77,19 +82,24 @@ public sealed class Peripheral : IDisposable
     {
         get
         {
-            nuint count = handle.Query(NativeMethods.simpleble_peripheral_manufacturer_data_count);
-            var result = new Dictionary<ushort, byte[]>();
-            for (nuint i = 0; i < count; i++)
+            nint list = 0;
+            nuint count = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_peripheral_manufacturer_data(h, out list, ref e));
+            try
             {
-                NativeManufacturerData value = default;
-                try
+                var result = new Dictionary<ushort, byte[]>();
+                for (nuint i = 0; i < count; i++)
                 {
-                    handle.Execute((nint h, ref nint e) => NativeMethods.simpleble_peripheral_manufacturer_data_get(h, i, out value, ref e));
-                    result.Add(value.ManufacturerId, Buffers.Copy(value.Data, value.DataLength));
+                    NativeManufacturerData value = default;
+                    try
+                    {
+                        NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_manufacturer_data_list_get(list, i, out value, ref e); return 0; });
+                        result.Add(value.ManufacturerId, Buffers.Copy(value.Data, value.DataLength));
+                    }
+                    finally { NativeMethods.simpleble_manufacturer_data_release(ref value); }
                 }
-                finally { NativeMethods.simpleble_manufacturer_data_release(ref value); }
+                return new ReadOnlyDictionary<ushort, byte[]>(result);
             }
-            return new ReadOnlyDictionary<ushort, byte[]>(result);
+            finally { NativeMethods.simpleble_manufacturer_data_list_release(list); }
         }
     }
 
