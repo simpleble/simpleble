@@ -16,7 +16,13 @@ internal static partial class NativeMethods
     internal static extern void simpleble_local_service_release_handle(nint h);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern nint simpleble_local_service_identity(nint h);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_local_characteristic_release_handle(nint h);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern nint simpleble_local_characteristic_identity(nint h);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_local_peripheral_add_advertised_service(nint h, NativeUuid uuid, ref nint error);

@@ -8,6 +8,7 @@
 #include <set>
 #include <utility>
 
+#include "identity.hpp"
 #include "list_handle.hpp"
 
 using SimpleBLE::Error;
@@ -15,6 +16,11 @@ using SimpleBLE::ErrorCode;
 
 void simpleble_local_service_release_handle(simpleble_local_service_t handle) {
     delete (SimpleBLE::Local::Service*)handle;
+}
+
+const void* simpleble_local_service_identity(simpleble_local_service_t handle) {
+    if (handle == nullptr) return nullptr;
+    return SimpleCBLE::Identity<SimpleBLE::Local::Service>::of(*(SimpleBLE::Local::Service*)handle);
 }
 
 size_t simpleble_local_service_list_count(simpleble_local_service_list_t list) {

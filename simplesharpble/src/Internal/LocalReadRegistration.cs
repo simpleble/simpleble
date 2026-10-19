@@ -4,40 +4,20 @@ using SimpleSharpBLE.Internal.Interop;
 
 namespace SimpleSharpBLE.Internal;
 
-// Local GATT children have no stable native identity. OS backends list them in
-// insertion order and do not reject repeated UUIDs; the simulator sorts them by
-// UUID and rejects repeats. A UUID plus its occurrence among same-UUID siblings
-// identifies a child on both.
+// Local GATT children keep their state by native identity, which every handle to
+// the same child shares.
 internal sealed class LocalChildren<T> where T : new()
 {
-    private readonly Dictionary<string, List<T>> items = [];
+    private readonly Dictionary<nint, T> items = [];
 
-    // State for a child just added with uuid.
-    internal T Add(string uuid)
+    // State for the child with identity, created on first use.
+    internal T At(nint identity)
     {
-        T state = new();
-        Siblings(uuid).Add(state);
+        if (!items.TryGetValue(identity, out var state)) items[identity] = state = new();
         return state;
     }
 
-    // State for the next enumerated child with uuid; seen counts the same-UUID
-    // siblings this enumeration has already returned.
-    internal T At(string uuid, Dictionary<string, int> seen)
-    {
-        seen.TryGetValue(uuid, out int n);
-        seen[uuid] = n + 1;
-        var siblings = Siblings(uuid);
-        while (siblings.Count <= n) siblings.Add(new());
-        return siblings[n];
-    }
-
     internal void Clear() => items.Clear();
-
-    private List<T> Siblings(string uuid)
-    {
-        if (!items.TryGetValue(uuid, out var siblings)) items[uuid] = siblings = [];
-        return siblings;
-    }
 }
 
 internal sealed class LocalReadState

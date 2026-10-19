@@ -45,7 +45,7 @@ func (s *LocalService) AddCharacteristic(value string, capabilities Characterist
 		if *nativeError != 0 {
 			return nil
 		}
-		return newLocalCharacteristic(native, handle, s.state.add(uuid.String()))
+		return newLocalCharacteristic(native, handle, s.state.at(native.LocalCharacteristicIdentity(handle)))
 	})
 }
 
@@ -64,21 +64,15 @@ func (s *LocalService) Characteristics() ([]*LocalCharacteristic, error) {
 		}
 		defer native.LocalCharacteristicListRelease(list)
 		characteristics := make([]*LocalCharacteristic, 0, count)
-		seen := make(map[string]int)
 		for i := uintptr(0); i < count; i++ {
 			handle := native.LocalCharacteristicListGet(list, i, nativeError)
-			var uuid bindings.UUID
-			if *nativeError == 0 {
-				native.LocalCharacteristicUUID(handle, &uuid, nativeError)
-			}
 			if *nativeError != 0 {
-				native.LocalCharacteristicRelease(handle)
 				for _, c := range characteristics {
 					_ = c.Close()
 				}
 				return nil
 			}
-			characteristics = append(characteristics, newLocalCharacteristic(native, handle, s.state.at(uuid.String(), seen)))
+			characteristics = append(characteristics, newLocalCharacteristic(native, handle, s.state.at(native.LocalCharacteristicIdentity(handle))))
 		}
 		return characteristics
 	})

@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "identity.hpp"
 #include "list_handle.hpp"
 
 using SimpleBLE::Error;
@@ -14,6 +15,11 @@ using SimpleBLE::ErrorCode;
 
 void simpleble_local_characteristic_release_handle(simpleble_local_characteristic_t handle) {
     delete (SimpleBLE::Local::Characteristic*)handle;
+}
+
+const void* simpleble_local_characteristic_identity(simpleble_local_characteristic_t handle) {
+    if (handle == nullptr) return nullptr;
+    return SimpleCBLE::Identity<SimpleBLE::Local::Characteristic>::of(*(SimpleBLE::Local::Characteristic*)handle);
 }
 
 size_t simpleble_local_characteristic_list_count(simpleble_local_characteristic_list_t list) {

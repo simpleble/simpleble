@@ -64,7 +64,7 @@ internal actual object Native {
     private val dataCallbacks = mutableMapOf<Long, DataCallback>()
     private var nextSubscriptionId = 1L
 
-    // Local GATT objects have no SimpleBLE identity to read, so they are numbered as they are created.
+    // Local GATT objects are numbered as they are created. They are never listed, so they need no identity.
     private val localPeripherals = mutableMapOf<Long, simpleble_local_peripheral_t>()
     private val localServices = mutableMapOf<Long, simpleble_local_service_t>()
     private val localCharacteristics = mutableMapOf<Long, simpleble_local_characteristic_t>()

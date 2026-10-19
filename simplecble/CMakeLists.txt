@@ -141,6 +141,7 @@ if(SIMPLECBLE_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_buffer_overflow.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_config.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_list.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_local.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_logging.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/src/test_utils.cpp)
     set_target_properties(simplecble_test PROPERTIES

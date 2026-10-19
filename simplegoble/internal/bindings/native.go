@@ -95,12 +95,14 @@ type NativeAPI struct {
 	LocalPeripheralOnConnected        func(uintptr, uintptr, uintptr)
 	LocalPeripheralOnDisconnected     func(uintptr, uintptr, uintptr)
 	LocalServiceRelease               func(uintptr)
+	LocalServiceIdentity              func(uintptr) uintptr
 	LocalServiceListGet               func(uintptr, uintptr, *uintptr) uintptr
 	LocalServiceListRelease           func(uintptr)
 	LocalServiceUUID                  func(uintptr, *UUID, *uintptr)
 	LocalServiceAddCharacteristic     func(uintptr, UUID, uint32, *uintptr) uintptr
 	LocalServiceCharacteristics       func(uintptr, *uintptr, *uintptr) uintptr
 	LocalCharacteristicRelease        func(uintptr)
+	LocalCharacteristicIdentity       func(uintptr) uintptr
 	LocalCharacteristicListGet        func(uintptr, uintptr, *uintptr) uintptr
 	LocalCharacteristicListRelease    func(uintptr)
 	LocalCharacteristicUUID           func(uintptr, *UUID, *uintptr)
@@ -267,12 +269,14 @@ func Load(path string) error {
 		{"simpleble_local_peripheral_set_callback_on_client_connected", &native.LocalPeripheralOnConnected},
 		{"simpleble_local_peripheral_set_callback_on_client_disconnected", &native.LocalPeripheralOnDisconnected},
 		{"simpleble_local_service_release_handle", &native.LocalServiceRelease},
+		{"simpleble_local_service_identity", &native.LocalServiceIdentity},
 		{"simpleble_local_service_list_get", &native.LocalServiceListGet},
 		{"simpleble_local_service_list_release", &native.LocalServiceListRelease},
 		{"simpleble_local_service_uuid", &native.LocalServiceUUID},
 		{"simpleble_local_service_add_characteristic", &native.LocalServiceAddCharacteristic},
 		{"simpleble_local_service_characteristics", &native.LocalServiceCharacteristics},
 		{"simpleble_local_characteristic_release_handle", &native.LocalCharacteristicRelease},
+		{"simpleble_local_characteristic_identity", &native.LocalCharacteristicIdentity},
 		{"simpleble_local_characteristic_list_get", &native.LocalCharacteristicListGet},
 		{"simpleble_local_characteristic_list_release", &native.LocalCharacteristicListRelease},
 		{"simpleble_local_characteristic_uuid", &native.LocalCharacteristicUUID},

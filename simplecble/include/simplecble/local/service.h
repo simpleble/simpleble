@@ -16,6 +16,16 @@ extern "C" {
 SIMPLECBLE_EXPORT void simpleble_local_service_release_handle(simpleble_local_service_t handle);
 
 /**
+ * @brief Identifies the local service behind a handle.
+ *
+ * @param[in] handle A local service handle, or NULL.
+ * @return A value that is the same for every handle to this service while any of them exists, or NULL for NULL.
+ * @note Compare the value; never dereference it. A service created later can reuse it once every handle to this
+ *     service is released.
+ */
+SIMPLECBLE_EXPORT const void* simpleble_local_service_identity(simpleble_local_service_t handle);
+
+/**
  * @brief Counts the local services in a list.
  *
  * @param[in] list A local service list, or NULL.

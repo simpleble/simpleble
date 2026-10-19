@@ -16,6 +16,16 @@ extern "C" {
 SIMPLECBLE_EXPORT void simpleble_local_characteristic_release_handle(simpleble_local_characteristic_t handle);
 
 /**
+ * @brief Identifies the local characteristic behind a handle.
+ *
+ * @param[in] handle A local characteristic handle, or NULL.
+ * @return A value that is the same for every handle to this characteristic while any of them exists, or NULL for NULL.
+ * @note Compare the value; never dereference it. A characteristic created later can reuse it once every handle to
+ *     this characteristic is released.
+ */
+SIMPLECBLE_EXPORT const void* simpleble_local_characteristic_identity(simpleble_local_characteristic_t handle);
+
+/**
  * @brief Counts the local characteristics in a list.
  *
  * @param[in] list A local characteristic list, or NULL.

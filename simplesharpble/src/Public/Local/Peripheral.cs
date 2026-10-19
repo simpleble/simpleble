@@ -54,7 +54,7 @@ public sealed class Peripheral : IDisposable
         lock (children)
         {
             nint service = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_add_service(h, value, ref e));
-            return new(service, children.Add(value.ToString()));
+            return new(service, children.At(NativeMethods.simpleble_local_service_identity(service)));
         }
     }
     /// <summary>Returns wrappers for the configured services. Dispose each one.</summary>
@@ -64,16 +64,12 @@ public sealed class Peripheral : IDisposable
         {
             lock (children)
             {
-                var seen = new Dictionary<string, int>();
                 nint list = 0;
                 nuint count = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_peripheral_services(h, out list, ref e));
                 return NativeCall.Collect(list, count, NativeMethods.simpleble_local_service_list_release, (value, index) =>
                 {
                     nint service = NativeCall.Invoke((ref nint e) => NativeMethods.simpleble_local_service_list_get(value, index, ref e));
-                    NativeUuid uuid = default;
-                    try { NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_local_service_uuid(service, out uuid, ref e); return 0; }); }
-                    catch { NativeMethods.simpleble_local_service_release_handle(service); throw; }
-                    return new Service(service, children.At(uuid.ToString(), seen));
+                    return new Service(service, children.At(NativeMethods.simpleble_local_service_identity(service)));
                 });
             }
         }

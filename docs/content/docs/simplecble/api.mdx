@@ -777,6 +777,14 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
+  signature={"const void* simpleble_local_service_identity(simpleble_local_service_t handle)"}
+  brief={"Identifies the local service behind a handle."}
+  detailed={"Returns: A value that is the same for every handle to this service while any of them exists, or NULL for NULL."}
+  notes={[{"content": "Compare the value; never dereference it. A service created later can reuse it once every handle to this service is released.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_service_t", "description": "A local service handle, or NULL."}]}
+/>
+
+<ApiMethod
   signature={"size_t simpleble_local_service_list_count(simpleble_local_service_list_t list)"}
   brief={"Counts the services in a list."}
   detailed={"Returns: The number of services in the list, or zero for NULL."}
@@ -833,6 +841,14 @@ Error messages, version strings, native pointers, and callback payloads are borr
   brief={"Releases an owned local characteristic handle."}
   notes={[{"content": "Clear callbacks registered with this handle before releasing it.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"const void* simpleble_local_characteristic_identity(simpleble_local_characteristic_t handle)"}
+  brief={"Identifies the local characteristic behind a handle."}
+  detailed={"Returns: A value that is the same for every handle to this characteristic while any of them exists, or NULL for NULL."}
+  notes={[{"content": "Compare the value; never dereference it. A characteristic created later can reuse it once every handle to this characteristic is released.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_local_characteristic_t", "description": "A local characteristic handle, or NULL."}]}
 />
 
 <ApiMethod

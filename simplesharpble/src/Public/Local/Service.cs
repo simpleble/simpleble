@@ -30,16 +30,12 @@ public sealed class Service : IDisposable
         {
             lock (children)
             {
-                var seen = new Dictionary<string, int>();
                 nint list = 0;
                 nuint count = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_service_characteristics(h, out list, ref e));
                 return NativeCall.Collect(list, count, NativeMethods.simpleble_local_characteristic_list_release, (value, index) =>
                 {
                     nint characteristic = NativeCall.Invoke((ref nint e) => NativeMethods.simpleble_local_characteristic_list_get(value, index, ref e));
-                    NativeUuid uuid = default;
-                    try { NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_local_characteristic_uuid(characteristic, out uuid, ref e); return 0; }); }
-                    catch { NativeMethods.simpleble_local_characteristic_release_handle(characteristic); throw; }
-                    return new Characteristic(characteristic, children.At(uuid.ToString(), seen));
+                    return new Characteristic(characteristic, children.At(NativeMethods.simpleble_local_characteristic_identity(characteristic)));
                 });
             }
         }
@@ -52,7 +48,7 @@ public sealed class Service : IDisposable
         lock (children)
         {
             nint characteristic = handle.Query((nint h, ref nint e) => NativeMethods.simpleble_local_service_add_characteristic(h, value, (uint)capabilities, ref e));
-            return new(characteristic, children.Add(value.ToString()));
+            return new(characteristic, children.At(NativeMethods.simpleble_local_characteristic_identity(characteristic)));
         }
     }
     /// <summary>Releases this wrapper. The service stays hosted.</summary>

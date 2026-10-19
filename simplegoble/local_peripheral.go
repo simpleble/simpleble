@@ -13,34 +13,24 @@ type LocalPeripheral struct {
 	state     *localChildren[localChildren[bindings.ReadCallback]]
 }
 
-// localChildren keeps Go state for local GATT children, which have no stable
-// native identity. OS backends list them in insertion order and do not reject
-// repeated UUIDs; the simulator sorts them by UUID and rejects repeats. A UUID
-// plus its occurrence among same-UUID siblings identifies a child on both.
+// localChildren keeps Go state for local GATT children by their native identity,
+// which every handle to the same child shares.
 type localChildren[T any] struct {
 	sync.Mutex
-	byUUID map[string][]*T
+	byIdentity map[uintptr]*T
 }
 
-// add returns state for a child just added with uuid.
-func (c *localChildren[T]) add(uuid string) *T {
-	if c.byUUID == nil {
-		c.byUUID = make(map[string][]*T)
+// at returns state for the child with identity, creating it on first use.
+func (c *localChildren[T]) at(identity uintptr) *T {
+	if c.byIdentity == nil {
+		c.byIdentity = make(map[uintptr]*T)
 	}
-	state := new(T)
-	c.byUUID[uuid] = append(c.byUUID[uuid], state)
+	state := c.byIdentity[identity]
+	if state == nil {
+		state = new(T)
+		c.byIdentity[identity] = state
+	}
 	return state
-}
-
-// at returns state for the next enumerated child with uuid; seen counts the
-// same-UUID siblings this enumeration has already returned.
-func (c *localChildren[T]) at(uuid string, seen map[string]int) *T {
-	n := seen[uuid]
-	seen[uuid]++
-	for len(c.byUUID[uuid]) <= n {
-		c.add(uuid)
-	}
-	return c.byUUID[uuid][n]
 }
 
 // CreateLocalPeripheral creates an owned GATT host. Configure it before Start.
@@ -106,7 +96,7 @@ func (p *LocalPeripheral) AddService(value string) (*LocalService, error) {
 		if *nativeError != 0 {
 			return nil
 		}
-		return newLocalService(native, handle, p.state.add(uuid.String()))
+		return newLocalService(native, handle, p.state.at(native.LocalServiceIdentity(handle)))
 	})
 }
 
@@ -125,21 +115,15 @@ func (p *LocalPeripheral) Services() ([]*LocalService, error) {
 		}
 		defer native.LocalServiceListRelease(list)
 		services := make([]*LocalService, 0, count)
-		seen := make(map[string]int)
 		for i := uintptr(0); i < count; i++ {
 			handle := native.LocalServiceListGet(list, i, nativeError)
-			var uuid bindings.UUID
-			if *nativeError == 0 {
-				native.LocalServiceUUID(handle, &uuid, nativeError)
-			}
 			if *nativeError != 0 {
-				native.LocalServiceRelease(handle)
 				for _, service := range services {
 					_ = service.Close()
 				}
 				return nil
 			}
-			services = append(services, newLocalService(native, handle, p.state.at(uuid.String(), seen)))
+			services = append(services, newLocalService(native, handle, p.state.at(native.LocalServiceIdentity(handle))))
 		}
 		return services
 	})
@@ -156,7 +140,7 @@ func (p *LocalPeripheral) RemoveAllServices() error {
 		native.LocalPeripheralRemoveServices(nativeHandle, nativeError)
 	})
 	if err == nil {
-		p.state.byUUID = nil
+		p.state.byIdentity = nil
 	}
 	return err
 }
