@@ -37,7 +37,7 @@ jobs:
           # requirements-file: 'simplepyble/requirements.txt'
           # publish-to-testpypi: 'false'
           # cibw-build-verbosity: '3'
-          # macosx-deployment-target: '13.0'
+          # macosx-deployment-target: '15.0'
           # cibw-skip: '*musllinux_* pp* cp36-* cp37-* cp38-* cp39-*'
 ```
 
@@ -50,7 +50,7 @@ jobs:
 | `requirements-file`     | Path to requirements.txt file                             | No       | `simplepyble/requirements.txt` |
 | `publish-to-testpypi`   | Whether to publish the built wheels to TestPyPI           | No       | `false`                      |
 | `cibw-build-verbosity`  | Verbosity level for cibuildwheel                          | No       | `3`                          |
-| `macosx-deployment-target` | Minimum macOS version to target                       | No       | `13.0`                       |
+| `macosx-deployment-target` | Minimum macOS version to target                       | No       | `15.0`                       |
 | `cibw-skip`             | Patterns for skipping certain builds                      | No       | `*musllinux_* pp* cp36-* cp37-* cp38-* cp39-*` |
 
 ## Outputs

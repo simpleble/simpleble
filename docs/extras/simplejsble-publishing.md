@@ -25,7 +25,7 @@ the binding layer and use PLAIN's documented fixture (see
 [plain-backend.md](plain-backend.md)).
 
 `check:prebuild` checks what a build can lose without failing: the glibc 2.28
-baseline on Linux, the macOS 13.0 deployment target, and on Windows the static
+baseline on Linux, the macOS 15.0 deployment target, and on Windows the static
 C++ runtime and a delay-loaded `node.exe`, which Electron needs.
 
 ## CI distribution

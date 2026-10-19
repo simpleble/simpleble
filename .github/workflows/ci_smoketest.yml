@@ -82,7 +82,7 @@ jobs:
       matrix:
         config:
           - { runner-os: ubuntu-22.04, os: linux, architecture: x64, cmake-options: '' }
-          - { runner-os: macos-15, os: macos, architecture: aarch64, cmake-options: '-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0' }
+          - { runner-os: macos-15, os: macos, architecture: aarch64, cmake-options: '-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0' }
 
     steps:
       - name: Clone Repository

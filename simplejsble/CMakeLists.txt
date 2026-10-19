@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # NOTE: Must be set before project(). The same minimum as SimplePyBLE's wheels.
-set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
 
 project(simplejsble LANGUAGES C CXX)
 

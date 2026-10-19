@@ -11,7 +11,7 @@ const addon = join(root, 'prebuilds', `${process.platform}-${process.arch}`, 'si
 
 const MAX_GLIBC = '2.28';
 const MAX_GLIBCXX = '3.4.25';
-const MAX_MACOS = '13.0';
+const MAX_MACOS = '15.0';
 
 function compare(a, b) {
   const x = a.split('.').map(Number);

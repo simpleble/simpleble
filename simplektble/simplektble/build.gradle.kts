@@ -129,7 +129,7 @@ val buildJvmNative = registerCMakeBuild(
     jvmNativeBuildDir,
     buildList {
         add("-DCMAKE_BUILD_TYPE=Release")
-        if (OperatingSystem.current().isMacOsX) add("-DCMAKE_OSX_DEPLOYMENT_TARGET=13")
+        if (OperatingSystem.current().isMacOsX) add("-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0")
     }
 )
 
@@ -161,7 +161,7 @@ fun configureSimpleCBle(target: KotlinNativeTarget) {
             "-DCMAKE_SYSTEM_NAME=iOS", "-DCMAKE_OSX_SYSROOT=iphonesimulator",
             "-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.8"
         )
-        KonanTarget.MACOS_ARM64 -> listOf("-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=13")
+        KonanTarget.MACOS_ARM64 -> listOf("-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0")
         else -> error("Unsupported Apple target ${target.name}")
     }
 

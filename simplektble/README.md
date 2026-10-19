@@ -200,7 +200,7 @@ before `connect()`.
 | --- | --- | --- |
 | Android 12 (API 31) or newer | `android` | arm64-v8a, armeabi-v7a, x86, x86_64 |
 | iOS 15.8 or newer | `iosArm64`, `iosSimulatorArm64` | arm64 |
-| macOS 13.0 or newer | `jvm`, `macosArm64` | x64 and arm64 on the JVM, arm64 native |
+| macOS 15.0 or newer | `jvm`, `macosArm64` | x64 and arm64 on the JVM, arm64 native |
 | Windows 10 or newer | `jvm` | x64 |
 | Linux with BlueZ and D-Bus | `jvm` | x64, arm64 |
 

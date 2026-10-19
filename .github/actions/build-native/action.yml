@@ -80,7 +80,7 @@ runs:
              _ARCH_FLAG="-DCMAKE_OSX_ARCHITECTURES=i386"
           fi
 
-          echo "CMAKE_OPTIONS=$_ARCH_FLAG -DCMAKE_OSX_DEPLOYMENT_TARGET=13 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
+          echo "CMAKE_OPTIONS=$_ARCH_FLAG -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 $_BASE_CMAKE_OPTIONS" >> $GITHUB_ENV
           echo "SHELL=bash" >> $GITHUB_ENV
         elif [[ "${{ inputs.os }}" == "ios" || "${{ inputs.os }}" == "iossimulator" || "${{ inputs.os }}" == "maccatalyst" ]]; then
           _ARCH_FLAG_VALUE=""

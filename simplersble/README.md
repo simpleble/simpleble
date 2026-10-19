@@ -183,7 +183,7 @@ happens without the operating system: register a callback with
 
 | Platform | Architectures | Requirements |
 | --- | --- | --- |
-| macOS 13.0 or newer | x64, arm64 | Xcode Command Line Tools and Bluetooth permission for the app that runs your program |
+| macOS 15.0 or newer | x64, arm64 | Xcode Command Line Tools and Bluetooth permission for the app that runs your program |
 | Windows 10 or newer | x64, arm64 | Visual Studio 2019 16.11 or newer and Windows SDK 10.0.22621.0 or newer |
 | Linux | x64, arm64 | BlueZ and the D-Bus development headers |
 

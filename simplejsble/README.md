@@ -152,7 +152,7 @@ apps need an `NSBluetoothAlwaysUsageDescription` entry in their `Info.plist`.
 
 | Platform | Architectures | Requirements |
 | --- | --- | --- |
-| macOS 13.0 or newer | x64, arm64 | Bluetooth permission for the app that runs Node.js |
+| macOS 15.0 or newer | x64, arm64 | Bluetooth permission for the app that runs Node.js |
 | Windows 10 or newer | x64, arm64 | |
 | Linux with glibc 2.28 or newer | x64, arm64 | BlueZ and the D-Bus library |
 

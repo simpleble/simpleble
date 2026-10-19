@@ -163,7 +163,7 @@ callbacks and stops its scan, subscriptions, or advertising.
 
 | Platform | Architectures | Requirements |
 | --- | --- | --- |
-| macOS 13.0 or newer | x64, arm64 | Bluetooth permission for the app that runs Python |
+| macOS 15.0 or newer | x64, arm64 | Bluetooth permission for the app that runs Python |
 | Windows 10 or newer | x64, x86, arm64 | |
 | Linux | x64, x86, arm64 | BlueZ and the D-Bus library |
 

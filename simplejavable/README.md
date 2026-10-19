@@ -158,7 +158,7 @@ peripheral before `connect()`.
 
 | Platform | Architectures | Requirements |
 | --- | --- | --- |
-| macOS 13.0 or newer | x64, arm64 | Bluetooth permission for the app that runs the JVM |
+| macOS 15.0 or newer | x64, arm64 | Bluetooth permission for the app that runs the JVM |
 | Windows 10 or newer | x64 | |
 | Linux | x64, arm64 | BlueZ and the D-Bus library |
 

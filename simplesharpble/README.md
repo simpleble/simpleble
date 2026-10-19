@@ -180,7 +180,7 @@ is a complete app.
 
 | Platform | Architectures | Requirements |
 | --- | --- | --- |
-| macOS 14 or newer | arm64 | Bluetooth permission for the app that runs your code |
+| macOS 15.0 or newer | arm64 | Bluetooth permission for the app that runs your code |
 | Windows 10 or newer | x64, arm64 | |
 | Linux with glibc | x64, arm64 | BlueZ and the D-Bus library |
 | Android 12 or newer | arm64, x64 | Nearby devices permission |

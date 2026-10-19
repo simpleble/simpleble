@@ -42,7 +42,7 @@ cmake_options.append(f"-Dpybind11_DIR={pybind11.get_cmake_dir()}")
 if sys.platform == "win32":
     cmake_options.append("-DCMAKE_SYSTEM_VERSION=10.0.19041.0")
 elif sys.platform.startswith("darwin"):
-    cmake_options.append("-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0")
+    cmake_options.append("-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0")
 cmake_options.append(f"-DPYTHON_EXECUTABLE={sys.executable}")
 cmake_options.append(f"-DSIMPLEPYBLE_VERSION={version_str}")
 
