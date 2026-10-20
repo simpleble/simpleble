@@ -141,8 +141,8 @@ Napi::Value AdapterHandle::scan_stop(const Napi::CallbackInfo& info) {
 Napi::Value AdapterHandle::scan_for(const Napi::CallbackInfo& info) {
     if (!info[0].IsNumber()) throw Napi::TypeError::New(info.Env(), "timeoutMs must be a number");
     const double timeout_ms = info[0].As<Napi::Number>().DoubleValue();
-    if (!(timeout_ms >= 0 && timeout_ms <= INT32_MAX) || timeout_ms != static_cast<int32_t>(timeout_ms)) {
-        throw Napi::RangeError::New(info.Env(), "timeoutMs must be an integer from 0 to 2147483647");
+    if (!(timeout_ms >= INT32_MIN && timeout_ms <= INT32_MAX) || timeout_ms != static_cast<int32_t>(timeout_ms)) {
+        throw Napi::RangeError::New(info.Env(), "timeoutMs must be a 32-bit integer");
     }
 
     auto adapter = adapter_;

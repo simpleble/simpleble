@@ -92,6 +92,9 @@ class CoreBluetoothError(SimpleBLEError):
 class AdapterInUseError(SimpleBLEError):
     """Another process holds the adapter."""
 
+class InvalidArgumentError(SimpleBLEError, ValueError):
+    """An argument is out of range. It is a ValueError too."""
+
 class Descriptor:
     """Represents a GATT descriptor."""
 
@@ -805,6 +808,9 @@ class Adapter:
         
         Args:
             timeout_ms: Scan duration in milliseconds
+
+        Raises:
+            InvalidArgumentError: If timeout_ms is negative
         """
         ...
     

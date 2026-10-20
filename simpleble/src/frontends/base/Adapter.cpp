@@ -89,6 +89,8 @@ void Adapter::scan_stop() {
 }
 
 void Adapter::scan_for(int timeout_ms) {
+    if (timeout_ms < 0) throw Exception::InvalidArgument("timeout_ms must not be negative");
+
     if (!(*this)->bluetooth_enabled()) {
         SIMPLEBLE_LOG_WARN(fmt::format("Bluetooth is not enabled."));
         return;

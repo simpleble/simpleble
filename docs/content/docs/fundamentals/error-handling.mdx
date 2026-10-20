@@ -21,13 +21,14 @@ SimpleBLE reports errors by throwing exceptions. All library-defined exceptions 
 | `OperationFailed` | The operation was attempted but did not complete successfully | Timeouts, stack-level errors, connection failures, mutating a local peripheral while it is started |
 | `WinRTException` | A WinRT API call failed (Windows only) | Carries the WinRT error code and message |
 | `CoreBluetoothException` | A CoreBluetooth operation failed (macOS/iOS only) | Carries the `NSError` description |
+| `InvalidArgument` | An argument is out of range | Programming error, such as a negative `scan_for()` duration |
 | `AdapterInUse` | Another process holds the adapter | A Dongl whose serial port another program has open. Such a Dongl is still listed, and its first operation raises this error |
 
 ### Recoverable vs. fatal
 
 As a rule of thumb:
 
-*   **Programming errors — fix your code, don't retry:** `NotInitialized`, `InvalidReference`, `OperationNotSupported`, and the three `*NotFound` exceptions. If the UUIDs and capabilities are right, these should never fire in production. The one nuance: `*NotFound` can also occur when talking to a fleet of devices with different firmware revisions — in that case treat it as "this device doesn't support the feature," not as a retry candidate.
+*   **Programming errors — fix your code, don't retry:** `NotInitialized`, `InvalidReference`, `InvalidArgument`, `OperationNotSupported`, and the three `*NotFound` exceptions. If the UUIDs and capabilities are right, these should never fire in production. The one nuance: `*NotFound` can also occur when talking to a fleet of devices with different firmware revisions — in that case treat it as "this device doesn't support the feature," not as a retry candidate.
 *   **Runtime errors — retry or reconnect:** `NotConnected`, `OperationFailed`, `WinRTException`, `CoreBluetoothException`. These reflect transient radio and stack conditions. The standard recovery is: check `is_connected()`, reconnect if needed, re-establish subscriptions, and retry the operation. See the [reconnect loop recipe](../recipes/reconnect-loop) for a production-ready pattern.
 
 ## Catch `std::exception`, not just `BaseException`

@@ -103,3 +103,9 @@ AdapterInUse::AdapterInUse(const std::string& adapter)
 std::unique_ptr<Error> AdapterInUse::make_error() const {
     return std::make_unique<Error>(ErrorCode::ADAPTER_IN_USE, std::make_unique<AdapterInUse>(*this));
 }
+
+InvalidArgument::InvalidArgument(const std::string& err_msg) : BaseException(err_msg) {}
+
+std::unique_ptr<Error> InvalidArgument::make_error() const {
+    return std::make_unique<Error>(ErrorCode::INVALID_ARGUMENT, std::make_unique<InvalidArgument>(*this));
+}

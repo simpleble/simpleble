@@ -278,10 +278,6 @@ void simpleble_adapter_scan_for(simpleble_adapter_t handle, int timeout_ms, simp
         *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
         return;
     }
-    if (timeout_ms < 0) {
-        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "timeout_ms is negative");
-        return;
-    }
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     try {

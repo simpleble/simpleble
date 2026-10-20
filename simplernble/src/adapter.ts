@@ -83,8 +83,8 @@ export class Adapter extends NativeEmitter<AdapterEvents> {
   /** Scans for `timeoutMs` milliseconds, then stops. Other calls on this adapter wait for it. */
   async scanFor(timeoutMs: number): Promise<void> {
     if (typeof timeoutMs !== 'number') throw new TypeError('timeoutMs must be a number');
-    if (!Number.isInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 2 ** 31 - 1) {
-      throw new RangeError('timeoutMs must be an integer from 0 to 2147483647');
+    if (!Number.isInteger(timeoutMs) || timeoutMs < -(2 ** 31) || timeoutMs > 2 ** 31 - 1) {
+      throw new RangeError('timeoutMs must be a 32-bit integer');
     }
     return async(() => this.#handle.scanFor(timeoutMs));
   }

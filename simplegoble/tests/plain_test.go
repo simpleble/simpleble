@@ -166,7 +166,7 @@ func TestPlainNamedBackends(t *testing.T) {
 
 func TestPlainRejectsInvalidScanDuration(t *testing.T) {
 	a := plainAdapter(t)
-	for _, d := range []time.Duration{-1, time.Duration(1<<31) * time.Millisecond} {
+	for _, d := range []time.Duration{time.Duration(1<<31) * time.Millisecond} {
 		if err := a.ScanFor(d); !errors.Is(err, simplegoble.InvalidArgument) {
 			t.Fatal(err)
 		}

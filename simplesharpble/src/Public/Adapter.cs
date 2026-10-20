@@ -49,8 +49,8 @@ public sealed class Adapter : IDisposable
     /// <summary>Scans synchronously. Positive fractional milliseconds round up.</summary>
     public void ScanFor(TimeSpan duration)
     {
-        if (duration < TimeSpan.Zero || duration.TotalMilliseconds > int.MaxValue)
-            throw new ArgumentOutOfRangeException(nameof(duration), "Duration must fit a nonnegative 32-bit millisecond count.");
+        if (duration.TotalMilliseconds < int.MinValue || duration.TotalMilliseconds > int.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(duration), "Duration must fit a 32-bit millisecond count.");
         int milliseconds = checked((int)Math.Ceiling(duration.TotalMilliseconds));
         handle.Execute((nint value, ref nint error) =>
             NativeMethods.simpleble_adapter_scan_for(value, milliseconds, ref error));

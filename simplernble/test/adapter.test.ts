@@ -84,7 +84,6 @@ test('operations on one adapter run in call order', async () => {
 test('scanFor() checks its argument before calling the core', async () => {
   await adapter.scanFor(0);
 
-  await assert.rejects(adapter.scanFor(-1), RangeError);
   await assert.rejects(adapter.scanFor(1.5), RangeError);
   await assert.rejects(adapter.scanFor(2 ** 31), RangeError);
   await assert.rejects(adapter.scanFor('100' as never), TypeError);

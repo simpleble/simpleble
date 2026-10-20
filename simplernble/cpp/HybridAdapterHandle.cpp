@@ -58,8 +58,8 @@ std::shared_ptr<Promise<void>> HybridAdapterHandle::scanStop() {
 }
 
 std::shared_ptr<Promise<void>> HybridAdapterHandle::scanFor(double timeoutMs) {
-    if (!(timeoutMs >= 0 && timeoutMs <= INT32_MAX) || std::floor(timeoutMs) != timeoutMs) {
-        throw std::invalid_argument("timeoutMs must be an integer from 0 to 2147483647");
+    if (!(timeoutMs >= INT32_MIN && timeoutMs <= INT32_MAX) || std::floor(timeoutMs) != timeoutMs) {
+        throw std::invalid_argument("timeoutMs must be a 32-bit integer");
     }
     auto adapter = adapter_;
     const int timeout = static_cast<int>(timeoutMs);

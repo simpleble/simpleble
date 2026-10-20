@@ -109,7 +109,7 @@ useEffect(() => {
 }, [adapter]);
 ```
 
-Failures reject with a `SimpleBLEError`. Its `code` is SimpleBLE's error code, such as `'PERIPHERAL_NOT_CONNECTED'` or `'GATT_CHARACTERISTIC_NOT_FOUND'`. Invalid arguments are `TypeError`s or `RangeError`s.
+Failures reject with a `SimpleBLEError`. Its `code` is SimpleBLE's error code, such as `'PERIPHERAL_NOT_CONNECTED'` or `'GATT_CHARACTERISTIC_NOT_FOUND'`. Arguments of the wrong type or outside a 32-bit range are `TypeError`s or `RangeError`s, and those SimpleBLE rejects, such as a negative `scanFor()` duration, reject with `'INVALID_ARGUMENT'`.
 
 ## Connect and use GATT
 

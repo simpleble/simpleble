@@ -34,7 +34,7 @@ Callbacks belong to the device, not to the `Peripheral` object you set them thro
 
 ## Errors
 
-A failed call raises `simplepyble.SimpleBLEError`, a subclass of `RuntimeError`, or one of its subclasses, which follow SimpleBLE's [exceptions](../fundamentals/error-handling#exception-taxonomy): `NotInitializedError`, `InvalidReferenceError`, `NotConnectedError`, `ServiceNotFoundError`, `CharacteristicNotFoundError`, `DescriptorNotFoundError`, `OperationNotSupportedError`, `OperationFailedError`, `WinRTError` and its subclass `WinRTAccessDeniedError`, `CoreBluetoothError` and `AdapterInUseError`. Each error carries its `simplepyble.ErrorCode` in `code`, and a WinRT failure carries its HRESULT in `native_code`. Failures from lower layers, such as D-Bus, arrive as plain `RuntimeError`, so `except RuntimeError` catches both.
+A failed call raises `simplepyble.SimpleBLEError`, a subclass of `RuntimeError`, or one of its subclasses, which follow SimpleBLE's [exceptions](../fundamentals/error-handling#exception-taxonomy): `NotInitializedError`, `InvalidReferenceError`, `NotConnectedError`, `ServiceNotFoundError`, `CharacteristicNotFoundError`, `DescriptorNotFoundError`, `OperationNotSupportedError`, `OperationFailedError`, `WinRTError` and its subclass `WinRTAccessDeniedError`, `CoreBluetoothError`, `AdapterInUseError`, and `InvalidArgumentError`, which is also a `ValueError`. Each error carries its `simplepyble.ErrorCode` in `code`, and a WinRT failure carries its HRESULT in `native_code`. Failures from lower layers, such as D-Bus, arrive as plain `RuntimeError`, so `except RuntimeError` catches both.
 
 ```python
 try:

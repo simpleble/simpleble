@@ -140,7 +140,9 @@ stored value instead.
 ## Errors
 
 Native failures throw `RuntimeException` with the native message. Operations that
-the backend or platform does not support throw `UnsupportedOperationException`.
+the backend or platform does not support throw `UnsupportedOperationException`, and
+arguments SimpleBLE rejects, such as a negative `scanFor()` duration, throw
+`IllegalArgumentException`.
 
 ## Host a GATT service
 

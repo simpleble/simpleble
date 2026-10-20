@@ -1,6 +1,7 @@
 package simplegoble
 
 import (
+	"math"
 	"time"
 
 	"github.com/simpleble/simplegoble/internal/bindings"
@@ -125,16 +126,19 @@ func (a *Adapter) ScanIsActive() (bool, error) {
 }
 
 // ScanFor scans synchronously for duration. Other goroutines remain runnable.
-// Positive fractional milliseconds round up. The duration must fit a
-// nonnegative signed 32-bit millisecond count. The native call is not cancellable;
+// Fractional milliseconds round up. The duration must fit a signed 32-bit
+// millisecond count, and SimpleBLE rejects negative durations. The native call is not cancellable;
 // use ScanStart and ScanStop when the application must control scan lifetime.
 func (a *Adapter) ScanFor(duration time.Duration) error {
-	if duration < 0 || duration > time.Duration(1<<31-1)*time.Millisecond {
-		return &Error{Code: InvalidArgument, Message: "scan duration must fit a nonnegative 32-bit millisecond count"}
+	ms := duration / time.Millisecond
+	if duration%time.Millisecond > 0 {
+		ms++
 	}
-	ms := int32((duration + time.Millisecond - 1) / time.Millisecond)
+	if ms < math.MinInt32 || ms > math.MaxInt32 {
+		return &Error{Code: InvalidArgument, Message: "scan duration must fit a 32-bit millisecond count"}
+	}
 	return bindings.Command(a.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) {
-		native.AdapterScanFor(nativeHandle, ms, nativeError)
+		native.AdapterScanFor(nativeHandle, int32(ms), nativeError)
 	})
 }
 

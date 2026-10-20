@@ -135,6 +135,12 @@ class SIMPLEBLE_EXPORT AdapterInUse : public BaseException {
     std::unique_ptr<Error> make_error() const override;
 };
 
+class SIMPLEBLE_EXPORT InvalidArgument : public BaseException {
+  public:
+    InvalidArgument(const std::string& err_msg);
+    std::unique_ptr<Error> make_error() const override;
+};
+
 }  // namespace Exception
 
 }  // namespace SimpleBLE

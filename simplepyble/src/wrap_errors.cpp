@@ -81,6 +81,9 @@ void wrap_errors(py::module& m) {
                                                       ErrorCode::CORE_BLUETOOTH_EXCEPTION, "A CoreBluetooth call failed.");
     register_error<Exception::AdapterInUse>(m, "AdapterInUseError", base, ErrorCode::ADAPTER_IN_USE,
                                             "Another process holds the adapter.");
+    register_error<Exception::InvalidArgument>(m, "InvalidArgumentError", py::make_tuple(base, py::handle(PyExc_ValueError)),
+                                               ErrorCode::INVALID_ARGUMENT,
+                                               "An argument is out of range. It is a ValueError too.");
 
     // WinRT errors also carry their HRESULT.
     py::register_exception_translator([](std::exception_ptr exception) {

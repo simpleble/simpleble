@@ -58,6 +58,8 @@ auto safe_jni_call(JNIEnv* env, Func&& func) {
         throw_java_exception(env, "java/lang/UnsupportedOperationException", e.what());
     } catch (const UnsupportedOperation& e) {
         throw_java_exception(env, "java/lang/UnsupportedOperationException", e.what());
+    } catch (const SimpleBLE::Exception::InvalidArgument& e) {
+        throw_java_exception(env, "java/lang/IllegalArgumentException", e.what());
     } catch (const std::exception& e) {
         throw_java_exception(env, "java/lang/RuntimeException", e.what());
     } catch (...) {

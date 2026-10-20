@@ -108,7 +108,6 @@ public sealed class PlainBackendTests
     public void InvalidDurationsFailBeforeStartingScan()
     {
         using var adapter = OpenAdapter();
-        Assert.Throws<ArgumentOutOfRangeException>(() => adapter.ScanFor(TimeSpan.FromTicks(-1)));
         Assert.Throws<ArgumentOutOfRangeException>(() => adapter.ScanFor(TimeSpan.MaxValue));
         Assert.False(adapter.ScanIsActive);
         adapter.ScanFor(TimeSpan.FromTicks(1));
