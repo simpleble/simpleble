@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use super::ffi;
 use crate::local_characteristic::InnerLocalCharacteristic;
 use crate::local_characteristic::LocalCharacteristic;
-use crate::types::{CharacteristicCapability, Error};
+use crate::types::{call, CharacteristicCapability, Error};
 
 pub(crate) struct InnerLocalService {
     internal: cxx::UniquePtr<ffi::RustyLocalService>,
@@ -22,7 +22,7 @@ impl InnerLocalService {
     }
 
     fn uuid(&self) -> Result<String, Error> {
-        self.internal.uuid().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.uuid(error))
     }
 
     fn add_characteristic(
@@ -30,10 +30,8 @@ impl InnerLocalService {
         uuid: &str,
         capabilities: &[CharacteristicCapability],
     ) -> Result<LocalCharacteristic, Error> {
-        let internal = self
-            .internal
-            .add_characteristic(uuid, CharacteristicCapability::to_mask(capabilities))
-            .map_err(Error::from_cxx_exception)?;
+        let mask = CharacteristicCapability::to_mask(capabilities);
+        let internal = call(|error| self.internal.add_characteristic(uuid, mask, error))?;
         let characteristic: LocalCharacteristic = InnerLocalCharacteristic::new(internal)?.into();
 
         self.characteristics.lock().unwrap().push(characteristic.clone());

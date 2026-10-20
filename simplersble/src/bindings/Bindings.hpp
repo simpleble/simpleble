@@ -32,19 +32,20 @@ struct RustyCharacteristicWrapper;
 struct RustyDescriptorWrapper;
 struct RustyManufacturerDataWrapper;
 struct RustyBackendWrapper;
+struct RustyError;
 
 class RustyBackend;
 class RustyLocalPeripheral;
 class RustyLocalService;
 class RustyLocalCharacteristic;
 
-rust::Vec<Bindings::RustyAdapterWrapper> RustyAdapter_get_adapters();
-bool RustyAdapter_bluetooth_enabled();
+rust::Vec<Bindings::RustyAdapterWrapper> RustyAdapter_get_adapters(RustyError& error);
+bool RustyAdapter_bluetooth_enabled(RustyError& error);
 
-rust::Vec<Bindings::RustyBackendWrapper> RustyBackend_get_backends();
-std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_native();
-std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_dongl();
-std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_simulator();
+rust::Vec<Bindings::RustyBackendWrapper> RustyBackend_get_backends(RustyError& error);
+std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_native(RustyError& error);
+std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_dongl(RustyError& error);
+std::unique_ptr<Bindings::RustyBackend> RustyBackend_get_simulator(RustyError& error);
 
 void RustyConfig_reset_all();
 
@@ -82,8 +83,8 @@ class RustyBackend {
     RustyBackend(SimpleBLE::Backend backend) : _internal(new SimpleBLE::Backend(std::move(backend))) {}
 
     rust::String identifier() const;
-    bool bluetooth_enabled() const;
-    rust::Vec<Bindings::RustyAdapterWrapper> adapters() const;
+    bool bluetooth_enabled(RustyError& error) const;
+    rust::Vec<Bindings::RustyAdapterWrapper> adapters(RustyError& error) const;
 
   private:
     std::unique_ptr<SimpleBLE::Backend> _internal;
@@ -96,32 +97,32 @@ class RustyAdapter {
 
     RustyAdapter(SimpleBLE::Adapter adapter) : _internal(new SimpleBLE::Adapter(std::move(adapter))) {};
 
-    void link(SimpleRsBLE::InnerAdapter& target) const;
-    void unlink() const;
-    void register_scan_callbacks() const;
-    void register_power_callbacks() const;
+    void link(SimpleRsBLE::InnerAdapter& target, RustyError& error) const;
+    void unlink(RustyError& error) const;
+    void register_scan_callbacks(RustyError& error) const;
+    void register_power_callbacks(RustyError& error) const;
 
-    bool initialized() const;
-    rust::String identifier() const;
-    rust::String address() const;
+    bool initialized(RustyError& error) const;
+    rust::String identifier(RustyError& error) const;
+    rust::String address(RustyError& error) const;
 
-    void power_on() const;
-    void power_off() const;
-    bool is_powered() const;
+    void power_on(RustyError& error) const;
+    void power_off(RustyError& error) const;
+    bool is_powered(RustyError& error) const;
 
-    void scan_start() const;
-    void scan_stop() const;
-    void scan_for(int32_t timeout_ms) const;
-    bool scan_is_active() const;
-    rust::Vec<Bindings::RustyPeripheralWrapper> scan_get_results() const;
+    void scan_start(RustyError& error) const;
+    void scan_stop(RustyError& error) const;
+    void scan_for(int32_t timeout_ms, RustyError& error) const;
+    bool scan_is_active(RustyError& error) const;
+    rust::Vec<Bindings::RustyPeripheralWrapper> scan_get_results(RustyError& error) const;
 
-    rust::Vec<Bindings::RustyPeripheralWrapper> get_paired_peripherals() const;
-    rust::Vec<Bindings::RustyPeripheralWrapper> get_connected_peripherals() const;
+    rust::Vec<Bindings::RustyPeripheralWrapper> get_paired_peripherals(RustyError& error) const;
+    rust::Vec<Bindings::RustyPeripheralWrapper> get_connected_peripherals(RustyError& error) const;
 
-    std::unique_ptr<Bindings::RustyLocalPeripheral> create_local_peripheral() const;
+    std::unique_ptr<Bindings::RustyLocalPeripheral> create_local_peripheral(RustyError& error) const;
 
     rust::Vec<Bindings::RustyPeripheralWrapper> macos_retrieve_cached_peripherals(
-        rust::Vec<rust::String> const& identifiers) const;
+        rust::Vec<rust::String> const& identifiers, RustyError& error) const;
 
   private:
     // NOTE: All internal properties need to be handled as pointers,
@@ -146,46 +147,46 @@ class RustyPeripheral {
 
     RustyPeripheral(SimpleBLE::Peripheral peripheral) : _internal(new SimpleBLE::Peripheral(peripheral)) {}
 
-    void link(SimpleRsBLE::InnerPeripheral& target) const;
-    void unlink() const;
-    void register_connection_callbacks() const;
+    void link(SimpleRsBLE::InnerPeripheral& target, RustyError& error) const;
+    void unlink(RustyError& error) const;
+    void register_connection_callbacks(RustyError& error) const;
 
-    bool initialized() const;
-    rust::String identifier() const;
-    rust::String address() const;
-    SimpleBLE::BluetoothAddressType address_type() const;
-    int16_t rssi() const;
+    bool initialized(RustyError& error) const;
+    rust::String identifier(RustyError& error) const;
+    rust::String address(RustyError& error) const;
+    SimpleBLE::BluetoothAddressType address_type(RustyError& error) const;
+    int16_t rssi(RustyError& error) const;
 
-    int16_t tx_power() const;
-    uint16_t mtu() const;
+    int16_t tx_power(RustyError& error) const;
+    uint16_t mtu(RustyError& error) const;
 
-    void connect() const;
-    void disconnect() const;
-    bool is_connected() const;
-    bool is_connectable() const;
-    bool is_paired() const;
-    void unpair() const;
+    void connect(RustyError& error) const;
+    void disconnect(RustyError& error) const;
+    bool is_connected(RustyError& error) const;
+    bool is_connectable(RustyError& error) const;
+    bool is_paired(RustyError& error) const;
+    void unpair(RustyError& error) const;
 
-    rust::Vec<Bindings::RustyServiceWrapper> services() const;
-    rust::Vec<Bindings::RustyManufacturerDataWrapper> manufacturer_data() const;
+    rust::Vec<Bindings::RustyServiceWrapper> services(RustyError& error) const;
+    rust::Vec<Bindings::RustyManufacturerDataWrapper> manufacturer_data(RustyError& error) const;
 
-    rust::Vec<uint8_t> read(rust::String const& service, rust::String const& characteristic) const;
+    rust::Vec<uint8_t> read(rust::String const& service, rust::String const& characteristic, RustyError& error) const;
     void write_request(rust::String const& service, rust::String const& characteristic,
-                       rust::Vec<uint8_t> const& data) const;
+                       rust::Vec<uint8_t> const& data, RustyError& error) const;
     void write_command(rust::String const& service, rust::String const& characteristic,
-                       rust::Vec<uint8_t> const& data) const;
-    void notify(rust::String const& service, rust::String const& characteristic) const;
-    void indicate(rust::String const& service, rust::String const& characteristic) const;
-    void unsubscribe(rust::String const& service, rust::String const& characteristic) const;
+                       rust::Vec<uint8_t> const& data, RustyError& error) const;
+    void notify(rust::String const& service, rust::String const& characteristic, RustyError& error) const;
+    void indicate(rust::String const& service, rust::String const& characteristic, RustyError& error) const;
+    void unsubscribe(rust::String const& service, rust::String const& characteristic, RustyError& error) const;
 
     rust::Vec<uint8_t> read_descriptor(rust::String const& service, rust::String const& characteristic,
-                                       rust::String const& descriptor) const;
+                                       rust::String const& descriptor, RustyError& error) const;
     void write_descriptor(rust::String const& service, rust::String const& characteristic,
-                          rust::String const& descriptor, rust::Vec<uint8_t> const& data) const;
+                          rust::String const& descriptor, rust::Vec<uint8_t> const& data, RustyError& error) const;
 
-    void dongl_set_passkey_request_callback(bool enabled) const;
-    void dongl_set_passkey_display_callback(bool enabled) const;
-    void dongl_set_numeric_comparison_callback(bool enabled) const;
+    void dongl_set_passkey_request_callback(bool enabled, RustyError& error) const;
+    void dongl_set_passkey_display_callback(bool enabled, RustyError& error) const;
+    void dongl_set_numeric_comparison_callback(bool enabled, RustyError& error) const;
 
   private:
     // NOTE: All internal properties need to be handled as pointers,
@@ -279,22 +280,23 @@ class RustyLocalPeripheral {
     RustyLocalPeripheral(SimpleBLE::Local::Peripheral peripheral)
         : _internal(new SimpleBLE::Local::Peripheral(std::move(peripheral))) {}
 
-    void link(SimpleRsBLE::InnerLocalPeripheral const& target) const;
-    void unlink() const;
+    void link(SimpleRsBLE::InnerLocalPeripheral const& target, RustyError& error) const;
+    void unlink(RustyError& error) const;
 
-    void add_advertised_service(rust::Str uuid) const;
-    void set_advertised_manufacturer_data(uint16_t company_id, rust::Slice<const uint8_t> data) const;
-    void set_connectable(bool connectable) const;
-    std::unique_ptr<Bindings::RustyLocalService> add_service(rust::Str uuid) const;
-    void remove_all_services() const;
+    void add_advertised_service(rust::Str uuid, RustyError& error) const;
+    void set_advertised_manufacturer_data(uint16_t company_id, rust::Slice<const uint8_t> data,
+    RustyError& error) const;
+    void set_connectable(bool connectable, RustyError& error) const;
+    std::unique_ptr<Bindings::RustyLocalService> add_service(rust::Str uuid, RustyError& error) const;
+    void remove_all_services(RustyError& error) const;
 
-    void start() const;
-    void stop() const;
-    bool is_started() const;
-    bool is_advertising() const;
+    void start(RustyError& error) const;
+    void stop(RustyError& error) const;
+    bool is_started(RustyError& error) const;
+    bool is_advertising(RustyError& error) const;
 
-    void macos_set_advertisement_local_name(bool has_local_name, rust::Str local_name) const;
-    void linux_set_advertisement_local_name(bool has_local_name, rust::Str local_name) const;
+    void macos_set_advertisement_local_name(bool has_local_name, rust::Str local_name, RustyError& error) const;
+    void linux_set_advertisement_local_name(bool has_local_name, rust::Str local_name, RustyError& error) const;
 
   private:
     std::unique_ptr<SimpleBLE::Local::Peripheral> _internal;
@@ -308,8 +310,9 @@ class RustyLocalService {
 
     RustyLocalService(SimpleBLE::Local::Service service) : _internal(new SimpleBLE::Local::Service(std::move(service))) {}
 
-    rust::String uuid() const;
-    std::unique_ptr<Bindings::RustyLocalCharacteristic> add_characteristic(rust::Str uuid, uint8_t capabilities) const;
+    rust::String uuid(RustyError& error) const;
+    std::unique_ptr<Bindings::RustyLocalCharacteristic> add_characteristic(rust::Str uuid, uint8_t capabilities,
+    RustyError& error) const;
 
   private:
     std::unique_ptr<SimpleBLE::Local::Service> _internal;
@@ -323,14 +326,14 @@ class RustyLocalCharacteristic {
     RustyLocalCharacteristic(SimpleBLE::Local::Characteristic characteristic)
         : _internal(new SimpleBLE::Local::Characteristic(std::move(characteristic))) {}
 
-    void link(SimpleRsBLE::InnerLocalCharacteristic const& target) const;
-    void unlink() const;
+    void link(SimpleRsBLE::InnerLocalCharacteristic const& target, RustyError& error) const;
+    void unlink(RustyError& error) const;
 
-    rust::String uuid() const;
-    uint8_t capabilities() const;
-    rust::Vec<uint8_t> value() const;
-    void set_value(rust::Slice<const uint8_t> value) const;
-    void set_read_callback_enabled(bool enabled) const;
+    rust::String uuid(RustyError& error) const;
+    uint8_t capabilities(RustyError& error) const;
+    rust::Vec<uint8_t> value(RustyError& error) const;
+    void set_value(rust::Slice<const uint8_t> value, RustyError& error) const;
+    void set_read_callback_enabled(bool enabled, RustyError& error) const;
 
   private:
     std::unique_ptr<SimpleBLE::Local::Characteristic> _internal;

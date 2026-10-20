@@ -61,6 +61,20 @@ For event streams and notification examples, see [Quickstart](../quickstart), [R
 
 Several handles can refer to the same adapter or device, such as a peripheral from a scan event and another from `scan_get_results()`. Each kind of event goes to the handle that last subscribed to it with `on_scan_event()`, `on_power_event()`, or `on_connection_event()`, and dropping a handle doesn't affect the others.
 
+## Errors
+
+Calls that can fail return `simplersble::Error`, which displays SimpleBLE's message. Its `code()` returns an `ErrorCode` that follows SimpleBLE's [exceptions](../fundamentals/error-handling#exception-taxonomy), such as `ErrorCode::PeripheralNotConnected` or `ErrorCode::GattServiceNotFound`. Failures from lower layers, such as D-Bus, have the code `ErrorCode::UnclassifiedException`.
+
+```rust
+use simplersble::ErrorCode;
+
+match peripheral.read(&service_uuid, &characteristic_uuid) {
+    Ok(value) => println!("{:?}", value),
+    Err(e) if e.code() == ErrorCode::PeripheralNotConnected => peripheral.connect().unwrap(),
+    Err(e) => println!("{:?}: {}", e.code(), e),
+}
+```
+
 ## Configure backends
 
 `simplersble::config` holds process-wide settings, grouped by backend: `simplebluez` (Linux), `winrt` (Windows), `corebluetooth` (macOS), and `dongl`. Set them at startup, before the first `Backend::get_backends()` or `Adapter::get_adapters()` call; changes made afterwards may not take effect.

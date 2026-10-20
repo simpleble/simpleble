@@ -7,7 +7,7 @@ use futures::Stream;
 
 use super::ffi;
 use crate::events::EventSender;
-use crate::types::{CharacteristicCapability, Error};
+use crate::types::{call, CharacteristicCapability, Error, ErrorCode};
 
 /// A client interacting with a [`LocalCharacteristic`].
 #[derive(Clone, Debug)]
@@ -50,31 +50,32 @@ impl InnerLocalCharacteristic {
         });
 
         // The back-pointer is only given to C++ once the object has its final address.
-        this.internal.link(&this).map_err(Error::from_cxx_exception)?;
+        call(|error| this.internal.link(&this, error))?;
 
         Ok(this)
     }
 
     fn uuid(&self) -> Result<String, Error> {
-        self.internal.uuid().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.uuid(error))
     }
 
     fn capabilities(&self) -> Result<Vec<CharacteristicCapability>, Error> {
-        let mask = self.internal.capabilities().map_err(Error::from_cxx_exception)?;
+        let mask = call(|error| self.internal.capabilities(error))?;
         Ok(CharacteristicCapability::from_mask(mask))
     }
 
     fn value(&self) -> Result<Vec<u8>, Error> {
-        self.internal.value().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.value(error))
     }
 
     fn set_value(&self, value: &[u8]) -> Result<(), Error> {
-        self.internal.set_value(value).map_err(Error::from_cxx_exception)
+        call(|error| self.internal.set_value(value, error))
     }
 
     fn set_read_callback(&self, callback: Option<ReadCallback>) -> Result<(), Error> {
         if READ_CALLBACK_DEPTH.with(Cell::get) > 0 {
-            return Err(Error::from_string(
+            return Err(Error::new(
+                ErrorCode::OperationFailed,
                 "Read callbacks cannot be changed from inside a read callback.".to_string(),
             ));
         }
@@ -86,15 +87,15 @@ impl InnerLocalCharacteristic {
                 // Store the callback before the native side can ask for it.
                 let previous = self.read_callback.lock().unwrap().replace(callback);
                 if previous.is_none() {
-                    if let Err(e) = self.internal.set_read_callback_enabled(true) {
+                    if let Err(e) = call(|error| self.internal.set_read_callback_enabled(true, error)) {
                         self.read_callback.lock().unwrap().take();
-                        return Err(Error::from_cxx_exception(e));
+                        return Err(e);
                     }
                 }
             }
             None => {
                 // Unregister natively first, so that reads return the stored value again.
-                self.internal.set_read_callback_enabled(false).map_err(Error::from_cxx_exception)?;
+                call(|error| self.internal.set_read_callback_enabled(false, error))?;
                 let _previous = self.read_callback.lock().unwrap().take();
             }
         }
@@ -132,7 +133,7 @@ impl InnerLocalCharacteristic {
 impl Drop for InnerLocalCharacteristic {
     fn drop(&mut self) {
         // Clear the native callbacks (waiting for any that are running) before this object goes away.
-        self.internal.unlink().unwrap();
+        call(|error| self.internal.unlink(error)).unwrap();
     }
 }
 

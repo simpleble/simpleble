@@ -124,7 +124,8 @@ characteristic values; `descriptor_read` and `descriptor_write` access
 descriptors. `notify` and `indicate` return a stream with each value as a
 `Vec<u8>`, and `unsubscribe` ends it. Calls that can fail return
 `Result<_, simplersble::Error>`, which carries SimpleBLE's message and works
-with `?`.
+with `?`; its `code()` returns an `ErrorCode`, such as
+`ErrorCode::PeripheralNotConnected`.
 
 ## Host a GATT service
 

@@ -7,7 +7,7 @@ use super::ffi;
 use crate::events::EventSender;
 use crate::local_service::InnerLocalService;
 use crate::local_service::LocalService;
-use crate::types::Error;
+use crate::types::{call, Error};
 
 /// A client connecting to or disconnecting from a [`LocalPeripheral`].
 ///
@@ -37,27 +37,25 @@ impl InnerLocalPeripheral {
         });
 
         // The back-pointer is only given to C++ once the object has its final address.
-        this.internal.link(&this).map_err(Error::from_cxx_exception)?;
+        call(|error| this.internal.link(&this, error))?;
 
         Ok(this)
     }
 
     fn add_advertised_service(&self, uuid: &str) -> Result<(), Error> {
-        self.internal.add_advertised_service(uuid).map_err(Error::from_cxx_exception)
+        call(|error| self.internal.add_advertised_service(uuid, error))
     }
 
     fn set_advertised_manufacturer_data(&self, company_id: u16, data: &[u8]) -> Result<(), Error> {
-        self.internal
-            .set_advertised_manufacturer_data(company_id, data)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.set_advertised_manufacturer_data(company_id, data, error))
     }
 
     fn set_connectable(&self, connectable: bool) -> Result<(), Error> {
-        self.internal.set_connectable(connectable).map_err(Error::from_cxx_exception)
+        call(|error| self.internal.set_connectable(connectable, error))
     }
 
     fn add_service(&self, uuid: &str) -> Result<LocalService, Error> {
-        let internal = self.internal.add_service(uuid).map_err(Error::from_cxx_exception)?;
+        let internal = call(|error| self.internal.add_service(uuid, error))?;
         let service: LocalService = InnerLocalService::new(internal).into();
 
         self.services.lock().unwrap().push(service.clone());
@@ -69,39 +67,41 @@ impl InnerLocalPeripheral {
     }
 
     fn remove_all_services(&self) -> Result<(), Error> {
-        self.internal.remove_all_services().map_err(Error::from_cxx_exception)?;
+        call(|error| self.internal.remove_all_services(error))?;
         self.services.lock().unwrap().clear();
         Ok(())
     }
 
     fn start(&self) -> Result<(), Error> {
-        self.internal.start().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.start(error))
     }
 
     fn stop(&self) -> Result<(), Error> {
-        self.internal.stop().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.stop(error))
     }
 
     fn is_started(&self) -> Result<bool, Error> {
-        self.internal.is_started().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.is_started(error))
     }
 
     fn is_advertising(&self) -> Result<bool, Error> {
-        self.internal.is_advertising().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.is_advertising(error))
     }
 
     #[cfg(any(target_os = "macos", doc))]
     pub(crate) fn macos_set_advertisement_local_name(&self, local_name: Option<&str>) -> Result<(), Error> {
-        self.internal
-            .macos_set_advertisement_local_name(local_name.is_some(), local_name.unwrap_or_default())
-            .map_err(Error::from_cxx_exception)
+        call(|error| {
+            self.internal
+                .macos_set_advertisement_local_name(local_name.is_some(), local_name.unwrap_or_default(), error)
+        })
     }
 
     #[cfg(any(target_os = "linux", doc))]
     pub(crate) fn linux_set_advertisement_local_name(&self, local_name: Option<&str>) -> Result<(), Error> {
-        self.internal
-            .linux_set_advertisement_local_name(local_name.is_some(), local_name.unwrap_or_default())
-            .map_err(Error::from_cxx_exception)
+        call(|error| {
+            self.internal
+                .linux_set_advertisement_local_name(local_name.is_some(), local_name.unwrap_or_default(), error)
+        })
     }
 
     pub(crate) fn on_callback_client_connected(&self, address: &[u8]) {
@@ -118,7 +118,7 @@ impl InnerLocalPeripheral {
 impl Drop for InnerLocalPeripheral {
     fn drop(&mut self) {
         // Clear the native callbacks before this object (and the back-pointer to it) goes away.
-        self.internal.unlink().unwrap();
+        call(|error| self.internal.unlink(error)).unwrap();
     }
 }
 

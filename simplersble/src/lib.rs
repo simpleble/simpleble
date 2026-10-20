@@ -17,7 +17,7 @@ use peripheral::InnerPeripheral;
 use local_peripheral::InnerLocalPeripheral;
 use local_characteristic::InnerLocalCharacteristic;
 
-pub use types::{Error, BluetoothAddressType, CharacteristicCapability};
+pub use types::{Error, ErrorCode, BluetoothAddressType, CharacteristicCapability};
 pub use adapter::Adapter;
 pub use adapter::ScanEvent;
 pub use adapter::PowerEvent;
@@ -74,6 +74,15 @@ mod ffi {
 
     // ----------------------------------------------------------------------------------
 
+    // A failed call fills this in instead of throwing, as an exception only carries its message
+    // across cxx.
+    #[namespace = "Bindings"]
+    struct RustyError {
+        failed: bool,
+        code: ErrorCode,
+        message: String,
+    }
+
     #[namespace = "Bindings"]
     struct RustyManufacturerDataWrapper {
         company_id: u16,
@@ -86,6 +95,26 @@ mod ffi {
         PUBLIC,
         RANDOM,
         UNSPECIFIED,
+    }
+
+    #[namespace = "SimpleBLE"]
+    #[repr(i32)]
+    enum ErrorCode {
+        INVALID_ARGUMENT = 0,
+        OUT_OF_MEMORY = 1,
+        OBJECT_NOT_INITIALIZED = 2,
+        INVALID_BACKEND_REFERENCE = 3,
+        PERIPHERAL_NOT_CONNECTED = 4,
+        GATT_SERVICE_NOT_FOUND = 5,
+        GATT_CHARACTERISTIC_NOT_FOUND = 6,
+        GATT_DESCRIPTOR_NOT_FOUND = 7,
+        OPERATION_NOT_SUPPORTED = 8,
+        OPERATION_FAILED = 9,
+        WINRT_ACCESS_DENIED = 10,
+        WINRT_EXCEPTION = 11,
+        CORE_BLUETOOTH_EXCEPTION = 12,
+        UNCLASSIFIED_EXCEPTION = 13,
+        ADAPTER_IN_USE = 14,
     }
 
     // Bit values used to pass a set of local characteristic capabilities as a mask.
@@ -145,6 +174,9 @@ mod ffi {
         #[namespace = "SimpleBLE"]
         type BluetoothAddressType;
 
+        #[namespace = "SimpleBLE"]
+        type ErrorCode;
+
         #[namespace = "Bindings"]
         type RustyAdapter;
 
@@ -175,22 +207,22 @@ mod ffi {
         // Common functions
 
         #[namespace = "Bindings"]
-        fn RustyAdapter_bluetooth_enabled() -> Result<bool>;
+        fn RustyAdapter_bluetooth_enabled(error: &mut RustyError) -> bool;
 
         #[namespace = "Bindings"]
-        fn RustyAdapter_get_adapters() -> Result<Vec<RustyAdapterWrapper>>;
+        fn RustyAdapter_get_adapters(error: &mut RustyError) -> Vec<RustyAdapterWrapper>;
 
         #[namespace = "Bindings"]
-        fn RustyBackend_get_backends() -> Result<Vec<RustyBackendWrapper>>;
+        fn RustyBackend_get_backends(error: &mut RustyError) -> Vec<RustyBackendWrapper>;
 
         #[namespace = "Bindings"]
-        fn RustyBackend_get_native() -> Result<UniquePtr<RustyBackend>>;
+        fn RustyBackend_get_native(error: &mut RustyError) -> UniquePtr<RustyBackend>;
 
         #[namespace = "Bindings"]
-        fn RustyBackend_get_dongl() -> Result<UniquePtr<RustyBackend>>;
+        fn RustyBackend_get_dongl(error: &mut RustyError) -> UniquePtr<RustyBackend>;
 
         #[namespace = "Bindings"]
-        fn RustyBackend_get_simulator() -> Result<UniquePtr<RustyBackend>>;
+        fn RustyBackend_get_simulator(error: &mut RustyError) -> UniquePtr<RustyBackend>;
 
         // Config functions
 
@@ -248,112 +280,120 @@ mod ffi {
         // RustyBackend functions
 
         fn identifier(self: &RustyBackend) -> String;
-        fn bluetooth_enabled(self: &RustyBackend) -> Result<bool>;
-        fn adapters(self: &RustyBackend) -> Result<Vec<RustyAdapterWrapper>>;
+        fn bluetooth_enabled(self: &RustyBackend, error: &mut RustyError) -> bool;
+        fn adapters(self: &RustyBackend, error: &mut RustyError) -> Vec<RustyAdapterWrapper>;
 
         // RustyAdapter functions
 
-        fn link(self: &RustyAdapter, target: Pin<&mut InnerAdapter>) -> Result<()>;
-        fn unlink(self: &RustyAdapter) -> Result<()>;
-        fn register_scan_callbacks(self: &RustyAdapter) -> Result<()>;
-        fn register_power_callbacks(self: &RustyAdapter) -> Result<()>;
+        fn link(self: &RustyAdapter, target: Pin<&mut InnerAdapter>, error: &mut RustyError);
+        fn unlink(self: &RustyAdapter, error: &mut RustyError);
+        fn register_scan_callbacks(self: &RustyAdapter, error: &mut RustyError);
+        fn register_power_callbacks(self: &RustyAdapter, error: &mut RustyError);
 
-        fn initialized(self: &RustyAdapter) -> Result<bool>;
-        fn identifier(self: &RustyAdapter) -> Result<String>;
-        fn address(self: &RustyAdapter) -> Result<String>;
+        fn initialized(self: &RustyAdapter, error: &mut RustyError) -> bool;
+        fn identifier(self: &RustyAdapter, error: &mut RustyError) -> String;
+        fn address(self: &RustyAdapter, error: &mut RustyError) -> String;
 
-        fn power_on(self: &RustyAdapter) -> Result<()>;
-        fn power_off(self: &RustyAdapter) -> Result<()>;
-        fn is_powered(self: &RustyAdapter) -> Result<bool>;
+        fn power_on(self: &RustyAdapter, error: &mut RustyError);
+        fn power_off(self: &RustyAdapter, error: &mut RustyError);
+        fn is_powered(self: &RustyAdapter, error: &mut RustyError) -> bool;
 
-        fn scan_start(self: &RustyAdapter) -> Result<()>;
-        fn scan_stop(self: &RustyAdapter) -> Result<()>;
-        fn scan_for(self: &RustyAdapter, timeout_ms: i32) -> Result<()>;
-        fn scan_is_active(self: &RustyAdapter) -> Result<bool>;
-        fn scan_get_results(self: &RustyAdapter) -> Result<Vec<RustyPeripheralWrapper>>;
+        fn scan_start(self: &RustyAdapter, error: &mut RustyError);
+        fn scan_stop(self: &RustyAdapter, error: &mut RustyError);
+        fn scan_for(self: &RustyAdapter, timeout_ms: i32, error: &mut RustyError);
+        fn scan_is_active(self: &RustyAdapter, error: &mut RustyError) -> bool;
+        fn scan_get_results(self: &RustyAdapter, error: &mut RustyError) -> Vec<RustyPeripheralWrapper>;
 
-        fn get_paired_peripherals(self: &RustyAdapter) -> Result<Vec<RustyPeripheralWrapper>>;
-        fn get_connected_peripherals(self: &RustyAdapter) -> Result<Vec<RustyPeripheralWrapper>>;
+        fn get_paired_peripherals(self: &RustyAdapter, error: &mut RustyError) -> Vec<RustyPeripheralWrapper>;
+        fn get_connected_peripherals(self: &RustyAdapter, error: &mut RustyError) -> Vec<RustyPeripheralWrapper>;
 
-        fn create_local_peripheral(self: &RustyAdapter) -> Result<UniquePtr<RustyLocalPeripheral>>;
+        fn create_local_peripheral(self: &RustyAdapter, error: &mut RustyError) -> UniquePtr<RustyLocalPeripheral>;
 
         #[cfg(any(target_os = "macos", doc))]
         fn macos_retrieve_cached_peripherals(
             self: &RustyAdapter,
             identifiers: &Vec<String>,
-        ) -> Result<Vec<RustyPeripheralWrapper>>;
+            error: &mut RustyError,
+        ) -> Vec<RustyPeripheralWrapper>;
 
         // RustyPeripheral functions
 
-        fn link(self: &RustyPeripheral, target: Pin<&mut InnerPeripheral>) -> Result<()>;
-        fn unlink(self: &RustyPeripheral) -> Result<()>;
-        fn register_connection_callbacks(self: &RustyPeripheral) -> Result<()>;
+        fn link(self: &RustyPeripheral, target: Pin<&mut InnerPeripheral>, error: &mut RustyError);
+        fn unlink(self: &RustyPeripheral, error: &mut RustyError);
+        fn register_connection_callbacks(self: &RustyPeripheral, error: &mut RustyError);
 
-        fn initialized(self: &RustyPeripheral) -> Result<bool>;
-        fn identifier(self: &RustyPeripheral) -> Result<String>;
-        fn address(self: &RustyPeripheral) -> Result<String>;
-        fn address_type(self: &RustyPeripheral) -> Result<BluetoothAddressType>;
-        fn rssi(self: &RustyPeripheral) -> Result<i16>;
+        fn initialized(self: &RustyPeripheral, error: &mut RustyError) -> bool;
+        fn identifier(self: &RustyPeripheral, error: &mut RustyError) -> String;
+        fn address(self: &RustyPeripheral, error: &mut RustyError) -> String;
+        fn address_type(self: &RustyPeripheral, error: &mut RustyError) -> BluetoothAddressType;
+        fn rssi(self: &RustyPeripheral, error: &mut RustyError) -> i16;
 
-        fn tx_power(self: &RustyPeripheral) -> Result<i16>;
-        fn mtu(self: &RustyPeripheral) -> Result<u16>;
+        fn tx_power(self: &RustyPeripheral, error: &mut RustyError) -> i16;
+        fn mtu(self: &RustyPeripheral, error: &mut RustyError) -> u16;
 
-        fn connect(self: &RustyPeripheral) -> Result<()>;
-        fn disconnect(self: &RustyPeripheral) -> Result<()>;
-        fn is_connected(self: &RustyPeripheral) -> Result<bool>;
-        fn is_connectable(self: &RustyPeripheral) -> Result<bool>;
-        fn is_paired(self: &RustyPeripheral) -> Result<bool>;
-        fn unpair(self: &RustyPeripheral) -> Result<()>;
+        fn connect(self: &RustyPeripheral, error: &mut RustyError);
+        fn disconnect(self: &RustyPeripheral, error: &mut RustyError);
+        fn is_connected(self: &RustyPeripheral, error: &mut RustyError) -> bool;
+        fn is_connectable(self: &RustyPeripheral, error: &mut RustyError) -> bool;
+        fn is_paired(self: &RustyPeripheral, error: &mut RustyError) -> bool;
+        fn unpair(self: &RustyPeripheral, error: &mut RustyError);
 
-        fn services(self: &RustyPeripheral) -> Result<Vec<RustyServiceWrapper>>;
-        fn manufacturer_data(self: &RustyPeripheral) -> Result<Vec<RustyManufacturerDataWrapper>>;
+        fn services(self: &RustyPeripheral, error: &mut RustyError) -> Vec<RustyServiceWrapper>;
+        fn manufacturer_data(self: &RustyPeripheral, error: &mut RustyError) -> Vec<RustyManufacturerDataWrapper>;
 
         fn read(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
-        ) -> Result<Vec<u8>>;
+            error: &mut RustyError,
+        ) -> Vec<u8>;
         fn write_request(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
             data: &Vec<u8>,
-        ) -> Result<()>;
+            error: &mut RustyError,
+        );
         fn write_command(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
             data: &Vec<u8>,
-        ) -> Result<()>;
-        fn notify(self: &RustyPeripheral, service: &String, characteristic: &String) -> Result<()>;
+            error: &mut RustyError,
+        );
+        fn notify(self: &RustyPeripheral, service: &String, characteristic: &String, error: &mut RustyError);
         fn indicate(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
-        ) -> Result<()>;
+            error: &mut RustyError,
+        );
         fn unsubscribe(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
-        ) -> Result<()>;
+            error: &mut RustyError,
+        );
 
         fn read_descriptor(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
             descriptor: &String,
-        ) -> Result<Vec<u8>>;
+            error: &mut RustyError,
+        ) -> Vec<u8>;
         fn write_descriptor(
             self: &RustyPeripheral,
             service: &String,
             characteristic: &String,
             descriptor: &String,
             data: &Vec<u8>,
-        ) -> Result<()>;
+            error: &mut RustyError,
+        );
 
-        fn dongl_set_passkey_request_callback(self: &RustyPeripheral, enabled: bool) -> Result<()>;
-        fn dongl_set_passkey_display_callback(self: &RustyPeripheral, enabled: bool) -> Result<()>;
-        fn dongl_set_numeric_comparison_callback(self: &RustyPeripheral, enabled: bool) -> Result<()>;
+        fn dongl_set_passkey_request_callback(self: &RustyPeripheral, enabled: bool, error: &mut RustyError);
+        fn dongl_set_passkey_display_callback(self: &RustyPeripheral, enabled: bool, error: &mut RustyError);
+        fn dongl_set_numeric_comparison_callback(self: &RustyPeripheral, enabled: bool, error: &mut RustyError);
 
         // RustyService functions
 
@@ -382,52 +422,60 @@ mod ffi {
 
         // RustyLocalPeripheral functions
 
-        fn link(self: &RustyLocalPeripheral, target: &InnerLocalPeripheral) -> Result<()>;
-        fn unlink(self: &RustyLocalPeripheral) -> Result<()>;
+        fn link(self: &RustyLocalPeripheral, target: &InnerLocalPeripheral, error: &mut RustyError);
+        fn unlink(self: &RustyLocalPeripheral, error: &mut RustyError);
 
-        fn add_advertised_service(self: &RustyLocalPeripheral, uuid: &str) -> Result<()>;
-        fn set_advertised_manufacturer_data(self: &RustyLocalPeripheral, company_id: u16, data: &[u8]) -> Result<()>;
-        fn set_connectable(self: &RustyLocalPeripheral, connectable: bool) -> Result<()>;
-        fn add_service(self: &RustyLocalPeripheral, uuid: &str) -> Result<UniquePtr<RustyLocalService>>;
-        fn remove_all_services(self: &RustyLocalPeripheral) -> Result<()>;
+        fn add_advertised_service(self: &RustyLocalPeripheral, uuid: &str, error: &mut RustyError);
+        fn set_advertised_manufacturer_data(
+            self: &RustyLocalPeripheral,
+            company_id: u16,
+            data: &[u8],
+            error: &mut RustyError,
+        );
+        fn set_connectable(self: &RustyLocalPeripheral, connectable: bool, error: &mut RustyError);
+        fn add_service(self: &RustyLocalPeripheral, uuid: &str, error: &mut RustyError) -> UniquePtr<RustyLocalService>;
+        fn remove_all_services(self: &RustyLocalPeripheral, error: &mut RustyError);
 
-        fn start(self: &RustyLocalPeripheral) -> Result<()>;
-        fn stop(self: &RustyLocalPeripheral) -> Result<()>;
-        fn is_started(self: &RustyLocalPeripheral) -> Result<bool>;
-        fn is_advertising(self: &RustyLocalPeripheral) -> Result<bool>;
+        fn start(self: &RustyLocalPeripheral, error: &mut RustyError);
+        fn stop(self: &RustyLocalPeripheral, error: &mut RustyError);
+        fn is_started(self: &RustyLocalPeripheral, error: &mut RustyError) -> bool;
+        fn is_advertising(self: &RustyLocalPeripheral, error: &mut RustyError) -> bool;
 
         #[cfg(any(target_os = "macos", doc))]
         fn macos_set_advertisement_local_name(
             self: &RustyLocalPeripheral,
             has_local_name: bool,
             local_name: &str,
-        ) -> Result<()>;
+            error: &mut RustyError,
+        );
         #[cfg(any(target_os = "linux", doc))]
         fn linux_set_advertisement_local_name(
             self: &RustyLocalPeripheral,
             has_local_name: bool,
             local_name: &str,
-        ) -> Result<()>;
+            error: &mut RustyError,
+        );
 
         // RustyLocalService functions
 
-        fn uuid(self: &RustyLocalService) -> Result<String>;
+        fn uuid(self: &RustyLocalService, error: &mut RustyError) -> String;
         fn add_characteristic(
             self: &RustyLocalService,
             uuid: &str,
             capabilities: u8,
-        ) -> Result<UniquePtr<RustyLocalCharacteristic>>;
+            error: &mut RustyError,
+        ) -> UniquePtr<RustyLocalCharacteristic>;
 
         // RustyLocalCharacteristic functions
 
-        fn link(self: &RustyLocalCharacteristic, target: &InnerLocalCharacteristic) -> Result<()>;
-        fn unlink(self: &RustyLocalCharacteristic) -> Result<()>;
+        fn link(self: &RustyLocalCharacteristic, target: &InnerLocalCharacteristic, error: &mut RustyError);
+        fn unlink(self: &RustyLocalCharacteristic, error: &mut RustyError);
 
-        fn uuid(self: &RustyLocalCharacteristic) -> Result<String>;
-        fn capabilities(self: &RustyLocalCharacteristic) -> Result<u8>;
-        fn value(self: &RustyLocalCharacteristic) -> Result<Vec<u8>>;
-        fn set_value(self: &RustyLocalCharacteristic, value: &[u8]) -> Result<()>;
-        fn set_read_callback_enabled(self: &RustyLocalCharacteristic, enabled: bool) -> Result<()>;
+        fn uuid(self: &RustyLocalCharacteristic, error: &mut RustyError) -> String;
+        fn capabilities(self: &RustyLocalCharacteristic, error: &mut RustyError) -> u8;
+        fn value(self: &RustyLocalCharacteristic, error: &mut RustyError) -> Vec<u8>;
+        fn set_value(self: &RustyLocalCharacteristic, value: &[u8], error: &mut RustyError);
+        fn set_read_callback_enabled(self: &RustyLocalCharacteristic, enabled: bool, error: &mut RustyError);
     }
 }
 

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::ffi;
 use crate::adapter::{Adapter, InnerAdapter};
-use crate::types::Error;
+use crate::types::{call, Error};
 
 struct InnerBackend {
     internal: cxx::UniquePtr<ffi::RustyBackend>,
@@ -26,7 +26,7 @@ impl Backend {
     ///
     /// Set the [configuration](crate::config) first, for example to leave out the Dongl backend.
     pub fn get_backends() -> Result<Vec<Backend>, Error> {
-        let mut raw_backend_list = ffi::RustyBackend_get_backends().map_err(Error::from_cxx_exception)?;
+        let mut raw_backend_list = call(|error| ffi::RustyBackend_get_backends(error))?;
 
         let mut backends = Vec::<Backend>::new();
         for backend_wrapper in raw_backend_list.iter_mut() {
@@ -41,7 +41,7 @@ impl Backend {
 
     /// Returns the backend of the operating system's Bluetooth stack.
     pub fn get_native() -> Result<Backend, Error> {
-        Self::from_internal(ffi::RustyBackend_get_native())
+        Self::from_internal(call(|error| ffi::RustyBackend_get_native(error)))
     }
 
     /// Returns the Dongl backend, whether or not
@@ -50,18 +50,18 @@ impl Backend {
     ///
     /// Fails if this build of SimpleBLE doesn't include the Dongl backend.
     pub fn get_dongl() -> Result<Backend, Error> {
-        Self::from_internal(ffi::RustyBackend_get_dongl())
+        Self::from_internal(call(|error| ffi::RustyBackend_get_dongl(error)))
     }
 
     /// Returns the Simulator backend, which only has adapters while a simulation is active.
     ///
     /// Fails if this build of SimpleBLE doesn't include the Simulator backend.
     pub fn get_simulator() -> Result<Backend, Error> {
-        Self::from_internal(ffi::RustyBackend_get_simulator())
+        Self::from_internal(call(|error| ffi::RustyBackend_get_simulator(error)))
     }
 
-    fn from_internal(internal: Result<cxx::UniquePtr<ffi::RustyBackend>, cxx::Exception>) -> Result<Backend, Error> {
-        let internal = internal.map_err(Error::from_cxx_exception)?;
+    fn from_internal(internal: Result<cxx::UniquePtr<ffi::RustyBackend>, Error>) -> Result<Backend, Error> {
+        let internal = internal?;
         Ok(Backend {
             inner: Arc::new(InnerBackend { internal }),
         })
@@ -73,12 +73,12 @@ impl Backend {
     }
 
     pub fn bluetooth_enabled(&self) -> Result<bool, Error> {
-        self.inner.internal.bluetooth_enabled().map_err(Error::from_cxx_exception)
+        call(|error| self.inner.internal.bluetooth_enabled(error))
     }
 
     /// Returns the adapters of this backend.
     pub fn adapters(&self) -> Result<Vec<Adapter>, Error> {
-        let mut raw_adapter_list = self.inner.internal.adapters().map_err(Error::from_cxx_exception)?;
+        let mut raw_adapter_list = call(|error| self.inner.internal.adapters(error))?;
 
         let mut adapters = Vec::<Adapter>::new();
         for adapter_wrapper in raw_adapter_list.iter_mut() {

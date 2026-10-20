@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use futures::{Stream, StreamExt};
 use simplersble::{
-    advanced, config, Adapter, Backend, CharacteristicCapability, ClientEvent, ConnectionEvent, Error,
+    advanced, config, Adapter, Backend, CharacteristicCapability, ClientEvent, ConnectionEvent, Error, ErrorCode,
     LocalCharacteristic, LocalCharacteristicEvent, LocalPeripheral, Peripheral, ScanEvent, ValueChangedEvent,
 };
 
@@ -276,6 +276,26 @@ async fn streams_keep_events_until_read() {
     }
 
     release(&peer);
+    local.stop().unwrap();
+}
+
+// Errors used to carry only their message.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn errors_carry_their_code() {
+    let _serial = SERIAL.lock().await;
+    const SERVICE: &str = "0000a600-0000-1000-8000-00805f9b34fb";
+    const MISSING_SERVICE: &str = "0000a6ff-0000-1000-8000-00805f9b34fb";
+    const VALUE: &str = "0000a601-0000-1000-8000-00805f9b34fb";
+    let (service, missing_service, value) = (SERVICE.to_string(), MISSING_SERVICE.to_string(), VALUE.to_string());
+
+    let adapter = plain_adapter();
+    let (local, _characteristic) = host(&adapter, SERVICE, VALUE);
+    local.start().unwrap();
+    let peer = connect(&adapter, SERVICE).await;
+    assert_eq!(peer.read(&missing_service, &value).unwrap_err().code(), ErrorCode::GattServiceNotFound);
+
+    release(&peer);
+    assert_eq!(peer.read(&service, &value).unwrap_err().code(), ErrorCode::PeripheralNotConnected);
     local.stop().unwrap();
 }
 

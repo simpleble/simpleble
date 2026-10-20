@@ -36,9 +36,27 @@ const std::pair<RustyCharacteristicCapability, LocalCapability> CAPABILITIES[] =
     {RustyCharacteristicCapability::INDICATE, LocalCapability::INDICATE},
 };
 
+// Fills in `error` from the exception being handled.
+void report_exception(Bindings::RustyError& error) noexcept {
+    error.failed = true;
+
+    try {
+        throw;
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        error.code = e.make_error()->code;
+        error.message = rust::String::lossy(e.what());
+    } catch (const std::exception& e) {
+        error.code = SimpleBLE::ErrorCode::UNCLASSIFIED_EXCEPTION;
+        error.message = rust::String::lossy(e.what());
+    } catch (...) {
+        error.code = SimpleBLE::ErrorCode::UNCLASSIFIED_EXCEPTION;
+        error.message = "Unknown exception";
+    }
+}
+
 }  // namespace
 
-rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyAdapter_get_adapters() {
+rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyAdapter_get_adapters(RustyError& error) try {
     rust::Vec<Bindings::RustyAdapterWrapper> result;
 
     for (auto& adapter : SimpleBLE::Adapter::get_adapters()) {
@@ -48,11 +66,19 @@ rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyAdapter_get_adapters() {
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-bool Bindings::RustyAdapter_bluetooth_enabled() { return SimpleBLE::Adapter::bluetooth_enabled(); }
+bool Bindings::RustyAdapter_bluetooth_enabled(RustyError& error) try {
+    return SimpleBLE::Adapter::bluetooth_enabled();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::Vec<Bindings::RustyBackendWrapper> Bindings::RustyBackend_get_backends() {
+rust::Vec<Bindings::RustyBackendWrapper> Bindings::RustyBackend_get_backends(RustyError& error) try {
     rust::Vec<Bindings::RustyBackendWrapper> result;
 
     for (auto& backend : SimpleBLE::Backend::get_backends()) {
@@ -62,18 +88,30 @@ rust::Vec<Bindings::RustyBackendWrapper> Bindings::RustyBackend_get_backends() {
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_native() {
+std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_native(RustyError& error) try {
     return std::make_unique<Bindings::RustyBackend>(SimpleBLE::Backend::get_native());
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_dongl() {
+std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_dongl(RustyError& error) try {
     return std::make_unique<Bindings::RustyBackend>(SimpleBLE::Backend::get_dongl());
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_simulator() {
+std::unique_ptr<Bindings::RustyBackend> Bindings::RustyBackend_get_simulator(RustyError& error) try {
     return std::make_unique<Bindings::RustyBackend>(SimpleBLE::Backend::get_simulator());
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 // Config Bindings
@@ -150,9 +188,14 @@ void Bindings::RustyConfig_dongl_set_force_update(bool enabled) { SimpleBLE::Con
 
 rust::String Bindings::RustyBackend::identifier() const { return rust::String(_internal->identifier()); }
 
-bool Bindings::RustyBackend::bluetooth_enabled() const { return _internal->bluetooth_enabled(); }
+bool Bindings::RustyBackend::bluetooth_enabled(RustyError& error) const try {
+    return _internal->bluetooth_enabled();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyBackend::adapters() const {
+rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyBackend::adapters(RustyError& error) const try {
     rust::Vec<Bindings::RustyAdapterWrapper> result;
 
     for (auto& adapter : _internal->adapters()) {
@@ -162,11 +205,14 @@ rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyBackend::adapters() cons
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 // InnerAdapter Bindings
 
-void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target) const {
+void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target, RustyError& error) const try {
     // Time to explain the weird shenanigan we're doing here:
     // The TL;DR is that we're making the InnerAdapter(Rust) and the RustyAdapter(C++)
     // point to each other in a safe way.
@@ -182,16 +228,20 @@ void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target) const {
     // They belong to the adapter, so registering them here would take them from every other handle.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->adapter = &target;  // THIS LINE IS SUPER IMPORTANT
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyAdapter::unlink() const {
+void Bindings::RustyAdapter::unlink(RustyError& error) const try {
     // NOTE: Callbacks stay registered, as they might belong to another handle by now.
     // Clearing the back-pointer stops ours for good, once any running one finishes.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->adapter = nullptr;
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyAdapter::register_scan_callbacks() const {
+void Bindings::RustyAdapter::register_scan_callbacks(RustyError& error) const try {
     auto target = _callback_target;
 
     _internal->set_callback_on_scan_start([target]() {
@@ -225,9 +275,11 @@ void Bindings::RustyAdapter::register_scan_callbacks() const {
         wrapper.internal = std::make_unique<Bindings::RustyPeripheral>(peripheral);
         target->adapter->on_callback_scan_updated(wrapper);
     });
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyAdapter::register_power_callbacks() const {
+void Bindings::RustyAdapter::register_power_callbacks(RustyError& error) const try {
     auto target = _callback_target;
 
     _internal->set_callback_on_power_on([target]() {
@@ -243,29 +295,76 @@ void Bindings::RustyAdapter::register_power_callbacks() const {
 
         target->adapter->on_callback_power_off();
     });
+} catch (...) {
+    report_exception(error);
 }
 
-bool Bindings::RustyAdapter::initialized() const { return _internal->initialized(); }
+bool Bindings::RustyAdapter::initialized(RustyError& error) const try {
+    return _internal->initialized();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::String Bindings::RustyAdapter::identifier() const { return rust::String(_internal->identifier()); }
+rust::String Bindings::RustyAdapter::identifier(RustyError& error) const try {
+    return rust::String(_internal->identifier());
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::String Bindings::RustyAdapter::address() const { return rust::String(_internal->address()); }
+rust::String Bindings::RustyAdapter::address(RustyError& error) const try {
+    return rust::String(_internal->address());
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-void Bindings::RustyAdapter::power_on() const { _internal->power_on(); }
+void Bindings::RustyAdapter::power_on(RustyError& error) const try {
+    _internal->power_on();
+} catch (...) {
+    report_exception(error);
+}
 
-void Bindings::RustyAdapter::power_off() const { _internal->power_off(); }
+void Bindings::RustyAdapter::power_off(RustyError& error) const try {
+    _internal->power_off();
+} catch (...) {
+    report_exception(error);
+}
 
-bool Bindings::RustyAdapter::is_powered() const { return _internal->is_powered(); }
+bool Bindings::RustyAdapter::is_powered(RustyError& error) const try {
+    return _internal->is_powered();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-void Bindings::RustyAdapter::scan_start() const { _internal->scan_start(); }
+void Bindings::RustyAdapter::scan_start(RustyError& error) const try {
+    _internal->scan_start();
+} catch (...) {
+    report_exception(error);
+}
 
-void Bindings::RustyAdapter::scan_stop() const { _internal->scan_stop(); }
+void Bindings::RustyAdapter::scan_stop(RustyError& error) const try {
+    _internal->scan_stop();
+} catch (...) {
+    report_exception(error);
+}
 
-void Bindings::RustyAdapter::scan_for(int32_t timeout_ms) const { _internal->scan_for(timeout_ms); }
+void Bindings::RustyAdapter::scan_for(int32_t timeout_ms, RustyError& error) const try {
+    _internal->scan_for(timeout_ms);
+} catch (...) {
+    report_exception(error);
+}
 
-bool Bindings::RustyAdapter::scan_is_active() const { return _internal->scan_is_active(); }
+bool Bindings::RustyAdapter::scan_is_active(RustyError& error) const try {
+    return _internal->scan_is_active();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::scan_get_results() const {
+rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::scan_get_results(RustyError& error) const try {
     rust::Vec<Bindings::RustyPeripheralWrapper> result;
 
     for (auto& peripheral : _internal->scan_get_results()) {
@@ -275,9 +374,13 @@ rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::scan_get_res
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::get_paired_peripherals() const {
+rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::get_paired_peripherals(
+    RustyError& error) const try {
     rust::Vec<Bindings::RustyPeripheralWrapper> result;
 
     for (auto& peripheral : _internal->get_paired_peripherals()) {
@@ -287,9 +390,13 @@ rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::get_paired_p
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::get_connected_peripherals() const {
+rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::get_connected_peripherals(
+    RustyError& error) const try {
     rust::Vec<Bindings::RustyPeripheralWrapper> result;
 
     for (auto& peripheral : _internal->get_connected_peripherals()) {
@@ -299,15 +406,22 @@ rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::get_connecte
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-std::unique_ptr<Bindings::RustyLocalPeripheral> Bindings::RustyAdapter::create_local_peripheral() const {
+std::unique_ptr<Bindings::RustyLocalPeripheral> Bindings::RustyAdapter::create_local_peripheral(
+    RustyError& error) const try {
     return std::make_unique<Bindings::RustyLocalPeripheral>(_internal->create_local_peripheral());
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 // InnerPeripheral Bindings
 
-void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target) const {
+void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target, RustyError& error) const try {
     // Time to explain the weird shenanigan we're doing here:
     // The TL;DR is that we're making the InnerPeripheral(Rust) and the RustyPeripheral(C++)
     // point to each other in a safe way.
@@ -323,16 +437,20 @@ void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target) const
     // They belong to the peripheral, so registering them here would take them from every other handle.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->peripheral = &target;  // THIS LINE IS SUPER IMPORTANT
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::unlink() const {
+void Bindings::RustyPeripheral::unlink(RustyError& error) const try {
     // NOTE: Callbacks stay registered, as they might belong to another handle by now.
     // Clearing the back-pointer stops ours for good, once any running one finishes.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->peripheral = nullptr;
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::register_connection_callbacks() const {
+void Bindings::RustyPeripheral::register_connection_callbacks(RustyError& error) const try {
     auto target = _callback_target;
 
     _internal->set_callback_on_connected([target]() {
@@ -348,36 +466,100 @@ void Bindings::RustyPeripheral::register_connection_callbacks() const {
 
         target->peripheral->on_callback_disconnected();
     });
+} catch (...) {
+    report_exception(error);
 }
 
-bool Bindings::RustyPeripheral::initialized() const { return _internal->initialized(); }
+bool Bindings::RustyPeripheral::initialized(RustyError& error) const try {
+    return _internal->initialized();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::String Bindings::RustyPeripheral::identifier() const { return rust::String(_internal->identifier()); }
+rust::String Bindings::RustyPeripheral::identifier(RustyError& error) const try {
+    return rust::String(_internal->identifier());
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-rust::String Bindings::RustyPeripheral::address() const { return rust::String(_internal->address()); }
+rust::String Bindings::RustyPeripheral::address(RustyError& error) const try {
+    return rust::String(_internal->address());
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
 
-SimpleBLE::BluetoothAddressType Bindings::RustyPeripheral::address_type() const { return _internal->address_type(); }
+SimpleBLE::BluetoothAddressType Bindings::RustyPeripheral::address_type(RustyError& error) const try {
+    return _internal->address_type();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-int16_t Bindings::RustyPeripheral::rssi() const { return _internal->rssi(); }
+int16_t Bindings::RustyPeripheral::rssi(RustyError& error) const try {
+    return _internal->rssi();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-int16_t Bindings::RustyPeripheral::tx_power() const { return _internal->tx_power(); }
+int16_t Bindings::RustyPeripheral::tx_power(RustyError& error) const try {
+    return _internal->tx_power();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-uint16_t Bindings::RustyPeripheral::mtu() const { return _internal->mtu(); }
+uint16_t Bindings::RustyPeripheral::mtu(RustyError& error) const try {
+    return _internal->mtu();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-void Bindings::RustyPeripheral::connect() const { _internal->connect(); }
+void Bindings::RustyPeripheral::connect(RustyError& error) const try {
+    _internal->connect();
+} catch (...) {
+    report_exception(error);
+}
 
-void Bindings::RustyPeripheral::disconnect() const { _internal->disconnect(); }
+void Bindings::RustyPeripheral::disconnect(RustyError& error) const try {
+    _internal->disconnect();
+} catch (...) {
+    report_exception(error);
+}
 
-bool Bindings::RustyPeripheral::is_connected() const { return _internal->is_connected(); }
+bool Bindings::RustyPeripheral::is_connected(RustyError& error) const try {
+    return _internal->is_connected();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-bool Bindings::RustyPeripheral::is_connectable() const { return _internal->is_connectable(); }
+bool Bindings::RustyPeripheral::is_connectable(RustyError& error) const try {
+    return _internal->is_connectable();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-bool Bindings::RustyPeripheral::is_paired() const { return _internal->is_paired(); }
+bool Bindings::RustyPeripheral::is_paired(RustyError& error) const try {
+    return _internal->is_paired();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-void Bindings::RustyPeripheral::unpair() const { _internal->unpair(); }
+void Bindings::RustyPeripheral::unpair(RustyError& error) const try {
+    _internal->unpair();
+} catch (...) {
+    report_exception(error);
+}
 
-rust::Vec<Bindings::RustyServiceWrapper> Bindings::RustyPeripheral::services() const {
+rust::Vec<Bindings::RustyServiceWrapper> Bindings::RustyPeripheral::services(RustyError& error) const try {
     rust::Vec<Bindings::RustyServiceWrapper> result;
 
     for (auto& service : _internal->services()) {
@@ -387,9 +569,13 @@ rust::Vec<Bindings::RustyServiceWrapper> Bindings::RustyPeripheral::services() c
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-rust::Vec<Bindings::RustyManufacturerDataWrapper> Bindings::RustyPeripheral::manufacturer_data() const {
+rust::Vec<Bindings::RustyManufacturerDataWrapper> Bindings::RustyPeripheral::manufacturer_data(
+    RustyError& error) const try {
     rust::Vec<Bindings::RustyManufacturerDataWrapper> result;
 
     for (auto& manufacturer_data : _internal->manufacturer_data()) {
@@ -404,10 +590,13 @@ rust::Vec<Bindings::RustyManufacturerDataWrapper> Bindings::RustyPeripheral::man
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 rust::Vec<uint8_t> Bindings::RustyPeripheral::read(rust::String const& service,
-                                                   rust::String const& characteristic) const {
+                                                   rust::String const& characteristic, RustyError& error) const try {
     std::string read_result = _internal->read(std::string(service), std::string(characteristic));
 
     rust::Vec<uint8_t> result;
@@ -416,27 +605,35 @@ rust::Vec<uint8_t> Bindings::RustyPeripheral::read(rust::String const& service,
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 void Bindings::RustyPeripheral::write_request(rust::String const& service_rs, rust::String const& characteristic_rs,
-                                              rust::Vec<uint8_t> const& data) const {
+                                              rust::Vec<uint8_t> const& data, RustyError& error) const try {
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
     std::string data_vec((char*)data.data(), data.size());
 
     _internal->write_request(service, characteristic, data_vec);
+} catch (...) {
+    report_exception(error);
 }
 
 void Bindings::RustyPeripheral::write_command(rust::String const& service_rs, rust::String const& characteristic_rs,
-                                              rust::Vec<uint8_t> const& data) const {
+                                              rust::Vec<uint8_t> const& data, RustyError& error) const try {
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
     std::string data_vec((char*)data.data(), data.size());
 
     _internal->write_command(service, characteristic, data_vec);
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::notify(rust::String const& service_rs, rust::String const& characteristic_rs) const {
+void Bindings::RustyPeripheral::notify(rust::String const& service_rs, rust::String const& characteristic_rs,
+                                       RustyError& error) const try {
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
 
@@ -452,9 +649,12 @@ void Bindings::RustyPeripheral::notify(rust::String const& service_rs, rust::Str
 
         target->peripheral->on_callback_characteristic_updated(service_rs, characteristic_rs, data_vec);
     });
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::indicate(rust::String const& service_rs, rust::String const& characteristic_rs) const {
+void Bindings::RustyPeripheral::indicate(rust::String const& service_rs, rust::String const& characteristic_rs,
+                                         RustyError& error) const try {
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
 
@@ -470,19 +670,24 @@ void Bindings::RustyPeripheral::indicate(rust::String const& service_rs, rust::S
 
         target->peripheral->on_callback_characteristic_updated(service_rs, characteristic_rs, data_vec);
     });
+} catch (...) {
+    report_exception(error);
 }
 
 void Bindings::RustyPeripheral::unsubscribe(rust::String const& service_rs,
-                                            rust::String const& characteristic_rs) const {
+                                            rust::String const& characteristic_rs, RustyError& error) const try {
     std::string service(service_rs);
     std::string characteristic(characteristic_rs);
 
     _internal->unsubscribe(service, characteristic);
+} catch (...) {
+    report_exception(error);
 }
 
 rust::Vec<uint8_t> Bindings::RustyPeripheral::read_descriptor(rust::String const& service,
                                                               rust::String const& characteristic,
-                                                              rust::String const& descriptor) const {
+                                                              rust::String const& descriptor,
+                                                              RustyError& error) const try {
     std::string read_result = _internal->read(std::string(service), std::string(characteristic),
                                               std::string(descriptor));
 
@@ -492,18 +697,24 @@ rust::Vec<uint8_t> Bindings::RustyPeripheral::read_descriptor(rust::String const
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 void Bindings::RustyPeripheral::write_descriptor(rust::String const& service, rust::String const& characteristic,
-                                                 rust::String const& descriptor, rust::Vec<uint8_t> const& data) const {
+                                                 rust::String const& descriptor, rust::Vec<uint8_t> const& data,
+                                                 RustyError& error) const try {
     _internal->write(std::string(service), std::string(characteristic), std::string(descriptor),
                      std::string((char*)data.data(), data.size()));
+} catch (...) {
+    report_exception(error);
 }
 
 // NOTE: The pairing callbacks run on a Dongl worker thread, possibly while connect() is still
 // in progress. They hold the target lock while waiting for the user, so unlink() waits for them.
 
-void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(bool enabled) const {
+void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(bool enabled, RustyError& error) const try {
     if (!enabled) {
         SimpleBLE::Advanced::Dongl::set_passkey_request_callback(*_internal, nullptr);
         return;
@@ -519,9 +730,11 @@ void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(bool enabled)
 
         return std::string(passkey);
     });
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(bool enabled) const {
+void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(bool enabled, RustyError& error) const try {
     if (!enabled) {
         SimpleBLE::Advanced::Dongl::set_passkey_display_callback(*_internal, nullptr);
         return;
@@ -535,9 +748,11 @@ void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(bool enabled)
         target->peripheral->on_callback_passkey_display(
             rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(passkey.data()), passkey.size()));
     });
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(bool enabled) const {
+void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(bool enabled, RustyError& error) const try {
     if (!enabled) {
         SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(*_internal, nullptr);
         return;
@@ -551,6 +766,8 @@ void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(bool enabl
         return target->peripheral->on_callback_numeric_comparison(
             rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(passkey.data()), passkey.size()));
     });
+} catch (...) {
+    report_exception(error);
 }
 
 // Service Bindings
@@ -602,7 +819,8 @@ rust::Vec<rust::String> Bindings::RustyCharacteristic::capabilities() const {
 
 // LocalPeripheral Bindings
 
-void Bindings::RustyLocalPeripheral::link(SimpleRsBLE::InnerLocalPeripheral const& target) const {
+void Bindings::RustyLocalPeripheral::link(SimpleRsBLE::InnerLocalPeripheral const& target,
+                                          RustyError& error) const try {
     // Same approach as RustyAdapter::link(): the pinned InnerLocalPeripheral(Rust) owns this object,
     // and unlink() clears all native callbacks before releasing the back-pointer.
     _peripheral = &target;
@@ -620,49 +838,91 @@ void Bindings::RustyLocalPeripheral::link(SimpleRsBLE::InnerLocalPeripheral cons
         this->_peripheral->on_callback_client_disconnected(
             rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(address.data()), address.size()));
     });
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyLocalPeripheral::unlink() const {
+void Bindings::RustyLocalPeripheral::unlink(RustyError& error) const try {
     // Clear all callbacks
     _internal->set_callback_on_client_connected(nullptr);
     _internal->set_callback_on_client_disconnected(nullptr);
 
     _peripheral = nullptr;
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyLocalPeripheral::add_advertised_service(rust::Str uuid) const {
+void Bindings::RustyLocalPeripheral::add_advertised_service(rust::Str uuid, RustyError& error) const try {
     _internal->add_advertised_service(std::string(uuid));
+} catch (...) {
+    report_exception(error);
 }
 
 void Bindings::RustyLocalPeripheral::set_advertised_manufacturer_data(uint16_t company_id,
-                                                                      rust::Slice<const uint8_t> data) const {
+                                                                      rust::Slice<const uint8_t> data,
+                                                                      RustyError& error) const try {
     _internal->set_advertised_manufacturer_data(company_id, SimpleBLE::ByteArray(data.data(), data.size()));
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyLocalPeripheral::set_connectable(bool connectable) const {
+void Bindings::RustyLocalPeripheral::set_connectable(bool connectable, RustyError& error) const try {
     _internal->set_connectable(connectable);
+} catch (...) {
+    report_exception(error);
 }
 
-std::unique_ptr<Bindings::RustyLocalService> Bindings::RustyLocalPeripheral::add_service(rust::Str uuid) const {
+std::unique_ptr<Bindings::RustyLocalService> Bindings::RustyLocalPeripheral::add_service(rust::Str uuid,
+                                                                                         RustyError& error) const try {
     return std::make_unique<Bindings::RustyLocalService>(_internal->add_service(std::string(uuid)));
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-void Bindings::RustyLocalPeripheral::remove_all_services() const { _internal->remove_all_services(); }
+void Bindings::RustyLocalPeripheral::remove_all_services(RustyError& error) const try {
+    _internal->remove_all_services();
+} catch (...) {
+    report_exception(error);
+}
 
-void Bindings::RustyLocalPeripheral::start() const { _internal->start(); }
+void Bindings::RustyLocalPeripheral::start(RustyError& error) const try {
+    _internal->start();
+} catch (...) {
+    report_exception(error);
+}
 
-void Bindings::RustyLocalPeripheral::stop() const { _internal->stop(); }
+void Bindings::RustyLocalPeripheral::stop(RustyError& error) const try {
+    _internal->stop();
+} catch (...) {
+    report_exception(error);
+}
 
-bool Bindings::RustyLocalPeripheral::is_started() const { return _internal->is_started(); }
+bool Bindings::RustyLocalPeripheral::is_started(RustyError& error) const try {
+    return _internal->is_started();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-bool Bindings::RustyLocalPeripheral::is_advertising() const { return _internal->is_advertising(); }
+bool Bindings::RustyLocalPeripheral::is_advertising(RustyError& error) const try {
+    return _internal->is_advertising();
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
 // LocalService Bindings
 
-rust::String Bindings::RustyLocalService::uuid() const { return rust::String(_internal->uuid()); }
+rust::String Bindings::RustyLocalService::uuid(RustyError& error) const try {
+    return rust::String(_internal->uuid());
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
 std::unique_ptr<Bindings::RustyLocalCharacteristic> Bindings::RustyLocalService::add_characteristic(
-    rust::Str uuid, uint8_t capabilities) const {
+    rust::Str uuid, uint8_t capabilities, RustyError& error) const try {
     std::set<LocalCapability> capability_set;
     for (auto& [bit, capability] : CAPABILITIES) {
         if (capabilities & static_cast<uint8_t>(bit)) {
@@ -672,11 +932,15 @@ std::unique_ptr<Bindings::RustyLocalCharacteristic> Bindings::RustyLocalService:
 
     return std::make_unique<Bindings::RustyLocalCharacteristic>(
         _internal->add_characteristic(std::string(uuid), capability_set));
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 // LocalCharacteristic Bindings
 
-void Bindings::RustyLocalCharacteristic::link(SimpleRsBLE::InnerLocalCharacteristic const& target) const {
+void Bindings::RustyLocalCharacteristic::link(SimpleRsBLE::InnerLocalCharacteristic const& target,
+                                              RustyError& error) const try {
     // Same approach as RustyAdapter::link(): the pinned InnerLocalCharacteristic(Rust) owns this object,
     // and unlink() clears all native callbacks before releasing the back-pointer.
     // NOTE: The read callback is only registered when needed, as having one changes how reads are answered.
@@ -699,9 +963,11 @@ void Bindings::RustyLocalCharacteristic::link(SimpleRsBLE::InnerLocalCharacteris
 
         this->_characteristic->on_callback_unsubscribed();
     });
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyLocalCharacteristic::unlink() const {
+void Bindings::RustyLocalCharacteristic::unlink(RustyError& error) const try {
     // Clear all callbacks
     _internal->set_callback_on_read(nullptr);
     _internal->set_callback_on_write(nullptr);
@@ -709,11 +975,18 @@ void Bindings::RustyLocalCharacteristic::unlink() const {
     _internal->set_callback_on_unsubscribed(nullptr);
 
     _characteristic = nullptr;
+} catch (...) {
+    report_exception(error);
 }
 
-rust::String Bindings::RustyLocalCharacteristic::uuid() const { return rust::String(_internal->uuid()); }
+rust::String Bindings::RustyLocalCharacteristic::uuid(RustyError& error) const try {
+    return rust::String(_internal->uuid());
+} catch (...) {
+    report_exception(error);
+    return {};
+}
 
-uint8_t Bindings::RustyLocalCharacteristic::capabilities() const {
+uint8_t Bindings::RustyLocalCharacteristic::capabilities(RustyError& error) const try {
     auto capability_set = _internal->capabilities();
 
     uint8_t result = 0;
@@ -724,22 +997,30 @@ uint8_t Bindings::RustyLocalCharacteristic::capabilities() const {
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-rust::Vec<uint8_t> Bindings::RustyLocalCharacteristic::value() const {
+rust::Vec<uint8_t> Bindings::RustyLocalCharacteristic::value(RustyError& error) const try {
     rust::Vec<uint8_t> result;
     for (auto& byte : _internal->value()) {
         result.push_back(byte);
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
-void Bindings::RustyLocalCharacteristic::set_value(rust::Slice<const uint8_t> value) const {
+void Bindings::RustyLocalCharacteristic::set_value(rust::Slice<const uint8_t> value, RustyError& error) const try {
     _internal->set_value(SimpleBLE::ByteArray(value.data(), value.size()));
+} catch (...) {
+    report_exception(error);
 }
 
-void Bindings::RustyLocalCharacteristic::set_read_callback_enabled(bool enabled) const {
+void Bindings::RustyLocalCharacteristic::set_read_callback_enabled(bool enabled, RustyError& error) const try {
     if (!enabled) {
         _internal->set_callback_on_read(nullptr);
         return;
@@ -751,6 +1032,8 @@ void Bindings::RustyLocalCharacteristic::set_read_callback_enabled(bool enabled)
         rust::Vec<uint8_t> value = this->_characteristic->on_callback_read();
         return SimpleBLE::ByteArray(value.data(), value.size());
     });
+} catch (...) {
+    report_exception(error);
 }
 
 // Advanced Bindings
@@ -761,13 +1044,16 @@ void Bindings::RustyLocalCharacteristic::set_read_callback_enabled(bool enabled)
 #if SIMPLEBLE_BACKEND_MACOS
 
 void Bindings::RustyLocalPeripheral::macos_set_advertisement_local_name(bool has_local_name,
-                                                                        rust::Str local_name) const {
+                                                                        rust::Str local_name,
+                                                                        RustyError& error) const try {
     auto name = has_local_name ? std::make_optional<std::string>(local_name) : std::nullopt;
     SimpleBLE::Advanced::MacOS::set_advertisement_local_name(*_internal, std::move(name));
+} catch (...) {
+    report_exception(error);
 }
 
 rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::macos_retrieve_cached_peripherals(
-    rust::Vec<rust::String> const& identifiers) const {
+    rust::Vec<rust::String> const& identifiers, RustyError& error) const try {
     std::vector<SimpleBLE::BluetoothAddress> addresses;
     for (auto& identifier : identifiers) {
         addresses.emplace_back(identifier);
@@ -782,17 +1068,25 @@ rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::macos_retrie
     }
 
     return result;
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 #else
 
-void Bindings::RustyLocalPeripheral::macos_set_advertisement_local_name(bool, rust::Str) const {
+void Bindings::RustyLocalPeripheral::macos_set_advertisement_local_name(bool, rust::Str, RustyError& error) const try {
     throw SimpleBLE::Exception::OperationNotSupported();
+} catch (...) {
+    report_exception(error);
 }
 
 rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::macos_retrieve_cached_peripherals(
-    rust::Vec<rust::String> const&) const {
+    rust::Vec<rust::String> const&, RustyError& error) const try {
     throw SimpleBLE::Exception::OperationNotSupported();
+} catch (...) {
+    report_exception(error);
+    return {};
 }
 
 #endif
@@ -800,15 +1094,20 @@ rust::Vec<Bindings::RustyPeripheralWrapper> Bindings::RustyAdapter::macos_retrie
 #if SIMPLEBLE_BACKEND_LINUX
 
 void Bindings::RustyLocalPeripheral::linux_set_advertisement_local_name(bool has_local_name,
-                                                                        rust::Str local_name) const {
+                                                                        rust::Str local_name,
+                                                                        RustyError& error) const try {
     auto name = has_local_name ? std::make_optional<std::string>(local_name) : std::nullopt;
     SimpleBLE::Advanced::Linux::set_advertisement_local_name(*_internal, std::move(name));
+} catch (...) {
+    report_exception(error);
 }
 
 #else
 
-void Bindings::RustyLocalPeripheral::linux_set_advertisement_local_name(bool, rust::Str) const {
+void Bindings::RustyLocalPeripheral::linux_set_advertisement_local_name(bool, rust::Str, RustyError& error) const try {
     throw SimpleBLE::Exception::OperationNotSupported();
+} catch (...) {
+    report_exception(error);
 }
 
 #endif

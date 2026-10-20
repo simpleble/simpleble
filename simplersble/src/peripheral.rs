@@ -10,7 +10,7 @@ use super::ffi;
 use crate::events::EventSender;
 use crate::service::Service;
 use crate::service::InnerService;
-use crate::types::{BluetoothAddressType, Error};
+use crate::types::{call, BluetoothAddressType, Error};
 
 #[derive(Clone)]
 pub enum ConnectionEvent {
@@ -45,14 +45,14 @@ pub struct InnerPeripheral {
 fn replace_pairing_callback<T>(
     slot: &Mutex<Option<T>>,
     callback: Option<T>,
-    register: impl FnOnce(bool) -> Result<(), cxx::Exception>,
+    register: impl FnOnce(bool) -> Result<(), Error>,
 ) -> Result<(), Error> {
     let enabled = callback.is_some();
     let previous = mem::replace(&mut *slot.lock().unwrap(), callback);
 
     if let Err(e) = register(enabled) {
         *slot.lock().unwrap() = previous;
-        return Err(Error::from_cxx_exception(e));
+        return Err(e);
     }
 
     Ok(())
@@ -74,31 +74,26 @@ impl InnerPeripheral {
         };
 
         let mut this_boxed = Box::pin(this);
-        wrapper.internal.link(this_boxed.as_mut()).unwrap();
+        call(|error| wrapper.internal.link(this_boxed.as_mut(), error)).unwrap();
         mem::swap(&mut this_boxed.internal, &mut wrapper.internal);
 
         return this_boxed;
     }
 
     pub fn identifier(&self) -> Result<String, Error> {
-        self.internal
-            .identifier()
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.identifier(error))
     }
 
     pub fn initialized(&self) -> Result<bool, Error> {
-        self.internal.initialized().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.initialized(error))
     }
 
     pub fn address(&self) -> Result<String, Error> {
-        self.internal.address().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.address(error))
     }
 
     pub fn address_type(&self) -> Result<BluetoothAddressType, Error> {
-        let address_type = self
-            .internal
-            .address_type()
-            .map_err(Error::from_cxx_exception)?;
+        let address_type = call(|error| self.internal.address_type(error))?;
 
         return match address_type {
             ffi::BluetoothAddressType::PUBLIC => Ok(BluetoothAddressType::Public),
@@ -109,52 +104,43 @@ impl InnerPeripheral {
     }
 
     pub fn rssi(&self) -> Result<i16, Error> {
-        self.internal.rssi().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.rssi(error))
     }
 
     pub fn tx_power(&self) -> Result<i16, Error> {
-        self.internal.tx_power().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.tx_power(error))
     }
 
     pub fn mtu(&self) -> Result<u16, Error> {
-        self.internal.mtu().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.mtu(error))
     }
 
     pub fn connect(&self) -> Result<(), Error> {
-        self.internal.connect().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.connect(error))
     }
 
     pub fn disconnect(&self) -> Result<(), Error> {
-        self.internal
-            .disconnect()
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.disconnect(error))
     }
 
     pub fn is_connected(&self) -> Result<bool, Error> {
-        self.internal
-            .is_connected()
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.is_connected(error))
     }
 
     pub fn is_connectable(&self) -> Result<bool, Error> {
-        self.internal
-            .is_connectable()
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.is_connectable(error))
     }
 
     pub fn is_paired(&self) -> Result<bool, Error> {
-        self.internal.is_paired().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.is_paired(error))
     }
 
     pub fn unpair(&self) -> Result<(), Error> {
-        self.internal.unpair().map_err(Error::from_cxx_exception)
+        call(|error| self.internal.unpair(error))
     }
 
     pub fn services(&self) -> Result<Vec<Service>, Error> {
-        let mut raw_services = self
-            .internal
-            .services()
-            .map_err(Error::from_cxx_exception)?;
+        let mut raw_services = call(|error| self.internal.services(error))?;
 
         let mut services = Vec::<Service>::new();
         for service_wrapper in raw_services.iter_mut() {
@@ -165,10 +151,7 @@ impl InnerPeripheral {
     }
 
     pub fn manufacturer_data(&self) -> Result<HashMap<u16, Vec<u8>>, Error> {
-        let raw_manufacturer_data = self
-            .internal
-            .manufacturer_data()
-            .map_err(Error::from_cxx_exception)?;
+        let raw_manufacturer_data = call(|error| self.internal.manufacturer_data(error))?;
 
         let mut manufacturer_data = HashMap::<u16, Vec<u8>>::new();
         for raw_manuf_data in raw_manufacturer_data.iter() {
@@ -179,9 +162,7 @@ impl InnerPeripheral {
     }
 
     pub fn read(&self, service: &String, characteristic: &String) -> Result<Vec<u8>, Error> {
-        self.internal
-            .read(service, characteristic)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.read(service, characteristic, error))
     }
 
     pub fn write_request(
@@ -190,9 +171,7 @@ impl InnerPeripheral {
         characteristic: &String,
         data: &Vec<u8>,
     ) -> Result<(), Error> {
-        self.internal
-            .write_request(service, characteristic, data)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.write_request(service, characteristic, data, error))
     }
 
     pub fn write_command(
@@ -201,9 +180,7 @@ impl InnerPeripheral {
         characteristic: &String,
         data: &Vec<u8>,
     ) -> Result<(), Error> {
-        self.internal
-            .write_command(service, characteristic, data)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.write_command(service, characteristic, data, error))
     }
 
     pub fn notify(
@@ -214,9 +191,7 @@ impl InnerPeripheral {
         // NOTE: The stream subscribes first, so that it gets the values that arrive while notify() runs.
         let updates = self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic));
 
-        self.internal
-            .notify(service, characteristic)
-            .map_err(Error::from_cxx_exception)?;
+        call(|error| self.internal.notify(service, characteristic, error))?;
 
         Ok(updates)
     }
@@ -229,9 +204,7 @@ impl InnerPeripheral {
         // NOTE: The stream subscribes first, so that it gets the values that arrive while indicate() runs.
         let updates = self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic));
 
-        self.internal
-            .indicate(service, characteristic)
-            .map_err(Error::from_cxx_exception)?;
+        call(|error| self.internal.indicate(service, characteristic, error))?;
 
         Ok(updates)
     }
@@ -258,9 +231,7 @@ impl InnerPeripheral {
         let key = format!("{}{}", service, characteristic);
         self.on_characteristic_update_map.lock().unwrap().remove(&key);
 
-        self.internal
-            .unsubscribe(service, characteristic)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.unsubscribe(service, characteristic, error))
     }
 
     pub fn descriptor_read(
@@ -269,9 +240,7 @@ impl InnerPeripheral {
         characteristic: &String,
         descriptor: &String,
     ) -> Result<Vec<u8>, Error> {
-        self.internal
-            .read_descriptor(service, characteristic, descriptor)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.read_descriptor(service, characteristic, descriptor, error))
     }
 
     pub fn descriptor_write(
@@ -281,20 +250,18 @@ impl InnerPeripheral {
         descriptor: &String,
         data: &Vec<u8>,
     ) -> Result<(), Error> {
-        self.internal
-            .write_descriptor(service, characteristic, descriptor, data)
-            .map_err(Error::from_cxx_exception)
+        call(|error| self.internal.write_descriptor(service, characteristic, descriptor, data, error))
     }
 
     pub(crate) fn set_passkey_request_callback(&self, callback: Option<PasskeyRequestCallback>) -> Result<(), Error> {
         replace_pairing_callback(&self.passkey_request_callback, callback, |enabled| {
-            self.internal.dongl_set_passkey_request_callback(enabled)
+            call(|error| self.internal.dongl_set_passkey_request_callback(enabled, error))
         })
     }
 
     pub(crate) fn set_passkey_display_callback(&self, callback: Option<PasskeyDisplayCallback>) -> Result<(), Error> {
         replace_pairing_callback(&self.passkey_display_callback, callback, |enabled| {
-            self.internal.dongl_set_passkey_display_callback(enabled)
+            call(|error| self.internal.dongl_set_passkey_display_callback(enabled, error))
         })
     }
 
@@ -303,7 +270,7 @@ impl InnerPeripheral {
         callback: Option<NumericComparisonCallback>,
     ) -> Result<(), Error> {
         replace_pairing_callback(&self.numeric_comparison_callback, callback, |enabled| {
-            self.internal.dongl_set_numeric_comparison_callback(enabled)
+            call(|error| self.internal.dongl_set_numeric_comparison_callback(enabled, error))
         })
     }
 
@@ -366,7 +333,7 @@ impl InnerPeripheral {
 
 impl Drop for InnerPeripheral {
     fn drop(&mut self) {
-        self.internal.unlink().unwrap();
+        call(|error| self.internal.unlink(error)).unwrap();
     }
 }
 
@@ -502,7 +469,7 @@ impl Peripheral {
 
     pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
         let events = self.inner.on_connection_event.subscribe();
-        self.inner.internal.register_connection_callbacks().unwrap();
+        call(|error| self.inner.internal.register_connection_callbacks(error)).unwrap();
         events
     }
 }
