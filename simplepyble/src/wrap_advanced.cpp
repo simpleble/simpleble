@@ -1,4 +1,3 @@
-#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -6,6 +5,8 @@
 #include <string>
 
 #include "simpleble/Advanced.h"
+
+#include "python_callback.hpp"
 
 namespace py = pybind11;
 
@@ -32,42 +33,51 @@ void wrap_advanced(py::module& m) {
     auto dongl = advanced.def_submodule("dongl", "SimpleBLE Dongl pairing APIs");
     dongl.def(
         "set_passkey_request_callback",
-        [](SimpleBLE::Peripheral& peripheral, std::function<py::object()> callback) {
-            if (!callback) {
+        [](SimpleBLE::Peripheral& peripheral, std::optional<py::function> cb) {
+            if (!cb) {
                 SimpleBLE::Advanced::Dongl::set_passkey_request_callback(peripheral, nullptr);
                 return;
             }
+            simplepyble::PythonCallback callback(std::move(*cb));
             SimpleBLE::Advanced::Dongl::set_passkey_request_callback(
-                peripheral, [callback]() -> std::optional<std::string> {
-                    py::gil_scoped_acquire gil;
-                    py::object passkey = callback();
-                    if (passkey.is_none()) return std::nullopt;
-                    if (!py::isinstance<py::str>(passkey)) {
-                        throw py::type_error(std::string("passkey must be a str or None, not ") +
-                                             Py_TYPE(passkey.ptr())->tp_name);
-                    }
-                    return passkey.cast<std::string>();
+                peripheral, [callback]() {
+                    return callback.call([](const py::function& callable) -> std::optional<std::string> {
+                        py::object passkey = callable();
+                        if (passkey.is_none()) return std::nullopt;
+                        if (!py::isinstance<py::str>(passkey)) {
+                            throw py::type_error(std::string("passkey must be a str or None, not ") +
+                                                 Py_TYPE(passkey.ptr())->tp_name);
+                        }
+                        return passkey.cast<std::string>();
+                    });
                 });
         },
         py::call_guard<py::gil_scoped_release>(), kDocsDonglSetPasskeyRequestCallback);
-    dongl.def("set_passkey_display_callback", &SimpleBLE::Advanced::Dongl::set_passkey_display_callback,
-              py::call_guard<py::gil_scoped_release>(), kDocsDonglSetPasskeyDisplayCallback);
+    dongl.def(
+        "set_passkey_display_callback",
+        [](SimpleBLE::Peripheral& peripheral, std::optional<py::function> cb) {
+            SimpleBLE::Advanced::Dongl::set_passkey_display_callback(
+                peripheral, simplepyble::native_callback<void(const std::string&)>(std::move(cb)));
+        },
+        py::call_guard<py::gil_scoped_release>(), kDocsDonglSetPasskeyDisplayCallback);
     dongl.def(
         "set_numeric_comparison_callback",
-        [](SimpleBLE::Peripheral& peripheral, std::function<py::object(std::string)> callback) {
-            if (!callback) {
+        [](SimpleBLE::Peripheral& peripheral, std::optional<py::function> cb) {
+            if (!cb) {
                 SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, nullptr);
                 return;
             }
+            simplepyble::PythonCallback callback(std::move(*cb));
             SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(
                 peripheral, [callback](const std::string& passkey) {
-                    py::gil_scoped_acquire gil;
-                    py::object accept = callback(passkey);
-                    if (!PyBool_Check(accept.ptr())) {
-                        throw py::type_error(std::string("numeric comparison result must be a bool, not ") +
-                                             Py_TYPE(accept.ptr())->tp_name);
-                    }
-                    return accept.ptr() == Py_True;
+                    return callback.call([&](const py::function& callable) {
+                        py::object accept = callable(passkey);
+                        if (!PyBool_Check(accept.ptr())) {
+                            throw py::type_error(std::string("numeric comparison result must be a bool, not ") +
+                                                 Py_TYPE(accept.ptr())->tp_name);
+                        }
+                        return accept.ptr() == Py_True;
+                    });
                 });
         },
         py::call_guard<py::gil_scoped_release>(), kDocsDonglSetNumericComparisonCallback);

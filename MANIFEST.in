@@ -385,6 +385,7 @@ include simplepyble/CMakeLists.txt
 include simplepyble/README.md
 include simplepyble/requirements.txt
 include simplepyble/src/main.cpp
+include simplepyble/src/python_callback.hpp
 include simplepyble/src/simplepyble/__init__.py
 include simplepyble/src/simplepyble/__init__.pyi
 include simplepyble/src/simplepyble/aio.py

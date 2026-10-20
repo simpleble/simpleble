@@ -4,6 +4,8 @@
 
 #include "simpleble/SimpleBLE.h"
 
+#include "python_callback.hpp"
+
 /**
  * Useful links for documentation while I figure this one out.
  * https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
@@ -27,6 +29,8 @@ void wrap_logging(py::module& m);
 
 PYBIND11_MODULE(_simplepyble, m) {
     m.attr("__version__") = SIMPLEPYBLE_VERSION;
+
+    simplepyble::PythonCallback::register_exit_hook();
 
     // m.doc() = R"pbdoc(
     //     ====================

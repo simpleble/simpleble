@@ -1,8 +1,9 @@
-#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 #include "simpleble/Peripheral.h"
+
+#include "python_callback.hpp"
 
 namespace py = pybind11;
 
@@ -115,31 +116,34 @@ constexpr auto kDocsPeripheralSetCallbackOnDisconnected = R"pbdoc(
 void wrap_peripheral(py::module& m) {
     // TODO: Add __str__ and __repr__ methods
     py::class_<SimpleBLE::Peripheral>(m, "Peripheral", kDocsPeripheral)
-        .def("initialized", &SimpleBLE::Peripheral::initialized, kDocsPeripheralInitialized)
-        .def("identifier", &SimpleBLE::Peripheral::identifier, kDocsPeripheralIdentifier)
-        .def("address", &SimpleBLE::Peripheral::address, kDocsPeripheralAddress)
-        .def("address_type", &SimpleBLE::Peripheral::address_type, kDocsPeripheralAddressType)
-        .def("rssi", &SimpleBLE::Peripheral::rssi, kDocsPeripheralRSSI)
-        .def("tx_power", &SimpleBLE::Peripheral::tx_power, kDocsPeripheralTxPower)
-        .def("mtu", &SimpleBLE::Peripheral::mtu, kDocsPeripheralMtu)
+        .def("initialized", &SimpleBLE::Peripheral::initialized, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralInitialized)
+        .def("identifier", &SimpleBLE::Peripheral::identifier, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralIdentifier)
+        .def("address", &SimpleBLE::Peripheral::address, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralAddress)
+        .def("address_type", &SimpleBLE::Peripheral::address_type, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralAddressType)
+        .def("rssi", &SimpleBLE::Peripheral::rssi, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralRSSI)
+        .def("tx_power", &SimpleBLE::Peripheral::tx_power, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralTxPower)
+        .def("mtu", &SimpleBLE::Peripheral::mtu, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralMtu)
         .def("connect", &SimpleBLE::Peripheral::connect, py::call_guard<py::gil_scoped_release>(),
              kDocsPeripheralConnect)
         .def("disconnect", &SimpleBLE::Peripheral::disconnect, py::call_guard<py::gil_scoped_release>(),
              kDocsPeripheralDisconnect)
-        .def("is_connected", &SimpleBLE::Peripheral::is_connected, kDocsPeripheralIsConnected)
-        .def("is_connectable", &SimpleBLE::Peripheral::is_connectable, kDocsPeripheralIsConnectable)
-        .def("is_paired", &SimpleBLE::Peripheral::is_paired, kDocsPeripheralIsPaired)
-        .def("unpair", &SimpleBLE::Peripheral::unpair, kDocsPeripheralUnpair)
-        .def("services", &SimpleBLE::Peripheral::services, kDocsPeripheralServices)
+        .def("is_connected", &SimpleBLE::Peripheral::is_connected, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralIsConnected)
+        .def("is_connectable", &SimpleBLE::Peripheral::is_connectable, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralIsConnectable)
+        .def("is_paired", &SimpleBLE::Peripheral::is_paired, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralIsPaired)
+        .def("unpair", &SimpleBLE::Peripheral::unpair, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralUnpair)
+        .def("services", &SimpleBLE::Peripheral::services, py::call_guard<py::gil_scoped_release>(), kDocsPeripheralServices)
         .def(
             "manufacturer_data",
             [](SimpleBLE::Peripheral& p) {
+                std::map<uint16_t, SimpleBLE::ByteArray> data = p.manufacturer_data();
+                py::gil_scoped_acquire gil;
                 std::map<uint16_t, py::bytes> ret;
-                for (auto& kv : p.manufacturer_data()) {
+                for (auto& kv : data) {
                     ret[kv.first] = py::bytes(kv.second);
                 }
                 return ret;
             },
+            py::call_guard<py::gil_scoped_release>(),
             kDocsPeripheralManufacturerData)
         .def(
             "read",
@@ -170,20 +174,20 @@ void wrap_peripheral(py::module& m) {
             kDocsPeripheralWriteCommand)
         .def(
             "notify",
-            [](SimpleBLE::Peripheral& p, std::string service, std::string characteristic, std::function<void(py::bytes payload)> cb) {
-                p.notify(service, characteristic, [cb](SimpleBLE::ByteArray payload) {
-                    py::gil_scoped_acquire gil;
-                    cb(py::bytes(payload));
+            [](SimpleBLE::Peripheral& p, std::string service, std::string characteristic, py::function cb) {
+                simplepyble::PythonCallback callback(std::move(cb));
+                p.notify(service, characteristic, [callback](SimpleBLE::ByteArray payload) {
+                    callback.deliver([&](const py::function& callable) { callable(py::bytes(payload)); });
                 });
             },
             py::call_guard<py::gil_scoped_release>(),
             kDocsPeripheralNotify)
         .def(
             "indicate",
-            [](SimpleBLE::Peripheral& p, std::string service, std::string characteristic, std::function<void(py::bytes payload)> cb) {
-                p.indicate(service, characteristic, [cb](SimpleBLE::ByteArray payload) {
-                    py::gil_scoped_acquire gil;
-                    cb(py::bytes(payload));
+            [](SimpleBLE::Peripheral& p, std::string service, std::string characteristic, py::function cb) {
+                simplepyble::PythonCallback callback(std::move(cb));
+                p.indicate(service, characteristic, [callback](SimpleBLE::ByteArray payload) {
+                    callback.deliver([&](const py::function& callable) { callable(py::bytes(payload)); });
                 });
             },
             py::call_guard<py::gil_scoped_release>(),
@@ -209,10 +213,10 @@ void wrap_peripheral(py::module& m) {
             },
             kDocsPeripheralDescriptorWrite)
 
-        .def("set_callback_on_connected", &SimpleBLE::Peripheral::set_callback_on_connected,
-             py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsPeripheralSetCallbackOnConnected)
-        .def("set_callback_on_disconnected", &SimpleBLE::Peripheral::set_callback_on_disconnected,
-             py::call_guard<py::gil_scoped_release>(), py::keep_alive<1, 2>(), kDocsPeripheralSetCallbackOnDisconnected);
+        .def("set_callback_on_connected", simplepyble::callback_setter(&SimpleBLE::Peripheral::set_callback_on_connected),
+             py::call_guard<py::gil_scoped_release>(), kDocsPeripheralSetCallbackOnConnected)
+        .def("set_callback_on_disconnected", simplepyble::callback_setter(&SimpleBLE::Peripheral::set_callback_on_disconnected),
+             py::call_guard<py::gil_scoped_release>(), kDocsPeripheralSetCallbackOnDisconnected);
 }
 
 // clang-format on

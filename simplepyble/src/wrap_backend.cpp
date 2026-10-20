@@ -43,12 +43,12 @@ constexpr auto kDocsBackendIdentifier = R"pbdoc(
 
 void wrap_backend(py::module& m) {
     py::class_<SimpleBLE::Backend>(m, "Backend", kDocsBackend)
-        .def_static("get_backends", &SimpleBLE::Backend::get_backends, kDocsBackendGetBackends)
-        .def_static("get_native", &SimpleBLE::Backend::get_native, kDocsBackendGetNative)
-        .def_static("get_dongl", &SimpleBLE::Backend::get_dongl, kDocsBackendGetDongl)
-        .def_static("get_simulator", &SimpleBLE::Backend::get_simulator, kDocsBackendGetSimulator)
-        .def("initialized", &SimpleBLE::Backend::initialized, kDocsBackendInitialized)
-        .def("adapters", &SimpleBLE::Backend::adapters, kDocsBackendAdapters)
-        .def("bluetooth_enabled", &SimpleBLE::Backend::bluetooth_enabled, kDocsBackendBluetoothEnabled)
-        .def("identifier", &SimpleBLE::Backend::identifier, kDocsBackendIdentifier);
+        .def_static("get_backends", &SimpleBLE::Backend::get_backends, py::call_guard<py::gil_scoped_release>(), kDocsBackendGetBackends)
+        .def_static("get_native", &SimpleBLE::Backend::get_native, py::call_guard<py::gil_scoped_release>(), kDocsBackendGetNative)
+        .def_static("get_dongl", &SimpleBLE::Backend::get_dongl, py::call_guard<py::gil_scoped_release>(), kDocsBackendGetDongl)
+        .def_static("get_simulator", &SimpleBLE::Backend::get_simulator, py::call_guard<py::gil_scoped_release>(), kDocsBackendGetSimulator)
+        .def("initialized", &SimpleBLE::Backend::initialized, py::call_guard<py::gil_scoped_release>(), kDocsBackendInitialized)
+        .def("adapters", &SimpleBLE::Backend::adapters, py::call_guard<py::gil_scoped_release>(), kDocsBackendAdapters)
+        .def("bluetooth_enabled", &SimpleBLE::Backend::bluetooth_enabled, py::call_guard<py::gil_scoped_release>(), kDocsBackendBluetoothEnabled)
+        .def("identifier", &SimpleBLE::Backend::identifier, py::call_guard<py::gil_scoped_release>(), kDocsBackendIdentifier);
 }

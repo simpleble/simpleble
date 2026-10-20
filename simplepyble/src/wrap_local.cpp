@@ -1,13 +1,15 @@
-#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "simpleble/local/Peripheral.h"
+
+#include "python_callback.hpp"
 
 namespace py = pybind11;
 
@@ -209,35 +211,35 @@ void wrap_local(py::module& m) {
             kDocsLocalCharacteristicSetValue)
         .def(
             "set_callback_on_read",
-            [](SimpleBLE::Local::Characteristic& c, std::function<py::object()> cb) {
+            [](SimpleBLE::Local::Characteristic& c, std::optional<py::function> cb) {
                 if (!cb) {
                     c.set_callback_on_read(nullptr);
                     return;
                 }
-                c.set_callback_on_read([cb]() {
-                    py::gil_scoped_acquire gil;
-                    return to_byte_array(cb());
+                simplepyble::PythonCallback callback(std::move(*cb));
+                c.set_callback_on_read([callback]() {
+                    return callback.call([](const py::function& callable) { return to_byte_array(callable()); });
                 });
             },
             py::call_guard<py::gil_scoped_release>(),
             kDocsLocalCharacteristicSetCallbackOnRead)
         .def(
             "set_callback_on_write",
-            [](SimpleBLE::Local::Characteristic& c, std::function<void(py::bytes value)> cb) {
+            [](SimpleBLE::Local::Characteristic& c, std::optional<py::function> cb) {
                 if (!cb) {
                     c.set_callback_on_write(nullptr);
                     return;
                 }
-                c.set_callback_on_write([cb](SimpleBLE::ByteArray value) {
-                    py::gil_scoped_acquire gil;
-                    cb(py::bytes(value));
+                simplepyble::PythonCallback callback(std::move(*cb));
+                c.set_callback_on_write([callback](SimpleBLE::ByteArray value) {
+                    callback.deliver([&](const py::function& callable) { callable(py::bytes(value)); });
                 });
             },
             py::call_guard<py::gil_scoped_release>(),
             kDocsLocalCharacteristicSetCallbackOnWrite)
-        .def("set_callback_on_subscribed", &SimpleBLE::Local::Characteristic::set_callback_on_subscribed,
+        .def("set_callback_on_subscribed", simplepyble::callback_setter(&SimpleBLE::Local::Characteristic::set_callback_on_subscribed),
              py::call_guard<py::gil_scoped_release>(), kDocsLocalCharacteristicSetCallbackOnSubscribed)
-        .def("set_callback_on_unsubscribed", &SimpleBLE::Local::Characteristic::set_callback_on_unsubscribed,
+        .def("set_callback_on_unsubscribed", simplepyble::callback_setter(&SimpleBLE::Local::Characteristic::set_callback_on_unsubscribed),
              py::call_guard<py::gil_scoped_release>(), kDocsLocalCharacteristicSetCallbackOnUnsubscribed);
 
     py::class_<SimpleBLE::Local::Service, LocalHolder<SimpleBLE::Local::Service>>(m, "LocalService", kDocsLocalService)
@@ -287,9 +289,9 @@ void wrap_local(py::module& m) {
              kDocsLocalPeripheralIsStarted)
         .def("is_advertising", &SimpleBLE::Local::Peripheral::is_advertising, py::call_guard<py::gil_scoped_release>(),
              kDocsLocalPeripheralIsAdvertising)
-        .def("set_callback_on_client_connected", &SimpleBLE::Local::Peripheral::set_callback_on_client_connected,
+        .def("set_callback_on_client_connected", simplepyble::callback_setter(&SimpleBLE::Local::Peripheral::set_callback_on_client_connected),
              py::call_guard<py::gil_scoped_release>(), kDocsLocalPeripheralSetCallbackOnClientConnected)
-        .def("set_callback_on_client_disconnected", &SimpleBLE::Local::Peripheral::set_callback_on_client_disconnected,
+        .def("set_callback_on_client_disconnected", simplepyble::callback_setter(&SimpleBLE::Local::Peripheral::set_callback_on_client_disconnected),
              py::call_guard<py::gil_scoped_release>(), kDocsLocalPeripheralSetCallbackOnClientDisconnected);
 }
 

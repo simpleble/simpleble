@@ -1,11 +1,13 @@
 # Note: This test suite is only evaluating the Python bindings, not the C++ library.
 #       The SimpleBLE implementation to test this on is the PLAIN version.
 import asyncio
+import gc
 import logging
 import subprocess
 import sys
 import textwrap
 import threading
+import weakref
 
 import pytest
 
@@ -287,5 +289,34 @@ def test_callback_replacement_releases_the_gil():
         worker.join(2)
         assert not worker.is_alive()
         adapter.scan_stop()
+    """)
+    subprocess.run([sys.executable, "-c", code], check=True, timeout=8)
+
+
+def test_replaced_callback_is_released():
+    adapter = simplepyble.Adapter.get_adapters()[0]
+
+    def callback():
+        pass
+
+    released = weakref.ref(callback)
+    adapter.set_callback_on_scan_start(callback)
+    adapter.set_callback_on_scan_start(None)
+    del callback
+    gc.collect()
+
+    assert released() is None
+
+
+def test_exit_with_subscription_registered():
+    # SimpleBLE drops its callbacks after the interpreter has finalized.
+    code = textwrap.dedent(f"""
+        import simplepyble
+
+        adapter = simplepyble.Adapter.get_adapters()[0]
+        adapter.scan_for(250)
+        peripheral = adapter.scan_get_results()[0]
+        peripheral.connect()
+        peripheral.notify("{SERVICE}", "{VALUE}", lambda payload: None)
     """)
     subprocess.run([sys.executable, "-c", code], check=True, timeout=8)
