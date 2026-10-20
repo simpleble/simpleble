@@ -126,7 +126,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-All blocking calls from the synchronous API are available as coroutines in the `aio` module, and callbacks can be either regular functions or coroutines. Exceptions raised by callbacks go to the event loop's exception handler. For more examples, check out the [Examples](./examples) section.
+In the `aio` module, connecting, unpairing, GATT operations, scanning, power changes and starting or stopping a local peripheral are coroutines. Listing adapters, scan results and paired or connected peripherals, and reading their properties, are regular calls. To keep the event loop responsive while one of them waits on the system, such as `get_paired_peripherals()` on Windows, run it with `asyncio.to_thread()`. Callbacks can be either regular functions or coroutines, and exceptions raised by callbacks go to the event loop's exception handler. For more examples, check out the [Examples](./examples) section.
 
 Local hosting and Dongl pairing work the same way: `LocalPeripheral.start()`, `stop()`, and `LocalCharacteristic.set_value()` are coroutines, and callbacks run on the event loop that registered them. Read and pairing callbacks return their result to the Bluetooth stack, which waits for the event loop to run them, so keep the loop responsive. Leaving `async with` on a local peripheral clears its callbacks and stops it.
 
