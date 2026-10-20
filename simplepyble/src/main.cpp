@@ -15,6 +15,7 @@
 
 namespace py = pybind11;
 
+void wrap_errors(py::module& m);
 void wrap_types(py::module& m);
 void wrap_descriptor(py::module& m);
 void wrap_characteristic(py::module& m);
@@ -53,6 +54,7 @@ PYBIND11_MODULE(_simplepyble, m) {
         Returns the version of SimpleBLE.
     )pbdoc");
 
+    wrap_errors(m);
     wrap_types(m);
     wrap_descriptor(m);
     wrap_characteristic(m);

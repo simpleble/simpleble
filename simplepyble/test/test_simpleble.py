@@ -289,6 +289,21 @@ def test_gatt_binary_values_and_errors():
     peripheral.disconnect()
 
 
+def test_errors_carry_their_code():
+    adapter = simplepyble.Adapter.get_adapters()[0]
+    adapter.scan_for(250)
+    peripheral = adapter.scan_get_results()[0]
+
+    with pytest.raises(simplepyble.NotConnectedError) as error:
+        peripheral.read(SERVICE, VALUE)
+
+    assert isinstance(error.value, simplepyble.SimpleBLEError)
+    assert isinstance(error.value, RuntimeError)
+    assert error.value.code == simplepyble.ErrorCode.PERIPHERAL_NOT_CONNECTED
+    assert error.value.native_code is None
+    assert str(error.value) == "Peripheral is not connected."
+
+
 def test_callback_replacement_releases_the_gil():
     # A subprocess bounds the failure if callback replacement deadlocks with the GIL.
     code = textwrap.dedent("""

@@ -5,7 +5,7 @@ description: SimpleBLE's exception taxonomy, which errors are recoverable, timeo
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-SimpleBLE reports errors by throwing exceptions. All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. In Python, exceptions surface as `RuntimeError` with the same message text. The C bindings translate exceptions into owned error objects containing a code and message. Pass a required error slot to fallible calls and inspect it before reuse; see the [C migration guide](../simplecble/migration#replace-status-returns-with-an-error-object).
+SimpleBLE reports errors by throwing exceptions. All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. In Python, they surface as `simplepyble.SimpleBLEError`, a `RuntimeError` subclass, or as one of its subclasses named after the exception, such as `NotConnectedError`, with the same message text and the error code in `code`. The C bindings translate exceptions into owned error objects containing a code and message. Pass a required error slot to fallible calls and inspect it before reuse; see the [C migration guide](../simplecble/migration#replace-status-returns-with-an-error-object).
 
 ## Exception taxonomy
 
@@ -50,7 +50,7 @@ try {
 }
 ```
 
-In Python everything arrives as `RuntimeError`, so a single `except RuntimeError` handler covers both cases:
+In Python, classified errors arrive as `SimpleBLEError` and platform-layer errors as plain `RuntimeError`, its base class, so a single `except RuntimeError` handler covers both cases:
 
 ```python
 try:

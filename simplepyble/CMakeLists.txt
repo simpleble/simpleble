@@ -26,6 +26,7 @@ pybind11_add_module(
     src/wrap_service.cpp
     src/wrap_characteristic.cpp
     src/wrap_descriptor.cpp
+    src/wrap_errors.cpp
     src/wrap_types.cpp
     src/wrap_config.cpp
     src/wrap_logging.cpp

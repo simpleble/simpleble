@@ -32,6 +32,19 @@ pip install .
 
 Callbacks belong to the device, not to the `Peripheral` object you set them through. `scan_get_results()` and the scan callbacks return a new `Peripheral` object each time, but every object an adapter returns for the same device shares its callbacks and subscriptions, so setting a callback or subscribing through one of them replaces what was set through another. The same applies to `simplepyble.aio`. Pass `None` to unregister a callback.
 
+## Errors
+
+A failed call raises `simplepyble.SimpleBLEError`, a subclass of `RuntimeError`, or one of its subclasses, which follow SimpleBLE's [exceptions](../fundamentals/error-handling#exception-taxonomy): `NotInitializedError`, `InvalidReferenceError`, `NotConnectedError`, `ServiceNotFoundError`, `CharacteristicNotFoundError`, `DescriptorNotFoundError`, `OperationNotSupportedError`, `OperationFailedError`, `WinRTError` and its subclass `WinRTAccessDeniedError`, `CoreBluetoothError` and `AdapterInUseError`. Each error carries its `simplepyble.ErrorCode` in `code`, and a WinRT failure carries its HRESULT in `native_code`. Failures from lower layers, such as D-Bus, arrive as plain `RuntimeError`, so `except RuntimeError` catches both.
+
+```python
+try:
+    value = peripheral.read(service_uuid, characteristic_uuid)
+except simplepyble.NotConnectedError:
+    peripheral.connect()
+except simplepyble.SimpleBLEError as e:
+    print(f"{e.code.name}: {e}")
+```
+
 ## Host a GATT service
 
 `Adapter.create_local_peripheral()` creates a local GATT host. Configure advertised services, services, and characteristics before calling `start()`; they cannot change while started.
@@ -85,7 +98,7 @@ simplepyble.advanced.dongl.set_numeric_comparison_callback(peripheral, confirm)
 peripheral.connect()
 ```
 
-`set_passkey_request_callback()` returns the six digits the user typed as a `str`, including leading zeroes, or `None` to reject. `set_passkey_display_callback()` receives the passkey to show to the user. `set_numeric_comparison_callback()` returns `True` only if the device shows the same number. These callbacks run on a SimpleBLE worker thread and may block while the user answers. A request without a callback, with an invalid answer, or whose callback raises is rejected. Pass `None` to unregister a callback. Registering a callback on a peripheral from another backend raises `RuntimeError`.
+`set_passkey_request_callback()` returns the six digits the user typed as a `str`, including leading zeroes, or `None` to reject. `set_passkey_display_callback()` receives the passkey to show to the user. `set_numeric_comparison_callback()` returns `True` only if the device shows the same number. These callbacks run on a SimpleBLE worker thread and may block while the user answers. A request without a callback, with an invalid answer, or whose callback raises is rejected. Pass `None` to unregister a callback. Registering a callback on a peripheral from another backend raises `OperationNotSupportedError`.
 
 ## Asynchronous API
 

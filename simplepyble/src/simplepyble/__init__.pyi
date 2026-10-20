@@ -31,6 +31,67 @@ class AndroidConnectionPriority(Enum):
     LOW_POWER = ...
     DCK = ...
 
+class ErrorCode(Enum):
+    """Classification of a SimpleBLE error."""
+    INVALID_ARGUMENT = ...
+    OUT_OF_MEMORY = ...
+    OBJECT_NOT_INITIALIZED = ...
+    INVALID_BACKEND_REFERENCE = ...
+    PERIPHERAL_NOT_CONNECTED = ...
+    GATT_SERVICE_NOT_FOUND = ...
+    GATT_CHARACTERISTIC_NOT_FOUND = ...
+    GATT_DESCRIPTOR_NOT_FOUND = ...
+    OPERATION_NOT_SUPPORTED = ...
+    OPERATION_FAILED = ...
+    WINRT_ACCESS_DENIED = ...
+    WINRT_EXCEPTION = ...
+    CORE_BLUETOOTH_EXCEPTION = ...
+    UNCLASSIFIED_EXCEPTION = ...
+    ADAPTER_IN_USE = ...
+
+class SimpleBLEError(RuntimeError):
+    """Raised when a SimpleBLE operation fails."""
+    code: ErrorCode
+    """The error code."""
+    native_code: Optional[int]
+    """The HRESULT of a WinRT failure, otherwise None."""
+
+class NotInitializedError(SimpleBLEError):
+    """The object was not initialized."""
+
+class InvalidReferenceError(SimpleBLEError):
+    """The object's backend object is no longer valid."""
+
+class NotConnectedError(SimpleBLEError):
+    """The operation requires a connected peripheral."""
+
+class ServiceNotFoundError(SimpleBLEError):
+    """The peripheral has no service with that UUID."""
+
+class CharacteristicNotFoundError(SimpleBLEError):
+    """The service has no characteristic with that UUID."""
+
+class DescriptorNotFoundError(SimpleBLEError):
+    """The characteristic has no descriptor with that UUID."""
+
+class OperationNotSupportedError(SimpleBLEError):
+    """The adapter, characteristic or platform doesn't support the operation."""
+
+class OperationFailedError(SimpleBLEError):
+    """The operation failed. The message has any available detail."""
+
+class WinRTError(SimpleBLEError):
+    """A WinRT call failed."""
+
+class WinRTAccessDeniedError(WinRTError):
+    """Windows denied access to the operation."""
+
+class CoreBluetoothError(SimpleBLEError):
+    """A CoreBluetooth call failed."""
+
+class AdapterInUseError(SimpleBLEError):
+    """Another process holds the adapter."""
+
 class Descriptor:
     """Represents a GATT descriptor."""
 
