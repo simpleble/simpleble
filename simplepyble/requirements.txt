@@ -4,7 +4,7 @@ auditwheel
 wheel
 ninja; platform_system!='Windows'
 pytest
-pybind11
+pybind11>=3.1
 scikit-build>=0.18.1
 cmake>=3.21
 setuptools>=70.1

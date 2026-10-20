@@ -217,7 +217,7 @@ void wrap_config(py::module& m) {
     auto config = m.def_submodule("config", kDocsConfigModule);
 
     // Define classes directly under config
-    py::class_<PyWrappers::WinRT> winrt_config(config, "winrt", kDocsConfigWinRTClass, py::metaclass());
+    py::class_<PyWrappers::WinRT> winrt_config(config, "winrt", kDocsConfigWinRTClass);
     winrt_config
         .def_property_static("experimental_use_own_mta_apartment",
             [](py::object) { return PyWrappers::WinRT::get_experimental_use_own_mta_apartment(); },
@@ -233,7 +233,7 @@ void wrap_config(py::module& m) {
             kDocsConfigWinRTUseDeferredDisconnect)
         .def_static("reset", &PyWrappers::WinRT::reset, kDocsConfigWinRTReset);
 
-    py::class_<PyWrappers::SimpleBluez> simplebluez_config(config, "simplebluez", kDocsConfigSimpleBluezClass, py::metaclass());
+    py::class_<PyWrappers::SimpleBluez> simplebluez_config(config, "simplebluez", kDocsConfigSimpleBluezClass);
     simplebluez_config
         .def_property_static("use_system_bus",
             [](py::object) { return PyWrappers::SimpleBluez::get_use_system_bus(); },
@@ -249,11 +249,11 @@ void wrap_config(py::module& m) {
             kDocsConfigSimpleBluezDisconnectionTimeout)
         .def_static("reset", &PyWrappers::SimpleBluez::reset, kDocsConfigSimpleBluezReset);
 
-    py::class_<PyWrappers::CoreBluetooth> corebluetooth_config(config, "corebluetooth", kDocsConfigCoreBluetoothClass, py::metaclass());
+    py::class_<PyWrappers::CoreBluetooth> corebluetooth_config(config, "corebluetooth", kDocsConfigCoreBluetoothClass);
     corebluetooth_config
         .def_static("reset", &PyWrappers::CoreBluetooth::reset, kDocsConfigCoreBluetoothReset);
 
-    py::class_<PyWrappers::Android> android_config(config, "android", kDocsConfigAndroidClass, py::metaclass());
+    py::class_<PyWrappers::Android> android_config(config, "android", kDocsConfigAndroidClass);
     android_config
         .def_property_static("connection_priority_request",
             [](py::object) { return PyWrappers::Android::get_connection_priority_request(); },
@@ -263,7 +263,7 @@ void wrap_config(py::module& m) {
             kDocsConfigAndroidConnectionPriority)
         .def_static("reset", &PyWrappers::Android::reset, kDocsConfigAndroidReset);
 
-    py::class_<PyWrappers::Dongl> dongl_config(config, "dongl", kDocsConfigDonglClass, py::metaclass());
+    py::class_<PyWrappers::Dongl> dongl_config(config, "dongl", kDocsConfigDonglClass);
     dongl_config
         .def_property_static("use_dongl_backend",
             [](py::object) { return PyWrappers::Dongl::get_use_dongl_backend(); },
@@ -279,7 +279,7 @@ void wrap_config(py::module& m) {
             kDocsConfigDonglForceUpdate)
         .def_static("reset", &PyWrappers::Dongl::reset, kDocsConfigDonglReset);
 
-    py::class_<PyWrappers::Base> base_config(config, "base", kDocsConfigBaseClass, py::metaclass());
+    py::class_<PyWrappers::Base> base_config(config, "base", kDocsConfigBaseClass);
     base_config
         .def_static("reset_all", &PyWrappers::Base::reset_all, kDocsConfigBaseResetAll);
 }

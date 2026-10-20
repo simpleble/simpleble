@@ -12,7 +12,7 @@ include(GNUInstallDirs)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/epilogue.cmake)
 
-find_package(pybind11 REQUIRED)
+find_package(pybind11 3.1 REQUIRED)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../simpleble ${CMAKE_BINARY_DIR}/simpleble)
 
 pybind11_add_module(

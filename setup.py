@@ -75,7 +75,7 @@ skbuild.setup(
         "scikit-build",
         "ninja; platform_system!='Windows'",
         "cmake>=3.21",
-        "pybind11",
+        "pybind11>=3.1",
     ],
     install_requires=[],
     extras_require={},
