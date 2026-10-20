@@ -119,6 +119,33 @@ def test_async_adapter_parity():
     asyncio.run(run())
 
 
+def test_async_callback_exceptions_reach_the_event_loop():
+    async def run():
+        loop = asyncio.get_running_loop()
+        reported = asyncio.Event()
+        exceptions = []
+
+        def handler(loop, context):
+            exceptions.append(context.get("exception"))
+            reported.set()
+
+        loop.set_exception_handler(handler)
+
+        async def on_scan_start():
+            raise ValueError("callback failed")
+
+        adapter = aio.Adapter.get_adapters()[0]
+        adapter.set_callback_on_scan_start(on_scan_start)
+        await adapter.scan_start()
+        await asyncio.wait_for(reported.wait(), 2)
+        await adapter.scan_stop()
+        adapter.set_callback_on_scan_start(None)
+
+        assert isinstance(exceptions[0], ValueError)
+
+    asyncio.run(run())
+
+
 def test_get_adapters():
     assert simplepyble.Adapter.bluetooth_enabled() == True
 

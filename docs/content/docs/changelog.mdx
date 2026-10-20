@@ -73,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimplePyBLE) Fixed programs aborting at exit while a callback or subscription was still registered.
 - (SimplePyBLE) Fixed replaced callbacks staying alive until their adapter or peripheral object was deleted.
 - (SimplePyBLE) Fixed adapter and peripheral calls freezing other threads, and timing out on a Dongl while callbacks ran.
+- (SimplePyBLE) Fixed exceptions raised by `async def` callbacks in `aio` being silently dropped.
 - (SimpleRsBLE) Fixed linking on macOS and in Windows debug builds.
 - (SimpleRsBLE) Fixed a use-after-free when a notification arrived after its peripheral was dropped.
 - (SimpleRsBLE) Fixed creating or dropping an `Adapter` or `Peripheral` handle silencing the events of other handles for the same adapter or device.

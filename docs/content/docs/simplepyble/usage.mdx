@@ -28,6 +28,10 @@ cd <path-to-simpleble>/simplepyble
 pip install .
 ```
 
+## Callbacks
+
+Callbacks belong to the device, not to the `Peripheral` object you set them through. `scan_get_results()` and the scan callbacks return a new `Peripheral` object each time, but every object an adapter returns for the same device shares its callbacks and subscriptions, so setting a callback or subscribing through one of them replaces what was set through another. The same applies to `simplepyble.aio`. Pass `None` to unregister a callback.
+
 ## Host a GATT service
 
 `Adapter.create_local_peripheral()` creates a local GATT host. Configure advertised services, services, and characteristics before calling `start()`; they cannot change while started.
@@ -109,7 +113,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-All blocking calls from the synchronous API are available as coroutines in the `aio` module, and callbacks can be either regular functions or coroutines. For more examples, check out the [Examples](./examples) section.
+All blocking calls from the synchronous API are available as coroutines in the `aio` module, and callbacks can be either regular functions or coroutines. Exceptions raised by callbacks go to the event loop's exception handler. For more examples, check out the [Examples](./examples) section.
 
 Local hosting and Dongl pairing work the same way: `LocalPeripheral.start()`, `stop()`, and `LocalCharacteristic.set_value()` are coroutines, and callbacks run on the event loop that registered them. Read and pairing callbacks return their result to the Bluetooth stack, which waits for the event loop to run them, so keep the loop responsive. Leaving `async with` on a local peripheral clears its callbacks and stops it.
 

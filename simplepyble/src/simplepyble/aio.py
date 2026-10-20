@@ -15,14 +15,34 @@ _active_local_peripherals: weakref.WeakSet[Any] = weakref.WeakSet()
 # in waiting longer than 30 seconds, as that's when BLE gives up on the request.
 _RESULT_TIMEOUT_S = 30.0
 
+# Tasks running coroutine callbacks, as the loop itself only keeps weak references to them.
+_callback_tasks: set[asyncio.Task[Any]] = set()
+
 def _post(loop: asyncio.AbstractEventLoop, callback: Callable[..., Any], *args: Any) -> None:
     """Hand an event from a native thread to the loop the callback was registered on."""
-    if loop.is_closed():
+    try:
+        loop.call_soon_threadsafe(_run_callback, loop, callback, args)
+    except RuntimeError:
+        # The loop was closed after the callback was registered.
+        pass
+
+def _run_callback(loop: asyncio.AbstractEventLoop, callback: Callable[..., Any], args: tuple[Any, ...]) -> None:
+    result = callback(*args)
+    if inspect.isawaitable(result):
+        task = asyncio.ensure_future(result)
+        _callback_tasks.add(task)
+        task.add_done_callback(lambda task: _report_callback_task(loop, task))
+
+def _report_callback_task(loop: asyncio.AbstractEventLoop, task: asyncio.Task[Any]) -> None:
+    # Nobody awaits these tasks, so their exceptions go to the loop's exception handler, like those of plain callbacks.
+    _callback_tasks.discard(task)
+    if task.cancelled() or task.exception() is None:
         return
-    if inspect.iscoroutinefunction(callback):
-        asyncio.run_coroutine_threadsafe(callback(*args), loop)
-    else:
-        loop.call_soon_threadsafe(callback, *args)
+    loop.call_exception_handler({
+        "message": "Exception in SimplePyBLE callback",
+        "exception": task.exception(),
+        "task": task,
+    })
 
 def _wait_on_loop(loop: asyncio.AbstractEventLoop, callback: Callable[..., Any], *args: Any) -> Any:
     """Run a callback on its loop from a native thread and return its result.
@@ -211,12 +231,9 @@ class Peripheral:
     ):
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
-        def wrapper(payload: bytes):
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(payload), loop)
-            else:
-                loop.call_soon_threadsafe(callback, payload)
-        return await loop.run_in_executor(None, self._internal.notify, service_uuid, characteristic_uuid, wrapper)
+        return await loop.run_in_executor(
+            None, self._internal.notify, service_uuid, characteristic_uuid, lambda payload: _post(loop, callback, payload)
+        )
 
     async def indicate(
         self,
@@ -226,12 +243,9 @@ class Peripheral:
     ):
         loop = asyncio.get_running_loop()
         self._subscriptions.add((service_uuid, characteristic_uuid))
-        def wrapper(payload: bytes):
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(payload), loop)
-            else:
-                loop.call_soon_threadsafe(callback, payload)
-        return await loop.run_in_executor(None, self._internal.indicate, service_uuid, characteristic_uuid, wrapper)
+        return await loop.run_in_executor(
+            None, self._internal.indicate, service_uuid, characteristic_uuid, lambda payload: _post(loop, callback, payload)
+        )
 
     async def unsubscribe(self, service_uuid: str, characteristic_uuid: str):
         loop = asyncio.get_running_loop()
@@ -251,24 +265,14 @@ class Peripheral:
             self._internal.set_callback_on_connected(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper():
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(), loop)
-            else:
-                loop.call_soon_threadsafe(callback)
-        self._internal.set_callback_on_connected(wrapper)
+        self._internal.set_callback_on_connected(lambda: _post(loop, callback))
 
     def set_callback_on_disconnected(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_disconnected(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper():
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(), loop)
-            else:
-                loop.call_soon_threadsafe(callback)
-        self._internal.set_callback_on_disconnected(wrapper)
+        self._internal.set_callback_on_disconnected(lambda: _post(loop, callback))
 
     def _clear_all_callbacks_sync(self):
         """Internal sync cleanup for atexit or __aexit__"""
@@ -510,76 +514,42 @@ class Adapter:
             self._internal.set_callback_on_scan_start(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper():
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(), loop)
-            else:
-                loop.call_soon_threadsafe(callback)
-        self._internal.set_callback_on_scan_start(wrapper)
+        self._internal.set_callback_on_scan_start(lambda: _post(loop, callback))
 
     def set_callback_on_scan_stop(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_stop(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper():
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(), loop)
-            else:
-                loop.call_soon_threadsafe(callback)
-        self._internal.set_callback_on_scan_stop(wrapper)
+        self._internal.set_callback_on_scan_stop(lambda: _post(loop, callback))
 
     def set_callback_on_scan_found(self, callback: Callable[[Peripheral], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_found(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper(peripheral: simplepyble.Peripheral):
-            # Wrap the peripheral before passing it to the callback
-            wrapped_peripheral = Peripheral(peripheral)
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(wrapped_peripheral), loop)
-            else:
-                loop.call_soon_threadsafe(callback, wrapped_peripheral)
-        self._internal.set_callback_on_scan_found(wrapper)
+        self._internal.set_callback_on_scan_found(lambda peripheral: _post(loop, callback, Peripheral(peripheral)))
 
     def set_callback_on_scan_updated(self, callback: Callable[[Peripheral], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_scan_updated(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper(peripheral: simplepyble.Peripheral):
-            # Wrap the peripheral before passing it to the callback
-            wrapped_peripheral = Peripheral(peripheral)
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(wrapped_peripheral), loop)
-            else:
-                loop.call_soon_threadsafe(callback, wrapped_peripheral)
-        self._internal.set_callback_on_scan_updated(wrapper)
+        self._internal.set_callback_on_scan_updated(lambda peripheral: _post(loop, callback, Peripheral(peripheral)))
 
     def set_callback_on_power_on(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_power_on(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper():
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(), loop)
-            else:
-                loop.call_soon_threadsafe(callback)
-        self._internal.set_callback_on_power_on(wrapper)
+        self._internal.set_callback_on_power_on(lambda: _post(loop, callback))
 
     def set_callback_on_power_off(self, callback: Callable[[], Awaitable[None] | None] | None):
         if callback is None:
             self._internal.set_callback_on_power_off(None)
             return
         loop = asyncio.get_running_loop()
-        def wrapper():
-            if inspect.iscoroutinefunction(callback):
-                asyncio.run_coroutine_threadsafe(callback(), loop)
-            else:
-                loop.call_soon_threadsafe(callback)
-        self._internal.set_callback_on_power_off(wrapper)
+        self._internal.set_callback_on_power_off(lambda: _post(loop, callback))
 
     def _clear_all_callbacks_sync(self):
         """Internal sync cleanup for atexit or __aexit__"""
