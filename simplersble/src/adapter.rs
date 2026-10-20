@@ -2,11 +2,10 @@ use std::pin::Pin;
 use std::mem;
 use std::sync::Arc;
 
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
-use futures::{Stream, TryStreamExt};
+use futures::Stream;
 
 use super::ffi;
+use crate::events::EventSender;
 use crate::local_peripheral::InnerLocalPeripheral;
 use crate::local_peripheral::LocalPeripheral;
 use crate::peripheral::InnerPeripheral;
@@ -29,8 +28,8 @@ pub enum PowerEvent {
 
 pub struct InnerAdapter {
     internal: cxx::UniquePtr<ffi::RustyAdapter>,
-    on_scan_event: broadcast::Sender<ScanEvent>,
-    on_power_event: broadcast::Sender<PowerEvent>,
+    on_scan_event: EventSender<ScanEvent>,
+    on_power_event: EventSender<PowerEvent>,
 }
 
 impl InnerAdapter {
@@ -49,13 +48,10 @@ impl InnerAdapter {
     }
 
     pub(crate) fn new(wrapper: &mut ffi::RustyAdapterWrapper) -> Pin<Box<Self>> {
-        let (scan_event_sender, _) = broadcast::channel(128);
-        let (power_event_sender, _) = broadcast::channel(128);
-
         let this = Self {
             internal: cxx::UniquePtr::<ffi::RustyAdapter>::null(),
-            on_scan_event: scan_event_sender,
-            on_power_event: power_event_sender,
+            on_scan_event: EventSender::new(),
+            on_power_event: EventSender::new(),
         };
 
         let mut this_boxed = Box::pin(this);
@@ -161,35 +157,29 @@ impl InnerAdapter {
     }
 
     pub fn on_callback_scan_start(&self) {
-        // TODO: Review how to handle errors here.
-        let _ = self.on_scan_event.send(ScanEvent::Start);
+        self.on_scan_event.send(ScanEvent::Start);
     }
 
     pub fn on_callback_scan_stop(&self) {
-        // TODO: Review how to handle errors here.
-        let _ = self.on_scan_event.send(ScanEvent::Stop);
+        self.on_scan_event.send(ScanEvent::Stop);
     }
 
     pub fn on_callback_scan_updated(&self, peripheral: &mut ffi::RustyPeripheralWrapper) {
-        // TODO: Review how to handle errors here.
         let peripheral: Peripheral = InnerPeripheral::new(peripheral).into();
-        let _ = self.on_scan_event.send(ScanEvent::Updated(peripheral));
+        self.on_scan_event.send(ScanEvent::Updated(peripheral));
     }
 
     pub fn on_callback_scan_found(&self, peripheral: &mut ffi::RustyPeripheralWrapper) {
-        // TODO: Review how to handle errors here.
         let peripheral: Peripheral = InnerPeripheral::new(peripheral).into();
-        let _ = self.on_scan_event.send(ScanEvent::Found(peripheral));
+        self.on_scan_event.send(ScanEvent::Found(peripheral));
     }
 
     pub fn on_callback_power_on(&self) {
-        // TODO: Review how to handle errors here.
-        let _ = self.on_power_event.send(PowerEvent::On);
+        self.on_power_event.send(PowerEvent::On);
     }
 
     pub fn on_callback_power_off(&self) {
-        // TODO: Review how to handle errors here.
-        let _ = self.on_power_event.send(PowerEvent::Off);
+        self.on_power_event.send(PowerEvent::Off);
     }
 }
 
@@ -290,17 +280,15 @@ impl Adapter {
     }
 
     pub fn on_scan_event(&self) -> impl Stream<Item = Result<ScanEvent, Error>> {
+        let events = self.inner.on_scan_event.subscribe();
         self.inner.internal.register_scan_callbacks().unwrap();
-
-        BroadcastStream::new(self.inner.on_scan_event.subscribe())
-            .map_err(|e| Error::from_string(e.to_string()))
+        events
     }
 
     pub fn on_power_event(&self) -> impl Stream<Item = Result<PowerEvent, Error>> {
+        let events = self.inner.on_power_event.subscribe();
         self.inner.internal.register_power_callbacks().unwrap();
-
-        BroadcastStream::new(self.inner.on_power_event.subscribe())
-            .map_err(|e| Error::from_string(e.to_string()))
+        events
     }
 }
 

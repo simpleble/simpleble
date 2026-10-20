@@ -10,6 +10,7 @@ pub mod advanced;
 pub mod local_peripheral;
 pub mod local_service;
 pub mod local_characteristic;
+mod events;
 
 use adapter::InnerAdapter;
 use peripheral::InnerPeripheral;

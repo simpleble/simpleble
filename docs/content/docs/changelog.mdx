@@ -80,6 +80,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleRsBLE) Fixed a use-after-free on notifications for dropped peripherals.
 - (SimpleRsBLE) Fixed creating or dropping a handle silencing other handles' events.
 - (SimpleRsBLE) Fixed blocking calls freezing other clones of the same handle.
+- (SimpleRsBLE) Fixed event streams dropping events when read slowly.
+- (SimpleRsBLE) Fixed `notify()` and `indicate()` missing the first values.
 
 **Removed**
 

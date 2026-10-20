@@ -3,11 +3,10 @@ use std::panic::{self, AssertUnwindSafe};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
-use futures::{Stream, TryStreamExt};
+use futures::Stream;
 
 use super::ffi;
+use crate::events::EventSender;
 use crate::types::{CharacteristicCapability, Error};
 
 /// A client interacting with a [`LocalCharacteristic`].
@@ -31,7 +30,7 @@ thread_local! {
 
 pub struct InnerLocalCharacteristic {
     internal: cxx::UniquePtr<ffi::RustyLocalCharacteristic>,
-    on_event: broadcast::Sender<LocalCharacteristicEvent>,
+    on_event: EventSender<LocalCharacteristicEvent>,
 
     // NOTE: These are used from native threads through the back-pointer, so they have their own
     // locks, and no lock is held while user code runs.
@@ -43,11 +42,9 @@ pub struct InnerLocalCharacteristic {
 
 impl InnerLocalCharacteristic {
     pub(crate) fn new(internal: cxx::UniquePtr<ffi::RustyLocalCharacteristic>) -> Result<Pin<Box<Self>>, Error> {
-        let (event_sender, _) = broadcast::channel(128);
-
         let this = Box::pin(Self {
             internal,
-            on_event: event_sender,
+            on_event: EventSender::new(),
             read_callback: Mutex::new(None),
             read_registration: Mutex::new(()),
         });
@@ -120,15 +117,15 @@ impl InnerLocalCharacteristic {
     }
 
     pub(crate) fn on_callback_written(&self, value: &[u8]) {
-        let _ = self.on_event.send(LocalCharacteristicEvent::Written(value.to_vec()));
+        self.on_event.send(LocalCharacteristicEvent::Written(value.to_vec()));
     }
 
     pub(crate) fn on_callback_subscribed(&self) {
-        let _ = self.on_event.send(LocalCharacteristicEvent::Subscribed);
+        self.on_event.send(LocalCharacteristicEvent::Subscribed);
     }
 
     pub(crate) fn on_callback_unsubscribed(&self) {
-        let _ = self.on_event.send(LocalCharacteristicEvent::Unsubscribed);
+        self.on_event.send(LocalCharacteristicEvent::Unsubscribed);
     }
 }
 
@@ -196,8 +193,7 @@ impl LocalCharacteristic {
 
     /// Returns a stream of client writes and subscription changes.
     pub fn on_event(&self) -> impl Stream<Item = Result<LocalCharacteristicEvent, Error>> {
-        BroadcastStream::new(self.inner.on_event.subscribe())
-            .map_err(|e| Error::from_string(e.to_string()))
+        self.inner.on_event.subscribe()
     }
 }
 

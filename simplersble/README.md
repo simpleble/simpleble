@@ -75,7 +75,7 @@ An adapter streams `ScanEvent::Start`, `Stop`, `Found`, and `Updated` from
 peripheral streams `ConnectionEvent::Connected` and `Disconnected` from
 `on_connection_event()`. Each method returns a `futures::Stream` of `Result`s
 that you read in your own task, so SimpleBLE's threads never wait on your code.
-Drop a stream to stop listening.
+A stream keeps every event until you read it. Drop a stream to stop listening.
 
 Use `scan_start()` and `scan_stop()` when your application controls scan
 timing, and `scan_get_results()` for the peripherals seen by the last scan.

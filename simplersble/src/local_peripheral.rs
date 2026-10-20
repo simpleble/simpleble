@@ -1,11 +1,10 @@
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
-use futures::{Stream, TryStreamExt};
+use futures::Stream;
 
 use super::ffi;
+use crate::events::EventSender;
 use crate::local_service::InnerLocalService;
 use crate::local_service::LocalService;
 use crate::types::Error;
@@ -22,7 +21,7 @@ pub enum ClientEvent {
 
 pub struct InnerLocalPeripheral {
     internal: cxx::UniquePtr<ffi::RustyLocalPeripheral>,
-    on_client_event: broadcast::Sender<ClientEvent>,
+    on_client_event: EventSender<ClientEvent>,
 
     // Services added through this peripheral. We keep a single Rust object per native service,
     // so that all clones share the same characteristics and callbacks.
@@ -31,11 +30,9 @@ pub struct InnerLocalPeripheral {
 
 impl InnerLocalPeripheral {
     pub(crate) fn new(internal: cxx::UniquePtr<ffi::RustyLocalPeripheral>) -> Result<Pin<Box<Self>>, Error> {
-        let (client_event_sender, _) = broadcast::channel(128);
-
         let this = Box::pin(Self {
             internal,
-            on_client_event: client_event_sender,
+            on_client_event: EventSender::new(),
             services: Mutex::new(Vec::new()),
         });
 
@@ -109,12 +106,12 @@ impl InnerLocalPeripheral {
 
     pub(crate) fn on_callback_client_connected(&self, address: &[u8]) {
         let address = String::from_utf8_lossy(address).into_owned();
-        let _ = self.on_client_event.send(ClientEvent::Connected(address));
+        self.on_client_event.send(ClientEvent::Connected(address));
     }
 
     pub(crate) fn on_callback_client_disconnected(&self, address: &[u8]) {
         let address = String::from_utf8_lossy(address).into_owned();
-        let _ = self.on_client_event.send(ClientEvent::Disconnected(address));
+        self.on_client_event.send(ClientEvent::Disconnected(address));
     }
 }
 
@@ -194,8 +191,7 @@ impl LocalPeripheral {
 
     /// Returns a stream of clients connecting and disconnecting.
     pub fn on_client_event(&self) -> impl Stream<Item = Result<ClientEvent, Error>> {
-        BroadcastStream::new(self.inner.on_client_event.subscribe())
-            .map_err(|e| Error::from_string(e.to_string()))
+        self.inner.on_client_event.subscribe()
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux", doc))]

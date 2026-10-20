@@ -4,11 +4,10 @@ use std::panic::{self, AssertUnwindSafe};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
-use futures::{Stream, TryStreamExt};
+use futures::Stream;
 
 use super::ffi;
+use crate::events::EventSender;
 use crate::service::Service;
 use crate::service::InnerService;
 use crate::types::{BluetoothAddressType, Error};
@@ -31,8 +30,8 @@ pub(crate) type NumericComparisonCallback = Arc<dyn Fn(&str) -> bool + Send + Sy
 pub struct InnerPeripheral {
     internal: cxx::UniquePtr<ffi::RustyPeripheral>,
 
-    on_connection_event: broadcast::Sender<ConnectionEvent>,
-    on_characteristic_update_map: Mutex<HashMap<String, broadcast::Sender<ValueChangedEvent>>>,
+    on_connection_event: EventSender<ConnectionEvent>,
+    on_characteristic_update_map: Mutex<HashMap<String, EventSender<ValueChangedEvent>>>,
 
     // NOTE: Pairing callbacks run on a native worker thread, possibly while `connect()` is still
     // running, so each one has a lock of its own.
@@ -65,11 +64,9 @@ fn current_callback<T: Clone>(slot: &Mutex<Option<T>>) -> Option<T> {
 
 impl InnerPeripheral {
     pub(crate) fn new(wrapper: &mut ffi::RustyPeripheralWrapper) -> Pin<Box<Self>> {
-        let (event_sender, _) = broadcast::channel(128);
-
         let this = Self {
             internal: cxx::UniquePtr::<ffi::RustyPeripheral>::null(),
-            on_connection_event: event_sender,
+            on_connection_event: EventSender::new(),
             on_characteristic_update_map: Mutex::new(HashMap::new()),
             passkey_request_callback: Mutex::new(None),
             passkey_display_callback: Mutex::new(None),
@@ -214,11 +211,14 @@ impl InnerPeripheral {
         service: &String,
         characteristic: &String
     ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
+        // NOTE: The stream subscribes first, so that it gets the values that arrive while notify() runs.
+        let updates = self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic));
+
         self.internal
             .notify(service, characteristic)
             .map_err(Error::from_cxx_exception)?;
 
-        Ok(self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic)))
+        Ok(updates)
     }
 
     pub fn indicate(
@@ -226,11 +226,14 @@ impl InnerPeripheral {
         service: &String,
         characteristic: &String
     ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
+        // NOTE: The stream subscribes first, so that it gets the values that arrive while indicate() runs.
+        let updates = self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic));
+
         self.internal
             .indicate(service, characteristic)
             .map_err(Error::from_cxx_exception)?;
 
-        Ok(self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic)))
+        Ok(updates)
     }
 
     // NOTE: Clones can unsubscribe at the same time, so the entry is looked up and subscribed to
@@ -239,15 +242,12 @@ impl InnerPeripheral {
         &self,
         key: String,
     ) -> impl Stream<Item = Result<ValueChangedEvent, Error>> {
-        let receiver = self
-            .on_characteristic_update_map
+        self.on_characteristic_update_map
             .lock()
             .unwrap()
             .entry(key)
-            .or_insert_with(|| broadcast::channel(128).0)
-            .subscribe();
-
-        BroadcastStream::new(receiver).map_err(|e| Error::from_string(e.to_string()))
+            .or_insert_with(EventSender::new)
+            .subscribe()
     }
 
     pub fn unsubscribe(
@@ -308,13 +308,11 @@ impl InnerPeripheral {
     }
 
     pub fn on_callback_connected(&self) {
-        // TODO: Review how to handle errors here.
-        let _ = self.on_connection_event.send(ConnectionEvent::Connected);
+        self.on_connection_event.send(ConnectionEvent::Connected);
     }
 
     pub fn on_callback_disconnected(&self) {
-        // TODO: Review how to handle errors here.
-        let _ = self.on_connection_event.send(ConnectionEvent::Disconnected);
+        self.on_connection_event.send(ConnectionEvent::Disconnected);
     }
 
     pub fn on_callback_characteristic_updated(
@@ -325,9 +323,8 @@ impl InnerPeripheral {
     ) {
         let key = format!("{}{}", service, characteristic);
 
-        if let Some(cb) = self.on_characteristic_update_map.lock().unwrap().get(&key) {
-            // TODO: Review how to handle errors here.
-            let _ = cb.send(ValueChangedEvent::ValueUpdated(data.clone()));
+        if let Some(updates) = self.on_characteristic_update_map.lock().unwrap().get(&key) {
+            updates.send(ValueChangedEvent::ValueUpdated(data.clone()));
         }
     }
 
@@ -504,10 +501,9 @@ impl Peripheral {
     }
 
     pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
+        let events = self.inner.on_connection_event.subscribe();
         self.inner.internal.register_connection_callbacks().unwrap();
-
-        BroadcastStream::new(self.inner.on_connection_event.subscribe())
-            .map_err(|e| Error::from_string(e.to_string()))
+        events
     }
 }
 

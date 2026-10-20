@@ -248,6 +248,37 @@ async fn clones_do_not_wait_for_each_other() {
     scan.join().unwrap().unwrap();
 }
 
+// Streams used to drop events once 128 were waiting to be read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn streams_keep_events_until_read() {
+    let _serial = SERIAL.lock().await;
+    const SERVICE: &str = "0000a500-0000-1000-8000-00805f9b34fb";
+    const VALUE: &str = "0000a501-0000-1000-8000-00805f9b34fb";
+    let (service, value) = (SERVICE.to_string(), VALUE.to_string());
+
+    let adapter = plain_adapter();
+    let (local, characteristic) = host(&adapter, SERVICE, VALUE);
+    local.start().unwrap();
+    let peer = connect(&adapter, SERVICE).await;
+
+    // The last write is a request, which returns once the commands queued before it were handled.
+    let mut events = characteristic.on_event();
+    for i in 0..199u8 {
+        peer.write_command(&service, &value, &vec![i]).unwrap();
+    }
+    peer.write_request(&service, &value, &vec![199]).unwrap();
+
+    for i in 0..200u8 {
+        match next_event(&mut events).await {
+            LocalCharacteristicEvent::Written(written) => assert_eq!(written, [i]),
+            event => panic!("unexpected characteristic event {event:?}"),
+        }
+    }
+
+    release(&peer);
+    local.stop().unwrap();
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn read_callback_panics_and_reentrancy() {
     let _serial = SERIAL.lock().await;
