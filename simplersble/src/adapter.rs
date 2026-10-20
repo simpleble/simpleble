@@ -1,6 +1,6 @@
 use std::pin::Pin;
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
@@ -204,7 +204,7 @@ unsafe impl Send for InnerAdapter {}
 
 #[derive(Clone)]
 pub struct Adapter {
-    inner: Arc<Mutex<Pin<Box<InnerAdapter>>>>,
+    inner: Arc<Pin<Box<InnerAdapter>>>,
 }
 
 impl Adapter {
@@ -225,55 +225,55 @@ impl Adapter {
     }
 
     pub fn initialized(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().initialized()
+        self.inner.initialized()
     }
 
     pub fn identifier(&self) -> Result<String, Error> {
-        self.inner.lock().unwrap().identifier()
+        self.inner.identifier()
     }
 
     pub fn address(&self) -> Result<String, Error> {
-        self.inner.lock().unwrap().address()
+        self.inner.address()
     }
 
     pub fn power_on(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().power_on()
+        self.inner.power_on()
     }
 
     pub fn power_off(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().power_off()
+        self.inner.power_off()
     }
 
     pub fn is_powered(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().is_powered()
+        self.inner.is_powered()
     }
 
     pub fn scan_start(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().scan_start()
+        self.inner.scan_start()
     }
 
     pub fn scan_stop(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().scan_stop()
+        self.inner.scan_stop()
     }
 
     pub fn scan_for(&self, timeout_ms: i32) -> Result<(), Error> {
-        self.inner.lock().unwrap().scan_for(timeout_ms)
+        self.inner.scan_for(timeout_ms)
     }
 
     pub fn scan_is_active(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().scan_is_active()
+        self.inner.scan_is_active()
     }
 
     pub fn scan_get_results(&self) -> Result<Vec<Peripheral>, Error> {
-        self.inner.lock().unwrap().scan_get_results()
+        self.inner.scan_get_results()
     }
 
     pub fn get_paired_peripherals(&self) -> Result<Vec<Peripheral>, Error> {
-        self.inner.lock().unwrap().get_paired_peripherals()
+        self.inner.get_paired_peripherals()
     }
 
     pub fn get_connected_peripherals(&self) -> Result<Vec<Peripheral>, Error> {
-        self.inner.lock().unwrap().get_connected_peripherals()
+        self.inner.get_connected_peripherals()
     }
 
     /// Creates a local peripheral that hosts GATT services on this adapter.
@@ -281,27 +281,25 @@ impl Adapter {
     /// Configure its services, characteristics and advertised service UUIDs, then call
     /// [`LocalPeripheral::start`] to start advertising.
     pub fn create_local_peripheral(&self) -> Result<LocalPeripheral, Error> {
-        self.inner.lock().unwrap().create_local_peripheral()
+        self.inner.create_local_peripheral()
     }
 
     #[cfg(any(target_os = "macos", doc))]
     pub(crate) fn macos_retrieve_cached_peripherals(&self, identifiers: &Vec<String>) -> Result<Vec<Peripheral>, Error> {
-        self.inner.lock().unwrap().macos_retrieve_cached_peripherals(identifiers)
+        self.inner.macos_retrieve_cached_peripherals(identifiers)
     }
 
     pub fn on_scan_event(&self) -> impl Stream<Item = Result<ScanEvent, Error>> {
-        let inner = self.inner.lock().unwrap();
-        inner.internal.register_scan_callbacks().unwrap();
+        self.inner.internal.register_scan_callbacks().unwrap();
 
-        BroadcastStream::new(inner.on_scan_event.subscribe())
+        BroadcastStream::new(self.inner.on_scan_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
     }
 
     pub fn on_power_event(&self) -> impl Stream<Item = Result<PowerEvent, Error>> {
-        let inner = self.inner.lock().unwrap();
-        inner.internal.register_power_callbacks().unwrap();
+        self.inner.internal.register_power_callbacks().unwrap();
 
-        BroadcastStream::new(inner.on_power_event.subscribe())
+        BroadcastStream::new(self.inner.on_power_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
     }
 }
@@ -310,7 +308,7 @@ impl Adapter {
 impl From<Pin<Box<InnerAdapter>>> for Adapter {
     fn from(adapter: Pin<Box<InnerAdapter>>) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(adapter)),
+            inner: Arc::new(adapter),
         }
     }
 }

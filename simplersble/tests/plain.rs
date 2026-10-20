@@ -234,6 +234,20 @@ async fn handles_keep_their_events() {
     local.stop().unwrap();
 }
 
+// A blocking call on one clone used to make every other clone wait until it returned.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn clones_do_not_wait_for_each_other() {
+    let _serial = SERIAL.lock().await;
+
+    let adapter = plain_adapter();
+    let scanner = adapter.clone();
+    let scan = std::thread::spawn(move || scanner.scan_for(1000));
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(adapter.scan_is_active().unwrap());
+    scan.join().unwrap().unwrap();
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn read_callback_panics_and_reentrancy() {
     let _serial = SERIAL.lock().await;

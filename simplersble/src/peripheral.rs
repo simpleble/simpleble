@@ -34,8 +34,8 @@ pub struct InnerPeripheral {
     on_connection_event: broadcast::Sender<ConnectionEvent>,
     on_characteristic_update_map: Mutex<HashMap<String, broadcast::Sender<ValueChangedEvent>>>,
 
-    // NOTE: Pairing callbacks run on a native worker thread while `connect()` might be holding
-    // the `Peripheral` lock, so they have locks of their own.
+    // NOTE: Pairing callbacks run on a native worker thread, possibly while `connect()` is still
+    // running, so each one has a lock of its own.
     passkey_request_callback: Mutex<Option<PasskeyRequestCallback>>,
     passkey_display_callback: Mutex<Option<PasskeyDisplayCallback>>,
     numeric_comparison_callback: Mutex<Option<NumericComparisonCallback>>,
@@ -210,47 +210,48 @@ impl InnerPeripheral {
     }
 
     pub fn notify(
-        &mut self,
+        &self,
         service: &String,
         characteristic: &String
     ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
-        let key = format!("{}{}", service, characteristic);
-
-        if !self.on_characteristic_update_map.lock().unwrap().contains_key(&key) {
-            let (event_sender, _) = broadcast::channel(128);
-            self.on_characteristic_update_map.lock().unwrap().insert(key.clone(), event_sender);
-        }
-
         self.internal
             .notify(service, characteristic)
             .map_err(Error::from_cxx_exception)?;
 
-        let stream = BroadcastStream::new(self.on_characteristic_update_map.lock().unwrap()[&key].subscribe());
-        Ok(stream.map_err(|e| Error::from_string(e.to_string())))
+        Ok(self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic)))
     }
 
     pub fn indicate(
-        &mut self,
+        &self,
         service: &String,
         characteristic: &String
     ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
-        let key = format!("{}{}", service, characteristic);
-
-        if !self.on_characteristic_update_map.lock().unwrap().contains_key(&key) {
-            let (event_sender, _) = broadcast::channel(128);
-            self.on_characteristic_update_map.lock().unwrap().insert(key.clone(), event_sender);
-        }
-
         self.internal
             .indicate(service, characteristic)
             .map_err(Error::from_cxx_exception)?;
 
-        let stream = BroadcastStream::new(self.on_characteristic_update_map.lock().unwrap()[&key].subscribe());
-        Ok(stream.map_err(|e| Error::from_string(e.to_string())))
+        Ok(self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic)))
+    }
+
+    // NOTE: Clones can unsubscribe at the same time, so the entry is looked up and subscribed to
+    // under a single lock.
+    fn subscribe_to_characteristic_updates(
+        &self,
+        key: String,
+    ) -> impl Stream<Item = Result<ValueChangedEvent, Error>> {
+        let receiver = self
+            .on_characteristic_update_map
+            .lock()
+            .unwrap()
+            .entry(key)
+            .or_insert_with(|| broadcast::channel(128).0)
+            .subscribe();
+
+        BroadcastStream::new(receiver).map_err(|e| Error::from_string(e.to_string()))
     }
 
     pub fn unsubscribe(
-        &mut self,
+        &self,
         service: &String,
         characteristic: &String,
     ) -> Result<(), Error> {
@@ -377,72 +378,72 @@ unsafe impl Send for InnerPeripheral {}
 
 #[derive(Clone)]
 pub struct Peripheral {
-    inner: Arc<Mutex<Pin<Box<InnerPeripheral>>>>,
+    inner: Arc<Pin<Box<InnerPeripheral>>>,
 }
 
 impl Peripheral {
     pub fn identifier(&self) -> Result<String, Error> {
-        self.inner.lock().unwrap().identifier()
+        self.inner.identifier()
     }
 
     pub fn initialized(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().initialized()
+        self.inner.initialized()
     }
 
     pub fn address(&self) -> Result<String, Error> {
-        self.inner.lock().unwrap().address()
+        self.inner.address()
     }
 
     pub fn address_type(&self) -> Result<BluetoothAddressType, Error> {
-        self.inner.lock().unwrap().address_type()
+        self.inner.address_type()
     }
 
     pub fn rssi(&self) -> Result<i16, Error> {
-        self.inner.lock().unwrap().rssi()
+        self.inner.rssi()
     }
 
     pub fn tx_power(&self) -> Result<i16, Error> {
-        self.inner.lock().unwrap().tx_power()
+        self.inner.tx_power()
     }
 
     pub fn mtu(&self) -> Result<u16, Error> {
-        self.inner.lock().unwrap().mtu()
+        self.inner.mtu()
     }
 
     pub fn connect(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().connect()
+        self.inner.connect()
     }
 
     pub fn disconnect(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().disconnect()
+        self.inner.disconnect()
     }
 
     pub fn is_connected(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().is_connected()
+        self.inner.is_connected()
     }
 
     pub fn is_connectable(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().is_connectable()
+        self.inner.is_connectable()
     }
 
     pub fn is_paired(&self) -> Result<bool, Error> {
-        self.inner.lock().unwrap().is_paired()
+        self.inner.is_paired()
     }
 
     pub fn unpair(&self) -> Result<(), Error> {
-        self.inner.lock().unwrap().unpair()
+        self.inner.unpair()
     }
 
     pub fn services(&self) -> Result<Vec<Service>, Error> {
-        self.inner.lock().unwrap().services()
+        self.inner.services()
     }
 
     pub fn manufacturer_data(&self) -> Result<HashMap<u16, Vec<u8>>, Error> {
-        self.inner.lock().unwrap().manufacturer_data()
+        self.inner.manufacturer_data()
     }
 
     pub fn read(&self, service: &String, characteristic: &String) -> Result<Vec<u8>, Error> {
-        self.inner.lock().unwrap().read(service, characteristic)
+        self.inner.read(service, characteristic)
     }
 
     pub fn write_request(
@@ -451,7 +452,7 @@ impl Peripheral {
         characteristic: &String,
         data: &Vec<u8>,
     ) -> Result<(), Error> {
-        self.inner.lock().unwrap().write_request(service, characteristic, data)
+        self.inner.write_request(service, characteristic, data)
     }
 
     pub fn write_command(
@@ -460,7 +461,7 @@ impl Peripheral {
         characteristic: &String,
         data: &Vec<u8>,
     ) -> Result<(), Error> {
-        self.inner.lock().unwrap().write_command(service, characteristic, data)
+        self.inner.write_command(service, characteristic, data)
     }
 
     pub fn notify(
@@ -468,7 +469,7 @@ impl Peripheral {
         service: &String,
         characteristic: &String
     ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
-        self.inner.lock().unwrap().notify(service, characteristic)
+        self.inner.notify(service, characteristic)
     }
 
     pub fn indicate(
@@ -476,11 +477,11 @@ impl Peripheral {
         service: &String,
         characteristic: &String
     ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
-        self.inner.lock().unwrap().indicate(service, characteristic)
+        self.inner.indicate(service, characteristic)
     }
 
     pub fn unsubscribe(&self, service: &String, characteristic: &String) -> Result<(), Error> {
-        unsafe { Pin::as_mut(&mut *self.inner.lock().unwrap()).get_unchecked_mut() }.unsubscribe(service, characteristic)
+        self.inner.unsubscribe(service, characteristic)
     }
 
     pub fn descriptor_read(
@@ -489,7 +490,7 @@ impl Peripheral {
         characteristic: &String,
         descriptor: &String,
     ) -> Result<Vec<u8>, Error> {
-        self.inner.lock().unwrap().descriptor_read(service, characteristic, descriptor)
+        self.inner.descriptor_read(service, characteristic, descriptor)
     }
 
     pub fn descriptor_write(
@@ -499,39 +500,38 @@ impl Peripheral {
         descriptor: &String,
         data: &Vec<u8>,
     ) -> Result<(), Error> {
-        self.inner.lock().unwrap().descriptor_write(service, characteristic, descriptor, data)
+        self.inner.descriptor_write(service, characteristic, descriptor, data)
     }
 
     pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
-        let inner = self.inner.lock().unwrap();
-        inner.internal.register_connection_callbacks().unwrap();
+        self.inner.internal.register_connection_callbacks().unwrap();
 
-        BroadcastStream::new(inner.on_connection_event.subscribe())
+        BroadcastStream::new(self.inner.on_connection_event.subscribe())
             .map_err(|e| Error::from_string(e.to_string()))
     }
 }
 
 impl Peripheral {
     pub(crate) fn set_passkey_request_callback(&self, callback: Option<PasskeyRequestCallback>) -> Result<(), Error> {
-        self.inner.lock().unwrap().set_passkey_request_callback(callback)
+        self.inner.set_passkey_request_callback(callback)
     }
 
     pub(crate) fn set_passkey_display_callback(&self, callback: Option<PasskeyDisplayCallback>) -> Result<(), Error> {
-        self.inner.lock().unwrap().set_passkey_display_callback(callback)
+        self.inner.set_passkey_display_callback(callback)
     }
 
     pub(crate) fn set_numeric_comparison_callback(
         &self,
         callback: Option<NumericComparisonCallback>,
     ) -> Result<(), Error> {
-        self.inner.lock().unwrap().set_numeric_comparison_callback(callback)
+        self.inner.set_numeric_comparison_callback(callback)
     }
 }
 
 impl From<Pin<Box<InnerPeripheral>>> for Peripheral {
     fn from(peripheral: Pin<Box<InnerPeripheral>>) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(peripheral)),
+            inner: Arc::new(peripheral),
         }
     }
 }
