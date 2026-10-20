@@ -192,6 +192,8 @@ futures = "0.3"
 Then scan:
 
 ```rust
+use std::time::Duration;
+
 use futures::stream::StreamExt;
 
 #[tokio::main]
@@ -218,7 +220,7 @@ async fn main() {
         }
     });
 
-    adapter.scan_for(5000).unwrap();
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
 
     println!("Scan results:");
     for peripheral in adapter.scan_get_results().unwrap() {

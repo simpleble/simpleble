@@ -212,7 +212,7 @@ rust::Vec<Bindings::RustyAdapterWrapper> Bindings::RustyBackend::adapters(RustyE
 
 // InnerAdapter Bindings
 
-void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target, RustyError& error) const try {
+void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target) const {
     // Time to explain the weird shenanigan we're doing here:
     // The TL;DR is that we're making the InnerAdapter(Rust) and the RustyAdapter(C++)
     // point to each other in a safe way.
@@ -228,20 +228,16 @@ void Bindings::RustyAdapter::link(SimpleRsBLE::InnerAdapter& target, RustyError&
     // They belong to the adapter, so registering them here would take them from every other handle.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->adapter = &target;  // THIS LINE IS SUPER IMPORTANT
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyAdapter::unlink(RustyError& error) const try {
+void Bindings::RustyAdapter::unlink() const {
     // NOTE: Callbacks stay registered, as they might belong to another handle by now.
     // Clearing the back-pointer stops ours for good, once any running one finishes.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->adapter = nullptr;
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyAdapter::register_scan_callbacks(RustyError& error) const try {
+void Bindings::RustyAdapter::register_scan_callbacks() const {
     auto target = _callback_target;
 
     _internal->set_callback_on_scan_start([target]() {
@@ -275,11 +271,9 @@ void Bindings::RustyAdapter::register_scan_callbacks(RustyError& error) const tr
         wrapper.internal = std::make_unique<Bindings::RustyPeripheral>(peripheral);
         target->adapter->on_callback_scan_updated(wrapper);
     });
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyAdapter::register_power_callbacks(RustyError& error) const try {
+void Bindings::RustyAdapter::register_power_callbacks() const {
     auto target = _callback_target;
 
     _internal->set_callback_on_power_on([target]() {
@@ -295,8 +289,6 @@ void Bindings::RustyAdapter::register_power_callbacks(RustyError& error) const t
 
         target->adapter->on_callback_power_off();
     });
-} catch (...) {
-    report_exception(error);
 }
 
 bool Bindings::RustyAdapter::initialized(RustyError& error) const try {
@@ -421,7 +413,7 @@ std::unique_ptr<Bindings::RustyLocalPeripheral> Bindings::RustyAdapter::create_l
 
 // InnerPeripheral Bindings
 
-void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target, RustyError& error) const try {
+void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target) const {
     // Time to explain the weird shenanigan we're doing here:
     // The TL;DR is that we're making the InnerPeripheral(Rust) and the RustyPeripheral(C++)
     // point to each other in a safe way.
@@ -437,20 +429,16 @@ void Bindings::RustyPeripheral::link(SimpleRsBLE::InnerPeripheral& target, Rusty
     // They belong to the peripheral, so registering them here would take them from every other handle.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->peripheral = &target;  // THIS LINE IS SUPER IMPORTANT
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::unlink(RustyError& error) const try {
+void Bindings::RustyPeripheral::unlink() const {
     // NOTE: Callbacks stay registered, as they might belong to another handle by now.
     // Clearing the back-pointer stops ours for good, once any running one finishes.
     std::unique_lock<std::shared_mutex> lock(_callback_target->mutex);
     _callback_target->peripheral = nullptr;
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyPeripheral::register_connection_callbacks(RustyError& error) const try {
+void Bindings::RustyPeripheral::register_connection_callbacks() const {
     auto target = _callback_target;
 
     _internal->set_callback_on_connected([target]() {
@@ -466,8 +454,6 @@ void Bindings::RustyPeripheral::register_connection_callbacks(RustyError& error)
 
         target->peripheral->on_callback_disconnected();
     });
-} catch (...) {
-    report_exception(error);
 }
 
 bool Bindings::RustyPeripheral::initialized(RustyError& error) const try {
@@ -819,8 +805,7 @@ rust::Vec<rust::String> Bindings::RustyCharacteristic::capabilities() const {
 
 // LocalPeripheral Bindings
 
-void Bindings::RustyLocalPeripheral::link(SimpleRsBLE::InnerLocalPeripheral const& target,
-                                          RustyError& error) const try {
+void Bindings::RustyLocalPeripheral::link(SimpleRsBLE::InnerLocalPeripheral const& target) const {
     // Same approach as RustyAdapter::link(): the pinned InnerLocalPeripheral(Rust) owns this object,
     // and unlink() clears all native callbacks before releasing the back-pointer.
     _peripheral = &target;
@@ -838,18 +823,14 @@ void Bindings::RustyLocalPeripheral::link(SimpleRsBLE::InnerLocalPeripheral cons
         this->_peripheral->on_callback_client_disconnected(
             rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(address.data()), address.size()));
     });
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyLocalPeripheral::unlink(RustyError& error) const try {
+void Bindings::RustyLocalPeripheral::unlink() const {
     // Clear all callbacks
     _internal->set_callback_on_client_connected(nullptr);
     _internal->set_callback_on_client_disconnected(nullptr);
 
     _peripheral = nullptr;
-} catch (...) {
-    report_exception(error);
 }
 
 void Bindings::RustyLocalPeripheral::add_advertised_service(rust::Str uuid, RustyError& error) const try {
@@ -939,8 +920,7 @@ std::unique_ptr<Bindings::RustyLocalCharacteristic> Bindings::RustyLocalService:
 
 // LocalCharacteristic Bindings
 
-void Bindings::RustyLocalCharacteristic::link(SimpleRsBLE::InnerLocalCharacteristic const& target,
-                                              RustyError& error) const try {
+void Bindings::RustyLocalCharacteristic::link(SimpleRsBLE::InnerLocalCharacteristic const& target) const {
     // Same approach as RustyAdapter::link(): the pinned InnerLocalCharacteristic(Rust) owns this object,
     // and unlink() clears all native callbacks before releasing the back-pointer.
     // NOTE: The read callback is only registered when needed, as having one changes how reads are answered.
@@ -963,11 +943,9 @@ void Bindings::RustyLocalCharacteristic::link(SimpleRsBLE::InnerLocalCharacteris
 
         this->_characteristic->on_callback_unsubscribed();
     });
-} catch (...) {
-    report_exception(error);
 }
 
-void Bindings::RustyLocalCharacteristic::unlink(RustyError& error) const try {
+void Bindings::RustyLocalCharacteristic::unlink() const {
     // Clear all callbacks
     _internal->set_callback_on_read(nullptr);
     _internal->set_callback_on_write(nullptr);
@@ -975,8 +953,6 @@ void Bindings::RustyLocalCharacteristic::unlink(RustyError& error) const try {
     _internal->set_callback_on_unsubscribed(nullptr);
 
     _characteristic = nullptr;
-} catch (...) {
-    report_exception(error);
 }
 
 rust::String Bindings::RustyLocalCharacteristic::uuid(RustyError& error) const try {

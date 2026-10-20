@@ -1,6 +1,7 @@
 use std::pin::Pin;
 use std::mem;
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::Stream;
 
@@ -10,7 +11,7 @@ use crate::local_peripheral::InnerLocalPeripheral;
 use crate::local_peripheral::LocalPeripheral;
 use crate::peripheral::InnerPeripheral;
 use crate::peripheral::Peripheral;
-use crate::types::{call, Error};
+use crate::types::{call, Error, ErrorCode};
 
 #[derive(Clone)]
 pub enum ScanEvent {
@@ -55,7 +56,7 @@ impl InnerAdapter {
         };
 
         let mut this_boxed = Box::pin(this);
-        call(|error| wrapper.internal.link(this_boxed.as_mut(), error)).unwrap();
+        wrapper.internal.link(this_boxed.as_mut());
         mem::swap(&mut this_boxed.internal, &mut wrapper.internal);
 
         return this_boxed;
@@ -93,7 +94,12 @@ impl InnerAdapter {
         call(|error| self.internal.scan_stop(error))
     }
 
-    pub fn scan_for(&self, timeout_ms: i32) -> Result<(), Error> {
+    pub fn scan_for(&self, duration: Duration) -> Result<(), Error> {
+        // SimpleBLE scans for a whole number of milliseconds, so the duration is rounded up.
+        let timeout_ms = i32::try_from(duration.as_nanos().div_ceil(1_000_000)).map_err(|_| {
+            Error::new(ErrorCode::InvalidArgument, "scan duration must fit a 32-bit millisecond count".to_string())
+        })?;
+
         call(|error| self.internal.scan_for(timeout_ms, error))
     }
 
@@ -138,7 +144,7 @@ impl InnerAdapter {
 
     pub fn create_local_peripheral(&self) -> Result<LocalPeripheral, Error> {
         let internal = call(|error| self.internal.create_local_peripheral(error))?;
-        Ok(InnerLocalPeripheral::new(internal)?.into())
+        Ok(InnerLocalPeripheral::new(internal).into())
     }
 
     #[cfg(any(target_os = "macos", doc))]
@@ -183,7 +189,7 @@ impl InnerAdapter {
 
 impl Drop for InnerAdapter {
     fn drop(&mut self) {
-        call(|error| self.internal.unlink(error)).unwrap();
+        self.internal.unlink();
     }
 }
 
@@ -244,8 +250,11 @@ impl Adapter {
         self.inner.scan_stop()
     }
 
-    pub fn scan_for(&self, timeout_ms: i32) -> Result<(), Error> {
-        self.inner.scan_for(timeout_ms)
+    /// Scans for `duration`, rounded up to whole milliseconds, and returns once the scan stopped.
+    ///
+    /// Fails with [`ErrorCode::InvalidArgument`] for durations longer than `i32::MAX` milliseconds.
+    pub fn scan_for(&self, duration: Duration) -> Result<(), Error> {
+        self.inner.scan_for(duration)
     }
 
     pub fn scan_is_active(&self) -> Result<bool, Error> {
@@ -279,13 +288,13 @@ impl Adapter {
 
     pub fn on_scan_event(&self) -> impl Stream<Item = Result<ScanEvent, Error>> {
         let events = self.inner.on_scan_event.subscribe();
-        call(|error| self.inner.internal.register_scan_callbacks(error)).unwrap();
+        self.inner.internal.register_scan_callbacks();
         events
     }
 
     pub fn on_power_event(&self) -> impl Stream<Item = Result<PowerEvent, Error>> {
         let events = self.inner.on_power_event.subscribe();
-        call(|error| self.inner.internal.register_power_callbacks(error)).unwrap();
+        self.inner.internal.register_power_callbacks();
         events
     }
 }

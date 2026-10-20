@@ -44,6 +44,8 @@ development headers (`libdbus-1-dev` on Debian and Ubuntu).
 Scan for five seconds and print what was found:
 
 ```rust
+use std::time::Duration;
+
 use futures::StreamExt;
 use simplersble::{Adapter, ScanEvent};
 
@@ -64,7 +66,7 @@ async fn main() {
             }
         }
     });
-    adapter.scan_for(5000).unwrap();
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
 }
 ```
 

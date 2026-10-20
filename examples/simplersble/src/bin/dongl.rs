@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::time::Duration;
 
 use simplersble::{advanced, Backend, Peripheral};
 
@@ -44,7 +45,7 @@ fn main() {
     let adapter = &adapters[0];
 
     println!("Scanning for 5 seconds...");
-    adapter.scan_for(5000).unwrap();
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
 
     let mut peripherals = adapter.scan_get_results().unwrap();
     if peripherals.is_empty() {

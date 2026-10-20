@@ -41,7 +41,7 @@ pub struct InnerLocalCharacteristic {
 }
 
 impl InnerLocalCharacteristic {
-    pub(crate) fn new(internal: cxx::UniquePtr<ffi::RustyLocalCharacteristic>) -> Result<Pin<Box<Self>>, Error> {
+    pub(crate) fn new(internal: cxx::UniquePtr<ffi::RustyLocalCharacteristic>) -> Pin<Box<Self>> {
         let this = Box::pin(Self {
             internal,
             on_event: EventSender::new(),
@@ -50,9 +50,9 @@ impl InnerLocalCharacteristic {
         });
 
         // The back-pointer is only given to C++ once the object has its final address.
-        call(|error| this.internal.link(&this, error))?;
+        this.internal.link(&this);
 
-        Ok(this)
+        this
     }
 
     fn uuid(&self) -> Result<String, Error> {
@@ -133,7 +133,7 @@ impl InnerLocalCharacteristic {
 impl Drop for InnerLocalCharacteristic {
     fn drop(&mut self) {
         // Clear the native callbacks (waiting for any that are running) before this object goes away.
-        call(|error| self.internal.unlink(error)).unwrap();
+        self.internal.unlink();
     }
 }
 

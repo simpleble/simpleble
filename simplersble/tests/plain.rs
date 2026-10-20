@@ -241,7 +241,7 @@ async fn clones_do_not_wait_for_each_other() {
 
     let adapter = plain_adapter();
     let scanner = adapter.clone();
-    let scan = std::thread::spawn(move || scanner.scan_for(1000));
+    let scan = std::thread::spawn(move || scanner.scan_for(Duration::from_secs(1)));
 
     tokio::time::sleep(Duration::from_millis(200)).await;
     assert!(adapter.scan_is_active().unwrap());

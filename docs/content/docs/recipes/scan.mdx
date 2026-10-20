@@ -129,7 +129,7 @@ for (Peripheral peripheral : adapter.scanGetResults()) {
 let mut adapters = simplersble::Adapter::get_adapters().unwrap();
 let adapter = adapters.remove(0);
 
-adapter.scan_for(5000).unwrap();
+adapter.scan_for(std::time::Duration::from_secs(5)).unwrap();
 
 for peripheral in adapter.scan_get_results().unwrap() {
     println!(

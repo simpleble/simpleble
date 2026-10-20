@@ -74,7 +74,7 @@ impl InnerPeripheral {
         };
 
         let mut this_boxed = Box::pin(this);
-        call(|error| wrapper.internal.link(this_boxed.as_mut(), error)).unwrap();
+        wrapper.internal.link(this_boxed.as_mut());
         mem::swap(&mut this_boxed.internal, &mut wrapper.internal);
 
         return this_boxed;
@@ -333,7 +333,7 @@ impl InnerPeripheral {
 
 impl Drop for InnerPeripheral {
     fn drop(&mut self) {
-        call(|error| self.internal.unlink(error)).unwrap();
+        self.internal.unlink();
     }
 }
 
@@ -469,7 +469,7 @@ impl Peripheral {
 
     pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
         let events = self.inner.on_connection_event.subscribe();
-        call(|error| self.inner.internal.register_connection_callbacks(error)).unwrap();
+        self.inner.internal.register_connection_callbacks();
         events
     }
 }

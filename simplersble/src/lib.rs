@@ -285,10 +285,10 @@ mod ffi {
 
         // RustyAdapter functions
 
-        fn link(self: &RustyAdapter, target: Pin<&mut InnerAdapter>, error: &mut RustyError);
-        fn unlink(self: &RustyAdapter, error: &mut RustyError);
-        fn register_scan_callbacks(self: &RustyAdapter, error: &mut RustyError);
-        fn register_power_callbacks(self: &RustyAdapter, error: &mut RustyError);
+        fn link(self: &RustyAdapter, target: Pin<&mut InnerAdapter>);
+        fn unlink(self: &RustyAdapter);
+        fn register_scan_callbacks(self: &RustyAdapter);
+        fn register_power_callbacks(self: &RustyAdapter);
 
         fn initialized(self: &RustyAdapter, error: &mut RustyError) -> bool;
         fn identifier(self: &RustyAdapter, error: &mut RustyError) -> String;
@@ -318,9 +318,9 @@ mod ffi {
 
         // RustyPeripheral functions
 
-        fn link(self: &RustyPeripheral, target: Pin<&mut InnerPeripheral>, error: &mut RustyError);
-        fn unlink(self: &RustyPeripheral, error: &mut RustyError);
-        fn register_connection_callbacks(self: &RustyPeripheral, error: &mut RustyError);
+        fn link(self: &RustyPeripheral, target: Pin<&mut InnerPeripheral>);
+        fn unlink(self: &RustyPeripheral);
+        fn register_connection_callbacks(self: &RustyPeripheral);
 
         fn initialized(self: &RustyPeripheral, error: &mut RustyError) -> bool;
         fn identifier(self: &RustyPeripheral, error: &mut RustyError) -> String;
@@ -422,8 +422,8 @@ mod ffi {
 
         // RustyLocalPeripheral functions
 
-        fn link(self: &RustyLocalPeripheral, target: &InnerLocalPeripheral, error: &mut RustyError);
-        fn unlink(self: &RustyLocalPeripheral, error: &mut RustyError);
+        fn link(self: &RustyLocalPeripheral, target: &InnerLocalPeripheral);
+        fn unlink(self: &RustyLocalPeripheral);
 
         fn add_advertised_service(self: &RustyLocalPeripheral, uuid: &str, error: &mut RustyError);
         fn set_advertised_manufacturer_data(
@@ -468,8 +468,8 @@ mod ffi {
 
         // RustyLocalCharacteristic functions
 
-        fn link(self: &RustyLocalCharacteristic, target: &InnerLocalCharacteristic, error: &mut RustyError);
-        fn unlink(self: &RustyLocalCharacteristic, error: &mut RustyError);
+        fn link(self: &RustyLocalCharacteristic, target: &InnerLocalCharacteristic);
+        fn unlink(self: &RustyLocalCharacteristic);
 
         fn uuid(self: &RustyLocalCharacteristic, error: &mut RustyError) -> String;
         fn capabilities(self: &RustyLocalCharacteristic, error: &mut RustyError) -> u8;

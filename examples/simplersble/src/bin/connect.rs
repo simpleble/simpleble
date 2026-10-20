@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use simplersble;
 use futures::stream::StreamExt;
 
@@ -26,7 +28,7 @@ async fn main() {
         }
     });
 
-    adapter.scan_for(5000).unwrap();
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
     println!("Scan complete.");
 
     println!("The following devices were found:");

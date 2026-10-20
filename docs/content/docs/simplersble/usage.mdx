@@ -36,6 +36,8 @@ simplersble = { path = "path/to/simpleble" }
 ## First scan
 
 ```rust
+use std::time::Duration;
+
 #[tokio::main]
 async fn main() {
     let mut adapters = simplersble::Adapter::get_adapters().unwrap();
@@ -45,7 +47,7 @@ async fn main() {
     }
 
     let adapter = adapters.remove(0);
-    adapter.scan_for(5000).unwrap();
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
 
     for peripheral in adapter.scan_get_results().unwrap() {
         println!(

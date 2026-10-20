@@ -29,7 +29,7 @@ pub struct InnerLocalPeripheral {
 }
 
 impl InnerLocalPeripheral {
-    pub(crate) fn new(internal: cxx::UniquePtr<ffi::RustyLocalPeripheral>) -> Result<Pin<Box<Self>>, Error> {
+    pub(crate) fn new(internal: cxx::UniquePtr<ffi::RustyLocalPeripheral>) -> Pin<Box<Self>> {
         let this = Box::pin(Self {
             internal,
             on_client_event: EventSender::new(),
@@ -37,9 +37,9 @@ impl InnerLocalPeripheral {
         });
 
         // The back-pointer is only given to C++ once the object has its final address.
-        call(|error| this.internal.link(&this, error))?;
+        this.internal.link(&this);
 
-        Ok(this)
+        this
     }
 
     fn add_advertised_service(&self, uuid: &str) -> Result<(), Error> {
@@ -118,7 +118,7 @@ impl InnerLocalPeripheral {
 impl Drop for InnerLocalPeripheral {
     fn drop(&mut self) {
         // Clear the native callbacks before this object (and the back-pointer to it) goes away.
-        call(|error| self.internal.unlink(error)).unwrap();
+        self.internal.unlink();
     }
 }
 

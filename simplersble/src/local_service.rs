@@ -32,7 +32,7 @@ impl InnerLocalService {
     ) -> Result<LocalCharacteristic, Error> {
         let mask = CharacteristicCapability::to_mask(capabilities);
         let internal = call(|error| self.internal.add_characteristic(uuid, mask, error))?;
-        let characteristic: LocalCharacteristic = InnerLocalCharacteristic::new(internal)?.into();
+        let characteristic: LocalCharacteristic = InnerLocalCharacteristic::new(internal).into();
 
         self.characteristics.lock().unwrap().push(characteristic.clone());
         Ok(characteristic)

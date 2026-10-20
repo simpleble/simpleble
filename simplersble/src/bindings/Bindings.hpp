@@ -97,10 +97,10 @@ class RustyAdapter {
 
     RustyAdapter(SimpleBLE::Adapter adapter) : _internal(new SimpleBLE::Adapter(std::move(adapter))) {};
 
-    void link(SimpleRsBLE::InnerAdapter& target, RustyError& error) const;
-    void unlink(RustyError& error) const;
-    void register_scan_callbacks(RustyError& error) const;
-    void register_power_callbacks(RustyError& error) const;
+    void link(SimpleRsBLE::InnerAdapter& target) const;
+    void unlink() const;
+    void register_scan_callbacks() const;
+    void register_power_callbacks() const;
 
     bool initialized(RustyError& error) const;
     rust::String identifier(RustyError& error) const;
@@ -147,9 +147,9 @@ class RustyPeripheral {
 
     RustyPeripheral(SimpleBLE::Peripheral peripheral) : _internal(new SimpleBLE::Peripheral(peripheral)) {}
 
-    void link(SimpleRsBLE::InnerPeripheral& target, RustyError& error) const;
-    void unlink(RustyError& error) const;
-    void register_connection_callbacks(RustyError& error) const;
+    void link(SimpleRsBLE::InnerPeripheral& target) const;
+    void unlink() const;
+    void register_connection_callbacks() const;
 
     bool initialized(RustyError& error) const;
     rust::String identifier(RustyError& error) const;
@@ -280,8 +280,8 @@ class RustyLocalPeripheral {
     RustyLocalPeripheral(SimpleBLE::Local::Peripheral peripheral)
         : _internal(new SimpleBLE::Local::Peripheral(std::move(peripheral))) {}
 
-    void link(SimpleRsBLE::InnerLocalPeripheral const& target, RustyError& error) const;
-    void unlink(RustyError& error) const;
+    void link(SimpleRsBLE::InnerLocalPeripheral const& target) const;
+    void unlink() const;
 
     void add_advertised_service(rust::Str uuid, RustyError& error) const;
     void set_advertised_manufacturer_data(uint16_t company_id, rust::Slice<const uint8_t> data,
@@ -326,8 +326,8 @@ class RustyLocalCharacteristic {
     RustyLocalCharacteristic(SimpleBLE::Local::Characteristic characteristic)
         : _internal(new SimpleBLE::Local::Characteristic(std::move(characteristic))) {}
 
-    void link(SimpleRsBLE::InnerLocalCharacteristic const& target, RustyError& error) const;
-    void unlink(RustyError& error) const;
+    void link(SimpleRsBLE::InnerLocalCharacteristic const& target) const;
+    void unlink() const;
 
     rust::String uuid(RustyError& error) const;
     uint8_t capabilities(RustyError& error) const;
