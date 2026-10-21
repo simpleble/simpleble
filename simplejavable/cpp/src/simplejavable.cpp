@@ -662,6 +662,18 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Config_nativeCoreBlueto
     SimpleBLE::Config::CoreBluetooth::reset();
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Config_nativeAndroidReset(JNIEnv*, jclass) {
+    SimpleBLE::Config::Android::reset();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplejavable_Config_nativeAndroidGetNegotiateMtu(JNIEnv*, jclass) {
+    return SimpleBLE::Config::Android::negotiate_mtu;
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Config_nativeAndroidSetNegotiateMtu(JNIEnv*, jclass, jboolean value) {
+    SimpleBLE::Config::Android::negotiate_mtu = value;
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Config_nativeDonglReset(JNIEnv* env, jclass clazz) {
     SimpleBLE::Config::Dongl::reset();
 }

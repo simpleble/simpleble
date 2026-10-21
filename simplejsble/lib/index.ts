@@ -37,7 +37,7 @@ native.setup({
 
 export { Adapter, type AdapterEvents } from './adapter';
 export { Backend } from './backend';
-export { Config, type DonglConfig, type SimpleBluezConfig, type WinRTConfig } from './config';
+export { Config, type AndroidConfig, type DonglConfig, type SimpleBluezConfig, type WinRTConfig } from './config';
 export { SimpleBLEError, type ErrorCode } from './errors';
 export { Logging, type LogEntry, type LogLevel } from './logging';
 export {

@@ -102,6 +102,12 @@ public static class Config
     {
         /// <summary>Restores the Android defaults.</summary>
         public static void Reset() => NativeMethods.simpleble_config_android_reset();
+        /// <summary>Negotiates MTU on connect. Defaults to true.</summary>
+        public static bool NegotiateMtu
+        {
+            get => NativeMethods.simpleble_config_android_get_negotiate_mtu();
+            set => NativeMethods.simpleble_config_android_set_negotiate_mtu(value);
+        }
         /// <summary>Priority requested after each connection. Defaults to Disabled, which leaves Android's choice.</summary>
         public static AndroidConnectionPriority ConnectionPriority
         {

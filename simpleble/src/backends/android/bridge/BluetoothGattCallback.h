@@ -21,6 +21,7 @@ class BluetoothGattCallback {
 
     void set_callback_onConnectionStateChange(std::function<void(bool)> callback);
     void set_callback_onServicesDiscovered(std::function<void(void)> callback);
+    void set_callback_onMtuChanged(std::function<void(int)> callback);
 
     void set_callback_onCharacteristicChanged(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic,
                                               std::function<void(std::vector<uint8_t> value)> callback);
@@ -84,6 +85,7 @@ class BluetoothGattCallback {
 
     kvn::safe_callback<void(bool)> _callback_onConnectionStateChange;
     kvn::safe_callback<void()> _callback_onServicesDiscovered;
+    kvn::safe_callback<void(int)> _callback_onMtuChanged;
 
     kvn::safe_map<SimpleJNI::Object<SimpleJNI::GlobalRef, jobject>, kvn::safe_callback<void(std::vector<uint8_t>)>, SimpleJNI::ObjectComparator<SimpleJNI::GlobalRef, jobject>>
         _callback_onCharacteristicChanged;

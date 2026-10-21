@@ -55,6 +55,8 @@ SIMPLECBLE_EXPORT void simpleble_config_winrt_set_use_deferred_disconnect(bool e
 SIMPLECBLE_EXPORT void simpleble_config_corebluetooth_reset(void);
 
 SIMPLECBLE_EXPORT void simpleble_config_android_reset(void);
+SIMPLECBLE_EXPORT bool simpleble_config_android_get_negotiate_mtu(void);
+SIMPLECBLE_EXPORT void simpleble_config_android_set_negotiate_mtu(bool enabled);
 SIMPLECBLE_EXPORT simpleble_config_android_connection_priority_t
 simpleble_config_android_get_connection_priority(void);
 SIMPLECBLE_EXPORT void simpleble_config_android_set_connection_priority(

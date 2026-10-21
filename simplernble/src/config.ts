@@ -8,6 +8,8 @@ const PRIORITIES: readonly ConnectionPriorityRequest[] = ['disabled', 'balanced'
 export interface AndroidConfig {
   /** Requested after each connection; 'disabled' leaves Android's default. */
   connectionPriorityRequest: ConnectionPriorityRequest;
+  /** Negotiate MTU on connect. Defaults to true. */
+  negotiateMtu: boolean;
 }
 
 /**
@@ -26,8 +28,16 @@ export const Config: {
       if (!PRIORITIES.includes(value)) throw new TypeError(`connectionPriorityRequest must be one of ${PRIORITIES.join(', ')}`);
       native.connectionPriorityRequest = value;
     },
+    get negotiateMtu(): boolean {
+      return native.negotiateMtu;
+    },
+    set negotiateMtu(value: boolean) {
+      if (typeof value !== 'boolean') throw new TypeError('negotiateMtu must be a boolean');
+      native.negotiateMtu = value;
+    },
     reset(): void {
       native.connectionPriorityRequest = 'disabled';
+      native.negotiateMtu = true;
     },
   }),
   resetAll(): void {

@@ -263,6 +263,13 @@ mod ffi {
         fn RustyConfig_corebluetooth_reset();
 
         #[namespace = "Bindings"]
+        fn RustyConfig_android_reset();
+        #[namespace = "Bindings"]
+        fn RustyConfig_android_negotiate_mtu() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_android_set_negotiate_mtu(enabled: bool);
+
+        #[namespace = "Bindings"]
         fn RustyConfig_dongl_reset();
         #[namespace = "Bindings"]
         fn RustyConfig_dongl_use_dongl_backend() -> bool;

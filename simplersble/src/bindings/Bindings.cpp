@@ -180,6 +180,14 @@ void Bindings::RustyConfig_winrt_set_use_deferred_disconnect(bool enabled) {
 
 void Bindings::RustyConfig_corebluetooth_reset() { SimpleBLE::Config::CoreBluetooth::reset(); }
 
+void Bindings::RustyConfig_android_reset() { SimpleBLE::Config::Android::reset(); }
+
+bool Bindings::RustyConfig_android_negotiate_mtu() { return SimpleBLE::Config::Android::negotiate_mtu; }
+
+void Bindings::RustyConfig_android_set_negotiate_mtu(bool enabled) {
+    SimpleBLE::Config::Android::negotiate_mtu = enabled;
+}
+
 void Bindings::RustyConfig_dongl_reset() { SimpleBLE::Config::Dongl::reset(); }
 
 bool Bindings::RustyConfig_dongl_use_dongl_backend() { return SimpleBLE::Config::Dongl::use_dongl_backend; }

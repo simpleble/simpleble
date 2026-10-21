@@ -26,6 +26,7 @@ PeripheralAndroid::PeripheralAndroid(Android::BluetoothDevice device) : _device(
             // If a connection has been established, request service discovery.
             _gatt.discoverServices();
         } else {
+            _connection_pending = false;
             // If a connection has been lost, close the GATT object.
             _gatt.close();
             SAFE_CALLBACK_CALL(callback_on_disconnected_);
@@ -34,10 +35,33 @@ PeripheralAndroid::PeripheralAndroid(Android::BluetoothDevice device) : _device(
     });
 
     _btGattCallback.set_callback_onServicesDiscovered([this]() {
-        // Once services have been discovered, store them and notify the user.
         _services = _gatt.getServices();
-        SAFE_CALLBACK_CALL(callback_on_connected_);
-        _connection_cv.notify_all();
+
+        // Android can report a retained ACL connection's MTU during discovery.
+        // Request it only when needed, after discovery and before completing connect.
+        if (Config::Android::negotiate_mtu && !_mtu_observed) {
+            if (_gatt.requestMtu(517)) {
+                return;
+            }
+
+            SIMPLEBLE_LOG_WARN("Failed to start MTU negotiation; using the last known ATT MTU");
+        }
+
+        _complete_connection();
+    });
+
+    _btGattCallback.set_callback_onMtuChanged([this](int status) {
+        if (status == 0) {
+            _mtu_observed = true;
+        }
+
+        if (_btGattCallback.services_discovered) {
+            if (status != 0 && _connection_pending) {
+                SIMPLEBLE_LOG_WARN("MTU negotiation failed; using the last known ATT MTU");
+            }
+
+            _complete_connection();
+        }
     });
 }
 
@@ -84,10 +108,18 @@ int16_t PeripheralAndroid::rssi() { return rssi_; }
 
 int16_t PeripheralAndroid::tx_power() { return tx_power_; }
 
-uint16_t PeripheralAndroid::mtu() { return _btGattCallback.mtu; }
+uint16_t PeripheralAndroid::mtu() {
+    if (!is_connected()) {
+        return 0;
+    }
+
+    return _btGattCallback.mtu.load() - 3;
+}
 
 void PeripheralAndroid::connect() {
     _btGattCallback.mtu = 23;
+    _connection_pending = true;
+    _mtu_observed = false;
     _gatt = _device.connectGatt(false, _btGattCallback);
 
     // Wait for the connection to be confirmed.
@@ -95,7 +127,7 @@ void PeripheralAndroid::connect() {
     std::unique_lock<std::mutex> lock(_connection_mutex);
     bool connected = _connection_cv.wait_for(lock, 8s, [this]() { return is_connected(); });
     if (!connected) {
-        throw SimpleBLE::Exception::OperationFailed("Failed to connect to device");
+        _handle_connection_timeout();
     }
 }
 
@@ -110,7 +142,9 @@ void PeripheralAndroid::disconnect() {
     }
 }
 
-bool PeripheralAndroid::is_connected() { return _btGattCallback.connected && _btGattCallback.services_discovered; }
+bool PeripheralAndroid::is_connected() {
+    return _btGattCallback.connected && _btGattCallback.services_discovered && !_connection_pending;
+}
 
 bool PeripheralAndroid::is_connectable() { return connectable_; }
 
@@ -332,6 +366,29 @@ void PeripheralAndroid::set_callback_on_disconnected(std::function<void()> on_di
     } else {
         callback_on_disconnected_.unload();
     }
+}
+
+void PeripheralAndroid::_complete_connection() {
+    bool connection_pending = _connection_pending.exchange(false);
+    if (!connection_pending) {
+        return;
+    }
+
+    SAFE_CALLBACK_CALL(callback_on_connected_);
+    _connection_cv.notify_all();
+}
+
+void PeripheralAndroid::_handle_connection_timeout() {
+    bool waiting_for_mtu = _btGattCallback.services_discovered && _connection_pending;
+    _btGattCallback.connected = false;
+    _btGattCallback.services_discovered = false;
+    _connection_pending = false;
+    _gatt.disconnect();
+    _gatt.close();
+    if (waiting_for_mtu) {
+        throw SimpleBLE::Exception::OperationFailed("Timed out waiting for MTU negotiation");
+    }
+    throw SimpleBLE::Exception::OperationFailed("Failed to connect to device");
 }
 
 // NOTE: This approach to retrieve the characteristic and descriptor objects is not ideal, as it involves

@@ -981,6 +981,9 @@ class _CoreBluetoothConfig:
 class _AndroidConfig:
     """Android-specific configuration options."""
 
+    negotiate_mtu: bool
+    """Negotiate MTU on connect. Defaults to true."""
+
     connection_priority_request: AndroidConnectionPriority
     """Android connection priority request."""
     

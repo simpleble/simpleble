@@ -31,6 +31,11 @@ export interface WinRTConfig {
   useDeferredDisconnect: boolean;
 }
 
+export interface AndroidConfig {
+  /** Negotiate MTU on connect. Defaults to true. */
+  negotiateMtu: boolean;
+}
+
 export interface DonglConfig {
   /** Include Dongl adapters in Backend.getBackends() and Adapter.getAdapters(). */
   useDonglBackend: boolean;
@@ -54,6 +59,9 @@ export const Config = Object.freeze({
       'winRT.experimentalReinitializeWinrtApartmentOnMainThread',
     ),
     useDeferredDisconnect: setting<boolean>('winRT.useDeferredDisconnect'),
+  }),
+  android: group<AndroidConfig>('android', {
+    negotiateMtu: setting<boolean>('android.negotiateMtu'),
   }),
   dongl: group<DonglConfig>('dongl', {
     useDonglBackend: setting<boolean>('dongl.useDonglBackend'),

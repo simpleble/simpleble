@@ -165,6 +165,27 @@ public final class Config {
     }
 
     /**
+     * Options of the Android backend.
+     */
+    public static final class Android {
+        private Android() {}
+
+        /** Restores the Android defaults. */
+        public static void reset() {
+            nativeAndroidReset();
+        }
+
+        /** Negotiate MTU on connect. Defaults to true. */
+        public static boolean getNegotiateMtu() {
+            return nativeAndroidGetNegotiateMtu();
+        }
+
+        public static void setNegotiateMtu(boolean value) {
+            nativeAndroidSetNegotiateMtu(value);
+        }
+    }
+
+    /**
      * Options of the Dongl backend.
      */
     public static final class Dongl {
@@ -250,6 +271,9 @@ public final class Config {
     private static native boolean nativeWinRTGetUseDeferredDisconnect();
     private static native void nativeWinRTSetUseDeferredDisconnect(boolean value);
     private static native void nativeCoreBluetoothReset();
+    private static native void nativeAndroidReset();
+    private static native boolean nativeAndroidGetNegotiateMtu();
+    private static native void nativeAndroidSetNegotiateMtu(boolean value);
     private static native void nativeDonglReset();
     private static native boolean nativeDonglGetUseDonglBackend();
     private static native void nativeDonglSetUseDonglBackend(boolean value);

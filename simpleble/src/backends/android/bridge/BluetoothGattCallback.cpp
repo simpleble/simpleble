@@ -69,6 +69,14 @@ void BluetoothGattCallback::set_callback_onServicesDiscovered(std::function<void
     }
 }
 
+void BluetoothGattCallback::set_callback_onMtuChanged(std::function<void(int)> callback) {
+    if (callback) {
+        _callback_onMtuChanged.load(callback);
+    } else {
+        _callback_onMtuChanged.unload();
+    }
+}
+
 void BluetoothGattCallback::set_callback_onCharacteristicChanged(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic,
                                                                  std::function<void(std::vector<uint8_t>)> callback) {
     if (callback) {
@@ -229,7 +237,13 @@ void BluetoothGattCallback::jni_onConnectionStateChangeCallback(SimpleJNI::Objec
 
     BluetoothGattCallback* obj = GET_CALLBACK_OBJECT_OR_RETURN(thiz_obj);
     const bool connected = new_state == 2;
-    obj->connected = connected;
+    bool was_connected = obj->connected.exchange(connected);
+
+    // Some Android stacks repeat the connected event. Start connection setup only once.
+    if (connected && was_connected) {
+        return;
+    }
+
     if (!connected) {
         // Services need to be rediscovered on the next connection.
         obj->services_discovered = false;
@@ -313,9 +327,13 @@ void BluetoothGattCallback::jni_onMtuChangedCallback(SimpleJNI::Object<SimpleJNI
     BluetoothGattCallback* obj = GET_CALLBACK_OBJECT_OR_RETURN(thiz_obj);
     if (status != 0) {
         SIMPLEBLE_LOG_ERROR(fmt::format("MTU change failed with GATT status {}", status));
-        return;
+    } else if (mtu < 23 || mtu > 517) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Invalid ATT MTU {}", mtu));
+        status = -1;
+    } else {
+        obj->mtu = mtu;
     }
-    obj->mtu = mtu;
+    SAFE_CALLBACK_CALL(obj->_callback_onMtuChanged, status);
 }
 
 void BluetoothGattCallback::jni_onPhyReadCallback(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> thiz_obj, jint tx_phy, jint rx_phy, jint status) {

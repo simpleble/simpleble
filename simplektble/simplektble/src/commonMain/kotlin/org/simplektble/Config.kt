@@ -62,6 +62,12 @@ public object Config {
     }
 
     public object Android {
+        /** Negotiate MTU on connect. Defaults to true. */
+        @JvmStatic
+        public var negotiateMtu: Boolean
+            get() = Native.configGetBoolean(ConfigKey.ANDROID_NEGOTIATE_MTU)
+            set(value) = Native.configSetBoolean(ConfigKey.ANDROID_NEGOTIATE_MTU, value)
+
         /** What each connection asks Android for once connected. [ConnectionPriorityRequest.DISABLED] asks nothing. */
         @JvmStatic
         public var connectionPriorityRequest: ConnectionPriorityRequest
@@ -123,6 +129,7 @@ internal object ConfigKey {
     const val DONGL_AUTO_UPDATE = 6
     const val DONGL_FORCE_UPDATE = 7
     const val ANDROID_CONNECTION_PRIORITY = 8
+    const val ANDROID_NEGOTIATE_MTU = 9
 }
 
 /** The groups Native resets. The native side uses the same numbers. */

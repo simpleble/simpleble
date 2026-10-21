@@ -60,6 +60,13 @@ internal static partial class NativeMethods
     internal static extern void simpleble_config_android_reset();
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    internal static extern bool simpleble_config_android_get_negotiate_mtu();
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_config_android_set_negotiate_mtu([MarshalAs(UnmanagedType.I1)] bool value);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern AndroidConnectionPriority simpleble_config_android_get_connection_priority();
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]

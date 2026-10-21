@@ -101,6 +101,7 @@ bool* bool_setting(const std::string& name) {
         return &Config::WinRT::experimental_reinitialize_winrt_apartment_on_main_thread;
     }
     if (name == "winRT.useDeferredDisconnect") return &Config::WinRT::use_deferred_disconnect;
+    if (name == "android.negotiateMtu") return &Config::Android::negotiate_mtu;
     if (name == "dongl.useDonglBackend") return &Config::Dongl::use_dongl_backend;
     if (name == "dongl.autoUpdate") return &Config::Dongl::auto_update;
     if (name == "dongl.forceUpdate") return &Config::Dongl::force_update;
@@ -146,6 +147,8 @@ Napi::Value config_reset(const Napi::CallbackInfo& info) {
         Config::SimpleBluez::reset();
     } else if (group == "winRT") {
         Config::WinRT::reset();
+    } else if (group == "android") {
+        Config::Android::reset();
     } else if (group == "dongl") {
         Config::Dongl::reset();
     } else if (group == "all") {

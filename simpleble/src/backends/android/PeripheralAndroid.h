@@ -10,6 +10,7 @@
 #include <types/android/bluetooth/le/ScanResult.h>
 #include <bridge/BluetoothGattCallback.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <map>
 #include <mutex>
@@ -77,9 +78,14 @@ class PeripheralAndroid : public PeripheralBase {
     std::mutex _disconnection_mutex;
     std::condition_variable _connection_cv;
     std::condition_variable _disconnection_cv;
+    std::atomic<bool> _connection_pending = false;
+    std::atomic<bool> _mtu_observed = false;
 
     kvn::safe_callback<void()> callback_on_connected_;
     kvn::safe_callback<void()> callback_on_disconnected_;
+
+    void _complete_connection();
+    void _handle_connection_timeout();
 
     Android::BluetoothGattCharacteristic _fetch_characteristic(const BluetoothUUID& service_uuid,
                                                                const BluetoothUUID& characteristic_uuid);

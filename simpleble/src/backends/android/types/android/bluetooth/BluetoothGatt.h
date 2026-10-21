@@ -42,7 +42,7 @@ class BluetoothGatt {
     // void readPhy();
     // bool readRemoteRssi();
     bool requestConnectionPriority(int connectionPriority);
-    // bool requestMtu(int mtu);
+    bool requestMtu(int mtu);
     bool setCharacteristicNotification(BluetoothGattCharacteristic characteristic, bool enable);
     // void setPreferredPhy(int txPhy, int rxPhy, int phyOptions);
     bool writeCharacteristic(BluetoothGattCharacteristic characteristic);
@@ -66,6 +66,7 @@ class BluetoothGatt {
     static jmethodID _method_writeCharacteristic;
     static jmethodID _method_writeDescriptor;
     static jmethodID _method_requestConnectionPriority;
+    static jmethodID _method_requestMtu;
     // JNI descriptor for auto-registration
     static const SimpleJNI::JNIDescriptor descriptor;
     static const SimpleJNI::AutoRegister<BluetoothGatt> registrar;

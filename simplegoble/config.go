@@ -15,6 +15,7 @@ type Configuration struct {
 	SimpleBluez   SimpleBluezConfig
 	WinRT         WinRTConfig
 	CoreBluetooth CoreBluetoothConfig
+	Android       AndroidConfig
 	Dongl         DonglConfig
 }
 
@@ -30,6 +31,9 @@ type WinRTConfig struct{}
 
 // CoreBluetoothConfig configures the macOS backend. It has no options yet.
 type CoreBluetoothConfig struct{}
+
+// AndroidConfig configures the Android backend.
+type AndroidConfig struct{}
 
 // DonglConfig configures the Dongl backend.
 type DonglConfig struct{}
@@ -165,6 +169,20 @@ func (WinRTConfig) SetUseDeferredDisconnect(enabled bool) error {
 // Reset restores the CoreBluetooth defaults.
 func (CoreBluetoothConfig) Reset() error {
 	return configure(func(native *bindings.NativeAPI) { native.ConfigCoreBluetoothReset() })
+}
+
+// Reset restores the Android defaults.
+func (AndroidConfig) Reset() error {
+	return configure(func(native *bindings.NativeAPI) { native.ConfigAndroidReset() })
+}
+
+// NegotiateMTU reports whether MTU is negotiated on connect. Defaults to true.
+func (AndroidConfig) NegotiateMTU() (bool, error) {
+	return configValue(func(native *bindings.NativeAPI) bool { return native.ConfigAndroidNegotiateMTU() })
+}
+
+func (AndroidConfig) SetNegotiateMTU(enabled bool) error {
+	return configure(func(native *bindings.NativeAPI) { native.ConfigAndroidSetNegotiateMTU(enabled) })
 }
 
 // Reset restores the Dongl defaults.

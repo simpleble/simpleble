@@ -66,6 +66,12 @@ void simpleble_config_corebluetooth_reset(void) { SimpleBLE::Config::CoreBluetoo
 
 void simpleble_config_android_reset(void) { SimpleBLE::Config::Android::reset(); }
 
+bool simpleble_config_android_get_negotiate_mtu(void) { return SimpleBLE::Config::Android::negotiate_mtu; }
+
+void simpleble_config_android_set_negotiate_mtu(bool enabled) {
+    SimpleBLE::Config::Android::negotiate_mtu = enabled;
+}
+
 simpleble_config_android_connection_priority_t simpleble_config_android_get_connection_priority(void) {
     return static_cast<simpleble_config_android_connection_priority_t>(
         SimpleBLE::Config::Android::connection_priority_request);

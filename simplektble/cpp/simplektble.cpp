@@ -988,6 +988,8 @@ bool& config_boolean(jint key) {
             return SimpleBLE::Config::Dongl::auto_update;
         case 7:
             return SimpleBLE::Config::Dongl::force_update;
+        case 9:
+            return SimpleBLE::Config::Android::negotiate_mtu;
     }
     throw std::invalid_argument("Unknown boolean setting");
 }

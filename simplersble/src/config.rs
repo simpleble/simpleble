@@ -120,6 +120,24 @@ pub mod corebluetooth {
     }
 }
 
+/// Settings for the Android backend.
+pub mod android {
+    use super::*;
+
+    pub fn reset() {
+        locked(ffi::RustyConfig_android_reset)
+    }
+
+    /// Negotiate MTU on connect. Defaults to `true`.
+    pub fn negotiate_mtu() -> bool {
+        locked(ffi::RustyConfig_android_negotiate_mtu)
+    }
+
+    pub fn set_negotiate_mtu(enabled: bool) {
+        locked(|| ffi::RustyConfig_android_set_negotiate_mtu(enabled))
+    }
+}
+
 /// Settings for the Dongl USB adapter.
 pub mod dongl {
     use super::*;

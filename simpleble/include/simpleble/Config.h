@@ -47,8 +47,12 @@ namespace Android {
     enum class ConnectionPriorityRequest { DISABLED = -1, BALANCED = 0, HIGH = 1, LOW_POWER = 2, DCK = 3 };
 
     extern SIMPLEBLE_EXPORT ConnectionPriorityRequest connection_priority_request;
+    extern SIMPLEBLE_EXPORT bool negotiate_mtu;
 
-    static void reset() { connection_priority_request = ConnectionPriorityRequest::DISABLED; }
+    static void reset() {
+        connection_priority_request = ConnectionPriorityRequest::DISABLED;
+        negotiate_mtu = true;
+    }
 }  // namespace Android
 
 namespace Dongl {

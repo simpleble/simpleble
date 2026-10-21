@@ -3,6 +3,7 @@
 #include <android/log.h>
 #include <fmt/format.h>
 #include <simpleble/Advanced.h>
+#include <simpleble/Config.h>
 #include <simpleble/Logging.h>
 #include <simpleble/SimpleBLE.h>
 
@@ -735,4 +736,24 @@ extern "C" JNIEXPORT void JNICALL Java_org_simpleble_android_Peripheral_nativePe
             .peripheral(adapter_id, peripheral_id)
             .write(service.str(), characteristic.str(), descriptor.str(), data.bytes());
     });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_org_simpleble_android_Config_nativeGetNegotiateMtu(JNIEnv*, jobject) {
+    return SimpleBLE::Config::Android::negotiate_mtu;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_simpleble_android_Config_nativeSetNegotiateMtu(JNIEnv*, jobject, jboolean value) {
+    SimpleBLE::Config::Android::negotiate_mtu = value;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_simpleble_android_Config_nativeResetAndroid(JNIEnv*, jobject) {
+    SimpleBLE::Config::Android::reset();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_simpleble_android_Config_nativeResetAll(JNIEnv*, jobject) {
+    SimpleBLE::Config::Base::reset_all();
 }

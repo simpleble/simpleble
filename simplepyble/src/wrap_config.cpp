@@ -69,6 +69,13 @@ namespace PyWrappers {
     };
 
     struct Android {
+        static bool get_negotiate_mtu() {
+            return SimpleBLE::Config::Android::negotiate_mtu;
+        }
+        static void set_negotiate_mtu(bool value) {
+            SimpleBLE::Config::Android::negotiate_mtu = value;
+        }
+
         static SimpleBLE::Config::Android::ConnectionPriorityRequest get_connection_priority_request() {
             return SimpleBLE::Config::Android::connection_priority_request;
         }
@@ -255,6 +262,10 @@ void wrap_config(py::module& m) {
 
     py::class_<PyWrappers::Android> android_config(config, "android", kDocsConfigAndroidClass);
     android_config
+        .def_property_static("negotiate_mtu",
+            [](py::object) { return PyWrappers::Android::get_negotiate_mtu(); },
+            [](py::object, bool value) { PyWrappers::Android::set_negotiate_mtu(value); },
+            "Negotiate MTU on connect. Defaults to true.")
         .def_property_static("connection_priority_request",
             [](py::object) { return PyWrappers::Android::get_connection_priority_request(); },
             [](py::object, SimpleBLE::Config::Android::ConnectionPriorityRequest value) {

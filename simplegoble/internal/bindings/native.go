@@ -129,6 +129,9 @@ type NativeAPI struct {
 	ConfigWinRTDeferredDisconnect     func() bool
 	ConfigWinRTSetDeferredDisconnect  func(bool)
 	ConfigCoreBluetoothReset          func()
+	ConfigAndroidReset                func()
+	ConfigAndroidNegotiateMTU         func() bool
+	ConfigAndroidSetNegotiateMTU      func(bool)
 	ConfigDonglReset                  func()
 	ConfigDonglBackend                func() bool
 	ConfigDonglSetBackend             func(bool)
@@ -303,6 +306,9 @@ func Load(path string) error {
 		{"simpleble_config_winrt_get_use_deferred_disconnect", &native.ConfigWinRTDeferredDisconnect},
 		{"simpleble_config_winrt_set_use_deferred_disconnect", &native.ConfigWinRTSetDeferredDisconnect},
 		{"simpleble_config_corebluetooth_reset", &native.ConfigCoreBluetoothReset},
+		{"simpleble_config_android_reset", &native.ConfigAndroidReset},
+		{"simpleble_config_android_get_negotiate_mtu", &native.ConfigAndroidNegotiateMTU},
+		{"simpleble_config_android_set_negotiate_mtu", &native.ConfigAndroidSetNegotiateMTU},
 		{"simpleble_config_dongl_reset", &native.ConfigDonglReset},
 		{"simpleble_config_dongl_get_use_dongl_backend", &native.ConfigDonglBackend},
 		{"simpleble_config_dongl_set_use_dongl_backend", &native.ConfigDonglSetBackend},

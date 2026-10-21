@@ -637,6 +637,7 @@ internal actual object Native {
         ConfigKey.DONGL_USE_DONGL_BACKEND -> simpleble_config_dongl_get_use_dongl_backend()
         ConfigKey.DONGL_AUTO_UPDATE -> simpleble_config_dongl_get_auto_update()
         ConfigKey.DONGL_FORCE_UPDATE -> simpleble_config_dongl_get_force_update()
+        ConfigKey.ANDROID_NEGOTIATE_MTU -> simpleble_config_android_get_negotiate_mtu()
         else -> throw unclassified("Unknown boolean setting")
     }
 
@@ -649,6 +650,7 @@ internal actual object Native {
             ConfigKey.DONGL_USE_DONGL_BACKEND -> simpleble_config_dongl_set_use_dongl_backend(value)
             ConfigKey.DONGL_AUTO_UPDATE -> simpleble_config_dongl_set_auto_update(value)
             ConfigKey.DONGL_FORCE_UPDATE -> simpleble_config_dongl_set_force_update(value)
+            ConfigKey.ANDROID_NEGOTIATE_MTU -> simpleble_config_android_set_negotiate_mtu(value)
             else -> throw unclassified("Unknown boolean setting")
         }
     }

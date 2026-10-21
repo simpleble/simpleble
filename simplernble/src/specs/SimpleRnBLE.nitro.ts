@@ -142,6 +142,7 @@ export interface SimpleRnBLE extends Native {
   bluetoothEnabled(): Promise<boolean>;
 
   connectionPriorityRequest: ConnectionPriorityRequest;
+  negotiateMtu: boolean;
   resetConfig(): void;
 
   logLevel: number;

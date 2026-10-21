@@ -96,6 +96,14 @@ Android's Bluetooth API has evolved significantly over time, leading to some ver
 ### Bond Management
 Similar to iOS, Android (especially newer versions) restricts the ability of applications to remove bonds (unpair) programmatically. While SimpleBLE attempts to use hidden APIs to achieve this where possible, it is not guaranteed to work on all devices or future Android versions.
 
+### MTU Negotiation
+
+After discovering services, SimpleBLE requests ATT MTU 517 unless Android has already reported the MTU of the connection. The connection becomes ready after that step; the successful MTU callback supplies the negotiated value. `Peripheral::mtu()` reports ATT MTU minus 3, the payload capacity of an ordinary write, and returns zero while disconnected. Write commands exceeding that capacity are rejected to prevent silent truncation. Writes with response retain Android's long-write behavior, which requires support from the peripheral.
+
+Set `SimpleBLE::Config::Android::negotiate_mtu = false` before retrieving adapters to skip negotiation for peripherals that mishandle it. The initial ATT MTU is 23 (20 payload bytes). If requesting negotiation fails or its callback reports an error, SimpleBLE logs a warning and continues with the last known MTU. If no callback arrives, the connection attempt times out and closes its GATT client.
+
+Android 14 and newer request ATT MTU 517 on the first client request and disregard subsequent requests on the same ACL connection. The requested value is not the negotiated value; the peripheral must respond with a size it supports. See the [Android MTU behavior notes](https://developer.android.com/about/versions/14/behavior-changes-all#mtu-set-to-517).
+
 ### Local Peripheral Mode
 
 Android API 31 and newer can host local GATT services and legacy BLE advertisements. Add `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE` to the application manifest and request both at runtime. Hardware support still depends on `BluetoothAdapter.isMultipleAdvertisementSupported()` and the vendor Bluetooth stack.

@@ -16,6 +16,8 @@ class HybridSimpleRnBLE : public HybridSimpleRnBLESpec {
     std::shared_ptr<Promise<std::vector<std::shared_ptr<HybridAdapterHandleSpec>>>> getAdapters() override;
     std::shared_ptr<Promise<bool>> bluetoothEnabled() override;
 
+    bool getNegotiateMtu() override;
+    void setNegotiateMtu(bool enabled) override;
     ConnectionPriorityRequest getConnectionPriorityRequest() override;
     void setConnectionPriorityRequest(ConnectionPriorityRequest request) override;
     void resetConfig() override;

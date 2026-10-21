@@ -92,6 +92,10 @@ std::shared_ptr<Promise<bool>> HybridSimpleRnBLE::bluetoothEnabled() {
     return run<bool>(lifecycle(), [] { return SimpleBLE::Adapter::bluetooth_enabled(); });
 }
 
+bool HybridSimpleRnBLE::getNegotiateMtu() { return SimpleBLE::Config::Android::negotiate_mtu; }
+
+void HybridSimpleRnBLE::setNegotiateMtu(bool enabled) { SimpleBLE::Config::Android::negotiate_mtu = enabled; }
+
 ConnectionPriorityRequest HybridSimpleRnBLE::getConnectionPriorityRequest() {
     return convert_back(PRIORITIES, SimpleBLE::Config::Android::connection_priority_request);
 }

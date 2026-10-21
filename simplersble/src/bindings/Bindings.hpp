@@ -67,6 +67,10 @@ void RustyConfig_winrt_set_use_deferred_disconnect(bool enabled);
 
 void RustyConfig_corebluetooth_reset();
 
+void RustyConfig_android_reset();
+bool RustyConfig_android_negotiate_mtu();
+void RustyConfig_android_set_negotiate_mtu(bool enabled);
+
 void RustyConfig_dongl_reset();
 bool RustyConfig_dongl_use_dongl_backend();
 void RustyConfig_dongl_set_use_dongl_backend(bool enabled);
