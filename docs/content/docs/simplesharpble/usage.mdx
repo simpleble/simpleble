@@ -76,6 +76,16 @@ scan, disconnect, unsubscribe, or stop a local host; call `ScanStop`,
 in native code finishes before the handle is released; later calls throw
 `ObjectDisposedException`.
 
+Events and subscriptions belong to the device, not to the `Peripheral` wrapper
+you use. `ScanGetResults()` and the scan events return a new wrapper each time,
+and all wrappers for one device share its events and subscriptions. Each event
+goes to the handlers of the wrapper that last added or removed one. A
+subscription or Dongl pairing callback set through one wrapper replaces the one
+set through another, and `Unsubscribe` through any wrapper ends a subscription.
+Disposing a wrapper doesn't affect the others. A wrapper raises events until it
+is disposed or garbage collected, so keep a reference to the one you registered
+through.
+
 ## Choose an adapter
 
 `Adapter.GetAdapters()` returns the adapters of every active backend.
@@ -146,8 +156,8 @@ Bluetooth address.
 ## Connect, read, and write
 
 ```csharp
-const string battery = "180f";
-const string level = "2a19";
+const string battery = "0000180f-0000-1000-8000-00805f9b34fb";
+const string level = "00002a19-0000-1000-8000-00805f9b34fb";
 
 peripheral.Connect();
 try
@@ -170,8 +180,7 @@ finally
 `Connect` blocks until the link is up and services are discovered. After
 connection, `Services` returns discovered services with their characteristics,
 capabilities, and descriptors as managed snapshots that remain valid after the
-peripheral is disposed. UUID arguments accept 16-bit and 32-bit short forms or
-full 128-bit UUIDs, in either case.
+peripheral is disposed. UUIDs are full 128-bit strings.
 
 Use `Read`, `WriteRequest` (acknowledged), and `WriteCommand` (unacknowledged)
 for characteristics, and the `Read` and `Write` overloads that take a descriptor
@@ -182,9 +191,9 @@ when the link drops unexpectedly.
 ## Notifications and indications
 
 ```csharp
-peripheral.Notify("180f", "2a19", data => Console.WriteLine($"Battery: {data[0]}%"));
+peripheral.Notify(battery, level, data => Console.WriteLine($"Battery: {data[0]}%"));
 // ...
-peripheral.Unsubscribe("180f", "2a19");
+peripheral.Unsubscribe(battery, level);
 ```
 
 `Indicate` works the same way for indications. A new subscription replaces the
@@ -216,7 +225,7 @@ Blocking operations have `Async` counterparts: `ScanForAsync`, `ConnectAsync`,
 
 ```csharp
 await peripheral.ConnectAsync();
-byte[] value = await peripheral.ReadAsync("180f", "2a19");
+byte[] value = await peripheral.ReadAsync(battery, level);
 await peripheral.DisconnectAsync();
 ```
 
@@ -236,7 +245,7 @@ APIs called on another platform throw `PlatformNotSupportedException`.
 ```csharp
 try
 {
-    byte[] value = peripheral.Read("180f", "2a19");
+    byte[] value = peripheral.Read(battery, level);
 }
 catch (BleException error) when (error.Code == BleErrorCode.PeripheralNotConnected)
 {

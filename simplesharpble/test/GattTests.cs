@@ -67,6 +67,6 @@ public sealed class GattTests
         Assert.Throws<ArgumentException>(() => peripheral.Read(new string('a', 37), Uuid));
         Assert.Throws<ArgumentException>(() => peripheral.Read("123\0", Uuid));
         Assert.Throws<ArgumentNullException>(() => peripheral.WriteCommand(Uuid, Uuid, null!));
-        Assert.Equal("abcd", new NativeUuid("ABCD").ToString());
+        Assert.Equal("ABCD", new NativeUuid("ABCD").ToString());
     }
 }

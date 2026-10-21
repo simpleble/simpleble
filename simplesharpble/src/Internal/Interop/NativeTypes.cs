@@ -10,12 +10,11 @@ internal unsafe struct NativeUuid
     internal NativeUuid(string value)
     {
         if (value is null) throw new ArgumentNullException(nameof(value));
-        // C++ accepts short Bluetooth UUIDs as well as full UUID strings.
-        if ((value.Length != 4 && value.Length != 8 && value.Length != 36) ||
-            (value.Length == 36 ? !Guid.TryParseExact(value, "D", out _) : !value.All(Uri.IsHexDigit)))
-            throw new ArgumentException("Expected a 4/8-digit Bluetooth UUID or a canonical 128-bit UUID.", nameof(value));
+        // SimpleBLE interprets the UUID. Only reject what can't reach it unchanged.
+        if (value.Length > 36 || value.Any(c => c == '\0' || c >= 0x80))
+            throw new ArgumentException("Expected a UUID of at most 36 ASCII characters.", nameof(value));
         this = default;
-        fixed (byte* ptr = Value) Encoding.ASCII.GetBytes(value.ToLowerInvariant(), new Span<byte>(ptr, 36));
+        fixed (byte* ptr = Value) Encoding.ASCII.GetBytes(value, new Span<byte>(ptr, 36));
     }
     public override string ToString()
     {
