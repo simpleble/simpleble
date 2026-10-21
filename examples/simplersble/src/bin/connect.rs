@@ -18,7 +18,7 @@ async fn main() {
 
     let mut scan_event = adapter.on_scan_event();
     tokio::spawn(async move {
-        while let Some(Ok(event)) = scan_event.next().await {
+        while let Some(event) = scan_event.next().await {
             match event {
                 simplersble::ScanEvent::Start => println!("Scan started."),
                 simplersble::ScanEvent::Stop => println!("Scan stopped."),
@@ -57,7 +57,7 @@ async fn main() {
 
     let mut connection_event = peripheral.on_connection_event();
     tokio::spawn(async move {
-        while let Some(Ok(event)) = connection_event.next().await {
+        while let Some(event) = connection_event.next().await {
             match event {
                 simplersble::ConnectionEvent::Connected => println!("Connected to device."),
                 simplersble::ConnectionEvent::Disconnected => println!("Disconnected from device."),

@@ -78,6 +78,3 @@ impl From<Pin<Box<InnerService>>> for Service {
         };
     }
 }
-
-unsafe impl Send for Service {}
-unsafe impl Sync for Service {}

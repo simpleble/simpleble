@@ -184,9 +184,9 @@ class RustyPeripheral {
     void write_descriptor(rust::String const& service, rust::String const& characteristic,
                           rust::String const& descriptor, rust::Vec<uint8_t> const& data, RustyError& error) const;
 
-    void dongl_set_passkey_request_callback(bool enabled, RustyError& error) const;
-    void dongl_set_passkey_display_callback(bool enabled, RustyError& error) const;
-    void dongl_set_numeric_comparison_callback(bool enabled, RustyError& error) const;
+    void dongl_set_passkey_request_callback(RustyError& error) const;
+    void dongl_set_passkey_display_callback(RustyError& error) const;
+    void dongl_set_numeric_comparison_callback(RustyError& error) const;
 
   private:
     // NOTE: All internal properties need to be handled as pointers,

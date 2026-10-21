@@ -310,7 +310,7 @@ peripheral.unsubscribe(service, characteristic);
 let mut stream = peripheral.notify(&service_uuid, &characteristic_uuid).unwrap();
 
 tokio::spawn(async move {
-    while let Some(Ok(event)) = stream.next().await {
+    while let Some(event) = stream.next().await {
         if let simplersble::ValueChangedEvent::ValueUpdated(data) = event {
             println!("Notification: {:?}", data);
         }

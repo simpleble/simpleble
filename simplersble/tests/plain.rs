@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use futures::{Stream, StreamExt};
 use simplersble::{
-    advanced, config, Adapter, Backend, CharacteristicCapability, ClientEvent, ConnectionEvent, Error, ErrorCode,
+    advanced, config, Adapter, Backend, CharacteristicCapability, ClientEvent, ConnectionEvent, ErrorCode,
     LocalCharacteristic, LocalCharacteristicEvent, LocalPeripheral, Peripheral, ScanEvent, ValueChangedEvent,
 };
 
@@ -27,13 +27,12 @@ const ALL_CAPABILITIES: [CharacteristicCapability; 5] = [
 
 async fn next_event<T, S>(stream: &mut S) -> T
 where
-    S: Stream<Item = Result<T, Error>> + Unpin,
+    S: Stream<Item = T> + Unpin,
 {
     tokio::time::timeout(TIMEOUT, stream.next())
         .await
         .expect("timed out waiting for an event")
         .expect("event stream ended")
-        .expect("event stream failed")
 }
 
 fn plain_adapter() -> Adapter {
@@ -56,7 +55,7 @@ async fn find_peripheral(adapter: &Adapter, service_uuid: &str) -> Peripheral {
 
     let found = tokio::time::timeout(TIMEOUT, async {
         while let Some(event) = events.next().await {
-            if let Ok(ScanEvent::Found(peripheral) | ScanEvent::Updated(peripheral)) = event {
+            if let ScanEvent::Found(peripheral) | ScanEvent::Updated(peripheral) = event {
                 if advertises(&peripheral, service_uuid) {
                     return peripheral;
                 }

@@ -190,7 +190,7 @@ impl LocalPeripheral {
     }
 
     /// Returns a stream of clients connecting and disconnecting.
-    pub fn on_client_event(&self) -> impl Stream<Item = Result<ClientEvent, Error>> {
+    pub fn on_client_event(&self) -> impl Stream<Item = ClientEvent> {
         self.inner.on_client_event.subscribe()
     }
 

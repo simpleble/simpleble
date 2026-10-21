@@ -153,7 +153,7 @@ characteristic.set_value(b"ready").unwrap();
 let mut characteristic_events = characteristic.on_event();
 let echo = characteristic.clone();
 tokio::spawn(async move {
-    while let Some(Ok(event)) = characteristic_events.next().await {
+    while let Some(event) = characteristic_events.next().await {
         if let LocalCharacteristicEvent::Written(value) = event {
             // Echo the written value to subscribed clients.
             echo.set_value(&value).unwrap();
@@ -163,7 +163,7 @@ tokio::spawn(async move {
 
 let mut client_events = peripheral.on_client_event();
 tokio::spawn(async move {
-    while let Some(Ok(event)) = client_events.next().await {
+    while let Some(event) = client_events.next().await {
         if let ClientEvent::Connected(address) = event {
             println!("Client connected: {}", address);
         }

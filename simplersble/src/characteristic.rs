@@ -141,6 +141,3 @@ impl From<Pin<Box<InnerCharacteristic>>> for Characteristic {
         };
     }
 }
-
-unsafe impl Send for Characteristic {}
-unsafe impl Sync for Characteristic {}

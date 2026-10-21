@@ -1,10 +1,8 @@
 use std::sync::{Mutex, PoisonError};
 
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-
-use crate::types::Error;
 
 // Sends each event to every open stream.
 // NOTE: Each stream keeps its events until they are read, so that native threads never wait on a
@@ -20,11 +18,11 @@ impl<T: Clone> EventSender<T> {
         }
     }
 
-    pub(crate) fn subscribe(&self) -> impl Stream<Item = Result<T, Error>> {
+    pub(crate) fn subscribe(&self) -> impl Stream<Item = T> {
         let (sender, receiver) = mpsc::unbounded_channel();
         self.streams.lock().unwrap_or_else(PoisonError::into_inner).push(sender);
 
-        UnboundedReceiverStream::new(receiver).map(Ok)
+        UnboundedReceiverStream::new(receiver)
     }
 
     // Called from native threads, so it never panics. Streams that were dropped are removed.

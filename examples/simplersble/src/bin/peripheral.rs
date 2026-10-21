@@ -40,7 +40,7 @@ async fn main() {
     let mut characteristic_events = characteristic.on_event();
     let echo = characteristic.clone();
     tokio::spawn(async move {
-        while let Some(Ok(event)) = characteristic_events.next().await {
+        while let Some(event) = characteristic_events.next().await {
             match event {
                 LocalCharacteristicEvent::Written(value) => {
                     println!("Write: {}", to_hex(&value));
@@ -57,7 +57,7 @@ async fn main() {
 
     let mut client_events = peripheral.on_client_event();
     tokio::spawn(async move {
-        while let Some(Ok(event)) = client_events.next().await {
+        while let Some(event) = client_events.next().await {
             match event {
                 ClientEvent::Connected(address) => println!("Client connected: {}", address),
                 ClientEvent::Disconnected(address) => println!("Client disconnected: {}", address),

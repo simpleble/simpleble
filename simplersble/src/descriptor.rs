@@ -57,6 +57,3 @@ impl From<Pin<Box<InnerDescriptor>>> for Descriptor {
         };
     }
 }
-
-unsafe impl Send for Descriptor {}
-unsafe impl Sync for Descriptor {}

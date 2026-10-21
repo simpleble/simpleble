@@ -41,7 +41,7 @@ void report_exception(Bindings::RustyError& error) noexcept {
     error.failed = true;
 
     try {
-        throw;
+        std::rethrow_exception(std::current_exception());
     } catch (const SimpleBLE::Exception::BaseException& e) {
         error.code = e.make_error()->code;
         error.message = rust::String::lossy(e.what());
@@ -787,14 +787,10 @@ void Bindings::RustyPeripheral::write_descriptor(rust::String const& service, ru
 
 // NOTE: The pairing callbacks run on a Dongl worker thread, possibly while connect() is still
 // in progress. They hold the target lock while waiting for the user, so unlink() waits for them.
+// They forward to whichever callback the InnerPeripheral(Rust) has stored, so they're never cleared.
 
-void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(bool enabled, RustyError& error) const {
+void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(RustyError& error) const {
     try {
-        if (!enabled) {
-            SimpleBLE::Advanced::Dongl::set_passkey_request_callback(*_internal, nullptr);
-            return;
-        }
-
         auto target = _callback_target;
         SimpleBLE::Advanced::Dongl::set_passkey_request_callback(*_internal, [target]() -> std::optional<std::string> {
             std::shared_lock<std::shared_mutex> lock(target->mutex);
@@ -810,13 +806,8 @@ void Bindings::RustyPeripheral::dongl_set_passkey_request_callback(bool enabled,
     }
 }
 
-void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(bool enabled, RustyError& error) const {
+void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(RustyError& error) const {
     try {
-        if (!enabled) {
-            SimpleBLE::Advanced::Dongl::set_passkey_display_callback(*_internal, nullptr);
-            return;
-        }
-
         auto target = _callback_target;
         SimpleBLE::Advanced::Dongl::set_passkey_display_callback(*_internal, [target](const std::string& passkey) {
             std::shared_lock<std::shared_mutex> lock(target->mutex);
@@ -830,13 +821,8 @@ void Bindings::RustyPeripheral::dongl_set_passkey_display_callback(bool enabled,
     }
 }
 
-void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(bool enabled, RustyError& error) const {
+void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(RustyError& error) const {
     try {
-        if (!enabled) {
-            SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(*_internal, nullptr);
-            return;
-        }
-
         auto target = _callback_target;
         SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(*_internal, [target](const std::string& passkey) {
             std::shared_lock<std::shared_mutex> lock(target->mutex);

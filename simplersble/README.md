@@ -55,7 +55,7 @@ async fn main() {
 
     let mut events = adapter.on_scan_event();
     tokio::spawn(async move {
-        while let Some(Ok(event)) = events.next().await {
+        while let Some(event) = events.next().await {
             if let ScanEvent::Found(peripheral) = event {
                 println!(
                     "{} [{}] {} dBm",
@@ -75,8 +75,8 @@ async fn main() {
 An adapter streams `ScanEvent::Start`, `Stop`, `Found`, and `Updated` from
 `on_scan_event()`, and `PowerEvent::On` and `Off` from `on_power_event()`; a
 peripheral streams `ConnectionEvent::Connected` and `Disconnected` from
-`on_connection_event()`. Each method returns a `futures::Stream` of `Result`s
-that you read in your own task, so SimpleBLE's threads never wait on your code.
+`on_connection_event()`. Each method returns a `futures::Stream` of events that
+you read in your own task, so SimpleBLE's threads never wait on your code.
 A stream keeps every event until you read it. Drop a stream to stop listening.
 
 Use `scan_start()` and `scan_stop()` when your application controls scan
@@ -101,7 +101,7 @@ let peripheral = adapter
 
 let mut connection = peripheral.on_connection_event();
 tokio::spawn(async move {
-    while let Some(Ok(event)) = connection.next().await {
+    while let Some(event) = connection.next().await {
         if let ConnectionEvent::Disconnected = event {
             println!("Disconnected");
         }
@@ -114,7 +114,7 @@ println!("Battery: {}%", level[0]);
 
 let mut updates = peripheral.notify(&battery_service, &battery_level).unwrap();
 tokio::spawn(async move {
-    while let Some(Ok(ValueChangedEvent::ValueUpdated(value))) = updates.next().await {
+    while let Some(ValueChangedEvent::ValueUpdated(value)) = updates.next().await {
         println!("Battery: {}%", value[0]);
     }
 });
@@ -151,7 +151,7 @@ battery.set_value(&[100]).unwrap();
 
 let mut clients = host.on_client_event();
 tokio::spawn(async move {
-    while let Some(Ok(event)) = clients.next().await {
+    while let Some(event) = clients.next().await {
         if let ClientEvent::Connected(address) = event {
             println!("{} connected", address);
         }

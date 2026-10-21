@@ -208,7 +208,7 @@ async fn main() {
 
     let mut events = adapter.on_scan_event();
     tokio::spawn(async move {
-        while let Some(Ok(event)) = events.next().await {
+        while let Some(event) = events.next().await {
             if let simplersble::ScanEvent::Found(peripheral) = event {
                 println!(
                     "Found: {} [{}] {} dBm",

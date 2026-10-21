@@ -40,17 +40,18 @@ pub struct InnerPeripheral {
     numeric_comparison_callback: Mutex<Option<NumericComparisonCallback>>,
 }
 
-// Stores `callback` and then registers or clears the native callback.
+// Stores `callback` and then registers the native callback, so that the device uses this peripheral's callbacks.
 // If the native call fails, the previous callback is put back.
+// NOTE: The native callback forwards to whichever callback is stored and rejects the request without one, so it
+// stays registered when `callback` is `None`. Clones changing callbacks at once can't leave the two out of step.
 fn replace_pairing_callback<T>(
     slot: &Mutex<Option<T>>,
     callback: Option<T>,
-    register: impl FnOnce(bool) -> Result<(), Error>,
+    register: impl FnOnce() -> Result<(), Error>,
 ) -> Result<(), Error> {
-    let enabled = callback.is_some();
     let previous = mem::replace(&mut *slot.lock().unwrap(), callback);
 
-    if let Err(e) = register(enabled) {
+    if let Err(e) = register() {
         *slot.lock().unwrap() = previous;
         return Err(e);
     }
@@ -187,7 +188,7 @@ impl InnerPeripheral {
         &self,
         service: &String,
         characteristic: &String
-    ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
+    ) -> Result<impl Stream<Item = ValueChangedEvent>, Error> {
         // NOTE: The stream subscribes first, so that it gets the values that arrive while notify() runs.
         let updates = self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic));
 
@@ -200,7 +201,7 @@ impl InnerPeripheral {
         &self,
         service: &String,
         characteristic: &String
-    ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
+    ) -> Result<impl Stream<Item = ValueChangedEvent>, Error> {
         // NOTE: The stream subscribes first, so that it gets the values that arrive while indicate() runs.
         let updates = self.subscribe_to_characteristic_updates(format!("{}{}", service, characteristic));
 
@@ -214,7 +215,7 @@ impl InnerPeripheral {
     fn subscribe_to_characteristic_updates(
         &self,
         key: String,
-    ) -> impl Stream<Item = Result<ValueChangedEvent, Error>> {
+    ) -> impl Stream<Item = ValueChangedEvent> {
         self.on_characteristic_update_map
             .lock()
             .unwrap()
@@ -254,14 +255,14 @@ impl InnerPeripheral {
     }
 
     pub(crate) fn set_passkey_request_callback(&self, callback: Option<PasskeyRequestCallback>) -> Result<(), Error> {
-        replace_pairing_callback(&self.passkey_request_callback, callback, |enabled| {
-            call(|error| self.internal.dongl_set_passkey_request_callback(enabled, error))
+        replace_pairing_callback(&self.passkey_request_callback, callback, || {
+            call(|error| self.internal.dongl_set_passkey_request_callback(error))
         })
     }
 
     pub(crate) fn set_passkey_display_callback(&self, callback: Option<PasskeyDisplayCallback>) -> Result<(), Error> {
-        replace_pairing_callback(&self.passkey_display_callback, callback, |enabled| {
-            call(|error| self.internal.dongl_set_passkey_display_callback(enabled, error))
+        replace_pairing_callback(&self.passkey_display_callback, callback, || {
+            call(|error| self.internal.dongl_set_passkey_display_callback(error))
         })
     }
 
@@ -269,8 +270,8 @@ impl InnerPeripheral {
         &self,
         callback: Option<NumericComparisonCallback>,
     ) -> Result<(), Error> {
-        replace_pairing_callback(&self.numeric_comparison_callback, callback, |enabled| {
-            call(|error| self.internal.dongl_set_numeric_comparison_callback(enabled, error))
+        replace_pairing_callback(&self.numeric_comparison_callback, callback, || {
+            call(|error| self.internal.dongl_set_numeric_comparison_callback(error))
         })
     }
 
@@ -432,7 +433,7 @@ impl Peripheral {
         &self,
         service: &String,
         characteristic: &String
-    ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
+    ) -> Result<impl Stream<Item = ValueChangedEvent>, Error> {
         self.inner.notify(service, characteristic)
     }
 
@@ -440,7 +441,7 @@ impl Peripheral {
         &self,
         service: &String,
         characteristic: &String
-    ) -> Result<impl Stream<Item = Result<ValueChangedEvent, Error>>, Error> {
+    ) -> Result<impl Stream<Item = ValueChangedEvent>, Error> {
         self.inner.indicate(service, characteristic)
     }
 
@@ -467,7 +468,7 @@ impl Peripheral {
         self.inner.descriptor_write(service, characteristic, descriptor, data)
     }
 
-    pub fn on_connection_event(&self) -> impl Stream<Item = Result<ConnectionEvent, Error>> {
+    pub fn on_connection_event(&self) -> impl Stream<Item = ConnectionEvent> {
         let events = self.inner.on_connection_event.subscribe();
         self.inner.internal.register_connection_callbacks();
         events
@@ -498,6 +499,3 @@ impl From<Pin<Box<InnerPeripheral>>> for Peripheral {
         }
     }
 }
-
-unsafe impl Send for Peripheral {}
-unsafe impl Sync for Peripheral {}

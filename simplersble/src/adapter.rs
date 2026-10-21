@@ -286,13 +286,13 @@ impl Adapter {
         self.inner.macos_retrieve_cached_peripherals(identifiers)
     }
 
-    pub fn on_scan_event(&self) -> impl Stream<Item = Result<ScanEvent, Error>> {
+    pub fn on_scan_event(&self) -> impl Stream<Item = ScanEvent> {
         let events = self.inner.on_scan_event.subscribe();
         self.inner.internal.register_scan_callbacks();
         events
     }
 
-    pub fn on_power_event(&self) -> impl Stream<Item = Result<PowerEvent, Error>> {
+    pub fn on_power_event(&self) -> impl Stream<Item = PowerEvent> {
         let events = self.inner.on_power_event.subscribe();
         self.inner.internal.register_power_callbacks();
         events
@@ -307,6 +307,3 @@ impl From<Pin<Box<InnerAdapter>>> for Adapter {
         }
     }
 }
-
-unsafe impl Send for Adapter {}
-unsafe impl Sync for Adapter {}

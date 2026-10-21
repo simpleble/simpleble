@@ -193,7 +193,7 @@ impl LocalCharacteristic {
     }
 
     /// Returns a stream of client writes and subscription changes.
-    pub fn on_event(&self) -> impl Stream<Item = Result<LocalCharacteristicEvent, Error>> {
+    pub fn on_event(&self) -> impl Stream<Item = LocalCharacteristicEvent> {
         self.inner.on_event.subscribe()
     }
 }

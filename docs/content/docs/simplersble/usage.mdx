@@ -147,7 +147,7 @@ characteristic.set_value(b"ready").unwrap();
 let mut events = characteristic.on_event();
 let echo = characteristic.clone();
 tokio::spawn(async move {
-    while let Some(Ok(event)) = events.next().await {
+    while let Some(event) = events.next().await {
         if let LocalCharacteristicEvent::Written(value) = event {
             // Echo the written value to subscribed clients.
             echo.set_value(&value).unwrap();
