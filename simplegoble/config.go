@@ -1,6 +1,7 @@
 package simplegoble
 
 import (
+	"math"
 	"time"
 
 	"github.com/simpleble/simplegoble/internal/bindings"
@@ -56,11 +57,21 @@ func configValue[T any](get func(*bindings.NativeAPI) T) (T, error) {
 	return get(native), nil
 }
 
+// Fractional milliseconds round up, like ScanFor.
+// NOTE: SimpleBLE stores timeouts in nanoseconds, so rounding up the longest
+// Durations would overflow there.
 func timeoutMilliseconds(timeout time.Duration) (int64, error) {
 	if timeout < 0 {
 		return 0, &Error{Code: InvalidArgument, Message: "timeout cannot be negative"}
 	}
-	return timeout.Milliseconds(), nil
+	ms := timeout / time.Millisecond
+	if timeout%time.Millisecond > 0 {
+		ms++
+	}
+	if ms > math.MaxInt64/time.Millisecond {
+		return 0, &Error{Code: InvalidArgument, Message: "timeout is too long"}
+	}
+	return int64(ms), nil
 }
 
 // ResetAll restores every backend's defaults.
@@ -91,8 +102,8 @@ func (SimpleBluezConfig) ConnectionTimeout() (time.Duration, error) {
 	})
 }
 
-// SetConnectionTimeout sets how long Connect waits for BlueZ. Negative timeouts
-// return InvalidArgument.
+// SetConnectionTimeout sets how long Connect waits for BlueZ. Fractional
+// milliseconds round up, and negative timeouts return InvalidArgument.
 func (SimpleBluezConfig) SetConnectionTimeout(timeout time.Duration) error {
 	ms, err := timeoutMilliseconds(timeout)
 	if err != nil {
@@ -108,8 +119,8 @@ func (SimpleBluezConfig) DisconnectionTimeout() (time.Duration, error) {
 	})
 }
 
-// SetDisconnectionTimeout sets how long Disconnect waits for BlueZ. Negative
-// timeouts return InvalidArgument.
+// SetDisconnectionTimeout sets how long Disconnect waits for BlueZ. Fractional
+// milliseconds round up, and negative timeouts return InvalidArgument.
 func (SimpleBluezConfig) SetDisconnectionTimeout(timeout time.Duration) error {
 	ms, err := timeoutMilliseconds(timeout)
 	if err != nil {
