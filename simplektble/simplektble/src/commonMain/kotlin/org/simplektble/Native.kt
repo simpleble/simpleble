@@ -209,6 +209,8 @@ internal expect object Native {
 
     fun peripheralSetNumericComparisonHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
 
+    fun peripheralSecureConnection(adapterId: Long, peripheralId: Long, mitm: Boolean)
+
     fun getBackends(): List<String>
 
     fun getNativeBackend(): String

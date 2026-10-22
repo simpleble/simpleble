@@ -134,6 +134,10 @@ For pairing through a Dongl, register `Advanced.Dongl.SetPasskeyRequestCallback`
 before connecting. These callbacks run synchronously on a native pairing worker;
 return `null` or `false` to reject pairing.
 
+For devices that wait for the central to start pairing, call
+`Advanced.Dongl.SecureConnection(peripheral, mitm)` after connecting. See
+[Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
 ## Scan
 
 `ScanFor(TimeSpan)` scans synchronously and `ScanForAsync` runs the same scan on
@@ -221,7 +225,8 @@ promptly.
 
 Blocking operations have `Async` counterparts: `ScanForAsync`, `ConnectAsync`,
 `DisconnectAsync`, `ReadAsync`, `WriteRequestAsync`, `WriteCommandAsync`,
-`WriteAsync`, `NotifyAsync`, `IndicateAsync`, and `UnsubscribeAsync`.
+`WriteAsync`, `NotifyAsync`, `IndicateAsync`, `UnsubscribeAsync`, and
+`Advanced.Dongl.SecureConnectionAsync`.
 
 ```csharp
 await peripheral.ConnectAsync();

@@ -96,3 +96,24 @@ void simpleble_advanced_dongl_set_numeric_comparison_callback(simpleble_peripher
         *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
     }
 }
+
+void simpleble_advanced_dongl_secure_connection(simpleble_peripheral_t handle, bool mitm,
+                                                simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+
+    try {
+        auto* peripheral = (SimpleBLE::Peripheral*)handle;
+        SimpleBLE::Advanced::Dongl::secure_connection(*peripheral, mitm);
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}

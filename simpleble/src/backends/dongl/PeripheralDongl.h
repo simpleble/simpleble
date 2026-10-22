@@ -50,6 +50,7 @@ class PeripheralDongl : public PeripheralBase {
     void set_passkey_request_callback(const std::function<std::optional<std::string>()>& callback);
     void set_passkey_display_callback(const std::function<void(const std::string& passkey)>& callback);
     void set_numeric_comparison_callback(const std::function<bool(const std::string& passkey)>& callback);
+    void secure_connection(bool mitm);
 
     virtual std::vector<std::shared_ptr<ServiceBase>> available_services() override;
     virtual std::vector<std::shared_ptr<ServiceBase>> advertised_services() override;
@@ -85,6 +86,7 @@ class PeripheralDongl : public PeripheralBase {
     void notify_value_changed(simpleble_ValueChangedEvt const& value_changed_evt);
     void notify_passkey_display(simpleble_PasskeyDisplayEvt const& passkey_display_evt);
     void notify_auth_key_request(simpleble_AuthKeyRequestEvt const& auth_key_request_evt);
+    void notify_security_complete(simpleble_SecurityCompleteEvt const& security_complete_evt);
 
     const uint16_t BLE_CONN_HANDLE_INVALID = 0xFFFF;
     const uint16_t BLE_CONN_HANDLE_PENDING = 0xFFFE;
@@ -118,6 +120,8 @@ class PeripheralDongl : public PeripheralBase {
 
     static constexpr std::chrono::milliseconds CONNECT_TIMEOUT{10000};
     static constexpr std::chrono::milliseconds CONNECT_RESULT_MARGIN{5000};
+    // The Dongl gives up on securing a connection after 30 seconds.
+    static constexpr std::chrono::milliseconds SECURITY_RESULT_TIMEOUT{35000};
 
     void _resolve_missing_uuids();
 
@@ -156,6 +160,8 @@ class PeripheralDongl : public PeripheralBase {
     std::optional<simpleble_ConnectCompleteEvt> _connect_result;
     bool _connect_pending = false;  // Guarded by connection_mutex_.
     bool _lost = false;             // Guarded by connection_mutex_.
+    std::optional<simpleble_SecurityCompleteEvt> _security_result;
+    uint8_t _security_request_id = 0;  // Guarded by connection_mutex_. Zero when no request is pending.
 
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;
 

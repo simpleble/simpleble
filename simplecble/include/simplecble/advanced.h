@@ -62,6 +62,18 @@ SIMPLECBLE_EXPORT void simpleble_advanced_dongl_set_numeric_comparison_callback(
     simpleble_peripheral_t handle, bool (*callback)(simpleble_peripheral_t handle, const char* passkey, void* userdata),
     void* userdata, simpleble_error_t** out_error);
 
+/**
+ * @brief Secures the connection with LE Secure Connections.
+ *
+ * @param[in] handle Valid, non-NULL peripheral handle.
+ * @param[in] mitm Whether the peer must also be authenticated through the passkey or numeric comparison callbacks.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note Blocks until the link is encrypted with LE Secure Connections and a 128-bit key. Pairing started by this
+ *     call creates no bond. On failure the Dongl disconnects. A non-Dongl handle reports OPERATION_NOT_SUPPORTED.
+ */
+SIMPLECBLE_EXPORT void simpleble_advanced_dongl_secure_connection(simpleble_peripheral_t handle, bool mitm,
+                                                                  simpleble_error_t** out_error);
+
 #if defined(__APPLE__) && TARGET_OS_OSX
 
 /**

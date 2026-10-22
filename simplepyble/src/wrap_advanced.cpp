@@ -22,6 +22,10 @@ constexpr auto kDocsDonglSetNumericComparisonCallback = R"pbdoc(
     Register a callback that returns True only if the peer shows the same six-digit number
 )pbdoc";
 
+constexpr auto kDocsDonglSecureConnection = R"pbdoc(
+    Secure the connection with LE Secure Connections, also authenticating the peer if mitm is True
+)pbdoc";
+
 constexpr auto kDocsSetAdvertisementLocalName = R"pbdoc(
     Set the local name advertised by a local peripheral, or None to remove the override
 )pbdoc";
@@ -81,6 +85,8 @@ void wrap_advanced(py::module& m) {
                 });
         },
         py::call_guard<py::gil_scoped_release>(), kDocsDonglSetNumericComparisonCallback);
+    dongl.def("secure_connection", &SimpleBLE::Advanced::Dongl::secure_connection, py::arg("peripheral"),
+              py::arg("mitm") = false, py::call_guard<py::gil_scoped_release>(), kDocsDonglSecureConnection);
 
 #if SIMPLEPYBLE_HAS_MACOS_ADVANCED
     auto macos = advanced.def_submodule("macos", "Advanced CoreBluetooth APIs");

@@ -19,4 +19,8 @@ void set_numeric_comparison_callback(Peripheral& peripheral,
     Factory::get_internal<PeripheralDongl>(peripheral).set_numeric_comparison_callback(callback);
 }
 
+void secure_connection(Peripheral& peripheral, bool mitm) {
+    Factory::get_internal<PeripheralDongl>(peripheral).secure_connection(mitm);
+}
+
 }  // namespace SimpleBLE::Advanced::Dongl

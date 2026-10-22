@@ -29,11 +29,12 @@ class DonglPairingTest {
         val peripheral = found.await()
         activeAdapter.scanStop()
 
-        // Only Dongl peripherals pair through these handlers, so PLAIN's peripheral rejects each of them.
+        // Only Dongl peripherals pair through these calls, so PLAIN's peripheral rejects each of them.
         val rejections = listOf(
             assertFailsWith<SimpleKtBleException> { peripheral.setPasskeyRequestHandler { "123456" } },
             assertFailsWith<SimpleKtBleException> { peripheral.setPasskeyDisplayHandler { } },
-            assertFailsWith<SimpleKtBleException> { peripheral.setNumericComparisonHandler { true } }
+            assertFailsWith<SimpleKtBleException> { peripheral.setNumericComparisonHandler { true } },
+            assertFailsWith<SimpleKtBleException> { peripheral.secureConnection() }
         )
         rejections.forEach { assertEquals(ErrorCode.OPERATION_NOT_SUPPORTED, it.code) }
     }

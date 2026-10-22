@@ -142,6 +142,7 @@ type NativeAPI struct {
 	DonglPasskeyRequest               func(uintptr, uintptr, uintptr, *uintptr)
 	DonglPasskeyDisplay               func(uintptr, uintptr, uintptr, *uintptr)
 	DonglNumericComparison            func(uintptr, uintptr, uintptr, *uintptr)
+	DonglSecureConnection             func(uintptr, bool, *uintptr)
 	SetAdvertisementLocalName         func(uintptr, *byte, *uintptr) // Optional; see Load.
 	RetrieveCachedPeripheral          func(uintptr, *byte, *uintptr) uintptr
 }
@@ -319,6 +320,7 @@ func Load(path string) error {
 		{"simpleble_advanced_dongl_set_passkey_request_callback", &native.DonglPasskeyRequest},
 		{"simpleble_advanced_dongl_set_passkey_display_callback", &native.DonglPasskeyDisplay},
 		{"simpleble_advanced_dongl_set_numeric_comparison_callback", &native.DonglNumericComparison},
+		{"simpleble_advanced_dongl_secure_connection", &native.DonglSecureConnection},
 	}
 	for _, binding := range bindings {
 		symbol, err := findSymbol(libraryHandle, binding.name)

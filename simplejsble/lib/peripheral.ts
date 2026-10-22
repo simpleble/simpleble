@@ -235,6 +235,16 @@ export class Peripheral extends EventEmitter<PeripheralEvents> {
     return this.#numericComparison.set(handler, id => this.#handle.setNumericComparisonHandler(id));
   }
 
+  /**
+   * Secures a Dongl connection with LE Secure Connections. With `mitm`, the
+   * peer must also be authenticated through the passkey or numeric comparison
+   * handlers. Pairing started by this call creates no bond, and the Dongl
+   * disconnects if it fails.
+   */
+  async secureConnection(mitm = false): Promise<void> {
+    return this.#handle.secureConnection(mitm);
+  }
+
   override removeAllListeners(...args: Parameters<EventEmitter<PeripheralEvents>['removeAllListeners']>): this {
     super.removeAllListeners(...args);
     this.#rehook();

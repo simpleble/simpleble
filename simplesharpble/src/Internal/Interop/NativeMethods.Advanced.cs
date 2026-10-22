@@ -23,6 +23,9 @@ internal static partial class NativeMethods
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_advanced_dongl_set_passkey_display_callback(nint h, NativeCallbacks.Text? callback, nint token, ref nint error);
 
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_advanced_dongl_secure_connection(nint h, [MarshalAs(UnmanagedType.I1)] bool mitm, ref nint error);
+
     [DllImport(SharedLibrary, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_advanced_macos_set_advertisement_local_name(nint h, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, ref nint error);
 

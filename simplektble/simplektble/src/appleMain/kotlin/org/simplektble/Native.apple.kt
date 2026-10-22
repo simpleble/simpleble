@@ -592,6 +592,11 @@ internal actual object Native {
         }
     }
 
+    actual fun peripheralSecureConnection(adapterId: Long, peripheralId: Long, mitm: Boolean) {
+        val handle = peripheral(peripheralId)
+        call { simpleble_advanced_dongl_secure_connection(handle, mitm, it) }
+    }
+
     actual fun getBackends(): List<String> = readList(
         { list, error -> simpleble_backend_get_backends(list, error) },
         { simpleble_backend_list_release(it) }

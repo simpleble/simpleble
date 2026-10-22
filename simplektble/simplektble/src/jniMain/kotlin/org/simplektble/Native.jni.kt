@@ -178,6 +178,8 @@ internal actual object Native {
 
     actual external fun peripheralSetNumericComparisonHandler(adapterId: Long, peripheralId: Long, enabled: Boolean)
 
+    actual external fun peripheralSecureConnection(adapterId: Long, peripheralId: Long, mitm: Boolean)
+
     actual external fun getBackends(): List<String>
 
     actual external fun getNativeBackend(): String

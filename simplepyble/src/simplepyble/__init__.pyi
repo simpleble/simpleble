@@ -1128,6 +1128,21 @@ class _AdvancedDongl:
         """
         ...
 
+    def secure_connection(self, peripheral: Peripheral, mitm: bool = False) -> None:
+        """
+        Secure the connection with LE Secure Connections.
+
+        Pairs with the connected peer and waits until the link is encrypted
+        with LE Secure Connections and a 128-bit key. Pairing started by this
+        call creates no bond. If it fails, the Dongl disconnects.
+
+        Args:
+            peripheral: The connected peripheral
+            mitm: Whether the peer must also be authenticated through the
+                passkey or numeric comparison callbacks
+        """
+        ...
+
 class _Advanced:
     """Platform-specific advanced SimpleBLE APIs."""
 

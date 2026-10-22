@@ -57,6 +57,20 @@ void SIMPLEBLE_EXPORT set_passkey_display_callback(Peripheral& peripheral,
 void SIMPLEBLE_EXPORT set_numeric_comparison_callback(Peripheral& peripheral,
                                                       const std::function<bool(const std::string& passkey)>& callback);
 
+/**
+ * Secure the connection with LE Secure Connections.
+ *
+ * Pairs with the connected peer and waits until the link is encrypted using LE
+ * Secure Connections and a 128-bit key. With mitm set, the peer must also be
+ * authenticated through the passkey or numeric comparison callbacks. If the
+ * link already meets these requirements, for example through an existing bond,
+ * the call returns right away. Pairing started by this call creates no bond.
+ *
+ * Throws if the link can't be secured as requested, in which case the Dongl
+ * disconnects. The Dongl gives up after 30 seconds.
+ */
+void SIMPLEBLE_EXPORT secure_connection(Peripheral& peripheral, bool mitm = false);
+
 }  // namespace SimpleBLE::Advanced::Dongl
 
 /**

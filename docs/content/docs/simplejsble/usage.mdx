@@ -150,6 +150,8 @@ await peripheral.connect();
 
 Passing `null` removes a handler. A request without a handler is rejected, and peripherals of other adapters reject the setters with `OPERATION_NOT_SUPPORTED`.
 
+For devices that wait for the central to start pairing, call `await peripheral.secureConnection(mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
 ## Logging
 
 SimpleBLE writes its log to standard output, up to the `info` level. `Logging` changes that for the whole process:

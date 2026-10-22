@@ -701,6 +701,24 @@ Bonds are stored on the Dongl, not on the computer:
 - `peripheral.is_paired()` checks one device.
 - `peripheral.unpair()` deletes its bond from the Dongl.
 
+### Secure the connection from your application
+
+Some devices wait for the central to start pairing. With firmware v0.1.1, call `secure_connection()` after connecting to pair using LE Secure Connections and a 128-bit key. Set `mitm` to also authenticate the device through the passkey or numeric comparison callbacks, as LE Security Mode 1 Level 4 requires. Without it, pairing can use Just Works, which encrypts the link but doesn't authenticate the device.
+
+The call blocks until the link is secured, for up to 35 seconds. If the link already meets the requirements, for example through an existing bond, it returns right away. Pairing started this way creates no bond. If the link can't be secured as requested, the call fails and the Dongl disconnects.
+
+| Language | Call |
+| --- | --- |
+| C++ | `SimpleBLE::Advanced::Dongl::secure_connection(peripheral, mitm)` |
+| C | `simpleble_advanced_dongl_secure_connection(peripheral, mitm, &error)` |
+| C# | `Advanced.Dongl.SecureConnection(peripheral, mitm)`, `SecureConnectionAsync` |
+| Python | `simplepyble.advanced.dongl.secure_connection(peripheral, mitm=False)` |
+| Java | `Advanced.Dongl.secureConnection(peripheral, mitm)` |
+| Go | `Peripheral.SecureConnection(mitm)` |
+| Rust | `simplersble::advanced::dongl::secure_connection(&peripheral, mitm)` |
+| Node.js | `Peripheral.secureConnection(mitm)` |
+| Kotlin Multiplatform | `Peripheral.secureConnection(mitm)` |
+
 ## Update the firmware
 
 Dongls ship with the firmware installed. To update one, download the firmware package from the [Dongl page](https://simpleble.org/dongl), switch the Dongl into its bootloader, and program `app_dfu.zip` with Nordic's `nrfutil`:

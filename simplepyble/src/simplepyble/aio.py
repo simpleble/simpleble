@@ -664,6 +664,10 @@ class _DonglAdvanced:
         setter(peripheral._internal, lambda passkey: _wait_on_loop(loop, callback, passkey))
         peripheral._pairing_setters.add(setter)
 
+    async def secure_connection(self, peripheral: Peripheral, mitm: bool = False):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, simplepyble.advanced.dongl.secure_connection, peripheral._internal, mitm)
+
 class _Advanced:
     def __init__(self):
         self.dongl = _DonglAdvanced()

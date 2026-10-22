@@ -67,6 +67,7 @@ export interface PeripheralHandle {
   setPasskeyRequestHandler(id: number | undefined): Promise<void>;
   setPasskeyDisplayHandler(id: number | undefined): Promise<void>;
   setNumericComparisonHandler(id: number | undefined): Promise<void>;
+  secureConnection(mitm: boolean): Promise<void>;
   owner(): string;
   release(): void;
 }

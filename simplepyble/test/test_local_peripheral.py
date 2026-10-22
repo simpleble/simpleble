@@ -262,6 +262,8 @@ def test_dongl_pairing_requires_a_dongl_peripheral():
         dongl.set_passkey_display_callback(peripheral, print)
     with pytest.raises(RuntimeError, match="not supported"):
         dongl.set_numeric_comparison_callback(peripheral, lambda passkey: True)
+    with pytest.raises(RuntimeError, match="not supported"):
+        dongl.secure_connection(peripheral, mitm=True)
 
 
 def test_async_local_peripheral_loopback():

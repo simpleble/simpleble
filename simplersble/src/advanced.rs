@@ -62,6 +62,16 @@ pub mod dongl {
     pub fn clear_numeric_comparison_callback(peripheral: &Peripheral) -> Result<(), Error> {
         peripheral.set_numeric_comparison_callback(None)
     }
+
+    /// Secures the connection with LE Secure Connections.
+    ///
+    /// Pairs with the connected device and blocks until the link is encrypted with LE Secure
+    /// Connections and a 128-bit key. With `mitm`, the device must also be authenticated through
+    /// the passkey or numeric comparison callbacks. Pairing started by this call creates no bond.
+    /// If it fails, the Dongl disconnects.
+    pub fn secure_connection(peripheral: &Peripheral, mitm: bool) -> Result<(), Error> {
+        peripheral.secure_connection(mitm)
+    }
 }
 
 /// CoreBluetooth extensions. Available on macOS.

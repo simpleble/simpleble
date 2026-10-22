@@ -372,7 +372,7 @@ async fn local_configuration_is_frozen_while_started() {
 }
 
 #[tokio::test]
-async fn dongl_pairing_callbacks_require_a_dongl() {
+async fn dongl_pairing_requires_a_dongl() {
     let _serial = SERIAL.lock().await;
     const BATTERY_SERVICE: &str = "0000180f-0000-1000-8000-00805f9b34fb";
 
@@ -380,4 +380,5 @@ async fn dongl_pairing_callbacks_require_a_dongl() {
     assert!(advanced::dongl::set_passkey_request_callback(&peer, || Some("123456".to_string())).is_err());
     assert!(advanced::dongl::set_passkey_display_callback(&peer, |_| {}).is_err());
     assert!(advanced::dongl::set_numeric_comparison_callback(&peer, |_| true).is_err());
+    assert!(advanced::dongl::secure_connection(&peer, true).is_err());
 }

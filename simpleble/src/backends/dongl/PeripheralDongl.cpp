@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <memory>
 #include <thread>
@@ -183,6 +184,53 @@ void PeripheralDongl::set_numeric_comparison_callback(const std::function<bool(c
         numeric_comparison_callback_.load(callback);
     } else {
         numeric_comparison_callback_.unload();
+    }
+}
+
+void PeripheralDongl::secure_connection(bool mitm) {
+    if (!is_connected()) throw Exception::NotConnected();
+
+    // The result can arrive before the response to the command, so register the request first. The id is random so
+    // that a late result from an earlier request isn't taken for this one.
+    const uint8_t request_id = std::rand() % 255 + 1;
+    {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        _security_result.reset();
+        _security_request_id = request_id;
+    }
+
+    simpleble_SecureConnectionRsp response;
+    try {
+        response = _serial_protocol->simpleble_secure_connection(_conn_handle, request_id, mitm);
+    } catch (...) {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        _security_request_id = 0;
+        throw;
+    }
+    if (response.ret_code != 0) {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        _security_request_id = 0;
+        throw Exception::OperationFailed(fmt::format("Failed to secure the connection: {}", response.ret_code));
+    }
+
+    simpleble_SecurityCompleteEvt result;
+    {
+        std::unique_lock<std::mutex> lock(connection_mutex_);
+        connection_cv_.wait_for(lock, SECURITY_RESULT_TIMEOUT,
+                                [this]() { return _security_result.has_value() || _lost; });
+        _security_request_id = 0;
+        if (!_security_result.has_value()) {
+            if (_lost) throw Exception::OperationFailed("Lost the connection to the Dongl");
+            throw Exception::OperationFailed("Dongl did not report the security result");
+        }
+        result = *_security_result;
+    }
+
+    if (result.ret_code != 0) {
+        // The Dongl disconnects when it can't secure the connection, so wait for the disconnection.
+        std::unique_lock<std::mutex> lock(disconnection_mutex_);
+        disconnection_cv_.wait_for(lock, 500ms, [this]() { return !is_connected(); });
+        throw Exception::OperationFailed(fmt::format("Failed to secure the connection: {}", result.ret_code));
     }
 }
 
@@ -624,6 +672,16 @@ void PeripheralDongl::notify_auth_key_request(simpleble_AuthKeyRequestEvt const&
 
         _send_auth_key_reply(conn_handle, request_id, key, accept);
     });
+}
+
+void PeripheralDongl::notify_security_complete(simpleble_SecurityCompleteEvt const& evt) {
+    {
+        std::lock_guard<std::mutex> lock(connection_mutex_);
+        // Every peripheral receives this event, so only take the result of our own request.
+        if (evt.request_id != _security_request_id) return;
+        _security_result = evt;
+    }
+    connection_cv_.notify_all();
 }
 
 void PeripheralDongl::_enqueue(std::function<void()> func) {

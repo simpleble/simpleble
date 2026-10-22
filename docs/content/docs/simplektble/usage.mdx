@@ -240,3 +240,5 @@ peripheral.connect()
 ```
 
 The handlers run while `connect()` waits, so they can take as long as the user needs to answer. Passing `null` removes a handler, and a request without a handler is rejected.
+
+For devices that wait for the central to start pairing, call `peripheral.secureConnection(mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).

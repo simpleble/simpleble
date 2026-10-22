@@ -300,6 +300,18 @@ public class Peripheral internal constructor(
         Native.peripheralSetNumericComparisonHandler(adapterId, instanceId, handler != null)
     }
 
+    /**
+     * Secures a Dongl connection with LE Secure Connections. With [mitm], the peer must also be authenticated through
+     * the passkey or numeric comparison handlers. Pairing started by this call creates no bond, and the Dongl
+     * disconnects if it fails.
+     */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun secureConnection(mitm: Boolean = false) {
+        withContext(Dispatchers.IO) {
+            Native.peripheralSecureConnection(adapterId, instanceId, mitm)
+        }
+    }
+
     public val onConnected: SharedFlow<Unit> get() = _onConnected
 
     public val onDisconnected: SharedFlow<Unit> get() = _onDisconnected

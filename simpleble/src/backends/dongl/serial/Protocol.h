@@ -42,6 +42,7 @@ class Protocol : public ProtocolBase {
                                                        const std::vector<uint8_t>& key, bool accept);
     simpleble_GetPairedPeripheralRsp simpleble_get_paired_peripheral(uint16_t index);
     simpleble_GetPairedPeripheralCountRsp simpleble_get_paired_peripheral_count();
+    simpleble_SecureConnectionRsp simpleble_secure_connection(uint16_t conn_handle, uint8_t request_id, bool mitm);
 };
 
 }  // namespace Serial

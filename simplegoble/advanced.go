@@ -37,6 +37,19 @@ func (p *Peripheral) SetCallbackOnPasskeyDisplay(fn func(passkey string)) error 
 	return bindings.SetPasskeyDisplayCallback(p.handle, p.callbacks, fn)
 }
 
+// SecureConnection secures the connection with LE Secure Connections. With
+// mitm, the peer must also be authenticated through the passkey or numeric
+// comparison callbacks.
+//
+// NOTE: Pairing started by this call creates no bond, and the Dongl
+// disconnects if it fails. Peripherals from other backends return
+// OperationNotSupported.
+func (p *Peripheral) SecureConnection(mitm bool) error {
+	return bindings.Command(p.handle, func(native *bindings.NativeAPI, nativeHandle uintptr, nativeError *uintptr) {
+		native.DonglSecureConnection(nativeHandle, mitm, nativeError)
+	})
+}
+
 // SetAdvertisementLocalName sets the name included in the advertisement on
 // macOS and Linux. Call it before Start.
 //

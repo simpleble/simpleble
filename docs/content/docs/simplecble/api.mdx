@@ -959,6 +959,13 @@ Dongl functions require a Dongl peripheral. The macOS, iOS, Linux, and Android f
 />
 
 <ApiMethod
+  signature={"void simpleble_advanced_dongl_secure_connection(simpleble_peripheral_t handle, bool mitm, simpleble_error_t** out_error)"}
+  brief={"Secures the connection with LE Secure Connections."}
+  notes={[{"content": "Blocks until the link is encrypted with LE Secure Connections and a 128-bit key. Pairing started by this call creates no bond. On failure the Dongl disconnects. A non-Dongl handle reports OPERATION_NOT_SUPPORTED.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Valid, non-NULL peripheral handle."}, {"name": "mitm", "type": "bool", "description": "Whether the peer must also be authenticated through the passkey or numeric comparison callbacks."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
   signature={"void simpleble_advanced_macos_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
   brief={"Sets or clears the advertised local name."}
   notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}

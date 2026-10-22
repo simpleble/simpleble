@@ -844,6 +844,14 @@ void Bindings::RustyPeripheral::dongl_set_numeric_comparison_callback(RustyError
     }
 }
 
+void Bindings::RustyPeripheral::dongl_secure_connection(bool mitm, RustyError& error) const {
+    try {
+        SimpleBLE::Advanced::Dongl::secure_connection(*_internal, mitm);
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
 // Service Bindings
 
 rust::Vec<uint8_t> Bindings::RustyService::data() const {

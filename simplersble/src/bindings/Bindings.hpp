@@ -191,6 +191,7 @@ class RustyPeripheral {
     void dongl_set_passkey_request_callback(RustyError& error) const;
     void dongl_set_passkey_display_callback(RustyError& error) const;
     void dongl_set_numeric_comparison_callback(RustyError& error) const;
+    void dongl_secure_connection(bool mitm, RustyError& error) const;
 
   private:
     // NOTE: All internal properties need to be handled as pointers,

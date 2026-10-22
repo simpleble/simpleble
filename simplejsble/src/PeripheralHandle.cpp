@@ -40,6 +40,7 @@ Napi::Function PeripheralHandle::define(Napi::Env env) {
                            InstanceMethod<&PeripheralHandle::set_passkey_display_handler>("setPasskeyDisplayHandler"),
                            InstanceMethod<&PeripheralHandle::set_numeric_comparison_handler>(
                                "setNumericComparisonHandler"),
+                           InstanceMethod<&PeripheralHandle::secure_connection>("secureConnection"),
                            InstanceMethod<&PeripheralHandle::owner>("owner"),
                            InstanceMethod<&PeripheralHandle::release>("release"),
                        });
@@ -433,6 +434,16 @@ Napi::Value PeripheralHandle::set_numeric_comparison_handler(const Napi::Callbac
             };
         }
         SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, on_compare);
+        return finish_undefined();
+    });
+}
+
+Napi::Value PeripheralHandle::secure_connection(const Napi::CallbackInfo& info) {
+    if (!info[0].IsBoolean()) throw Napi::TypeError::New(info.Env(), "mitm must be a boolean");
+    const bool mitm = info[0].As<Napi::Boolean>().Value();
+    auto peripheral = peripheral_;
+    return run(info.Env(), strand(), [peripheral, mitm]() mutable {
+        SimpleBLE::Advanced::Dongl::secure_connection(peripheral, mitm);
         return finish_undefined();
     });
 }

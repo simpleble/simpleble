@@ -275,6 +275,10 @@ impl InnerPeripheral {
         })
     }
 
+    pub(crate) fn secure_connection(&self, mitm: bool) -> Result<(), Error> {
+        call(|error| self.internal.dongl_secure_connection(mitm, error))
+    }
+
     pub fn on_callback_connected(&self) {
         self.on_connection_event.send(ConnectionEvent::Connected);
     }
@@ -489,6 +493,10 @@ impl Peripheral {
         callback: Option<NumericComparisonCallback>,
     ) -> Result<(), Error> {
         self.inner.set_numeric_comparison_callback(callback)
+    }
+
+    pub(crate) fn secure_connection(&self, mitm: bool) -> Result<(), Error> {
+        self.inner.secure_connection(mitm)
     }
 }
 

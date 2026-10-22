@@ -72,6 +72,19 @@ public final class Advanced {
             nativeDonglSetNumericComparisonCallback(peripheral.getAdapterId(), peripheral.getInstanceId(),
                 callback != null);
         }
+
+        /**
+         * Secures the connection with LE Secure Connections.
+         * <p>
+         * With mitm, the peer must also be authenticated through the passkey or numeric comparison callbacks. Pairing
+         * started by this call creates no bond, and the Dongl disconnects if it fails.
+         * @param peripheral A connected peripheral found through a Dongl adapter.
+         * @param mitm Whether the peer must also be authenticated.
+         */
+        public static void secureConnection(Peripheral peripheral, boolean mitm) {
+            Objects.requireNonNull(peripheral, "peripheral");
+            nativeDonglSecureConnection(peripheral.getAdapterId(), peripheral.getInstanceId(), mitm);
+        }
     }
 
     /**
@@ -139,6 +152,7 @@ public final class Advanced {
     private static native void nativeDonglSetPasskeyDisplayCallback(long adapterId, long peripheralId, boolean enabled);
     private static native void nativeDonglSetNumericComparisonCallback(long adapterId, long peripheralId,
                                                                        boolean enabled);
+    private static native void nativeDonglSecureConnection(long adapterId, long peripheralId, boolean mitm);
     private static native void nativeMacOSSetAdvertisementLocalName(long peripheralId, String localName);
     private static native long[] nativeMacOSRetrieveCachedPeripherals(long adapterId, String[] identifiers);
     private static native void nativeLinuxSetAdvertisementLocalName(long peripheralId, String localName);

@@ -168,6 +168,7 @@ test('pairing handlers reach the core', async () => {
   for (const set of ['setPasskeyRequestHandler', 'setPasskeyDisplayHandler', 'setNumericComparisonHandler']) {
     await assert.rejects(peripheral[set](() => {}), { code: 'OPERATION_NOT_SUPPORTED' }, set);
   }
+  await assert.rejects(peripheral.secureConnection(), { code: 'OPERATION_NOT_SUPPORTED' });
   await assert.rejects(peripheral.setPasskeyRequestHandler('123456'), TypeError);
 });
 

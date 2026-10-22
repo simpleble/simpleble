@@ -919,6 +919,14 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralSetNumer
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_peripheralSecureConnection(
+    JNIEnv* env, jobject, jlong adapter_id, jlong peripheral_id, jboolean mitm) {
+    call(env, [adapter_id, peripheral_id, mitm] {
+        auto peripheral = NativeCache::get().peripheral(adapter_id, peripheral_id);
+        SimpleBLE::Advanced::Dongl::secure_connection(peripheral, mitm);
+    });
+}
+
 extern "C" JNIEXPORT jobject JNICALL Java_org_simplektble_Native_getBackends(JNIEnv* env, jobject) {
     return call(env, [] {
         SimpleJNI::Java::Util::ArrayList identifiers;

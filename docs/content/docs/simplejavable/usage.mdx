@@ -130,6 +130,10 @@ user's answer. A request without a callback, or whose callback throws, is reject
 Pass `null` to unregister a callback. Peripherals of other backends throw
 `UnsupportedOperationException`.
 
+For devices that wait for the central to start pairing, call
+`Advanced.Dongl.secureConnection(peripheral, mitm)` after connecting. See
+[Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
 ## Callbacks and threading
 
 Event listeners, notification callbacks, read handlers, and pairing callbacks run

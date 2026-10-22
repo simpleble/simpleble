@@ -53,6 +53,18 @@ public static class Advanced
             peripheral.callbacks.Set("pair-compare", callback is null ? null : value => callback((string)value!), (h, id) =>
                 NativeCall.Invoke((ref nint e) => { NativeMethods.simpleble_advanced_dongl_set_numeric_comparison_callback(h, id == 0 ? null : compare, id, ref e); return 0; }));
         }
+        /// <summary>
+        /// Secures the connection with LE Secure Connections. With mitm, the peer must also be authenticated through the passkey or numeric comparison callbacks.
+        /// Pairing started by this call creates no bond, and the Dongl disconnects if it fails.
+        /// </summary>
+        public static void SecureConnection(Peripheral peripheral, bool mitm = false)
+        {
+            if (peripheral is null) throw new ArgumentNullException(nameof(peripheral));
+            peripheral.handle.Execute((nint h, ref nint e) => NativeMethods.simpleble_advanced_dongl_secure_connection(h, mitm, ref e));
+        }
+        /// <summary>Runs SecureConnection on a worker. Cancellation only applies before the operation starts.</summary>
+        public static Task SecureConnectionAsync(Peripheral peripheral, bool mitm = false, CancellationToken cancellationToken = default) =>
+            Task.Run(() => SecureConnection(peripheral, mitm), cancellationToken);
     }
 
     /// <summary>Android initialization.</summary>

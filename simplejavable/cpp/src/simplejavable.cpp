@@ -944,6 +944,14 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeDonglSet
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeDonglSecureConnection(
+    JNIEnv* env, jclass clazz, jlong adapter_id, jlong peripheral_id, jboolean mitm) {
+    return safe_jni_call(env, [&]() {
+        auto peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
+        SimpleBLE::Advanced::Dongl::secure_connection(peripheral_wrapper->get(), mitm);
+    });
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeMacOSSetAdvertisementLocalName(
     JNIEnv* env, jclass clazz, jlong local_peripheral_id, jstring j_local_name) {
     return safe_jni_call(env, [&]() {

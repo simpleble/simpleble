@@ -71,6 +71,9 @@ func TestPlainDonglPairingIsUnsupported(t *testing.T) {
 	if err := p.SetCallbackOnNumericComparison(func(string) bool { return true }); !errors.Is(err, ble.OperationNotSupported) {
 		t.Fatal(err)
 	}
+	if err := p.SecureConnection(false); !errors.Is(err, ble.OperationNotSupported) {
+		t.Fatal(err)
+	}
 }
 
 func TestPlainPlatformExtensionsAreUnsupported(t *testing.T) {

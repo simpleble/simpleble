@@ -140,6 +140,15 @@ SimpleBLE::Advanced::Dongl::set_numeric_comparison_callback(peripheral, [](const
 peripheral.connect();
 ```
 
+With firmware v0.1.1, initiate authenticated LESC after connecting:
+
+```python
+peripheral.connect()  # Register authentication callbacks before this.
+simplepyble.advanced.dongl.secure_connection(peripheral, mitm=True)
+```
+
+Pairing started this way creates no bond, so it doesn't replace `authenticate(..., bond=True)`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application) for the requirements, timeout, and how existing bonds are used.
+
 The C and C# versions, and the passkey callbacks, are in [Pairing and bonding](../dongl#pairing-and-bonding).
 
 Bonds are stored on the Dongl and persist across script runs, power cycles, and computers. SimplePyBLE can list and remove them:

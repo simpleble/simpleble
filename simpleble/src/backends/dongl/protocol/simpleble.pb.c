@@ -78,6 +78,9 @@ PB_BIND(simpleble_GetPairedPeripheralCmd, simpleble_GetPairedPeripheralCmd, AUTO
 PB_BIND(simpleble_GetPairedPeripheralCountCmd, simpleble_GetPairedPeripheralCountCmd, AUTO)
 
 
+PB_BIND(simpleble_SecureConnectionCmd, simpleble_SecureConnectionCmd, AUTO)
+
+
 PB_BIND(simpleble_InitRsp, simpleble_InitRsp, AUTO)
 
 
@@ -117,6 +120,9 @@ PB_BIND(simpleble_GetPairedPeripheralRsp, simpleble_GetPairedPeripheralRsp, AUTO
 PB_BIND(simpleble_GetPairedPeripheralCountRsp, simpleble_GetPairedPeripheralCountRsp, AUTO)
 
 
+PB_BIND(simpleble_SecureConnectionRsp, simpleble_SecureConnectionRsp, AUTO)
+
+
 PB_BIND(simpleble_AdvEvt, simpleble_AdvEvt, 2)
 
 
@@ -145,6 +151,9 @@ PB_BIND(simpleble_PasskeyDisplayEvt, simpleble_PasskeyDisplayEvt, AUTO)
 
 
 PB_BIND(simpleble_AuthKeyRequestEvt, simpleble_AuthKeyRequestEvt, AUTO)
+
+
+PB_BIND(simpleble_SecurityCompleteEvt, simpleble_SecurityCompleteEvt, AUTO)
 
 
 PB_BIND(simpleble_Command, simpleble_Command, 2)

@@ -112,6 +112,7 @@ class PeripheralHandle : public Napi::ObjectWrap<PeripheralHandle> {
     Napi::Value set_passkey_request_handler(const Napi::CallbackInfo& info);
     Napi::Value set_passkey_display_handler(const Napi::CallbackInfo& info);
     Napi::Value set_numeric_comparison_handler(const Napi::CallbackInfo& info);
+    Napi::Value secure_connection(const Napi::CallbackInfo& info);
     Napi::Value owner(const Napi::CallbackInfo& info);
     Napi::Value release(const Napi::CallbackInfo& info);
 

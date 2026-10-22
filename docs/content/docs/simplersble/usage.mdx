@@ -124,6 +124,8 @@ peripheral.connect().unwrap();
 
 The callbacks run synchronously on a SimpleBLE worker thread, possibly while `connect()` is still running, and can block while the user answers. A request without a callback, or whose callback panics, is rejected. A callback stays registered until you clear it with the matching `clear_*_callback()` or drop the last clone of the `Peripheral`. Peripherals of other adapters return an error.
 
+For devices that wait for the central to start pairing, call `simplersble::advanced::dongl::secure_connection(&peripheral, mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
 ## Host a local peripheral
 
 `adapter.create_local_peripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Add advertised service UUIDs, services, and characteristics, then call `start()`; the layout cannot change while started.

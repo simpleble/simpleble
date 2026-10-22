@@ -344,5 +344,13 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
             }
             break;
         }
+
+        case simpleble_Event_security_complete_evt_tag: {
+            // Routed by request id: the link might be gone by the time the result arrives.
+            for (auto& [address, peripheral] : this->peripherals_) {
+                peripheral->notify_security_complete(event.evt.security_complete_evt);
+            }
+            break;
+        }
     }
 }

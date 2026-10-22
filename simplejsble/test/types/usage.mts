@@ -65,6 +65,7 @@ const cached: Peripheral[] = await adapter.retrieveCachedPeripherals([peripheral
 
 await peripheral.setPasskeyRequestHandler(async () => '123456');
 await peripheral.setNumericComparisonHandler((passkey: string) => passkey === '123456');
+await peripheral.secureConnection(true);
 await peripheral.setPasskeyDisplayHandler(null);
 // @ts-expect-error A passkey is a string.
 await peripheral.setPasskeyRequestHandler(() => 123456);

@@ -401,6 +401,7 @@ mod ffi {
         fn dongl_set_passkey_request_callback(self: &RustyPeripheral, error: &mut RustyError);
         fn dongl_set_passkey_display_callback(self: &RustyPeripheral, error: &mut RustyError);
         fn dongl_set_numeric_comparison_callback(self: &RustyPeripheral, error: &mut RustyError);
+        fn dongl_secure_connection(self: &RustyPeripheral, mitm: bool, error: &mut RustyError);
 
         // RustyService functions
 

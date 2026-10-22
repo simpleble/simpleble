@@ -100,6 +100,8 @@ peripheral.connect()
 
 `set_passkey_request_callback()` returns the six digits the user typed as a `str`, including leading zeroes, or `None` to reject. `set_passkey_display_callback()` receives the passkey to show to the user. `set_numeric_comparison_callback()` returns `True` only if the device shows the same number. These callbacks run on a SimpleBLE worker thread and may block while the user answers. A request without a callback, with an invalid answer, or whose callback raises is rejected. Pass `None` to unregister a callback. Registering a callback on a peripheral from another backend raises `OperationNotSupportedError`.
 
+For devices that wait for the central to start pairing, call `simplepyble.advanced.dongl.secure_connection(peripheral, mitm=False)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
 ## Asynchronous API
 
 SimplePyBLE provides an asynchronous API via the `simplepyble.aio` module. This module is designed to work with `asyncio` and provides a more idiomatic way to handle asynchronous operations in Python.
