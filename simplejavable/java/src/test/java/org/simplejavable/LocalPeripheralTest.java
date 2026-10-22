@@ -64,6 +64,7 @@ class LocalPeripheralTest {
             client = TestSupport.scanFor(adapter, "Plain Adapter Peripheral");
             client.connect();
             assertEquals("connected", clients.poll(TestSupport.TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            assertTrue(adapter.getConnectedPeripherals().contains(client));
 
             assertArrayEquals(new byte[] {0x00, (byte) 0xff}, client.read(SERVICE, READABLE));
             readable.setReadHandler(() -> new byte[] {0x01});

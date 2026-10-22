@@ -66,16 +66,19 @@ public class Scan {
 
 ## Scanning and events
 
-An adapter's `Adapter.EventListener` receives `onScanStart`, `onScanStop`,
-`onScanFound`, and `onScanUpdated`; a peripheral's `Peripheral.EventListener`
-receives `onConnected` and `onDisconnected`. Implement only the methods you
-need. Listeners run on SimpleBLE's threads; hand longer work to your own
-executor.
+An adapter's `Adapter.EventListener` receives `onPowerOn`, `onPowerOff`,
+`onScanStart`, `onScanStop`, `onScanFound`, and `onScanUpdated`; a peripheral's
+`Peripheral.EventListener` receives `onConnected` and `onDisconnected`.
+Implement only the methods you need. Listeners run on SimpleBLE's threads; hand
+longer work to your own executor.
 
 Use `scanStart()` and `scanStop()` when your application controls scan timing,
-and `scanGetResults()` for the peripherals seen by the last scan. An adapter
-always gives you the same `Peripheral` object for the same device, whether it
-came from an event or from a list.
+and `scanGetResults()` for the peripherals seen by the last scan.
+`getPairedPeripherals()` and `getConnectedPeripherals()` list devices known to
+the system. An adapter always gives you the same `Peripheral` object for the
+same device, whether it came from an event or from a list. `powerOn()` and
+`powerOff()` switch the adapter where the platform allows it, and `isPowered()`
+reports its state.
 
 ## Connect and use GATT
 

@@ -154,6 +154,30 @@ extern "C" JNIEXPORT jstring JNICALL Java_org_simplejavable_Adapter_nativeAdapte
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterPowerOn(JNIEnv* env, jobject thiz,
+                                                                                      jlong adapter_id) {
+    return safe_jni_call(env, [&]() {
+        auto adapter_wrapper = Cache::get().getAdapter(adapter_id);
+        adapter_wrapper->get().power_on();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterPowerOff(JNIEnv* env, jobject thiz,
+                                                                                       jlong adapter_id) {
+    return safe_jni_call(env, [&]() {
+        auto adapter_wrapper = Cache::get().getAdapter(adapter_id);
+        adapter_wrapper->get().power_off();
+    });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_org_simplejavable_Adapter_nativeAdapterIsPowered(JNIEnv* env, jobject thiz,
+                                                                                            jlong adapter_id) {
+    return safe_jni_call(env, [&]() {
+        auto adapter_wrapper = Cache::get().getAdapter(adapter_id);
+        return adapter_wrapper->get().is_powered();
+    });
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Adapter_nativeAdapterScanStart(JNIEnv* env, jobject thiz,
                                                                                         jlong adapter_id) {
     return safe_jni_call(env, [&]() {
@@ -207,6 +231,14 @@ Java_org_simplejavable_Adapter_nativeAdapterGetPairedPeripherals(JNIEnv* env, jo
 
         auto adapter_wrapper = Cache::get().getAdapter(adapter_id);
         return peripheral_ids(adapter_id, adapter_wrapper->get().get_paired_peripherals());
+    });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_org_simplejavable_Adapter_nativeAdapterGetConnectedPeripherals(JNIEnv* env, jobject thiz, jlong adapter_id) {
+    return safe_jni_call(env, [&]() {
+        auto adapter_wrapper = Cache::get().getAdapter(adapter_id);
+        return peripheral_ids(adapter_id, adapter_wrapper->get().get_connected_peripherals());
     });
 }
 

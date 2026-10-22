@@ -10,8 +10,8 @@ namespace SimpleJavaBLE {
  *
  * This class encapsulates a jobject representing an instance of the Callback interface
  * from the org.simplejavable.Adapter class. It provides methods to invoke the interface's
- * Java methods (onScanStart, onScanStop, onScanUpdated, onScanFound) via JNI. JNI resources
- * are preloaded during JNI_OnLoad using the AutoRegister mechanism.
+ * Java methods (onPowerOn, onPowerOff, onScanStart, onScanStop, onScanUpdated, onScanFound)
+ * via JNI. JNI resources are preloaded during JNI_OnLoad using the AutoRegister mechanism.
  */
 class AdapterCallback {
   public:
@@ -26,6 +26,20 @@ class AdapterCallback {
      * @throws std::runtime_error if JNI resources are not preloaded.
      */
     explicit AdapterCallback(jobject obj);
+
+    /**
+     * @brief Invoke the onPowerOn method on the Java Callback object.
+     *
+     * Calls the Java onPowerOn() method, which has no arguments and returns void.
+     */
+    void on_power_on();
+
+    /**
+     * @brief Invoke the onPowerOff method on the Java Callback object.
+     *
+     * Calls the Java onPowerOff() method, which has no arguments and returns void.
+     */
+    void on_power_off();
 
     /**
      * @brief Invoke the onScanStart method on the Java Callback object.
@@ -60,6 +74,8 @@ class AdapterCallback {
   private:
     // Static JNI resources, populated by Registrar during JNI_OnLoad
     static SimpleJNI::GlobalRef<jclass> _cls;  ///< Preloaded jclass for org.simplejavable.Adapter$Callback.
+    static jmethodID _method_on_power_on;      ///< Preloaded jmethodID for onPowerOn.
+    static jmethodID _method_on_power_off;     ///< Preloaded jmethodID for onPowerOff.
     static jmethodID _method_on_scan_start;    ///< Preloaded jmethodID for onScanStart.
     static jmethodID _method_on_scan_stop;     ///< Preloaded jmethodID for onScanStop.
     static jmethodID _method_on_scan_updated;  ///< Preloaded jmethodID for onScanUpdated.

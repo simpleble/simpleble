@@ -20,6 +20,20 @@ public class Adapter {
 
     private final Callback callbacks = new Callback() {
         @Override
+        public void onPowerOn() {
+            if (eventListener != null) {
+                eventListener.onPowerOn();
+            }
+        }
+
+        @Override
+        public void onPowerOff() {
+            if (eventListener != null) {
+                eventListener.onPowerOff();
+            }
+        }
+
+        @Override
         public void onScanStart() {
             if (eventListener != null) {
                 eventListener.onScanStart();
@@ -69,6 +83,28 @@ public class Adapter {
     public BluetoothAddress getAddress() {
         String address = nativeAdapterAddress(instanceId);
         return new BluetoothAddress(address != null ? address : "");
+    }
+
+    /**
+     * Turns the Bluetooth adapter on, where the platform allows it.
+     */
+    public void powerOn() {
+        nativeAdapterPowerOn(instanceId);
+    }
+
+    /**
+     * Turns the Bluetooth adapter off, where the platform allows it.
+     */
+    public void powerOff() {
+        nativeAdapterPowerOff(instanceId);
+    }
+
+    /**
+     * Checks if the Bluetooth adapter is powered on.
+     * @return True if the adapter is powered on.
+     */
+    public boolean isPowered() {
+        return nativeAdapterIsPowered(instanceId);
     }
 
     /**
@@ -132,7 +168,7 @@ public class Adapter {
     }
 
     /**
-     * Sets the event listener for adapter events (e.g., scan start, stop, found).
+     * Sets the event listener for adapter events (e.g., power on, scan start, stop, found).
      * @param listener The EventListener implementation.
      */
     public void setEventListener(EventListener listener) {
@@ -145,6 +181,19 @@ public class Adapter {
      */
     public List<Peripheral> getPairedPeripherals() {
         long[] results = nativeAdapterGetPairedPeripherals(instanceId);
+        List<Peripheral> peripherals = new ArrayList<>();
+        for (long id : results) {
+            peripherals.add(getPeripheral(id));
+        }
+        return peripherals;
+    }
+
+    /**
+     * Gets a list of all peripherals currently connected to the system.
+     * @return A list of connected Peripheral objects.
+     */
+    public List<Peripheral> getConnectedPeripherals() {
+        long[] results = nativeAdapterGetConnectedPeripherals(instanceId);
         List<Peripheral> peripherals = new ArrayList<>();
         for (long id : results) {
             peripherals.add(getPeripheral(id));
@@ -206,15 +255,21 @@ public class Adapter {
     private native void nativeAdapterRegister(long adapterId, Callback callback);
     private native String nativeAdapterIdentifier(long adapterId);
     private native String nativeAdapterAddress(long adapterId);
+    private native void nativeAdapterPowerOn(long adapterId);
+    private native void nativeAdapterPowerOff(long adapterId);
+    private native boolean nativeAdapterIsPowered(long adapterId);
     private native void nativeAdapterScanStart(long adapterId);
     private native void nativeAdapterScanStop(long adapterId);
     private native void nativeAdapterScanFor(long adapterId, int timeout);
     private native boolean nativeAdapterScanIsActive(long adapterId);
     private native long[] nativeAdapterScanGetResults(long adapterId);
     private native long[] nativeAdapterGetPairedPeripherals(long adapterId);
+    private native long[] nativeAdapterGetConnectedPeripherals(long adapterId);
     private native long nativeAdapterCreateLocalPeripheral(long adapterId);
 
     private interface Callback {
+        void onPowerOn();
+        void onPowerOff();
         void onScanStart();
         void onScanStop();
         void onScanUpdated(long peripheralId);
@@ -222,6 +277,8 @@ public class Adapter {
     }
 
     public interface EventListener {
+        default void onPowerOn() {}
+        default void onPowerOff() {}
         default void onScanStart() {}
         default void onScanStop() {}
         default void onScanUpdated(Peripheral peripheral) {}
