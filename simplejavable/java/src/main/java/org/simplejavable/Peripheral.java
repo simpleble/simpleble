@@ -139,7 +139,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when connected.
      */
     public CompletableFuture<Void> connectAsync() {
-        return CompletableFuture.runAsync(this::connect);
+        return CompletableFuture.runAsync(this::connect, AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -154,7 +154,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when disconnected.
      */
     public CompletableFuture<Void> disconnectAsync() {
-        return CompletableFuture.runAsync(this::disconnect);
+        return CompletableFuture.runAsync(this::disconnect, AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -221,7 +221,7 @@ public class Peripheral {
      * @return A CompletableFuture containing the byte array payload.
      */
     public CompletableFuture<byte[]> readAsync(BluetoothUUID service, BluetoothUUID characteristic) {
-        return CompletableFuture.supplyAsync(() -> read(service, characteristic));
+        return CompletableFuture.supplyAsync(() -> read(service, characteristic), AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -242,7 +242,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when written.
      */
     public CompletableFuture<Void> writeRequestAsync(BluetoothUUID service, BluetoothUUID characteristic, byte[] data) {
-        return CompletableFuture.runAsync(() -> writeRequest(service, characteristic, data));
+        return CompletableFuture.runAsync(() -> writeRequest(service, characteristic, data), AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -263,7 +263,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when written.
      */
     public CompletableFuture<Void> writeCommandAsync(BluetoothUUID service, BluetoothUUID characteristic, byte[] data) {
-        return CompletableFuture.runAsync(() -> writeCommand(service, characteristic, data));
+        return CompletableFuture.runAsync(() -> writeCommand(service, characteristic, data), AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -284,7 +284,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when subscribed.
      */
     public CompletableFuture<Void> notifyAsync(BluetoothUUID service, BluetoothUUID characteristic, DataCallback callback) {
-        return CompletableFuture.runAsync(() -> notify(service, characteristic, callback));
+        return CompletableFuture.runAsync(() -> notify(service, characteristic, callback), AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -305,7 +305,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when subscribed.
      */
     public CompletableFuture<Void> indicateAsync(BluetoothUUID service, BluetoothUUID characteristic, DataCallback callback) {
-        return CompletableFuture.runAsync(() -> indicate(service, characteristic, callback));
+        return CompletableFuture.runAsync(() -> indicate(service, characteristic, callback), AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -324,7 +324,7 @@ public class Peripheral {
      * @return A CompletableFuture that completes when unsubscribed.
      */
     public CompletableFuture<Void> unsubscribeAsync(BluetoothUUID service, BluetoothUUID characteristic) {
-        return CompletableFuture.runAsync(() -> unsubscribe(service, characteristic));
+        return CompletableFuture.runAsync(() -> unsubscribe(service, characteristic), AsyncExecutor.INSTANCE);
     }
 
     /**
@@ -344,7 +344,7 @@ public class Peripheral {
      * @return A CompletableFuture containing the byte array payload.
      */
     public CompletableFuture<byte[]> readAsync(BluetoothUUID service, BluetoothUUID characteristic, BluetoothUUID descriptor) {
-        return CompletableFuture.supplyAsync(() -> read(service, characteristic, descriptor));
+        return CompletableFuture.supplyAsync(() -> read(service, characteristic, descriptor), AsyncExecutor.INSTANCE);
     }
 
     public void write(BluetoothUUID service, BluetoothUUID characteristic, BluetoothUUID descriptor, byte[] data) {
@@ -352,7 +352,7 @@ public class Peripheral {
     }
 
     public CompletableFuture<Void> writeAsync(BluetoothUUID service, BluetoothUUID characteristic, BluetoothUUID descriptor, byte[] data) {
-        return CompletableFuture.runAsync(() -> write(service, characteristic, descriptor, data));
+        return CompletableFuture.runAsync(() -> write(service, characteristic, descriptor, data), AsyncExecutor.INSTANCE);
     }
 
     private native void nativePeripheralRegister(long adapterId, long instanceId, Callback callback);
