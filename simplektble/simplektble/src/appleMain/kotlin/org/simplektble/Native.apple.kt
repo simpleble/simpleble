@@ -48,7 +48,8 @@ import platform.posix.size_tVar
  * Native over the SimpleCBLE C API.
  *
  * SimpleCBLE hands out a new handle every time it returns an adapter or peripheral, so each one is identified by the
- * SimpleBLE object behind it, which simplektble/identity.h reads. The first handle is kept and later ones are released.
+ * value of simpleble_adapter_identity() or simpleble_peripheral_identity(). The first handle is kept and later ones
+ * are released.
  * Callbacks receive the ID as their userdata and run, in order, on one coroutine, the same way the JNI layer runs them
  * on one thread.
  */
@@ -755,7 +756,7 @@ internal actual object Native {
 
     private fun internAdapter(handle: simpleble_adapter_t?): Long {
         if (handle == null) throw unclassified("SimpleBLE returned no adapter")
-        val id = simplektble_adapter_identity(handle).toLong()
+        val id = simpleble_adapter_identity(handle).toLong()
         val known = synchronized(lock) { adapters.getOrPut(id) { handle } != handle }
         if (known) simpleble_adapter_release_handle(handle)
         return id
@@ -763,7 +764,7 @@ internal actual object Native {
 
     internal fun internPeripheral(handle: simpleble_peripheral_t?): Long {
         if (handle == null) throw unclassified("SimpleBLE returned no peripheral")
-        val id = simplektble_peripheral_identity(handle).toLong()
+        val id = simpleble_peripheral_identity(handle).toLong()
         val known = synchronized(lock) { peripherals.getOrPut(id) { handle } != handle }
         if (known) simpleble_peripheral_release_handle(handle)
         return id

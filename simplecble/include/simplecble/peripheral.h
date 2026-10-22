@@ -20,6 +20,16 @@ extern "C" {
 SIMPLECBLE_EXPORT void simpleble_peripheral_release_handle(simpleble_peripheral_t handle);
 
 /**
+ * @brief Identifies the peripheral behind a handle.
+ *
+ * @param[in] handle A peripheral handle, or NULL.
+ * @return A value that is the same for every handle to this peripheral while any of them exists, or NULL for NULL.
+ * @note Compare the value; never dereference it. A peripheral created later can reuse it once every handle to this
+ *     peripheral is released.
+ */
+SIMPLECBLE_EXPORT const void* simpleble_peripheral_identity(simpleble_peripheral_t handle);
+
+/**
  * @brief Counts the peripherals in a list.
  *
  * @param[in] list A peripheral list, or NULL.

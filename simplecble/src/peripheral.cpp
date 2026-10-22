@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "identity.hpp"
 #include "list_handle.hpp"
 
 using SimpleBLE::Error;
@@ -26,6 +27,11 @@ void simpleble_peripheral_release_handle(simpleble_peripheral_t handle) {
 
     SimpleBLE::Peripheral* peripheral = (SimpleBLE::Peripheral*)handle;
     delete peripheral;
+}
+
+const void* simpleble_peripheral_identity(simpleble_peripheral_t handle) {
+    if (handle == nullptr) return nullptr;
+    return SimpleCBLE::Identity<SimpleBLE::Peripheral>::of(*(SimpleBLE::Peripheral*)handle);
 }
 
 size_t simpleble_peripheral_list_count(simpleble_peripheral_list_t list) {

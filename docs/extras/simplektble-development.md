@@ -61,10 +61,10 @@ or is missing serves the stored value, as in SimpleJavaBLE.
 - **Android shrinking.** The JNI library and the SimpleBLE Android backend look classes and methods up by name, so
   both Android libraries publish consumer keep rules (`consumer-rules.pro`) for apps that run R8.
 - **C API (iOS and macOS).** `appleMain` calls SimpleCBLE through cinterop. SimpleCBLE returns a new handle every
-  time and has no identity function for adapters and peripherals, so `cpp/apple` adds `simplektble_adapter_identity` and
-  `simplektble_peripheral_identity`: the first handle for an ID is kept and later ones are released. Lists come from
+  time, so adapters and peripherals are keyed by `simpleble_adapter_identity` and `simpleble_peripheral_identity`:
+  the first handle for an ID is kept and later ones are released. Lists come from
   SimpleCBLE's list handles, read once and released after each entry is interned. SimpleCBLE's advanced functions are
-  named differently on iOS and macOS and exist only with the CoreBluetooth backend, so `cpp/apple` also provides the
+  named differently on iOS and macOS and exist only with the CoreBluetooth backend, so `cpp/apple` provides the
   cached peripherals (`simplektble/snapshot.h`) and the advertised local name, and reports `OPERATION_NOT_SUPPORTED` without that backend, as the JNI layer does. Callbacks
   receive the ID as userdata and are queued onto one coroutine, in order; read and pairing handlers run on the calling
   thread. Their failures go to SimpleBLE's logger through `simplektble/logging.h`, since SimpleCBLE cannot log a

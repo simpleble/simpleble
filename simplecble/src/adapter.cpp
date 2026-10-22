@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 
+#include "identity.hpp"
 #include "list_handle.hpp"
 
 using SimpleBLE::Error;
@@ -53,6 +54,11 @@ void simpleble_adapter_release_handle(simpleble_adapter_t handle) {
 
     SimpleBLE::Adapter* adapter = (SimpleBLE::Adapter*)handle;
     delete adapter;
+}
+
+const void* simpleble_adapter_identity(simpleble_adapter_t handle) {
+    if (handle == nullptr) return nullptr;
+    return SimpleCBLE::Identity<SimpleBLE::Adapter>::of(*(SimpleBLE::Adapter*)handle);
 }
 
 void* simpleble_adapter_underlying(simpleble_adapter_t handle, simpleble_error_t** out_error) {

@@ -149,8 +149,8 @@ tasks.named<ProcessResources>("jvmProcessResources") {
     }
 }
 
-// Apple: SimpleCBLE and the identity functions in ../cpp/apple are built as static libraries for each target, which
-// the cinterop klib embeds.
+// Apple: SimpleCBLE and the functions in ../cpp/apple are built as static libraries for each target, which the
+// cinterop klib embeds.
 fun configureSimpleCBle(target: KotlinNativeTarget) {
     val platformArguments = when (target.konanTarget) {
         KonanTarget.IOS_ARM64 -> listOf(

@@ -69,6 +69,16 @@ SIMPLECBLE_EXPORT void simpleble_adapter_list_release(simpleble_adapter_list_t l
 SIMPLECBLE_EXPORT void simpleble_adapter_release_handle(simpleble_adapter_t handle);
 
 /**
+ * @brief Identifies the adapter behind a handle.
+ *
+ * @param[in] handle An adapter handle, or NULL.
+ * @return A value that is the same for every handle to this adapter while any of them exists, or NULL for NULL.
+ * @note Compare the value; never dereference it. An adapter created later can reuse it once every handle to this
+ *     adapter is released.
+ */
+SIMPLECBLE_EXPORT const void* simpleble_adapter_identity(simpleble_adapter_t handle);
+
+/**
  * @brief Retrieves the underlying OS object or handle.
  *
  * @param[in] handle Valid, non-NULL adapter handle.

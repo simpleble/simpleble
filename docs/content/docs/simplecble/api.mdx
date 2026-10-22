@@ -250,6 +250,14 @@ Error messages, version strings, native pointers, and callback payloads are borr
 />
 
 <ApiMethod
+  signature={"const void* simpleble_adapter_identity(simpleble_adapter_t handle)"}
+  brief={"Identifies the adapter behind a handle."}
+  detailed={"Returns: A value that is the same for every handle to this adapter while any of them exists, or NULL for NULL."}
+  notes={[{"content": "Compare the value; never dereference it. An adapter created later can reuse it once every handle to this adapter is released.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "An adapter handle, or NULL."}]}
+/>
+
+<ApiMethod
   signature={"void* simpleble_adapter_underlying(simpleble_adapter_t handle, simpleble_error_t** out_error)"}
   brief={"Retrieves the underlying OS object or handle."}
   detailed={"Returns: The borrowed OS object or handle, or NULL if unavailable or on failure. Do not free it."}
@@ -403,6 +411,14 @@ Error messages, version strings, native pointers, and callback payloads are borr
   signature={"void simpleble_peripheral_release_handle(simpleble_peripheral_t handle)"}
   brief={"Releases an owned peripheral handle."}
   parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "Handle to release, or NULL for no action."}]}
+/>
+
+<ApiMethod
+  signature={"const void* simpleble_peripheral_identity(simpleble_peripheral_t handle)"}
+  brief={"Identifies the peripheral behind a handle."}
+  detailed={"Returns: A value that is the same for every handle to this peripheral while any of them exists, or NULL for NULL."}
+  notes={[{"content": "Compare the value; never dereference it. A peripheral created later can reuse it once every handle to this peripheral is released.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_peripheral_t", "description": "A peripheral handle, or NULL."}]}
 />
 
 <ApiMethod
