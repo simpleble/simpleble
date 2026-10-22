@@ -84,8 +84,7 @@ public class Peripheral {
      * @return The string identifier.
      */
     public String getIdentifier() {
-        return nativePeripheralIdentifier(adapterId, instanceId) != null ?
-               nativePeripheralIdentifier(adapterId, instanceId) : "";
+        return nativePeripheralIdentifier(adapterId, instanceId);
     }
 
     /**
@@ -93,8 +92,7 @@ public class Peripheral {
      * @return The BluetoothAddress.
      */
     public BluetoothAddress getAddress() {
-        return new BluetoothAddress(nativePeripheralAddress(adapterId, instanceId) != null ?
-                                  nativePeripheralAddress(adapterId, instanceId) : "");
+        return new BluetoothAddress(nativePeripheralAddress(adapterId, instanceId));
     }
 
     /**

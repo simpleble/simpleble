@@ -137,9 +137,7 @@ tasks.register<Exec>("buildNativeCMake") {
 
 // Add native libraries to jar based on the selected mode
 tasks.jar {
-    // TODO: Remove this once main class is not needed.
     manifest {
-        attributes["Main-Class"] = "org.simplejavable.Main"
         attributes["Automatic-Module-Name"] = "org.simpleble"
     }
 

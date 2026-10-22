@@ -290,16 +290,28 @@ int main(int argc, char** argv) {
         harness.run("native thread attachment", [&] {
             std::exception_ptr worker_failure;
             std::thread worker([&] {
+                // Local references are released before the thread detaches.
                 try {
                     JNIEnv* worker_env = VM::env();
-                    jclass object_class = worker_env->FindClass("java/lang/Object");
+                    LocalRef<jclass> thread_class(adopt_local_ref, worker_env->FindClass("java/lang/Thread"));
                     Exception::check(worker_env);
-                    require(object_class != nullptr, "Attached thread could not use JNI");
-                    worker_env->DeleteLocalRef(object_class);
-                    VM::detach();
+                    require(thread_class.get() != nullptr, "Attached thread could not use JNI");
+                    jmethodID current_thread = worker_env->GetStaticMethodID(thread_class.get(), "currentThread",
+                                                                             "()Ljava/lang/Thread;");
+                    jmethodID is_daemon = worker_env->GetMethodID(thread_class.get(), "isDaemon", "()Z");
+                    Exception::check(worker_env);
+                    LocalRef<jobject> thread(adopt_local_ref,
+                                             worker_env->CallStaticObjectMethod(thread_class.get(), current_thread));
+                    Exception::check(worker_env);
+                    const bool daemon = worker_env->CallBooleanMethod(thread.get(), is_daemon);
+                    Exception::check(worker_env);
+                    // A non-daemon thread would keep the JVM from exiting.
+                    require(daemon, "Attached thread is not a daemon");
                 } catch (...) {
                     worker_failure = std::current_exception();
                 }
+                // NOTE: Detach even after a failure, or a non-daemon thread would keep the test from exiting.
+                VM::detach();
             });
             worker.join();
             if (worker_failure) std::rethrow_exception(worker_failure);

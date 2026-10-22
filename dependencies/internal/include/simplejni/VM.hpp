@@ -52,10 +52,12 @@ class VM {
             case JNI_OK:
                 break;
             case JNI_EDETACHED: {
+                // NOTE: Threads attached here are never detached. A desktop JVM only exits once its non-daemon
+                // threads finish, so they attach as daemons there.
 #ifdef __ANDROID__
                 auto result = jvm->AttachCurrentThread(&env, nullptr);
 #else
-                auto result = jvm->AttachCurrentThread(reinterpret_cast<void**>(&env), nullptr);
+                auto result = jvm->AttachCurrentThreadAsDaemon(reinterpret_cast<void**>(&env), nullptr);
 #endif
                 if (result != JNI_OK) {
                     throw std::runtime_error("Failed to attach the current thread to the JVM");

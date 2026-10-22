@@ -75,6 +75,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleJavaBLE) Fixed programs aborting at exit on macOS.
 - (SimpleJavaBLE) Fixed building with GCC 15.
 - (SimpleJavaBLE) Fixed loading on macOS in Java runtimes without the `java.desktop` module.
+- (SimpleJavaBLE) Fixed programs not exiting after `main` returned.
 - (SimplePyBLE) Fixed `asyncio` deprecation warnings on Python 3.14.
 - (SimplePyBLE) Fixed `aio` programs crashing at exit on macOS when Bluetooth access isn't granted.
 - (SimplePyBLE) Fixed programs aborting at exit while a callback or subscription was still registered.
@@ -90,7 +91,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Removed**
 
--
+- (SimpleJavaBLE) Removed the demo `Main` class from the JAR.
 
 
 ## [1.2.0] - 2026-09-28
