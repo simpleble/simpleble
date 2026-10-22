@@ -131,15 +131,14 @@ public class Adapter {
     }
 
     /**
-     * Starts scanning for BLE peripherals asynchronously and returns the results when finished.
+     * Scans for BLE peripherals for the specified duration asynchronously.
      * @param timeoutMs The scan duration in milliseconds.
-     * @return A CompletableFuture containing the list of found peripherals.
+     * @return A CompletableFuture that completes when the scan finishes.
      */
-    public CompletableFuture<List<Peripheral>> scanForAsync(int timeoutMs) {
-        return CompletableFuture.supplyAsync(() -> {
+    public CompletableFuture<Void> scanForAsync(int timeoutMs) {
+        return CompletableFuture.runAsync(() -> {
             try {
                 scanFor(timeoutMs);
-                return scanGetResults();
             } catch (Exception e) {
                 throw new CompletionException(e);
             }
