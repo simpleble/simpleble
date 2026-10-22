@@ -3,6 +3,7 @@ package org.simplejavable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +34,35 @@ class AdapterTest {
         } finally {
             adapter.scanStop();
             adapter.setEventListener(null);
+        }
+    }
+
+    @Test
+    void exitFromAListenerEndsTheProcess() throws Exception {
+        Process child = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(), "-cp",
+                System.getProperty("java.class.path"), ExitFromListener.class.getName())
+                .inheritIO()
+                .start();
+        try {
+            // The process used to hang, as exit waited for the SimpleBLE thread that was running the listener.
+            assertTrue(child.waitFor(TestSupport.TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            assertEquals(0, child.exitValue());
+        } finally {
+            child.destroyForcibly();
+        }
+    }
+
+    static final class ExitFromListener {
+        public static void main(String[] args) throws Exception {
+            Adapter adapter = Adapter.getAdapters().get(0);
+            adapter.setEventListener(new Adapter.EventListener() {
+                @Override
+                public void onScanFound(Peripheral peripheral) {
+                    System.exit(0);
+                }
+            });
+            adapter.scanStart();
+            Thread.sleep(Long.MAX_VALUE);
         }
     }
 

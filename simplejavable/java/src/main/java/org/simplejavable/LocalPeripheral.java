@@ -46,7 +46,7 @@ public class LocalPeripheral {
     /**
      * Sets the listener for client connection events.
      * <p>
-     * Events run on a native thread.
+     * Events run on SimpleJavaBLE's callback thread.
      * <p>
      * NOTE: CoreBluetooth doesn't report connections on macOS, so these events follow a client's first
      * subscription and last unsubscription instead.

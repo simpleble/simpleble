@@ -1,7 +1,7 @@
 #include "PeripheralCallback.h"
 
 #include "Callback.h"
-#include "Jvm.h"
+#include "simplejni/VM.hpp"
 
 namespace Org {
 namespace SimpleKtBLE {
@@ -38,8 +38,9 @@ void PeripheralCallback::on_disconnected() const noexcept {
 }
 
 std::optional<std::string> PeripheralCallback::on_passkey_request() const {
-    // The pairing calls run on SimpleBLE threads. Attach first, since any other JNI call would attach as a non-daemon.
-    attach_as_daemon();
+    // The pairing calls run on SimpleBLE threads. Attach first, since other JNI calls attach as a non-daemon on
+    // Android.
+    SimpleJNI::VM::attach_as_daemon();
 
     // Returning nothing rejects the request, and SimpleBLE validates the six digits.
     if (!_obj.is_valid()) return std::nullopt;
@@ -49,7 +50,7 @@ std::optional<std::string> PeripheralCallback::on_passkey_request() const {
 }
 
 void PeripheralCallback::on_passkey_display(const std::string& passkey) const {
-    attach_as_daemon();
+    SimpleJNI::VM::attach_as_daemon();
     if (!_obj.is_valid()) return;
 
     SimpleJNI::String<SimpleJNI::LocalRef> value(passkey);
@@ -57,7 +58,7 @@ void PeripheralCallback::on_passkey_display(const std::string& passkey) const {
 }
 
 bool PeripheralCallback::on_numeric_comparison(const std::string& passkey) const {
-    attach_as_daemon();
+    SimpleJNI::VM::attach_as_daemon();
     if (!_obj.is_valid()) return false;
 
     SimpleJNI::String<SimpleJNI::LocalRef> value(passkey);

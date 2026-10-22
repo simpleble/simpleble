@@ -25,10 +25,11 @@ DataCallback::DataCallback(jobject obj) : _obj(obj) {
     }
 }
 
-void DataCallback::on_data_received(jbyteArray data) noexcept {
+void DataCallback::on_data_received(const ::SimpleBLE::ByteArray& data) noexcept {
     try {
         if (_obj) {
-            _obj.to_local().call_void_method(_method_on_data_received, data);
+            SimpleJNI::ByteArray<SimpleJNI::LocalRef> bytes(data);
+            _obj.to_local().call_void_method(_method_on_data_received, bytes.get());
         }
     } catch (const std::exception& exception) {
         SimpleBLE::Logging::Logger::get()->log(

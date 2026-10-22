@@ -25,13 +25,13 @@
 #include <vector>
 
 #include "NativeCache.h"
-#include "ThreadRunner.h"
 #include "org/simplektble/Characteristic.h"
 #include "org/simplektble/Descriptor.h"
 #include "org/simplektble/Service.h"
 #include "org/simplektble/SimpleKtBleException.h"
 #include "simplejni/Common.hpp"
 #include "simplejni/Registry.hpp"
+#include "simplejni/ThreadRunner.hpp"
 #include "simplejni/VM.hpp"
 #include "simplejni/java/lang/Integer.hpp"
 #include "simplejni/java/util/ArrayList.hpp"
@@ -41,7 +41,7 @@ namespace {
 
 namespace Kt = Org::SimpleKtBLE;
 using Kt::NativeCache;
-using Kt::ThreadRunner;
+using SimpleJNI::ThreadRunner;
 
 SimpleBLE::ErrorCode error_code(const SimpleBLE::Exception::BaseException& exception) noexcept {
     try {
@@ -76,7 +76,7 @@ auto call(JNIEnv* env, Func&& func) noexcept {
 }
 
 // NOTE: Never destroyed. At JVM exit its thread cannot detach, so joining it from a static destructor hangs.
-ThreadRunner& callback_runner = *new ThreadRunner();
+ThreadRunner& callback_runner = *new ThreadRunner("SimpleKtBLE");
 
 void dispatch_adapter_event(int64_t adapter_id, void (Kt::AdapterCallback::*event)() const noexcept) {
     callback_runner.enqueue([adapter_id, event] {

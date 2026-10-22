@@ -18,6 +18,7 @@
 
 #include "core/AdapterWrapper.h"
 #include "core/Cache.h"
+#include "core/CallbackRunner.h"
 #include "org/simplejavable/AdapterCallback.h"
 #include "org/simplejavable/Characteristic.h"
 #include "org/simplejavable/DataCallback.h"
@@ -124,6 +125,15 @@ static std::vector<std::string> string_array(JNIEnv* env, jobjectArray array) {
         env->DeleteLocalRef(value);
     }
     return values;
+}
+
+// SimpleBLE's thread only queues each value. The callback runner hands it to Java.
+static std::function<void(SimpleBLE::ByteArray)> forward_data(jobject callback) {
+    auto data_callback = make_java_callback<Org::SimpleJavaBLE::DataCallback>(callback);
+    return [data_callback](SimpleBLE::ByteArray payload) {
+        callback_runner().enqueue(
+            [data_callback, payload = std::move(payload)]() { data_callback->on_data_received(payload); });
+    };
 }
 
 static jlongArray peripheral_ids(int64_t adapter_id, const std::vector<SimpleBLE::Peripheral>& peripherals) {
@@ -395,15 +405,9 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Peripheral_nativePeriph
     return safe_jni_call(env, [&]() {
 
         auto peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
-        Org::SimpleJavaBLE::DataCallback data_callback(callback);
         String<LocalRef> service(j_service);
         String<LocalRef> characteristic(j_characteristic);
-        peripheral_wrapper->get().notify(service.str(), characteristic.str(),
-                                         [data_callback](SimpleBLE::ByteArray payload) {
-                                             Org::SimpleJavaBLE::DataCallback data_callback_local(data_callback);
-                                             ByteArray<ReleasableLocalRef> j_payload(payload);
-                                             data_callback_local.on_data_received(j_payload.release());
-                                         });
+        peripheral_wrapper->get().notify(service.str(), characteristic.str(), forward_data(callback));
     });
 }
 
@@ -413,15 +417,9 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Peripheral_nativePeriph
     return safe_jni_call(env, [&]() {
 
         auto peripheral_wrapper = Cache::get().getPeripheral(adapter_id, peripheral_id);
-        Org::SimpleJavaBLE::DataCallback data_callback(callback);
         String<LocalRef> service(j_service);
         String<LocalRef> characteristic(j_characteristic);
-        peripheral_wrapper->get().indicate(service.str(), characteristic.str(),
-                                           [data_callback](SimpleBLE::ByteArray payload) {
-                                               Org::SimpleJavaBLE::DataCallback data_callback_local(data_callback);
-                                               ByteArray<ReleasableLocalRef> j_payload(payload);
-                                               data_callback_local.on_data_received(j_payload.release());
-                                           });
+        peripheral_wrapper->get().indicate(service.str(), characteristic.str(), forward_data(callback));
     });
 }
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Peripheral_nativePeripheralUnsubscribe(
@@ -794,14 +792,18 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_LocalPeripheral_nativeR
         const int64_t id = peripheral_id;
         auto peripheral = Cache::get().getLocalPeripheral(id);
         peripheral.set_callback_on_client_connected([id](SimpleBLE::BluetoothAddress address) {
-            if (auto local_callback = Cache::get().getLocalPeripheralCallback(id)) {
-                local_callback->on_client_connected(address);
-            }
+            callback_runner().enqueue([id, address = std::move(address)]() {
+                if (auto local_callback = Cache::get().getLocalPeripheralCallback(id)) {
+                    local_callback->on_client_connected(address);
+                }
+            });
         });
         peripheral.set_callback_on_client_disconnected([id](SimpleBLE::BluetoothAddress address) {
-            if (auto local_callback = Cache::get().getLocalPeripheralCallback(id)) {
-                local_callback->on_client_disconnected(address);
-            }
+            callback_runner().enqueue([id, address = std::move(address)]() {
+                if (auto local_callback = Cache::get().getLocalPeripheralCallback(id)) {
+                    local_callback->on_client_disconnected(address);
+                }
+            });
         });
     });
 }
@@ -920,19 +922,25 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_LocalCharacteristic_nat
         const int64_t id = characteristic_id;
         auto characteristic = Cache::get().getLocalCharacteristic(id);
         characteristic.set_callback_on_write([id](SimpleBLE::ByteArray value) {
-            if (auto local_callback = Cache::get().getLocalCharacteristicCallback(id)) {
-                local_callback->on_write(value);
-            }
+            callback_runner().enqueue([id, value = std::move(value)]() {
+                if (auto local_callback = Cache::get().getLocalCharacteristicCallback(id)) {
+                    local_callback->on_write(value);
+                }
+            });
         });
         characteristic.set_callback_on_subscribed([id]() {
-            if (auto local_callback = Cache::get().getLocalCharacteristicCallback(id)) {
-                local_callback->on_subscribed();
-            }
+            callback_runner().enqueue([id]() {
+                if (auto local_callback = Cache::get().getLocalCharacteristicCallback(id)) {
+                    local_callback->on_subscribed();
+                }
+            });
         });
         characteristic.set_callback_on_unsubscribed([id]() {
-            if (auto local_callback = Cache::get().getLocalCharacteristicCallback(id)) {
-                local_callback->on_unsubscribed();
-            }
+            callback_runner().enqueue([id]() {
+                if (auto local_callback = Cache::get().getLocalCharacteristicCallback(id)) {
+                    local_callback->on_unsubscribed();
+                }
+            });
         });
     });
 }

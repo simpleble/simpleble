@@ -12,12 +12,10 @@
 #include <thread>
 #include <utility>
 
-#include "Jvm.h"
-#include "simplejni/Common.hpp"
-#include "simplejni/VM.hpp"
+#include "Common.hpp"
+#include "VM.hpp"
 
-namespace Org {
-namespace SimpleKtBLE {
+namespace SimpleJNI {
 
 /**
  * Runs Java callbacks one at a time, in order, on a single thread attached to the JVM.
@@ -25,13 +23,14 @@ namespace SimpleKtBLE {
  * Follows kvn::thread_runner: stop() runs the queued functions, functions enqueued afterwards are dropped, and the
  * runner may be destroyed from one of its own functions. On top of that, it does what a JNI callback thread needs:
  * - The thread starts on the first enqueue, since the JavaVM is only known after JNI_OnLoad.
- * - The thread stays attached as "SimpleKtBLE", the name debuggers and ANR traces show, and detaches before it ends,
- *   as ART requires. It attaches as a daemon, so it does not keep a desktop JVM from exiting.
- * - A function that throws, or that leaves a Java exception pending, is logged and the thread carries on.
+ * - The thread stays attached under the runner's name, which debuggers and ANR traces show, and detaches before it
+ *   ends, as ART requires. It attaches as a daemon, so it does not keep a desktop JVM from exiting.
+ * - A function that throws, or that leaves a Java exception pending, is logged under the runner's name and the thread
+ *   carries on.
  */
 class ThreadRunner final {
   public:
-    ThreadRunner() : _state(std::make_shared<state>()) {}
+    explicit ThreadRunner(std::string name) : _state(std::make_shared<state>()) { _state->name = std::move(name); }
 
     // Remove copy constructor and copy assignment
     ThreadRunner(const ThreadRunner&) = delete;
@@ -100,18 +99,19 @@ class ThreadRunner final {
         std::condition_variable cv;
         std::queue<std::function<void()>> queue;
         bool stop = false;
+        std::string name;
     };
 
-    static void log_error(const std::string& message) noexcept {
-        SimpleBLE::Logging::Logger::get()->log(SimpleBLE::Logging::Level::Error, "SimpleKtBLE", __FILE__, __LINE__,
+    static void log_error(const state& shared, const std::string& message) noexcept {
+        SimpleBLE::Logging::Logger::get()->log(SimpleBLE::Logging::Level::Error, shared.name, __FILE__, __LINE__,
                                                __func__, message);
     }
 
     static void thread_func(std::shared_ptr<state> shared) noexcept {
         try {
-            attach_as_daemon("SimpleKtBLE");
+            VM::attach_as_daemon(shared->name.c_str());
         } catch (const std::exception& exception) {
-            log_error(std::string("Failed to attach callback thread: ") + exception.what());
+            log_error(*shared, std::string("Failed to attach callback thread: ") + exception.what());
 
             // Nothing can run without the JVM, so drop the queued functions instead of letting the queue grow.
             std::queue<std::function<void()>> dropped;
@@ -132,26 +132,26 @@ class ThreadRunner final {
                 func = std::move(shared->queue.front());
                 shared->queue.pop();
             }
-            run(func);
+            run(*shared, func);
         }
 
-        SimpleJNI::VM::detach();
+        VM::detach();
     }
 
-    static void run(const std::function<void()>& func) noexcept {
+    static void run(const state& shared, const std::function<void()>& func) noexcept {
         try {
             func();
         } catch (const std::exception& exception) {
-            log_error(std::string("Exception in callback thread: ") + exception.what());
+            log_error(shared, std::string("Exception in callback thread: ") + exception.what());
         } catch (...) {
-            log_error("Unknown exception in callback thread");
+            log_error(shared, "Unknown exception in callback thread");
         }
 
         // A pending Java exception would break every later JNI call on this thread.
         try {
-            SimpleJNI::Exception::check(SimpleJNI::VM::env());
+            Exception::check(VM::env());
         } catch (const std::exception& exception) {
-            log_error(std::string("Java exception left pending in callback thread: ") + exception.what());
+            log_error(shared, std::string("Java exception left pending in callback thread: ") + exception.what());
         }
     }
 
@@ -163,5 +163,4 @@ class ThreadRunner final {
     std::mutex _join_mutex;
 };
 
-}  // namespace SimpleKtBLE
-}  // namespace Org
+}  // namespace SimpleJNI

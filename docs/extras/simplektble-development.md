@@ -50,10 +50,11 @@ watch `onDisconnected`, which could still hold a disconnection from before a rec
 or is missing serves the stored value, as in SimpleJavaBLE.
 
 - **JNI (Android and the JVM).** `Native` is a set of `external` functions implemented in `cpp/simplektble.cpp`.
-  `NativeCache` maps the IDs to SimpleBLE objects. SimpleBLE callbacks go to `ThreadRunner`, which calls the Kotlin
+  `NativeCache` maps the IDs to SimpleBLE objects. SimpleBLE callbacks go to SimpleJNI's `ThreadRunner`
+  (`dependencies/internal/include/simplejni/ThreadRunner.hpp`, shared with SimpleJavaBLE), which calls the Kotlin
   callback interfaces from one thread attached to the JVM. Read handlers and Dongl pairing handlers instead run on the
-  SimpleBLE thread that waits for their answer. Every thread attaches as a daemon (`cpp/Jvm.h`), since a desktop JVM
-  waits for its non-daemon threads before exiting. Each platform supplies `loadNativeLibrary()`: Android uses
+  SimpleBLE thread that waits for their answer. Every thread attaches as a daemon (`VM::attach_as_daemon`), since a
+  desktop JVM waits for its non-daemon threads before exiting. Each platform supplies `loadNativeLibrary()`: Android uses
   `System.loadLibrary`, and the JVM copies the library for its OS and architecture out of the jar.
 - **Android context.** Hosting a GATT server needs the application context. An androidx.startup initializer keeps
   it when the app starts, and `createLocalPeripheral()` passes it to SimpleBLE.

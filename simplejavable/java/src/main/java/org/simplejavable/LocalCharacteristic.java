@@ -116,7 +116,7 @@ public class LocalCharacteristic {
     /**
      * Sets the listener for write and subscription events.
      * <p>
-     * Events run on a native thread and must return promptly.
+     * Events run on SimpleJavaBLE's callback thread and must return promptly.
      * @param listener The EventListener implementation, or null to remove it.
      */
     public void setEventListener(EventListener listener) {

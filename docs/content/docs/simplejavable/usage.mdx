@@ -136,10 +136,11 @@ For devices that wait for the central to start pairing, call
 
 ## Callbacks and threading
 
-Event listeners, notification callbacks, read handlers, and pairing callbacks run
-on native threads. Return promptly and hand longer work to your own executor.
-Exceptions thrown by a callback are logged. A read handler that throws serves the
-stored value instead.
+Event listeners and notification callbacks run one at a time, in order, on
+SimpleJavaBLE's callback thread. Read handlers and pairing callbacks return an
+answer to SimpleBLE, so they run on SimpleBLE's own threads. Return promptly and
+hand longer work to your own executor. Exceptions thrown by a callback are logged.
+A read handler that throws serves the stored value instead.
 
 ## Errors
 

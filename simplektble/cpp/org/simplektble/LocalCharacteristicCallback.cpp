@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Callback.h"
-#include "Jvm.h"
+#include "simplejni/VM.hpp"
 
 namespace Org::SimpleKtBLE {
 
@@ -25,8 +25,8 @@ LocalCharacteristicCallback::LocalCharacteristicCallback(jobject callback) : _ob
 std::optional<::SimpleBLE::ByteArray> LocalCharacteristicCallback::on_read() const noexcept {
     // NOTE: Failures are caught here instead of in SimpleBLE, so that every backend serves the stored value.
     try {
-        // Runs on a SimpleBLE thread. Attach first, since any other JNI call would attach as a non-daemon.
-        attach_as_daemon();
+        // Runs on a SimpleBLE thread. Attach first, since other JNI calls attach as a non-daemon on Android.
+        SimpleJNI::VM::attach_as_daemon();
         if (!_obj) return std::nullopt;
 
         auto local = _obj.to_local();

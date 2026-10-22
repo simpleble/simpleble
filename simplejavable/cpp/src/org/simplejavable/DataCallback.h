@@ -1,4 +1,6 @@
 #pragma once
+#include <simpleble/Types.h>
+
 #include "simplejni/Common.hpp"
 #include "simplejni/Registry.hpp"
 
@@ -26,9 +28,9 @@ class DataCallback {
     explicit DataCallback(jobject obj);
 
     /**
-     * @brief Invoke the onDataReceived method on the Java DataCallback object.
+     * @brief Invoke the onDataReceived method on the Java DataCallback object with a copy of the data.
      */
-    void on_data_received(jbyteArray data) noexcept;
+    void on_data_received(const ::SimpleBLE::ByteArray& data) noexcept;
 
   private:
     // Static JNI resources, populated by Registrar during JNI_OnLoad

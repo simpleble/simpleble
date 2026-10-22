@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "CallbackRunner.h"
+
 PeripheralWrapper::PeripheralWrapper(const SimpleBLE::Peripheral& peripheral) : _peripheral(peripheral) {}
 
 SimpleBLE::Peripheral& PeripheralWrapper::get() { return _peripheral; }
@@ -11,13 +13,17 @@ SimpleBLE::Peripheral& PeripheralWrapper::get() { return _peripheral; }
 const SimpleBLE::Peripheral& PeripheralWrapper::get() const { return _peripheral; }
 
 void PeripheralWrapper::setCallback(jobject callback) {
-    // NOTE: SimpleBLE guards replacing and calling these callbacks, so they can hold the Java callback directly.
-    auto peripheral_callback = std::make_shared<Org::SimpleJavaBLE::PeripheralCallback>(callback);
+    // NOTE: SimpleBLE's threads only queue the events. The callback runner calls Java.
+    auto peripheral_callback = make_java_callback<Org::SimpleJavaBLE::PeripheralCallback>(callback);
     _callback = peripheral_callback;
 
-    _peripheral.set_callback_on_connected([peripheral_callback]() { peripheral_callback->on_connected(); });
+    _peripheral.set_callback_on_connected([peripheral_callback]() {
+        callback_runner().enqueue([peripheral_callback]() { peripheral_callback->on_connected(); });
+    });
 
-    _peripheral.set_callback_on_disconnected([peripheral_callback]() { peripheral_callback->on_disconnected(); });
+    _peripheral.set_callback_on_disconnected([peripheral_callback]() {
+        callback_runner().enqueue([peripheral_callback]() { peripheral_callback->on_disconnected(); });
+    });
 }
 
 void PeripheralWrapper::setPasskeyRequestCallback(bool enabled) {

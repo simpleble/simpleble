@@ -69,8 +69,8 @@ public class Scan {
 An adapter's `Adapter.EventListener` receives `onPowerOn`, `onPowerOff`,
 `onScanStart`, `onScanStop`, `onScanFound`, and `onScanUpdated`; a peripheral's
 `Peripheral.EventListener` receives `onConnected` and `onDisconnected`.
-Implement only the methods you need. Listeners run on SimpleBLE's threads; hand
-longer work to your own executor.
+Implement only the methods you need. Listeners run one at a time on
+SimpleJavaBLE's callback thread; hand longer work to your own executor.
 
 Use `scanStart()` and `scanStop()` when your application controls scan timing,
 and `scanGetResults()` for the peripherals seen by the last scan.
