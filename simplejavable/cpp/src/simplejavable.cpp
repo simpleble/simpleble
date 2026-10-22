@@ -49,21 +49,62 @@ static void throw_java_exception(JNIEnv* env, const char* class_name, const char
     }
 }
 
+static constexpr const char* BASE_EXCEPTION = "org/simplejavable/SimpleJavaBleException";
+
+// The Java class thrown for each SimpleBLE error code. Codes without their own class throw the base class.
+static const char* exception_class(const SimpleBLE::Exception::BaseException& exception) noexcept {
+    SimpleBLE::ErrorCode code;
+    try {
+        code = exception.make_error()->code;
+    } catch (...) {
+        return BASE_EXCEPTION;
+    }
+
+    switch (code) {
+        case SimpleBLE::ErrorCode::INVALID_ARGUMENT:
+            return "org/simplejavable/InvalidArgumentException";
+        case SimpleBLE::ErrorCode::OBJECT_NOT_INITIALIZED:
+            return "org/simplejavable/NotInitializedException";
+        case SimpleBLE::ErrorCode::INVALID_BACKEND_REFERENCE:
+            return "org/simplejavable/InvalidReferenceException";
+        case SimpleBLE::ErrorCode::PERIPHERAL_NOT_CONNECTED:
+            return "org/simplejavable/NotConnectedException";
+        case SimpleBLE::ErrorCode::GATT_SERVICE_NOT_FOUND:
+            return "org/simplejavable/ServiceNotFoundException";
+        case SimpleBLE::ErrorCode::GATT_CHARACTERISTIC_NOT_FOUND:
+            return "org/simplejavable/CharacteristicNotFoundException";
+        case SimpleBLE::ErrorCode::GATT_DESCRIPTOR_NOT_FOUND:
+            return "org/simplejavable/DescriptorNotFoundException";
+        case SimpleBLE::ErrorCode::OPERATION_NOT_SUPPORTED:
+            return "org/simplejavable/OperationNotSupportedException";
+        case SimpleBLE::ErrorCode::OPERATION_FAILED:
+            return "org/simplejavable/OperationFailedException";
+        case SimpleBLE::ErrorCode::WINRT_ACCESS_DENIED:
+            return "org/simplejavable/WinRTAccessDeniedException";
+        case SimpleBLE::ErrorCode::WINRT_EXCEPTION:
+            return "org/simplejavable/WinRTException";
+        case SimpleBLE::ErrorCode::CORE_BLUETOOTH_EXCEPTION:
+            return "org/simplejavable/CoreBluetoothException";
+        case SimpleBLE::ErrorCode::ADAPTER_IN_USE:
+            return "org/simplejavable/AdapterInUseException";
+        default:
+            return BASE_EXCEPTION;
+    }
+}
+
 template <typename Func>
 auto safe_jni_call(JNIEnv* env, Func&& func) {
     using ReturnType = decltype(func());
     try {
         return func();
-    } catch (const SimpleBLE::Exception::OperationNotSupported& e) {
-        throw_java_exception(env, "java/lang/UnsupportedOperationException", e.what());
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        throw_java_exception(env, exception_class(e), e.what());
     } catch (const UnsupportedOperation& e) {
-        throw_java_exception(env, "java/lang/UnsupportedOperationException", e.what());
-    } catch (const SimpleBLE::Exception::InvalidArgument& e) {
-        throw_java_exception(env, "java/lang/IllegalArgumentException", e.what());
+        throw_java_exception(env, "org/simplejavable/OperationNotSupportedException", e.what());
     } catch (const std::exception& e) {
-        throw_java_exception(env, "java/lang/RuntimeException", e.what());
+        throw_java_exception(env, BASE_EXCEPTION, e.what());
     } catch (...) {
-        throw_java_exception(env, "java/lang/RuntimeException", "Unknown native error");
+        throw_java_exception(env, BASE_EXCEPTION, "Unknown native error");
     }
     if constexpr (!std::is_void_v<ReturnType>) {
         return ReturnType{};

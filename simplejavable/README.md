@@ -112,8 +112,9 @@ of a connected peripheral. `read`, `writeRequest`, and `writeCommand` access
 characteristic values, and `read` and `write` with a descriptor UUID access
 descriptors. `notify` and `indicate` call your callback with each value, and
 `unsubscribe` stops them. These calls and `connect()` also have `Async`
-counterparts that return a `CompletableFuture`. Failures throw a
-`RuntimeException` with SimpleBLE's message.
+counterparts that return a `CompletableFuture`. Failures throw
+`SimpleJavaBleException` or one of its subclasses, such as `NotConnectedException`,
+with SimpleBLE's error code and message.
 
 ## Host a GATT service
 

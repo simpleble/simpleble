@@ -78,7 +78,7 @@ public class Backend {
      * Gets the Dongl backend, whether or not {@link Config.Dongl#setUseDonglBackend(boolean)} lists it in
      * {@link #getBackends()}.
      * @return The Dongl backend.
-     * @throws UnsupportedOperationException if this build of SimpleBLE doesn't include the Dongl backend.
+     * @throws OperationNotSupportedException if this build of SimpleBLE doesn't include the Dongl backend.
      */
     public static Backend getDongl() {
         return backendCache.computeIfAbsent(nativeGetDongl(), Backend::new);
@@ -87,7 +87,7 @@ public class Backend {
     /**
      * Gets the Simulator backend, which only has adapters while a simulation is active.
      * @return The Simulator backend.
-     * @throws UnsupportedOperationException if this build of SimpleBLE doesn't include the Simulator backend.
+     * @throws OperationNotSupportedException if this build of SimpleBLE doesn't include the Simulator backend.
      */
     public static Backend getSimulator() {
         return backendCache.computeIfAbsent(nativeGetSimulator(), Backend::new);

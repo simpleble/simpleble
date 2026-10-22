@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 /**
  * Backend- and platform-specific APIs that are not part of the standard SimpleBLE API.
  * <p>
- * A platform method throws {@link UnsupportedOperationException} when the native library was not built for that
+ * A platform method throws {@link OperationNotSupportedException} when the native library was not built for that
  * platform.
  */
 public final class Advanced {
@@ -24,7 +24,7 @@ public final class Advanced {
      * <p>
      * NOTE: Callbacks run on an internal worker thread, possibly while {@code connect()} is still running, and they
      * can block while waiting for the user. Requests without a callback, or whose callback throws, are rejected.
-     * Peripherals from other backends throw {@link UnsupportedOperationException}.
+     * Peripherals from other backends throw {@link OperationNotSupportedException}.
      */
     public static final class Dongl {
         private Dongl() {}

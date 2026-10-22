@@ -13,7 +13,8 @@ class BackendTest {
         assertEquals("Plain", backend.getIdentifier());
         assertSame(Backend.getBackends().get(0), backend);
 
-        assertThrows(UnsupportedOperationException.class, Backend::getDongl);
-        assertThrows(UnsupportedOperationException.class, Backend::getSimulator);
+        OperationNotSupportedException dongl = assertThrows(OperationNotSupportedException.class, Backend::getDongl);
+        assertEquals(ErrorCode.OPERATION_NOT_SUPPORTED, dongl.getCode());
+        assertThrows(OperationNotSupportedException.class, Backend::getSimulator);
     }
 }

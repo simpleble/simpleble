@@ -128,7 +128,7 @@ the device shows, or `null` to reject. `setPasskeyDisplayCallback` takes a
 callbacks run on a worker thread while `connect()` blocks, so they can wait for the
 user's answer. A request without a callback, or whose callback throws, is rejected.
 Pass `null` to unregister a callback. Peripherals of other backends throw
-`UnsupportedOperationException`.
+`OperationNotSupportedException`.
 
 For devices that wait for the central to start pairing, call
 `Advanced.Dongl.secureConnection(peripheral, mitm)` after connecting. See
@@ -143,10 +143,26 @@ stored value instead.
 
 ## Errors
 
-Native failures throw `RuntimeException` with the native message. Operations that
-the backend or platform does not support throw `UnsupportedOperationException`, and
-arguments SimpleBLE rejects, such as a negative `scanFor()` duration, throw
-`IllegalArgumentException`.
+A failed call throws `SimpleJavaBleException`, a `RuntimeException`, or one of its
+subclasses, which follow SimpleBLE's [exceptions](../fundamentals/error-handling#exception-taxonomy):
+`NotInitializedException`, `InvalidReferenceException`, `NotConnectedException`,
+`ServiceNotFoundException`, `CharacteristicNotFoundException`,
+`DescriptorNotFoundException`, `OperationNotSupportedException`,
+`OperationFailedException`, `WinRTException` and its subclass
+`WinRTAccessDeniedException`, `CoreBluetoothException`, `AdapterInUseException`, and
+`InvalidArgumentException`. Each carries its `ErrorCode` in `getCode()` and the
+native message. Failures without a dedicated class throw `SimpleJavaBleException`
+itself with `UNCLASSIFIED_EXCEPTION`.
+
+```java
+try {
+    byte[] value = peripheral.read(service, characteristic);
+} catch (NotConnectedException e) {
+    peripheral.connect();
+} catch (SimpleJavaBleException e) {
+    System.err.println(e.getCode() + ": " + e.getMessage());
+}
+```
 
 ## Host a GATT service
 
@@ -202,7 +218,7 @@ can rebuild it.
 ## Platform-specific APIs
 
 `Advanced` holds APIs for a single platform. They throw
-`UnsupportedOperationException` on other platforms.
+`OperationNotSupportedException` on other platforms.
 
 - `Advanced.Linux.setAdvertisementLocalName()` and
   `Advanced.MacOS.setAdvertisementLocalName()` set the name in a local peripheral's

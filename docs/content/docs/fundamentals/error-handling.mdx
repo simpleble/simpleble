@@ -116,15 +116,15 @@ except RuntimeError as e:
 </Tab>
 <Tab value="Java">
 
-Native failures throw `RuntimeException` with the native message, including unclassified errors. Operations that the backend or platform does not support throw `UnsupportedOperationException`, and arguments SimpleBLE rejects, such as a negative `scanFor()` duration, throw `IllegalArgumentException`.
+A failed call throws `SimpleJavaBleException`, a `RuntimeException`, or one of its subclasses named after the exception, such as `NotConnectedException`, with the same message text. Each carries its `ErrorCode` in `getCode()`, and unclassified errors throw `SimpleJavaBleException` itself with `UNCLASSIFIED_EXCEPTION`. See [SimpleJavaBLE errors](../simplejavable/usage#errors) for the full list of subclasses.
 
 ```java
 try {
     byte[] value = peripheral.read(service, characteristic);
-} catch (UnsupportedOperationException e) {
-    // The device or platform can't do this.
-} catch (RuntimeException e) {
-    System.err.println("BLE error: " + e.getMessage());
+} catch (NotConnectedException e) {
+    peripheral.connect();
+} catch (SimpleJavaBleException e) {
+    System.err.println(e.getCode() + ": " + e.getMessage());
 }
 ```
 
