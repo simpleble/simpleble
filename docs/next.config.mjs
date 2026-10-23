@@ -59,7 +59,14 @@ const config = {
     unoptimized: true,
   },
   async headers() {
-    return [{ source: '/:path*', headers: SECURITY_HEADERS }];
+    // The raw Markdown copies stay readable for agents but out of search results.
+    const noindex = [{ key: 'X-Robots-Tag', value: 'noindex' }];
+
+    return [
+      { source: '/:path*', headers: SECURITY_HEADERS },
+      { source: '/:path*.mdx', headers: noindex },
+      { source: '/llms.mdx/:path*', headers: noindex },
+    ];
   },
   async redirects() {
     const moved = [...MOVED_PAGES, ...folderRedirects()];
