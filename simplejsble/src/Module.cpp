@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <string>
@@ -133,8 +134,13 @@ Napi::Value config_set(const Napi::CallbackInfo& info) {
     }
     if (auto setting = duration_setting(name)) {
         if (!info[1].IsNumber()) throw Napi::TypeError::New(info.Env(), name + " must be a number of milliseconds");
-        const double ms = info[1].As<Napi::Number>().DoubleValue();
-        if (!(ms >= 0)) throw Napi::RangeError::New(info.Env(), name + " cannot be negative");
+        const double value = info[1].As<Napi::Number>().DoubleValue();
+        if (!(value >= 0)) throw Napi::RangeError::New(info.Env(), name + " cannot be negative");
+        // Fractional milliseconds round up.
+        // NOTE: SimpleBLE stores timeouts in nanoseconds, so longer ones would overflow there.
+        const double ms = std::ceil(value);
+        const auto longest = std::chrono::floor<std::chrono::milliseconds>(std::chrono::steady_clock::duration::max());
+        if (!(ms <= static_cast<double>(longest.count()))) throw Napi::RangeError::New(info.Env(), name + " is too long");
         *setting = std::chrono::milliseconds(static_cast<int64_t>(ms));
         return info.Env().Undefined();
     }
