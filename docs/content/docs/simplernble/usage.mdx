@@ -95,7 +95,7 @@ Calls that reach the Bluetooth stack return promises and never block the JavaScr
 
 `Adapter`, `Peripheral`, `LocalPeripheral`, and `LocalCharacteristic` emit events, with `on()`, `once()`, and `off()` as in Node.js. Events are delivered on the JavaScript thread in the order they happened.
 
-Every enumeration returns the same `Adapter` object for an adapter, and an adapter gives you one `Peripheral` object per device, whether it came from `scanFound`, `scanGetResults()`, or `getConnectedPeripherals()`. Compare them with `===` and keep state on them, for example in React state or a `Map`.
+Every enumeration returns the same `Adapter` object for an adapter, and an adapter gives you one `Peripheral` object per device, whether it came from `scanFound` or `scanGetResults()`. Compare them with `===` and keep state on them, for example in React state or a `Map`.
 
 Objects with listeners or subscriptions stay alive without other references, so remove listeners when a component unmounts:
 
@@ -169,7 +169,7 @@ import { Config } from 'simplernble';
 Config.android.connectionPriorityRequest = 'high';
 ```
 
-`connectionPriorityRequest` is requested after each Android connection: `'balanced'`, `'high'`, `'lowPower'`, or `'dck'`, and `'disabled'`, the default, keeps Android's choice. `Config.android.reset()` restores the defaults, and `Config.resetAll()` restores every group.
+`connectionPriorityRequest` is requested after each Android connection: `'balanced'`, `'high'`, `'lowPower'`, or `'dck'`, and `'disabled'`, the default, keeps Android's choice. `negotiateMtu`, `true` by default, requests an MTU of 517 bytes while each Android connection is set up; set it to `false` for peripherals that mishandle the request. `Config.android.reset()` restores the defaults, and `Config.resetAll()` restores every group.
 
 ## Logging
 
