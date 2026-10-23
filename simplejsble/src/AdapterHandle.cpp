@@ -267,13 +267,10 @@ Napi::Value AdapterHandle::subscribe(const Napi::CallbackInfo& info) {
             });
         });
 
-        // A device can advertise many times a second. Only one update per
-        // device is queued at a time; the getters always read current data.
         adapter_.set_callback_on_scan_updated([events, pointer](SimpleBLE::Peripheral peripheral) {
             auto dispatcher = events->dispatcher.lock();
             if (!dispatcher) return;
-            Dispatcher::Key key{events.get(), Internal<SimpleBLE::Peripheral>::of(peripheral)};
-            dispatcher->post_coalesced(key, [events, pointer, peripheral](Napi::Env env) mutable {
+            dispatcher->post([events, pointer, peripheral](Napi::Env env) mutable {
                 emit(env, events->key, "scanUpdated", peripheral, pointer);
             });
         });

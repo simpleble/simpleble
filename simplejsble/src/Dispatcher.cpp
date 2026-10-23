@@ -20,18 +20,11 @@ Dispatcher::Dispatcher(Napi::Env env) {
     function_.Unref(env);
 }
 
-void Dispatcher::post(Job job) { enqueue({std::move(job), std::nullopt}); }
-
-void Dispatcher::post_coalesced(Key key, Job job) { enqueue({std::move(job), key}); }
-
-void Dispatcher::enqueue(Entry entry) {
+void Dispatcher::post(Job job) {
     std::lock_guard<std::mutex> lock(state_->mutex);
     if (state_->closed) return;
 
-    if (entry.key) {
-        if (!queued_keys_.insert(*entry.key).second) return;
-    }
-    queue_.push_back(std::move(entry));
+    queue_.push_back(std::move(job));
 
     // A single outstanding call drains everything queued until it runs.
     if (scheduled_) return;
@@ -43,18 +36,17 @@ void Dispatcher::drain(Napi::Env env, Napi::Function, Dispatcher* self, std::nul
     // longer run; close() has already discarded the jobs.
     if (env == nullptr) return;
 
-    std::deque<Entry> jobs;
+    std::deque<Job> jobs;
     {
         std::lock_guard<std::mutex> lock(self->state_->mutex);
         self->scheduled_ = false;
         jobs.swap(self->queue_);
-        self->queued_keys_.clear();
     }
 
-    for (auto& entry : jobs) {
+    for (auto& job : jobs) {
         Napi::HandleScope scope(env);
         try {
-            entry.job(env);
+            job(env);
         } catch (const Napi::Error& error) {
             // An exception from a listener behaves like one thrown from a timer.
             // NOTE: JavaScript stops running before a terminated worker stops
@@ -87,14 +79,13 @@ void Dispatcher::release(Napi::Env env) {
 }
 
 void Dispatcher::close() {
-    std::deque<Entry> jobs;
+    std::deque<Job> jobs;
     bool abort = false;
     {
         std::lock_guard<std::mutex> lock(state_->mutex);
         abort = !state_->closed;
         state_->closed = true;
         jobs.swap(queue_);
-        queued_keys_.clear();
     }
     if (abort) function_.Abort();
 }
