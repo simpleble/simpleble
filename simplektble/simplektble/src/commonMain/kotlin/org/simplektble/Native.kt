@@ -177,6 +177,8 @@ internal expect object Native {
 
     fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
 
+    fun localPeripheralServices(peripheralId: Long): LongArray
+
     fun localPeripheralRemoveAllServices(peripheralId: Long)
 
     fun localPeripheralStart(peripheralId: Long)
@@ -190,6 +192,8 @@ internal expect object Native {
     fun localServiceUuid(serviceId: Long): String
 
     fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long
+
+    fun localServiceCharacteristics(serviceId: Long): LongArray
 
     fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback)
 

@@ -146,6 +146,8 @@ internal actual object Native {
 
     actual external fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
 
+    actual external fun localPeripheralServices(peripheralId: Long): LongArray
+
     actual external fun localPeripheralRemoveAllServices(peripheralId: Long)
 
     actual external fun localPeripheralStart(peripheralId: Long)
@@ -159,6 +161,8 @@ internal actual object Native {
     actual external fun localServiceUuid(serviceId: Long): String
 
     actual external fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long
+
+    actual external fun localServiceCharacteristics(serviceId: Long): LongArray
 
     actual external fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback)
 

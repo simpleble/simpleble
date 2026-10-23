@@ -34,10 +34,12 @@ declared once with `expect` and implemented twice. Objects are passed around as 
 assigns, and the shared classes keep one Kotlin object per ID. Backends are named by their identifier instead, since
 SimpleBLE has one backend per identifier.
 
-An adapter's or peripheral's ID is the address of SimpleBLE's own object behind it, read through `cpp/Internal.h` the
-way SimpleJSBLE does. SimpleBLE keeps one such object per adapter and per device, so the same device always comes
-back as the same Kotlin object. `underlying()` cannot stand in for it: it returns the operating system's object, which
-the Dongl and simulated backends do not have. Local GATT objects are numbered as they are created.
+An adapter's, peripheral's, local service's or local characteristic's ID is the address of SimpleBLE's own object
+behind it, read through `cpp/Internal.h` the way SimpleJSBLE does. SimpleBLE keeps one such object per adapter, device,
+local service and local characteristic, so the same one always comes back as the same Kotlin object, and lists such as
+`LocalPeripheral.services()` come from SimpleBLE. `underlying()` cannot stand in for it: it returns the operating
+system's object, which the Dongl and simulated backends do not have. Local peripherals are never listed, so they are
+numbered as they are created.
 
 Properties return state that is already known, and anything that waits on the Bluetooth stack or can fail at run
 time on iOS and macOS is a function. Kotlin/Native lets only functions declare `@Throws`, and an undeclared exception
@@ -61,8 +63,8 @@ or is missing serves the stored value, as in SimpleJavaBLE.
 - **Android shrinking.** The JNI library and the SimpleBLE Android backend look classes and methods up by name, so
   both Android libraries publish consumer keep rules (`consumer-rules.pro`) for apps that run R8.
 - **C API (iOS and macOS).** `appleMain` calls SimpleCBLE through cinterop. SimpleCBLE returns a new handle every
-  time, so adapters and peripherals are keyed by `simpleble_adapter_identity` and `simpleble_peripheral_identity`:
-  the first handle for an ID is kept and later ones are released. Lists come from
+  time, so adapters, peripherals, local services and local characteristics are keyed by their `simpleble_*_identity`
+  function: the first handle for an ID is kept and later ones are released. Lists come from
   SimpleCBLE's list handles, read once and released after each entry is interned. SimpleCBLE's advanced functions are
   named differently on iOS and macOS and exist only with the CoreBluetooth backend, so `cpp/apple` provides the
   cached peripherals (`simplektble/snapshot.h`) and the advertised local name, and reports `OPERATION_NOT_SUPPORTED` without that backend, as the JNI layer does. Callbacks

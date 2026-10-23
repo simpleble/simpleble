@@ -47,9 +47,9 @@ import platform.posix.size_tVar
 /**
  * Native over the SimpleCBLE C API.
  *
- * SimpleCBLE hands out a new handle every time it returns an adapter or peripheral, so each one is identified by the
- * value of simpleble_adapter_identity() or simpleble_peripheral_identity(). The first handle is kept and later ones
- * are released.
+ * SimpleCBLE hands out a new handle every time it returns an adapter, peripheral, local service or local
+ * characteristic, so each one is identified by the value of its simpleble_*_identity() function. The first handle is
+ * kept and later ones are released.
  * Callbacks receive the ID as their userdata and run, in order, on one coroutine, the same way the JNI layer runs them
  * on one thread.
  */
@@ -65,7 +65,7 @@ internal actual object Native {
     private val dataCallbacks = mutableMapOf<Long, DataCallback>()
     private var nextSubscriptionId = 1L
 
-    // Local GATT objects are numbered as they are created. They are never listed, so they need no identity.
+    // Local peripherals are never listed, so they are numbered as they are created.
     private val localPeripherals = mutableMapOf<Long, simpleble_local_peripheral_t>()
     private val localServices = mutableMapOf<Long, simpleble_local_service_t>()
     private val localCharacteristics = mutableMapOf<Long, simpleble_local_characteristic_t>()
@@ -469,9 +469,17 @@ internal actual object Native {
 
     actual fun localPeripheralAddService(peripheralId: Long, uuid: String): Long {
         val handle = localPeripheral(peripheralId)
-        val service = call { simpleble_local_peripheral_add_service(handle, uuid(uuid), it) }
-            ?: throw unclassified("SimpleBLE returned no local service")
-        return addLocal(localServices, service)
+        return internLocalService(call { simpleble_local_peripheral_add_service(handle, uuid(uuid), it) })
+    }
+
+    actual fun localPeripheralServices(peripheralId: Long): LongArray {
+        val handle = localPeripheral(peripheralId)
+        return readList(
+            { list, error -> simpleble_local_peripheral_services(handle, list, error) },
+            { simpleble_local_service_list_release(it) }
+        ) { list, index ->
+            internLocalService(call { simpleble_local_service_list_get(list, index.convert(), it) })
+        }.toLongArray()
     }
 
     actual fun localPeripheralRemoveAllServices(peripheralId: Long) {
@@ -510,10 +518,19 @@ internal actual object Native {
 
     actual fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long {
         val handle = local(localServices, serviceId, "local service")
-        val characteristic = call {
+        return internLocalCharacteristic(call {
             simpleble_local_service_add_characteristic(handle, uuid(uuid), capabilities.toUInt(), it)
-        } ?: throw unclassified("SimpleBLE returned no local characteristic")
-        return addLocal(localCharacteristics, characteristic)
+        })
+    }
+
+    actual fun localServiceCharacteristics(serviceId: Long): LongArray {
+        val handle = local(localServices, serviceId, "local service")
+        return readList(
+            { list, error -> simpleble_local_service_characteristics(handle, list, error) },
+            { simpleble_local_characteristic_list_release(it) }
+        ) { list, index ->
+            internLocalCharacteristic(call { simpleble_local_characteristic_list_get(list, index.convert(), it) })
+        }.toLongArray()
     }
 
     actual fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback) {
@@ -815,6 +832,22 @@ internal actual object Native {
 
     private fun <T> addLocal(objects: MutableMap<Long, T>, handle: T): Long {
         return synchronized(lock) { (nextLocalId++).also { objects[it] = handle } }
+    }
+
+    private fun internLocalService(handle: simpleble_local_service_t?): Long {
+        if (handle == null) throw unclassified("SimpleBLE returned no local service")
+        val id = simpleble_local_service_identity(handle).toLong()
+        val known = synchronized(lock) { localServices.getOrPut(id) { handle } != handle }
+        if (known) simpleble_local_service_release_handle(handle)
+        return id
+    }
+
+    private fun internLocalCharacteristic(handle: simpleble_local_characteristic_t?): Long {
+        if (handle == null) throw unclassified("SimpleBLE returned no local characteristic")
+        val id = simpleble_local_characteristic_identity(handle).toLong()
+        val known = synchronized(lock) { localCharacteristics.getOrPut(id) { handle } != handle }
+        if (known) simpleble_local_characteristic_release_handle(handle)
+        return id
     }
 
     private fun <T : Any> local(objects: Map<Long, T>, id: Long, kind: String): T {

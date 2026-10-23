@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 
 public class LocalPeripheral internal constructor(private val instanceId: Long) {
     private val servicesLock = SynchronizedObject()
-    private val configuredServices = mutableListOf<LocalService>()
+    private val servicesById = mutableMapOf<Long, LocalService>()
     private val _onClientConnected = eventFlow<BluetoothAddress>()
     private val _onClientDisconnected = eventFlow<BluetoothAddress>()
 
@@ -26,6 +26,10 @@ public class LocalPeripheral internal constructor(private val instanceId: Long) 
 
     init {
         Native.localPeripheralRegister(instanceId, callbacks)
+    }
+
+    private fun service(serviceId: Long): LocalService {
+        return synchronized(servicesLock) { servicesById.getOrPut(serviceId) { LocalService(serviceId) } }
     }
 
     @Throws(SimpleKtBleException::class)
@@ -61,8 +65,10 @@ public class LocalPeripheral internal constructor(private val instanceId: Long) 
         Native.localPeripheralSetAdvertisementLocalName(instanceId, name)
     }
 
-    public val services: List<LocalService>
-        get() = synchronized(servicesLock) { configuredServices.toList() }
+    @Throws(SimpleKtBleException::class)
+    public fun services(): List<LocalService> {
+        return Native.localPeripheralServices(instanceId).map(::service)
+    }
 
     public val isStarted: Boolean
         get() = Native.localPeripheralIsStarted(instanceId)
@@ -81,15 +87,13 @@ public class LocalPeripheral internal constructor(private val instanceId: Long) 
 
     @Throws(SimpleKtBleException::class)
     public fun addService(uuid: BluetoothUUID): LocalService {
-        val service = LocalService(Native.localPeripheralAddService(instanceId, uuid.value))
-        synchronized(servicesLock) { configuredServices += service }
-        return service
+        return service(Native.localPeripheralAddService(instanceId, uuid.value))
     }
 
     @Throws(SimpleKtBleException::class)
     public fun removeAllServices() {
         Native.localPeripheralRemoveAllServices(instanceId)
-        synchronized(servicesLock) { configuredServices.clear() }
+        synchronized(servicesLock) { servicesById.clear() }
     }
 
     @Throws(SimpleKtBleException::class, CancellationException::class)

@@ -14,14 +14,22 @@ NativeCache& NativeCache::get() {
     return cache;
 }
 
-// IDs are the addresses of SimpleBLE's own objects, so the same adapter or device always has the same ID. The cache
-// keeps those objects alive, so an address is never reused while its ID is in use.
+// IDs are the addresses of SimpleBLE's own objects, so the same adapter, device, local service or local characteristic
+// always has the same ID. The cache keeps those objects alive, so an address is never reused while its ID is in use.
 int64_t NativeCache::adapter_id(SimpleBLE::Adapter& adapter) {
     return reinterpret_cast<int64_t>(Internal<SimpleBLE::Adapter>::of(adapter));
 }
 
 int64_t NativeCache::peripheral_id(SimpleBLE::Peripheral& peripheral) {
     return reinterpret_cast<int64_t>(Internal<SimpleBLE::Peripheral>::of(peripheral));
+}
+
+int64_t NativeCache::local_service_id(SimpleBLE::Local::Service& service) {
+    return reinterpret_cast<int64_t>(Internal<SimpleBLE::Local::Service>::of(service));
+}
+
+int64_t NativeCache::local_characteristic_id(SimpleBLE::Local::Characteristic& characteristic) {
+    return reinterpret_cast<int64_t>(Internal<SimpleBLE::Local::Characteristic>::of(characteristic));
 }
 
 std::string NativeCache::add_backend(SimpleBLE::Backend backend) {
@@ -71,24 +79,25 @@ SimpleBLE::Peripheral NativeCache::peripheral(int64_t adapter_id, int64_t periph
     return peripheral->second.peripheral;
 }
 
+// NOTE: Local peripherals are never listed, so they are numbered as they are created.
 int64_t NativeCache::add_local_peripheral(SimpleBLE::Local::Peripheral peripheral) {
     std::lock_guard<std::mutex> lock(_mutex);
-    const int64_t id = _next_local_id++;
+    const int64_t id = _next_local_peripheral_id++;
     _local_peripherals.emplace(id, LocalPeripheralEntry{std::move(peripheral), nullptr});
     return id;
 }
 
 int64_t NativeCache::add_local_service(SimpleBLE::Local::Service service) {
+    const int64_t id = local_service_id(service);
     std::lock_guard<std::mutex> lock(_mutex);
-    const int64_t id = _next_local_id++;
-    _local_services.emplace(id, std::move(service));
+    _local_services.try_emplace(id, std::move(service));
     return id;
 }
 
 int64_t NativeCache::add_local_characteristic(SimpleBLE::Local::Characteristic characteristic) {
+    const int64_t id = local_characteristic_id(characteristic);
     std::lock_guard<std::mutex> lock(_mutex);
-    const int64_t id = _next_local_id++;
-    _local_characteristics.emplace(id, LocalCharacteristicEntry{std::move(characteristic), nullptr});
+    _local_characteristics.try_emplace(id, LocalCharacteristicEntry{std::move(characteristic), nullptr});
     return id;
 }
 

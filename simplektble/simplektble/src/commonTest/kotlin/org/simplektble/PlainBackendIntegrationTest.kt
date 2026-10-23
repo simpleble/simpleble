@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
@@ -197,6 +198,21 @@ class PlainBackendIntegrationTest {
         } finally {
             local.stop()
         }
+    }
+
+    @Test
+    fun localServicesComeFromSimpleBLE() {
+        val local = Adapter.getAdapters().single().createLocalPeripheral()
+        val second = local.addService(BluetoothUUID("0000fff2-0000-1000-8000-00805f9b34fb"))
+        val first = local.addService(BluetoothUUID("0000fff1-0000-1000-8000-00805f9b34fb"))
+        val characteristic = first.addCharacteristic(
+            BluetoothUUID("0000fff3-0000-1000-8000-00805f9b34fb"),
+            LocalCharacteristicCapability.Read
+        )
+
+        // PLAIN lists services by UUID, and each listed object is the one that was added.
+        assertEquals(listOf(first, second), local.services())
+        assertSame(characteristic, local.services().first().characteristics().single())
     }
 
     @Test

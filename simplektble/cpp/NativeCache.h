@@ -101,13 +101,15 @@ class NativeCache {
 
     static int64_t adapter_id(SimpleBLE::Adapter& adapter);
     static int64_t peripheral_id(SimpleBLE::Peripheral& peripheral);
+    static int64_t local_service_id(SimpleBLE::Local::Service& service);
+    static int64_t local_characteristic_id(SimpleBLE::Local::Characteristic& characteristic);
 
     mutable std::mutex _mutex;
     std::map<std::string, SimpleBLE::Backend> _backends;
     std::map<int64_t, AdapterEntry> _adapters;
     std::map<int64_t, std::map<int64_t, PeripheralEntry>> _peripherals;
     std::map<DataCallbackKey, std::shared_ptr<Org::SimpleKtBLE::DataCallback>> _data_callbacks;
-    int64_t _next_local_id{1};
+    int64_t _next_local_peripheral_id{1};
     std::map<int64_t, LocalPeripheralEntry> _local_peripherals;
     std::map<int64_t, ::SimpleBLE::Local::Service> _local_services;
     std::map<int64_t, LocalCharacteristicEntry> _local_characteristics;

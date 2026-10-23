@@ -727,6 +727,17 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_localPeripheralAd
     });
 }
 
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_localPeripheralServices(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    return call(env, [peripheral_id] {
+        std::vector<int64_t> service_ids;
+        for (auto service : NativeCache::get().local_peripheral(peripheral_id).services()) {
+            service_ids.push_back(NativeCache::get().add_local_service(std::move(service)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(service_ids).release();
+    });
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralRemoveAllServices(
     JNIEnv* env, jobject, jlong peripheral_id) {
     call(env, [peripheral_id] { NativeCache::get().local_peripheral(peripheral_id).remove_all_services(); });
@@ -778,6 +789,17 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_localServiceAddCh
         auto characteristic = NativeCache::get().local_service(service_id).add_characteristic(
             SimpleJNI::String<SimpleJNI::LocalRef>(uuid).str(), std::move(native_capabilities));
         return static_cast<jlong>(NativeCache::get().add_local_characteristic(std::move(characteristic)));
+    });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_localServiceCharacteristics(
+    JNIEnv* env, jobject, jlong service_id) {
+    return call(env, [service_id] {
+        std::vector<int64_t> characteristic_ids;
+        for (auto characteristic : NativeCache::get().local_service(service_id).characteristics()) {
+            characteristic_ids.push_back(NativeCache::get().add_local_characteristic(std::move(characteristic)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(characteristic_ids).release();
     });
 }
 
