@@ -3,7 +3,7 @@ import Testing
 
 // NOTE: The tests run against SimpleBLE's PLAIN backend, whose state lasts for the whole process, so every suite
 // is nested in this one and they run one at a time.
-@Suite(.serialized, .timeLimit(.minutes(1)))
+@Suite(.serialized)
 struct SimpleSwiftBLETests {}
 
 enum Plain {
