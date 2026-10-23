@@ -141,6 +141,10 @@ jobs:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simplernble.yml
 
+  simpleswiftble:
+    needs: [smoketest]
+    uses: ./.github/workflows/ci_simpleswiftble.yml
+
   linux-internals:
     needs: [smoketest, libraries]
     if: ${{ needs.libraries.outputs.values != '[]' && needs.libraries.outputs.values != '' }}
@@ -149,7 +153,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble, simplektble, simplernble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble, simplektble, simplernble, simpleswiftble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     permissions:
       contents: write
@@ -301,6 +305,56 @@ jobs:
             git tag "$tag"
             git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
           fi
+
+  # SwiftPM resolves versions from tags, and prefers 1.2.1 over v1.2.1. Each release gets an unprefixed tag on a commit
+  # whose Package.swift points at the xcframework archive attached to the release. Development builds get no tag.
+  publish-simpleswiftble:
+    needs: [publish-release]
+    if: github.event_name == 'release'
+    runs-on: macos-15
+    permissions:
+      contents: write
+    concurrency:
+      group: simpleswiftble-distribution
+      cancel-in-progress: false
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Publish the SwiftPM version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(tr -d ' \t\n\r' < VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          asset=simpleswiftble-xcframework.zip
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/$asset"
+          if git show-ref --verify --quiet "refs/tags/$version"; then
+            if ! git show "$version:Package.swift" | grep -qF "$url"; then
+              echo "::error::$version already exists without this release's archive; published SwiftPM versions are immutable."
+              exit 1
+            fi
+            echo "$version is already published."
+            exit 0
+          fi
+          # NOTE: A retried run keeps the archive an earlier attempt uploaded, so its checksum stays valid.
+          if gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | grep -qx "$asset"; then
+            gh release download "$RELEASE_TAG" --pattern "$asset" --dir "$RUNNER_TEMP"
+          else
+            simpleswiftble/scripts/build-xcframework.sh
+            ditto -c -k --keepParent simpleswiftble/build/release/CSimpleBLE.xcframework "$RUNNER_TEMP/$asset"
+            gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/$asset"
+          fi
+          simpleswiftble/scripts/release-manifest.sh "$url" "$(swift package compute-checksum "$RUNNER_TEMP/$asset")"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Published SimpleSwiftBLE $version." Package.swift
+          git tag "$version"
+          git push origin "refs/tags/$version"
 
   publish-simplejsble:
     needs: [publish-release]

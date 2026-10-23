@@ -16,7 +16,8 @@ cmake --build build_plain -j7
 
 The flag replaces the native Bluetooth backend with the default simulated
 environment. It is intended for repository development and binding tests.
-Native advanced APIs require their corresponding platform backend.
+The platform advanced APIs, such as cached peripheral retrieval, exist and throw
+`OperationNotSupported`.
 
 Backend enumeration always exposes exactly one backend, `Plain`. Enabling
 Dongl in configuration cannot add a hardware backend to this build.
@@ -61,8 +62,8 @@ appears in `get_paired_peripherals()`. Paired state survives disconnect until
 Power changes update the adapter state and emit callbacks. Power-off stops
 scanning; connections and local hosts continue running. Invalid services,
 characteristics, descriptors, capabilities, and disconnected GATT operations
-produce the normal SimpleBLE exceptions. Native handles are null and
-platform-specific advanced APIs require their native backend.
+produce the normal SimpleBLE exceptions. Native handles are null, and
+platform-specific advanced APIs throw `OperationNotSupported`.
 
 ## Local GATT loopback
 

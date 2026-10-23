@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -260,6 +260,37 @@ peripheral.start()
 ```
 
 </Tab>
+<Tab value="Swift">
+
+```swift
+let adapter = try Adapter.getAdapters().first!
+let peripheral = try adapter.createLocalPeripheral()
+
+try peripheral.addAdvertisedService("12345678-1234-5678-1234-56789abcdef0")
+
+let characteristic = try peripheral
+    .addService("12345678-1234-5678-1234-56789abcdef0")
+    .addCharacteristic("12345678-1234-5678-1234-56789abcdef1", capabilities: [.read, .writeRequest, .notify])
+try await characteristic.setValue(Data("ready".utf8))
+
+// Echo the written value to subscribed clients. The streams buffer events until their tasks run.
+let writes = characteristic.onWrite
+let connections = peripheral.onClientConnected
+Task {
+    for await value in writes {
+        try? await characteristic.setValue(value)
+    }
+}
+Task {
+    for await address in connections {
+        print("Client connected: \(address)")
+    }
+}
+
+try await peripheral.start()
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -305,7 +336,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -425,6 +456,24 @@ val ibeacon = listOf(
 peripheral.setAdvertisedManufacturerData(0x004c, ibeacon)
 peripheral.setConnectable(false)
 peripheral.start()
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+let adapter = try Adapter.getAdapters().first!
+let peripheral = try adapter.createLocalPeripheral()
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+let ibeacon = Data([
+    0x02, 0x15,
+    0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+    0x00, 0x01, 0x00, 0x02, 0xc5,
+])
+try peripheral.setAdvertisedManufacturerData(companyId: 0x004c, data: ibeacon)
+try peripheral.setConnectable(false)
+try await peripheral.start()
 ```
 
 </Tab>

@@ -28,7 +28,7 @@ The [Dongl QuickStart](https://simpleble.org/dongl/quickstart) installs SimplePy
 | --- | --- |
 | Firmware | N-Series v0.1.0 |
 | Host | Windows, macOS, or Linux, over USB (on Linux, see [Dongl permissions](./simpleble/usage#dongl-permissions-on-linux)) |
-| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), Rust ([SimpleRsBLE](./simplersble/usage)), JavaScript ([SimpleJSBLE](./simplejsble/usage)), and Kotlin Multiplatform ([SimpleKtBLE](./simplektble/usage)), version 1.2.1 or later |
+| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), Rust ([SimpleRsBLE](./simplersble/usage)), JavaScript ([SimpleJSBLE](./simplejsble/usage)), Kotlin Multiplatform ([SimpleKtBLE](./simplektble/usage)), and Swift ([SimpleSwiftBLE](./simpleswiftble/usage)), version 1.2.1 or later |
 
 The firmware acts as a BLE central. It supports scanning with scan responses and service data, connections, reads and writes, notifications and indications, descriptors, MTU reporting, and pairing with bonding. Reads return values of up to 512 bytes.
 
@@ -36,7 +36,7 @@ The firmware acts as a BLE central. It supports scanning with scan responses and
 
 From SimpleBLE 1.2.1, the Dongl backend is on by default, so plugged-in Dongls appear next to the computer's own Bluetooth adapter. To use only Dongls, take the adapters of the Dongl backend, as below. To leave Dongls out, turn the backend off before any other SimpleBLE call. With 1.2.0, turn it on first. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
 
-<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform"]}>
+<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform", "Swift"]}>
 <Tab value="C++">
 
 ```cpp
@@ -183,6 +183,16 @@ println("${adapter.identifier} [${adapter.address}]")
 ```
 
 </Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+let adapter = try Backend.getDongl().getAdapters().first!
+print("\(adapter.identifier) [\(adapter.address)]")
+```
+
+</Tab>
 </Tabs>
 
 A Dongl adapter works like any other SimpleBLE adapter, and the [recipes](./recipes/scan) apply unchanged.
@@ -193,7 +203,7 @@ Each Dongl is a separate adapter with its own radio. Plug in as many as your set
 
 The programs below check three devices in parallel, one per Dongl.
 
-<Tabs items={["C++", "C", "Python", "C#", "Node.js", "Kotlin Multiplatform"]}>
+<Tabs items={["C++", "C", "Python", "C#", "Node.js", "Kotlin Multiplatform", "Swift"]}>
 <Tab value="C++">
 
 ```cpp
@@ -529,6 +539,46 @@ suspend fun main() = coroutineScope {
 ```
 
 </Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+let service: BluetoothUUID = "0000180a-0000-1000-8000-00805f9b34fb"         // Device Information
+let characteristic: BluetoothUUID = "00002a26-0000-1000-8000-00805f9b34fb"  // Firmware Revision String
+let targets = ["C4:2B:91:0E:5A:17", "F0:9E:3C:44:81:0B", "D2:41:6A:9C:03:5E"]
+
+func check(_ adapter: Adapter, _ address: String) async throws -> String {
+    try await adapter.scanFor(timeoutMs: 5000)
+    guard let peripheral = try adapter.scanGetResults().first(where: { $0.address.value == address }) else {
+        return "\(address): not found by \(adapter.address)"
+    }
+
+    try await peripheral.connect()
+    do {
+        let value = try await peripheral.read(service: service, characteristic: characteristic)
+        try await peripheral.disconnect()
+        return "\(address): \(String(decoding: value, as: UTF8.self))"
+    } catch {
+        try? await peripheral.disconnect()
+        throw error
+    }
+}
+
+let adapters = try Backend.getDongl().getAdapters()
+
+// Calls on different adapters run in parallel.
+try await withThrowingTaskGroup(of: String.self) { group in
+    for (address, adapter) in zip(targets, adapters) {
+        group.addTask { try await check(adapter, address) }
+    }
+    for try await result in group {
+        print(result)
+    }
+}
+```
+
+</Tab>
 </Tabs>
 
 Dongl addresses are uppercase, as in `C4:2B:91:0E:5A:17`; write target addresses the same way.
@@ -558,7 +608,7 @@ Callbacks run on a worker thread and can block while the user answers. A request
 | Node.js | `Peripheral.setPasskeyRequestHandler`, `setPasskeyDisplayHandler`, `setNumericComparisonHandler` |
 | Kotlin Multiplatform | `Peripheral.setPasskeyRequestHandler`, `setPasskeyDisplayHandler`, `setNumericComparisonHandler` |
 
-<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform"]}>
+<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform", "Swift"]}>
 <Tab value="C++">
 
 ```cpp
@@ -690,6 +740,18 @@ peripheral.setNumericComparisonHandler { passkey ->
 }
 
 peripheral.connect()
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+try peripheral.setNumericComparisonHandler { passkey in
+    print("Does the device show \(passkey)? [y/N] ", terminator: "")
+    return readLine()?.trimmingCharacters(in: .whitespaces) == "y"
+}
+
+try await peripheral.connect()
 ```
 
 </Tab>

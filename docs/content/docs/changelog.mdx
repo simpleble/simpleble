@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleJSBLE) Added Node.js bindings.
 - (SimpleRnBLE) Added React Native bindings.
 - (SimpleKtBLE) Added Kotlin Multiplatform bindings.
+- (SimpleSwiftBLE) Added Swift bindings.
 - (SimpleKtBLE) Added adapter power, error codes, service data, cached peripherals, local names and Android settings.
 - (SimpleBLE) Added the `AdapterInUse` exception and `ADAPTER_IN_USE` error code.
 - (SimpleBLE) Added direct access to the native, Dongl and Simulator backends.
@@ -61,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleSharpBLE) Fixed local read handlers attaching to the wrong characteristic on the PLAIN backend.
 - (SimpleSharpBLE) Fixed iOS and Mac Catalyst minimum versions.
 - (SimpleSharpBLE/SimpleGoBLE) Fixed lists repeating or missing entries, or failing with "index is out of range", during a scan.
+- (SimpleBLE) Fixed the macOS, iOS and Linux advanced functions missing from builds without their native backend.
 - (Dongl) Fixed C and C# adapter lists breaking with several Dongls plugged in.
 - (Dongl) Fixed another program opening a Dongl's port on macOS and Linux silently breaking its adapter.
 - (Dongl) Fixed a Dongl held by another process breaking the whole adapter list.

@@ -115,6 +115,13 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/simplektble/usage",
   },
   {
+    eyebrow: "Swift",
+    title: "SimpleSwiftBLE",
+    description:
+      "Swift bindings with async/await and AsyncStream for iOS, iPadOS, macOS, and Mac Catalyst.",
+    href: "/simpleswiftble/usage",
+  },
+  {
     eyebrow: "Android",
     title: "SimpleDroidBLE",
     description:

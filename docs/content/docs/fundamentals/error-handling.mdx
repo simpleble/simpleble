@@ -46,7 +46,7 @@ These errors carry the lower layer's message and no classification. C++ code see
 
 ## Errors in each language
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Android (deprecated)"]}>
 <Tab value="C++">
 
 All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. To cover both the classified exceptions and unclassified errors, catch at two levels:
@@ -209,6 +209,22 @@ try {
     when (e.code) {
         ErrorCode.PERIPHERAL_NOT_CONNECTED -> peripheral.connect()
         else -> println("BLE error ${e.code}: ${e.message}")
+    }
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+Failures are thrown as `SimpleBLEError`. Its `code` is SimpleBLE's error code, such as `.peripheralNotConnected`. Unclassified errors have the code `.unclassifiedException`.
+
+```swift
+do {
+    let value = try await peripheral.read(service: serviceUUID, characteristic: characteristicUUID)
+} catch let error as SimpleBLEError {
+    switch error.code {
+    case .peripheralNotConnected: try await peripheral.connect()
+    default: print("BLE error \(error.code): \(error.message)")
     }
 }
 ```
