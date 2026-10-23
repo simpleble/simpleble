@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import Script from 'next/script';
 
 import { Z2VTracker } from '@/components/z2v-tracker';
+import { siteUrl } from '@/lib/site';
 
 import './global.css';
 
@@ -23,9 +24,6 @@ const sora = Sora({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
 });
-
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://docs.simpleble.org';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
