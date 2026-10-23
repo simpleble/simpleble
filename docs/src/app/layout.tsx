@@ -25,10 +25,16 @@ const sora = Sora({
   weight: ['400', '500', '600', '700'],
 });
 
+const description =
+  'Documentation for SimpleBLE, the cross-platform Bluetooth Low Energy library for Windows, macOS, Linux, iOS and Android, and for each of its language bindings.';
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'SimpleBLE Docs',
-  description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
+  title: {
+    default: 'SimpleBLE Docs',
+    template: '%s | SimpleBLE Docs',
+  },
+  description,
   icons: {
     icon: '/favicon.png',
     apple: '/favicon.png',
@@ -38,7 +44,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: 'SimpleBLE Docs',
     title: 'SimpleBLE Docs',
-    description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
+    description,
     images: [
       {
         url: '/og/home',
@@ -51,7 +57,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'SimpleBLE Docs',
-    description: 'The fully supported, cross-platform library designed to get your embedded product to market without the headaches.',
+    description,
     images: ['/og/home'],
   },
 };

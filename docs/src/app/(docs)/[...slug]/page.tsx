@@ -1,5 +1,5 @@
 import { getPageImage } from "@/lib/metadata";
-import { source } from "@/lib/source";
+import { getPageTitle, source } from "@/lib/source";
 import {
   DocsBody,
   DocsDescription,
@@ -75,17 +75,21 @@ export async function generateMetadata(
   if (!page) notFound();
 
   const image = getPageImage(page);
+  const title = getPageTitle(page);
 
   return {
-    title: page.data.title,
+    title,
     description: page.data.description,
+    alternates: {
+      canonical: page.url,
+    },
     openGraph: {
       images: [
         {
           url: image.url,
           width: 1200,
           height: 630,
-          alt: page.data.title,
+          alt: title,
         },
       ],
     },
