@@ -131,7 +131,7 @@ peripheral.notify(batteryService, batteryLevel).collect { value ->
 }
 ```
 
-UUIDs are `BluetoothUUID` values holding the full 128-bit string, and values are `ByteArray`s. `services()` lists the services, characteristics, and descriptors of a connected peripheral, and each characteristic reports what it supports with `canRead`, `canWriteRequest`, `canWriteCommand`, `canNotify`, and `canIndicate`. Before connecting, `services()` lists the services the peripheral advertises, and each service's `data` holds the service data it advertised.
+UUIDs are `BluetoothUUID` values holding the full 128-bit string, and values are `ByteArray`s. `services()` lists the services, characteristics, and descriptors of a connected peripheral, and each characteristic reports what it supports with `canRead`, `canWriteRequest`, `canWriteCommand`, `canNotify`, and `canIndicate`, or all at once as a set of `CharacteristicCapability` values in `capabilities`. Before connecting, `services()` lists the services the peripheral advertises, and each service's `data` holds the service data it advertised.
 
 `writeRequest()` waits for the peripheral to confirm, while `writeCommand()` does not. `read()` and `write()` with a descriptor UUID access descriptors:
 
@@ -154,7 +154,7 @@ When the peripheral disconnects, the flow delivers the values received before th
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import org.simplektble.BluetoothUUID
-import org.simplektble.LocalCharacteristicCapability
+import org.simplektble.CharacteristicCapability
 
 val echoService = BluetoothUUID("12345678-1234-5678-1234-56789abcdef0")
 val echoCharacteristic = BluetoothUUID("12345678-1234-5678-1234-56789abcdef1")
@@ -164,9 +164,9 @@ host.addAdvertisedService(echoService)
 
 val echo = host.addService(echoService).addCharacteristic(
     echoCharacteristic,
-    LocalCharacteristicCapability.Read,
-    LocalCharacteristicCapability.WriteRequest,
-    LocalCharacteristicCapability.Notify
+    CharacteristicCapability.Read,
+    CharacteristicCapability.WriteRequest,
+    CharacteristicCapability.Notify
 )
 echo.setValue("ready".encodeToByteArray())
 
@@ -181,7 +181,7 @@ scope.launch(start = CoroutineStart.UNDISPATCHED) {
 host.start()
 ```
 
-Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`. `setValue()` updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
+Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`, the same `CharacteristicCapability` values a peripheral's characteristics report. `setValue()` updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
 
 To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value, until you pass `null`. If the function throws, the read gets the stored value:
 

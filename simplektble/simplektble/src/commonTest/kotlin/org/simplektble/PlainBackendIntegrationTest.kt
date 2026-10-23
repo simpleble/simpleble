@@ -207,7 +207,7 @@ class PlainBackendIntegrationTest {
         val first = local.addService(BluetoothUUID("0000fff1-0000-1000-8000-00805f9b34fb"))
         val characteristic = first.addCharacteristic(
             BluetoothUUID("0000fff3-0000-1000-8000-00805f9b34fb"),
-            LocalCharacteristicCapability.Read
+            CharacteristicCapability.Read
         )
 
         // PLAIN lists services by UUID, and each listed object is the one that was added.
@@ -224,9 +224,9 @@ class PlainBackendIntegrationTest {
         val valueUuid = BluetoothUUID("0000fff1-0000-1000-8000-00805f9b34fb")
         val value = local.addService(serviceUuid).addCharacteristic(
             valueUuid,
-            LocalCharacteristicCapability.Read,
-            LocalCharacteristicCapability.WriteRequest,
-            LocalCharacteristicCapability.Notify
+            CharacteristicCapability.Read,
+            CharacteristicCapability.WriteRequest,
+            CharacteristicCapability.Notify
         )
         val payload = byteArrayOf(0x00, 0xff.toByte(), 0x80.toByte())
         value.setValue(payload)

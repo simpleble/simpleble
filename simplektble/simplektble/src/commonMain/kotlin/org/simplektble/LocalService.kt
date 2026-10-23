@@ -23,7 +23,7 @@ public class LocalService internal constructor(private val instanceId: Long) {
     @Throws(SimpleKtBleException::class)
     public fun addCharacteristic(
         uuid: BluetoothUUID,
-        vararg capabilities: LocalCharacteristicCapability
+        vararg capabilities: CharacteristicCapability
     ): LocalCharacteristic {
         val mask = capabilities.fold(0) { result, capability -> result or capability.bit }
         return characteristic(Native.localServiceAddCharacteristic(instanceId, uuid.value, mask))

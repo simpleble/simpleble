@@ -5,7 +5,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.simplektble.BluetoothUUID
-import org.simplektble.LocalCharacteristicCapability
+import org.simplektble.CharacteristicCapability
 import org.simplektble.examples.chooseAdapter
 import org.simplektble.examples.toHex
 
@@ -21,11 +21,11 @@ fun main(): Unit = runBlocking {
 
     val characteristic = host.addService(SERVICE_UUID).addCharacteristic(
         CHARACTERISTIC_UUID,
-        LocalCharacteristicCapability.Read,
-        LocalCharacteristicCapability.WriteRequest,
-        LocalCharacteristicCapability.WriteCommand,
-        LocalCharacteristicCapability.Notify,
-        LocalCharacteristicCapability.Indicate
+        CharacteristicCapability.Read,
+        CharacteristicCapability.WriteRequest,
+        CharacteristicCapability.WriteCommand,
+        CharacteristicCapability.Notify,
+        CharacteristicCapability.Indicate
     )
     characteristic.setValue("ready".encodeToByteArray())
 

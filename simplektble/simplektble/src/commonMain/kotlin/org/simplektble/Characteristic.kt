@@ -10,4 +10,14 @@ public class Characteristic internal constructor(
     public val canIndicate: Boolean
 ) {
     public val uuid: BluetoothUUID = BluetoothUUID(uuid)
+
+    public val capabilities: Set<CharacteristicCapability> = CharacteristicCapability.entries.filterTo(linkedSetOf()) {
+        when (it) {
+            CharacteristicCapability.Read -> canRead
+            CharacteristicCapability.WriteRequest -> canWriteRequest
+            CharacteristicCapability.WriteCommand -> canWriteCommand
+            CharacteristicCapability.Notify -> canNotify
+            CharacteristicCapability.Indicate -> canIndicate
+        }
+    }
 }

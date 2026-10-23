@@ -242,9 +242,9 @@ val characteristic = peripheral
     .addService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
     .addCharacteristic(
         BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
-        LocalCharacteristicCapability.Read,
-        LocalCharacteristicCapability.WriteRequest,
-        LocalCharacteristicCapability.Notify
+        CharacteristicCapability.Read,
+        CharacteristicCapability.WriteRequest,
+        CharacteristicCapability.Notify
     )
 characteristic.setValue("ready".encodeToByteArray())
 
