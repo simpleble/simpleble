@@ -1,0 +1,2 @@
+# One isolate at a time owns SimpleDartBLE's events, so test files run one by one.
+concurrency: 1
