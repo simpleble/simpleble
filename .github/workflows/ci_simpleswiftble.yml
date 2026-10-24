@@ -41,3 +41,9 @@ jobs:
       - name: Build the examples
         working-directory: examples/simpleswiftble
         run: swift build
+
+      - name: Check the published package
+        run: |
+          checksum=$(printf '0%.0s' {1..64})
+          simpleswiftble/scripts/package.sh "$RUNNER_TEMP/package" https://example.com/CSimpleBLE.xcframework.zip "$checksum"
+          swift package dump-package --package-path "$RUNNER_TEMP/package" > /dev/null

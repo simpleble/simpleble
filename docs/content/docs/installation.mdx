@@ -229,15 +229,15 @@ and supported targets.
 <Tab value="Swift">
 
 Add SimpleSwiftBLE with Swift Package Manager, with Swift 6.0 (Xcode 16) or newer. In Xcode, choose
-**File > Add Package Dependencies**, enter `https://github.com/simpleble/simpleble`, and add the `SimpleSwiftBLE`
+**File > Add Package Dependencies**, enter `https://github.com/simpleble/simpleswiftble`, and add the `SimpleSwiftBLE`
 library to your target. In a `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/simpleble/simpleble", from: "<version>")
+    .package(url: "https://github.com/simpleble/simpleswiftble", from: "<version>")
 ],
 targets: [
-    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleble")])
+    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleswiftble")])
 ]
 ```
 

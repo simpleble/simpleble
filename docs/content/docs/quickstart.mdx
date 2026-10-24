@@ -369,10 +369,10 @@ Add the package in Xcode with **File > Add Package Dependencies**, or in your `P
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/simpleble/simpleble", from: "<version>")
+    .package(url: "https://github.com/simpleble/simpleswiftble", from: "<version>")
 ],
 targets: [
-    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleble")])
+    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleswiftble")])
 ]
 ```
 

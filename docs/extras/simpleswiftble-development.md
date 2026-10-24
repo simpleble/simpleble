@@ -6,14 +6,18 @@ not included in the published documentation site.
 ## Layout
 
 ```text
-Package.swift                     The Swift package, at the repository root as Swift Package Manager requires
+Package.swift                     The package for development, using the xcframework the build script builds
 simpleswiftble/
 ├── Sources/SimpleSwiftBLE/       Public API, over the SimpleCBLE C API
 ├── Tests/SimpleSwiftBLETests/    Tests against PLAIN
 ├── scripts/build-xcframework.sh  Builds SimpleCBLE into build/<flavor>/CSimpleBLE.xcframework
-├── scripts/release-manifest.sh   Points Package.swift at a release's xcframework archive, for publishing
+├── scripts/package.sh            Assembles the package that simpleble/simpleswiftble publishes
 └── build/                        Generated, ignored by git
 ```
+
+Applications depend on [simpleble/simpleswiftble](https://github.com/simpleble/simpleswiftble), which CI generates.
+`Package.swift` stays at the repository root because SwiftPM names a local package after its folder: in
+`simpleswiftble/`, it would clash with `examples/simpleswiftble`, whose package depends on it.
 
 ## Build and test
 
@@ -22,35 +26,41 @@ PLAIN=1 simpleswiftble/scripts/build-xcframework.sh
 SIMPLESWIFTBLE_FLAVOR=plain swift test
 ```
 
-In this repository, `Package.swift` uses the xcframework the script built: the native build, which the script builds
-without `PLAIN=1`, unless `SIMPLESWIFTBLE_FLAVOR=plain` selects the PLAIN build. The variable also reaches
-`xcodebuild`, which runs the tests on the iOS simulator and as Mac Catalyst:
+`Package.swift` uses the xcframework the script built: the native build, which the script builds without `PLAIN=1`,
+unless `SIMPLESWIFTBLE_FLAVOR=plain` selects the PLAIN build. The variable also reaches `xcodebuild`, which runs the
+tests on the iOS simulator and as Mac Catalyst:
 
 ```bash
 SIMPLESWIFTBLE_FLAVOR=plain xcodebuild test -scheme SimpleSwiftBLE -destination 'platform=iOS Simulator,name=iPhone 17'
 SIMPLESWIFTBLE_FLAVOR=plain xcodebuild test -scheme SimpleSwiftBLE -destination 'platform=macOS,variant=Mac Catalyst'
 ```
 
-## CI and publishing
+## CI distribution
 
 `ci_simpleswiftble.yml`, called by `ci_main.yml`, builds both xcframework flavors on macOS, runs the PLAIN tests on
-macOS and on an iPhone simulator, and builds the examples against the native build.
+macOS and on an iPhone simulator, builds the examples against the native build, and checks the manifest
+`scripts/package.sh` generates.
 
-SwiftPM resolves versions from tags. For a published GitHub release, `publish-simpleswiftble` in `ci_main.yml`:
+## Versions and publication
 
-1. Builds the native xcframework and uploads it to the release as `simpleswiftble-xcframework.zip`.
-2. Runs `scripts/release-manifest.sh`, which points `Package.swift` at that archive and its checksum.
-3. Commits that change on top of the release commit `vX.Y.Z` and pushes only the tag `X.Y.Z`.
+SwiftPM resolves versions from Git tags, so SimpleSwiftBLE is published like SimpleGoBLE. For each `main` build and
+each published SimpleBLE release, `publish-simpleswiftble` in `ci_main.yml` updates the generated
+[simpleble/simpleswiftble](https://github.com/simpleble/simpleswiftble) repository using `SIMPLESWIFTBLE_TOKEN`, a token
+with read and write access to its contents:
 
-SwiftPM prefers `X.Y.Z` over `vX.Y.Z`. The commit isn't on `main`, so the development version numbering, which counts
-commits since the latest tag on `main`, doesn't see it.
+1. It builds the native xcframework and attaches `CSimpleBLE.xcframework.zip` to a draft release `vX.Y.Z` or
+   `vX.Y.Z-devN` there. Development builds are prereleases.
+2. It replaces the repository's files with the output of `scripts/package.sh`: the sources, README, license, and a
+   `Package.swift` that points at that archive and its checksum.
+3. It pushes the commit to `main` and its tag in one atomic push, then publishes the release.
 
-The archive isn't a workflow artifact, so `publish-release` never uploads or replaces it. A retried run reuses an
-archive an earlier attempt uploaded, so the checksum a version pins stays valid. If the tag already exists, the job
-does nothing when the tag points at this release's archive, and fails otherwise.
+A retried run reuses the archive in the draft an earlier attempt made, so the checksum in `Package.swift` stays
+valid. If the tag already exists, the run only publishes its release if it is still a draft. Never replace a published
+tag or its archive.
 
-Until the `X.Y.Z` tag exists, SwiftPM resolves `vX.Y.Z`, whose `Package.swift` expects a local build, and resolution
-fails. Main builds get no SwiftPM version; test development changes from a checkout.
+Development builds are never deleted. Each has its own release with one archive, so GitHub's limit of 1000 assets per
+release never applies. Applications follow the latest development build with `branch: "main"`. SwiftPM compares the `-devN` suffix
+as text, so `1.2.1-dev99` sorts after `1.2.1-dev100`, and a single development build is pinned with `exact:`.
 
 ## How a call reaches SimpleBLE
 

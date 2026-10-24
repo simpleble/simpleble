@@ -20,20 +20,22 @@ app.
 
 ## Install with Swift Package Manager
 
-In Xcode, choose **File > Add Package Dependencies**, enter `https://github.com/simpleble/simpleble`, and add the
+In Xcode, choose **File > Add Package Dependencies**, enter `https://github.com/simpleble/simpleswiftble`, and add the
 `SimpleSwiftBLE` library to your target. In a `Package.swift`, add the package and the product:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/simpleble/simpleble", from: "<version>")
+    .package(url: "https://github.com/simpleble/simpleswiftble", from: "<version>")
 ],
 targets: [
-    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleble")])
+    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleswiftble")])
 ]
 ```
 
 The package includes SimpleBLE prebuilt for each platform, so only the Swift layer compiles with your app.
-SimpleSwiftBLE follows SimpleBLE's release versions.
+SimpleSwiftBLE follows SimpleBLE's release versions. Development builds of the main branch are published with a
+`-devN` suffix, such as `1.2.1-dev150`. Depend on one with `exact: "1.2.1-dev150"`, or follow the latest with
+`branch: "main"`.
 
 ## Permissions
 

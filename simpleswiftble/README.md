@@ -33,15 +33,15 @@ throughout.
 ## Get started
 
 Use Swift 6.0 (Xcode 16) or newer. In Xcode, choose **File > Add Package
-Dependencies** and enter `https://github.com/simpleble/simpleble`, or add the
+Dependencies** and enter `https://github.com/simpleble/simpleswiftble`, or add the
 package to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/simpleble/simpleble", from: "<version>")
+    .package(url: "https://github.com/simpleble/simpleswiftble", from: "<version>")
 ],
 targets: [
-    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleble")])
+    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleswiftble")])
 ]
 ```
 
@@ -172,7 +172,10 @@ handlers are `async`, so they can wait for the user.
 
 ## Versions
 
-SimpleSwiftBLE follows SimpleBLE's release versions, `X.Y.Z`.
+SimpleSwiftBLE follows SimpleBLE's release versions. Stable releases use
+`X.Y.Z`, and development builds of the main branch are published as
+`X.Y.Z-devN`; depend on one with `exact:`, or on the latest with
+`branch: "main"`.
 
 ## License
 
