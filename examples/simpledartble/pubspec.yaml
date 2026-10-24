@@ -1,0 +1,10 @@
+name: simpledartble_examples
+description: Command-line examples of SimpleDartBLE.
+publish_to: none
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  simpledartble:
+    path: ../../simpledartble
