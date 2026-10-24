@@ -48,24 +48,30 @@ import platform.posix.size_tVar
  * Native over the SimpleCBLE C API.
  *
  * SimpleCBLE hands out a new handle every time it returns an adapter, peripheral, local service or local
- * characteristic, so each one is identified by the value of its simpleble_*_identity() function. The first handle is
- * kept and later ones are released.
+ * characteristic, so each one is recognized by the value of its simpleble_*_identity() function. The first handle is
+ * kept and later ones are released. Each object gets an ID the first time it is seen, and IDs are never reused, so a
+ * released object's ID cannot reach another one.
  * Callbacks receive the ID as their userdata and run, in order, on one coroutine, the same way the JNI layer runs them
  * on one thread.
  */
 internal actual object Native {
     private data class Subscription(val peripheralId: Long, val service: String, val characteristic: String)
 
+    private data class PeripheralEntry(val adapterId: Long, val handle: simpleble_peripheral_t)
+
     private val lock = SynchronizedObject()
+    // The ID of each object, by the value of its identity function.
+    private val ids = mutableMapOf<Long, Long>()
+    private var nextId = 1L
     private val adapters = mutableMapOf<Long, simpleble_adapter_t>()
-    private val peripherals = mutableMapOf<Long, simpleble_peripheral_t>()
+    private val peripherals = mutableMapOf<Long, PeripheralEntry>()
     private val adapterCallbacks = mutableMapOf<Long, AdapterCallback>()
     private val peripheralCallbacks = mutableMapOf<Long, PeripheralCallback>()
     private val subscriptions = mutableMapOf<Subscription, Long>()
     private val dataCallbacks = mutableMapOf<Long, DataCallback>()
     private var nextSubscriptionId = 1L
 
-    // Local peripherals are never listed, so they are numbered as they are created.
+    // Local peripherals are never listed, so each one gets a new ID.
     private val localPeripherals = mutableMapOf<Long, simpleble_local_peripheral_t>()
     private val localServices = mutableMapOf<Long, simpleble_local_service_t>()
     private val localCharacteristics = mutableMapOf<Long, simpleble_local_characteristic_t>()
@@ -73,7 +79,6 @@ internal actual object Native {
     private val localCharacteristicCallbacks = mutableMapOf<Long, LocalCharacteristicCallback>()
     // NOTE: SimpleCBLE copies a read value after the callback returns, so each buffer lives until the next read.
     private val readBuffers = mutableMapOf<Long, CPointer<UByteVar>>()
-    private var nextLocalId = 1L
 
     // SimpleBLE has one backend per identifier, so backends are kept by identifier.
     private val backends = mutableMapOf<String, simpleble_backend_t>()
@@ -115,6 +120,36 @@ internal actual object Native {
         simpleble_adapter_set_callback_on_scan_stop(handle, onScanStop, userdata)
         simpleble_adapter_set_callback_on_scan_updated(handle, onScanUpdated, userdata)
         simpleble_adapter_set_callback_on_scan_found(handle, onScanFound, userdata)
+    }
+
+    actual fun adapterRelease(adapterId: Long) {
+        val handle = adapter(adapterId)
+        // NOTE: SimpleBLE keeps an adapter's callbacks while anything holds the adapter, so they are cleared first.
+        simpleble_adapter_set_callback_on_power_on(handle, null, null)
+        simpleble_adapter_set_callback_on_power_off(handle, null, null)
+        simpleble_adapter_set_callback_on_scan_start(handle, null, null)
+        simpleble_adapter_set_callback_on_scan_stop(handle, null, null)
+        simpleble_adapter_set_callback_on_scan_updated(handle, null, null)
+        simpleble_adapter_set_callback_on_scan_found(handle, null, null)
+
+        val (owned, ended) = synchronized(lock) {
+            adapters.remove(adapterId)
+            adapterCallbacks.remove(adapterId)
+            ids.remove(simpleble_adapter_identity(handle).toLong())
+            val adapterPeripherals = peripherals.filterValues { it.adapterId == adapterId }
+            for ((peripheralId, entry) in adapterPeripherals) {
+                peripherals.remove(peripheralId)
+                peripheralCallbacks.remove(peripheralId)
+                ids.remove(simpleble_peripheral_identity(entry.handle).toLong())
+            }
+            val keys = subscriptions.keys.filter { it.peripheralId in adapterPeripherals }
+            val ended = keys.mapNotNull { key -> subscriptions.remove(key)?.let(dataCallbacks::remove) }
+            adapterPeripherals.values to ended
+        }
+        // NOTE: The subscriptions end after the values queued before them, as on a disconnection.
+        dispatch { ended.forEach(DataCallback::onEnded) }
+        owned.forEach { simpleble_peripheral_release_handle(it.handle) }
+        simpleble_adapter_release_handle(handle)
     }
 
     actual fun adapterIdentifier(adapterId: Long): String {
@@ -164,17 +199,23 @@ internal actual object Native {
 
     actual fun adapterScanGetResults(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        return internPeripheralList { list, error -> simpleble_adapter_scan_get_results(handle, list, error) }
+        return internPeripheralList(adapterId) { list, error ->
+            simpleble_adapter_scan_get_results(handle, list, error)
+        }
     }
 
     actual fun adapterGetPairedPeripherals(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        return internPeripheralList { list, error -> simpleble_adapter_get_paired_peripherals(handle, list, error) }
+        return internPeripheralList(adapterId) { list, error ->
+            simpleble_adapter_get_paired_peripherals(handle, list, error)
+        }
     }
 
     actual fun adapterGetConnectedPeripherals(adapterId: Long): LongArray {
         val handle = adapter(adapterId)
-        return internPeripheralList { list, error -> simpleble_adapter_get_connected_peripherals(handle, list, error) }
+        return internPeripheralList(adapterId) { list, error ->
+            simpleble_adapter_get_connected_peripherals(handle, list, error)
+        }
     }
 
     actual fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray {
@@ -182,7 +223,7 @@ internal actual object Native {
         return memScoped {
             val values = allocArrayOf(identifiers.map { it.cstr.ptr })
             val size = identifiers.size.toULong()
-            internPeripherals { count, error ->
+            internPeripherals(adapterId) { count, error ->
                 simplektble_adapter_retrieve_cached_peripherals(handle, values, size, count, error)
             }
         }
@@ -439,6 +480,14 @@ internal actual object Native {
         simpleble_local_peripheral_set_callback_on_client_disconnected(handle, onClientDisconnected, userdata)
     }
 
+    actual fun localPeripheralRelease(peripheralId: Long) {
+        val handle = synchronized(lock) {
+            localPeripheralCallbacks.remove(peripheralId)
+            localPeripherals.remove(peripheralId)
+        } ?: return
+        simpleble_local_peripheral_release_handle(handle)
+    }
+
     actual fun localPeripheralAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>) {
         val handle = localPeripheral(peripheralId)
         for (serviceUuid in serviceUuids) {
@@ -507,8 +556,15 @@ internal actual object Native {
         return call { simpleble_local_peripheral_is_advertising(handle, it) }
     }
 
+    actual fun localServiceRelease(serviceId: Long) {
+        val handle = synchronized(lock) {
+            localServices.remove(serviceId)?.also { ids.remove(simpleble_local_service_identity(it).toLong()) }
+        } ?: return
+        simpleble_local_service_release_handle(handle)
+    }
+
     actual fun localServiceUuid(serviceId: Long): String {
-        val handle = local(localServices, serviceId, "local service")
+        val handle = local(localServices, serviceId)
         return memScoped {
             val uuid = alloc<simpleble_uuid_t>()
             call { simpleble_local_service_uuid(handle, uuid.ptr, it) }
@@ -517,14 +573,14 @@ internal actual object Native {
     }
 
     actual fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long {
-        val handle = local(localServices, serviceId, "local service")
+        val handle = local(localServices, serviceId)
         return internLocalCharacteristic(call {
             simpleble_local_service_add_characteristic(handle, uuid(uuid), capabilities.toUInt(), it)
         })
     }
 
     actual fun localServiceCharacteristics(serviceId: Long): LongArray {
-        val handle = local(localServices, serviceId, "local service")
+        val handle = local(localServices, serviceId)
         return readList(
             { list, error -> simpleble_local_service_characteristics(handle, list, error) },
             { simpleble_local_characteristic_list_release(it) }
@@ -540,6 +596,17 @@ internal actual object Native {
         simpleble_local_characteristic_set_callback_on_write(handle, onLocalWrite, userdata)
         simpleble_local_characteristic_set_callback_on_subscribed(handle, onLocalSubscribed, userdata)
         simpleble_local_characteristic_set_callback_on_unsubscribed(handle, onLocalUnsubscribed, userdata)
+    }
+
+    actual fun localCharacteristicRelease(characteristicId: Long) {
+        val (handle, buffer) = synchronized(lock) {
+            localCharacteristicCallbacks.remove(characteristicId)
+            val handle = localCharacteristics.remove(characteristicId)
+            handle?.let { ids.remove(simpleble_local_characteristic_identity(it).toLong()) }
+            handle to readBuffers.remove(characteristicId)
+        }
+        if (handle != null) simpleble_local_characteristic_release_handle(handle)
+        buffer?.let(nativeHeap::free)
     }
 
     actual fun localCharacteristicUuid(characteristicId: Long): String {
@@ -764,57 +831,71 @@ internal actual object Native {
     }
 
     private fun adapter(adapterId: Long): simpleble_adapter_t {
-        return synchronized(lock) { adapters[adapterId] } ?: throw unclassified("Unknown adapter")
+        return synchronized(lock) { adapters[adapterId] } ?: throw released()
     }
 
     private fun peripheral(peripheralId: Long): simpleble_peripheral_t {
-        return synchronized(lock) { peripherals[peripheralId] } ?: throw unclassified("Unknown peripheral")
+        return synchronized(lock) { peripherals[peripheralId]?.handle } ?: throw released()
+    }
+
+    /**
+     * Returns the ID of the object with [identity], and whether it already had one. A new ID is passed to [store] under
+     * the lock.
+     */
+    private inline fun assignId(identity: Long, store: (Long) -> Unit): Pair<Long, Boolean> = synchronized(lock) {
+        val known = ids[identity]
+        if (known != null) return@synchronized known to true
+        val id = nextId++
+        ids[identity] = id
+        store(id)
+        id to false
     }
 
     private fun internAdapter(handle: simpleble_adapter_t?): Long {
         if (handle == null) throw unclassified("SimpleBLE returned no adapter")
-        val id = simpleble_adapter_identity(handle).toLong()
-        val known = synchronized(lock) { adapters.getOrPut(id) { handle } != handle }
+        val (id, known) = assignId(simpleble_adapter_identity(handle).toLong()) { adapters[it] = handle }
         if (known) simpleble_adapter_release_handle(handle)
         return id
     }
 
-    internal fun internPeripheral(handle: simpleble_peripheral_t?): Long {
+    internal fun internPeripheral(adapterId: Long, handle: simpleble_peripheral_t?): Long {
         if (handle == null) throw unclassified("SimpleBLE returned no peripheral")
-        val id = simpleble_peripheral_identity(handle).toLong()
-        val known = synchronized(lock) { peripherals.getOrPut(id) { handle } != handle }
+        val identity = simpleble_peripheral_identity(handle).toLong()
+        val (id, known) = assignId(identity) { peripherals[it] = PeripheralEntry(adapterId, handle) }
         if (known) simpleble_peripheral_release_handle(handle)
         return id
     }
 
     /** Interns every peripheral in a list that one SimpleCBLE call read. */
     private inline fun internPeripheralList(
+        adapterId: Long,
         read: (CPointer<COpaquePointerVar>, CPointer<CPointerVar<simpleble_error_t>>) -> ULong
     ): LongArray = readList(read, { simpleble_peripheral_list_release(it) }) { list, index ->
-        internPeripheral(call { simpleble_peripheral_list_get(list, index.convert(), it) })
+        internPeripheral(adapterId, call { simpleble_peripheral_list_get(list, index.convert(), it) })
     }.toLongArray()
 
     /** Interns every handle in an array from simplektble/snapshot.h, and frees the array. */
     private inline fun internPeripherals(
+        adapterId: Long,
         snapshot: (CPointer<size_tVar>, CPointer<CPointerVar<simpleble_error_t>>) -> CPointer<COpaquePointerVar>?
     ): LongArray = memScoped {
         val count = alloc<size_tVar>()
         val handles = call { snapshot(count.ptr, it) }
         try {
-            LongArray(count.value.toInt()) { index -> internPeripheral(handles!![index]) }
+            LongArray(count.value.toInt()) { index -> internPeripheral(adapterId, handles!![index]) }
         } finally {
             simpleble_free(handles)
         }
     }
 
+    // NOTE: The callback is looked up when the event runs, so a released adapter's queued events are dropped, as on
+    // the JNI side.
     internal fun onAdapterEvent(adapterId: Long, event: (AdapterCallback) -> Unit) {
-        val callback = synchronized(lock) { adapterCallbacks[adapterId] } ?: return
-        dispatch { event(callback) }
+        dispatch { synchronized(lock) { adapterCallbacks[adapterId] }?.let(event) }
     }
 
     internal fun onPeripheralEvent(peripheralId: Long, event: (PeripheralCallback) -> Unit) {
-        val callback = synchronized(lock) { peripheralCallbacks[peripheralId] } ?: return
-        dispatch { event(callback) }
+        dispatch { synchronized(lock) { peripheralCallbacks[peripheralId] }?.let(event) }
     }
 
     // NOTE: The disconnection ends the subscriptions it had, and only those, after the values queued before it.
@@ -831,33 +912,31 @@ internal actual object Native {
     }
 
     private fun <T> addLocal(objects: MutableMap<Long, T>, handle: T): Long {
-        return synchronized(lock) { (nextLocalId++).also { objects[it] = handle } }
+        return synchronized(lock) { (nextId++).also { objects[it] = handle } }
     }
 
     private fun internLocalService(handle: simpleble_local_service_t?): Long {
         if (handle == null) throw unclassified("SimpleBLE returned no local service")
-        val id = simpleble_local_service_identity(handle).toLong()
-        val known = synchronized(lock) { localServices.getOrPut(id) { handle } != handle }
+        val (id, known) = assignId(simpleble_local_service_identity(handle).toLong()) { localServices[it] = handle }
         if (known) simpleble_local_service_release_handle(handle)
         return id
     }
 
     private fun internLocalCharacteristic(handle: simpleble_local_characteristic_t?): Long {
         if (handle == null) throw unclassified("SimpleBLE returned no local characteristic")
-        val id = simpleble_local_characteristic_identity(handle).toLong()
-        val known = synchronized(lock) { localCharacteristics.getOrPut(id) { handle } != handle }
+        val identity = simpleble_local_characteristic_identity(handle).toLong()
+        val (id, known) = assignId(identity) { localCharacteristics[it] = handle }
         if (known) simpleble_local_characteristic_release_handle(handle)
         return id
     }
 
-    private fun <T : Any> local(objects: Map<Long, T>, id: Long, kind: String): T {
-        return synchronized(lock) { objects[id] } ?: throw unclassified("Unknown $kind")
+    private fun <T : Any> local(objects: Map<Long, T>, id: Long): T {
+        return synchronized(lock) { objects[id] } ?: throw released()
     }
 
-    private fun localPeripheral(peripheralId: Long) = local(localPeripherals, peripheralId, "local peripheral")
+    private fun localPeripheral(peripheralId: Long) = local(localPeripherals, peripheralId)
 
-    private fun localCharacteristic(characteristicId: Long) =
-        local(localCharacteristics, characteristicId, "local characteristic")
+    private fun localCharacteristic(characteristicId: Long) = local(localCharacteristics, characteristicId)
 
     internal fun onLocalPeripheralEvent(peripheralId: Long, event: (LocalPeripheralCallback) -> Unit) {
         val callback = synchronized(lock) { localPeripheralCallbacks[peripheralId] } ?: return
@@ -913,15 +992,17 @@ private val onScanStop = staticCFunction { _: simpleble_adapter_t?, userdata: CO
 
 private val onScanUpdated = staticCFunction { _: simpleble_adapter_t?, peripheral: simpleble_peripheral_t?, userdata: COpaquePointer? ->
     guarded {
-        val peripheralId = Native.internPeripheral(peripheral)
-        Native.onAdapterEvent(userdata.toLong()) { it.onScanUpdated(peripheralId) }
+        val adapterId = userdata.toLong()
+        val peripheralId = Native.internPeripheral(adapterId, peripheral)
+        Native.onAdapterEvent(adapterId) { it.onScanUpdated(peripheralId) }
     }
 }
 
 private val onScanFound = staticCFunction { _: simpleble_adapter_t?, peripheral: simpleble_peripheral_t?, userdata: COpaquePointer? ->
     guarded {
-        val peripheralId = Native.internPeripheral(peripheral)
-        Native.onAdapterEvent(userdata.toLong()) { it.onScanFound(peripheralId) }
+        val adapterId = userdata.toLong()
+        val peripheralId = Native.internPeripheral(adapterId, peripheral)
+        Native.onAdapterEvent(adapterId) { it.onScanFound(peripheralId) }
     }
 }
 
@@ -1056,6 +1137,9 @@ private inline fun <T> readList(
 
 /** A failure in this bridge, which the JNI side raises as a plain C++ exception. */
 private fun unclassified(message: String) = SimpleKtBleException(ErrorCode.UNCLASSIFIED_EXCEPTION, message)
+
+/** A call on an object that was released, which the JNI side raises as SimpleBLE's NotInitialized. */
+private fun released() = SimpleKtBleException(ErrorCode.OBJECT_NOT_INITIALIZED, "Object has not been initialized.")
 
 private fun uuid(value: String): CValue<simpleble_uuid_t> {
     val bytes = value.encodeToByteArray()

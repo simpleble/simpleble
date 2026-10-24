@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "org/simplektble/AdapterCallback.h"
@@ -34,12 +35,18 @@ class NativeCache {
     SimpleBLE::Adapter adapter(int64_t adapter_id) const;
     SimpleBLE::Peripheral peripheral(int64_t adapter_id, int64_t peripheral_id) const;
 
+    /** Forgets an adapter and its peripherals, and returns the data callbacks they had. */
+    std::vector<std::shared_ptr<Org::SimpleKtBLE::DataCallback>> remove_adapter(int64_t adapter_id);
+
     int64_t add_local_peripheral(SimpleBLE::Local::Peripheral peripheral);
     int64_t add_local_service(SimpleBLE::Local::Service service);
     int64_t add_local_characteristic(SimpleBLE::Local::Characteristic characteristic);
     SimpleBLE::Local::Peripheral local_peripheral(int64_t peripheral_id) const;
     SimpleBLE::Local::Service local_service(int64_t service_id) const;
     SimpleBLE::Local::Characteristic local_characteristic(int64_t characteristic_id) const;
+    void remove_local_peripheral(int64_t peripheral_id);
+    void remove_local_service(int64_t service_id);
+    void remove_local_characteristic(int64_t characteristic_id);
 
     void set_local_peripheral_callback(int64_t peripheral_id, jobject callback);
     std::shared_ptr<Org::SimpleKtBLE::LocalPeripheralCallback> local_peripheral_callback(
@@ -99,17 +106,16 @@ class NativeCache {
 
     NativeCache() = default;
 
-    static int64_t adapter_id(SimpleBLE::Adapter& adapter);
-    static int64_t peripheral_id(SimpleBLE::Peripheral& peripheral);
-    static int64_t local_service_id(SimpleBLE::Local::Service& service);
-    static int64_t local_characteristic_id(SimpleBLE::Local::Characteristic& characteristic);
+    std::pair<int64_t, bool> assign_id(const void* identity);
 
     mutable std::mutex _mutex;
     std::map<std::string, SimpleBLE::Backend> _backends;
     std::map<int64_t, AdapterEntry> _adapters;
     std::map<int64_t, std::map<int64_t, PeripheralEntry>> _peripherals;
     std::map<DataCallbackKey, std::shared_ptr<Org::SimpleKtBLE::DataCallback>> _data_callbacks;
-    int64_t _next_local_peripheral_id{1};
+    // The ID of each SimpleBLE object in the cache, by the address of SimpleBLE's own object.
+    std::map<const void*, int64_t> _ids;
+    int64_t _next_id{1};
     std::map<int64_t, LocalPeripheralEntry> _local_peripherals;
     std::map<int64_t, ::SimpleBLE::Local::Service> _local_services;
     std::map<int64_t, LocalCharacteristicEntry> _local_characteristics;

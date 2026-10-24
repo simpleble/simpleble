@@ -20,6 +20,15 @@ public class LocalService internal constructor(private val instanceId: Long) {
         return Native.localServiceCharacteristics(instanceId).map(::characteristic)
     }
 
+    /** Releases this local service and its characteristics. */
+    internal fun release() {
+        val characteristicIds = synchronized(characteristicsLock) {
+            characteristicsById.keys.toList().also { characteristicsById.clear() }
+        }
+        characteristicIds.forEach(Native::localCharacteristicRelease)
+        Native.localServiceRelease(instanceId)
+    }
+
     @Throws(SimpleKtBleException::class)
     public fun addCharacteristic(
         uuid: BluetoothUUID,

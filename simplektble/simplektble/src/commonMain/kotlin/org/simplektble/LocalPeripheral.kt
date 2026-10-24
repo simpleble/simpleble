@@ -96,6 +96,14 @@ public class LocalPeripheral internal constructor(private val instanceId: Long) 
         synchronized(servicesLock) { servicesById.clear() }
     }
 
+    /** Stops hosting, ignoring a failure, and releases this local peripheral and its services. */
+    internal fun release() {
+        ignoringFailures { if (Native.localPeripheralIsStarted(instanceId)) Native.localPeripheralStop(instanceId) }
+        val services = synchronized(servicesLock) { servicesById.values.toList().also { servicesById.clear() } }
+        services.forEach(LocalService::release)
+        Native.localPeripheralRelease(instanceId)
+    }
+
     @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun start() {
         withContext(Dispatchers.IO) { Native.localPeripheralStart(instanceId) }

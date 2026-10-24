@@ -4,15 +4,19 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -179,6 +183,37 @@ class PlainBackendIntegrationTest {
 
         assertFalse(activeAdapter.scanIsActive())
         assertFalse(target.isConnected)
+    }
+
+    @Test
+    fun closeReleasesTheAdapterAndItsObjects() = runBlocking {
+        val closing = Adapter.getAdapters().single()
+        closing.scanFor(250)
+        val target = closing.scanGetResults().single { it.identifier == "Plain Peripheral" }
+        target.connect()
+        val subscribed = CompletableDeferred<Unit>()
+        val values = async {
+            withTimeout(5_000) {
+                target.notify(
+                    BluetoothUUID("0000180f-0000-1000-8000-00805f9b34fb"),
+                    BluetoothUUID("00002a19-0000-1000-8000-00805f9b34fb")
+                ).onEach { subscribed.complete(Unit) }.toList()
+            }
+        }
+        withTimeout(3_000) { subscribed.await() }
+
+        closing.close()
+
+        // The subscription ends, the next enumeration returns a new Adapter, and the closed objects keep rejecting calls
+        // although PLAIN hands out the same adapter and device again.
+        assertTrue(values.await().isNotEmpty())
+        val reopened = Adapter.getAdapters().single()
+        adapter = reopened
+        assertNotSame(closing, reopened)
+        reopened.scanFor(250)
+        assertFalse(reopened.scanGetResults().single { it.identifier == "Plain Peripheral" }.isConnected)
+        assertEquals(ErrorCode.OBJECT_NOT_INITIALIZED, assertFailsWith<SimpleKtBleException> { closing.scanStart() }.code)
+        assertEquals(ErrorCode.OBJECT_NOT_INITIALIZED, assertFailsWith<SimpleKtBleException> { target.isConnected }.code)
     }
 
     @Test
