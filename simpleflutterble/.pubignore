@@ -1,0 +1,7 @@
+# Replaces .gitignore for `dart pub publish`, so the package includes the files
+# simpledartble/tool/prepublish.dart copies in.
+.dart_tool/
+pubspec.lock
+pubspec_overrides.yaml
+android/.gradle/
+android/build/
