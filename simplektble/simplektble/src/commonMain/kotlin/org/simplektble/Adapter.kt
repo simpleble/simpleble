@@ -3,6 +3,7 @@ package org.simplektble
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,6 +21,11 @@ public class Adapter private constructor(private val instanceId: Long) {
 
     private val peripheralsLock = SynchronizedObject()
     private val peripherals = mutableMapOf<Long, Peripheral>()
+    private val localPeripherals = mutableListOf<LocalPeripheral>()
+
+    private val closeLock = SynchronizedObject()
+    private var closing = false
+    private val closed = CompletableDeferred<Unit>()
 
     private fun peripheral(peripheralId: Long): Peripheral {
         return synchronized(peripheralsLock) {
@@ -160,7 +166,50 @@ public class Adapter private constructor(private val instanceId: Long) {
      */
     @Throws(SimpleKtBleException::class)
     public fun createLocalPeripheral(): LocalPeripheral {
-        return LocalPeripheral(Native.adapterCreateLocalPeripheral(instanceId))
+        val peripheral = LocalPeripheral(Native.adapterCreateLocalPeripheral(instanceId))
+        synchronized(peripheralsLock) { localPeripherals += peripheral }
+        return peripheral
+    }
+
+    /**
+     * Stops this adapter's scan and local peripherals, disconnects the peripherals connected through it, and releases
+     * the adapter and every object that came from it, which frees a Dongl for other programs right away. Calls on the
+     * closed objects then throw [ErrorCode.OBJECT_NOT_INITIALIZED], they emit no more events, and [getAdapters] returns
+     * a new Adapter for the device. Calling it again waits for the first call. It finishes even when the calling
+     * coroutine is cancelled.
+     */
+    @Throws(SimpleKtBleException::class, CancellationException::class)
+    public suspend fun close() {
+        val first = synchronized(closeLock) { !closing.also { closing = true } }
+        if (!first) return closed.await()
+        try {
+            runToEnd { release() }
+        } finally {
+            closed.complete(Unit)
+        }
+    }
+
+    private fun release() {
+        // NOTE: A Dongl whose port closes during a scan can stop answering until it's replugged, so the scan, the
+        // connections and the local peripherals end first. Failures don't stop the release.
+        ignoringFailures { if (Native.adapterScanIsActive(instanceId)) Native.adapterScanStop(instanceId) }
+        val (peripheralIds, locals) = synchronized(peripheralsLock) {
+            peripherals.keys.toList() to localPeripherals.toList()
+        }
+        for (peripheralId in peripheralIds) {
+            ignoringFailures {
+                if (Native.peripheralIsConnected(instanceId, peripheralId)) {
+                    Native.peripheralDisconnect(instanceId, peripheralId)
+                }
+            }
+        }
+        locals.forEach(LocalPeripheral::release)
+        Native.adapterRelease(instanceId)
+        synchronized(peripheralsLock) {
+            peripherals.clear()
+            localPeripherals.clear()
+        }
+        synchronized(adapterCacheLock) { adapterCache.remove(instanceId) }
     }
 
     public companion object {

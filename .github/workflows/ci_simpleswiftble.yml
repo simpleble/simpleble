@@ -1,0 +1,49 @@
+name: Build SimpleSwiftBLE
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  apple:
+    timeout-minutes: 60
+    runs-on: macos-15
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Build SimpleBLE for Apple platforms
+        run: |
+          PLAIN=1 simpleswiftble/scripts/build-xcframework.sh
+          simpleswiftble/scripts/build-xcframework.sh
+
+      # The runners have no Bluetooth; the tests run against PLAIN.
+      - name: Test the binding on macOS
+        run: SIMPLESWIFTBLE_FLAVOR=plain swift test
+
+      - name: Test the binding on a simulator
+        run: |
+          device=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          SIMPLESWIFTBLE_FLAVOR=plain xcodebuild test -scheme SimpleSwiftBLE -destination "id=$device"
+
+      - name: Build the examples
+        working-directory: examples/simpleswiftble
+        run: swift build
+
+      - name: Check the published package
+        run: |
+          checksum=$(printf '0%.0s' {1..64})
+          simpleswiftble/scripts/package.sh "$RUNNER_TEMP/package" https://example.com/CSimpleBLE.xcframework.zip "$checksum"
+          swift package dump-package --package-path "$RUNNER_TEMP/package" > /dev/null

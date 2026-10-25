@@ -1,6 +1,6 @@
 ---
 title: Read, Write, Notify
-description: Perform GATT operations after connecting to a BLE peripheral.
+description: Read, write and subscribe to GATT characteristics on a connected BLE peripheral with SimpleBLE, including write types, Android notes and common pitfalls.
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -100,6 +100,14 @@ println("Read: ${value.toHexString()}")
 ```
 
 </Tab>
+<Tab value="Swift">
+
+```swift
+let value = try await peripheral.read(service: serviceUUID, characteristic: characteristicUUID)
+print("Read: \(value.map { String(format: "%02x", $0) }.joined())")
+```
+
+</Tab>
 <Tab value="Dart">
 
 ```dart
@@ -120,7 +128,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -223,6 +231,19 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 ```
 
 </Tab>
+<Tab value="Swift">
+
+```swift
+let payload = Data([0x01, 0x02, 0x03])
+
+// Acknowledged write.
+try await peripheral.writeRequest(service: serviceUUID, characteristic: characteristicUUID, data: payload)
+
+// Unacknowledged write.
+try await peripheral.writeCommand(service: serviceUUID, characteristic: characteristicUUID, data: payload)
+```
+
+</Tab>
 <Tab value="Dart">
 
 ```dart
@@ -250,7 +271,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -380,6 +401,21 @@ withTimeoutOrNull(10_000) {
 ```
 
 </Tab>
+<Tab value="Swift">
+
+```swift
+// notify() returns once subscribed. Cancelling the task that iterates the stream unsubscribes.
+let notifications = try await peripheral.notify(service: serviceUUID, characteristic: characteristicUUID)
+let listener = Task {
+    for await payload in notifications {
+        print("Notification: \(payload.map { String(format: "%02x", $0) }.joined())")
+    }
+}
+try await Task.sleep(nanoseconds: 10_000_000_000)
+listener.cancel()
+```
+
+</Tab>
 <Tab value="Dart">
 
 ```dart
@@ -407,7 +443,7 @@ withTimeoutOrNull(10_000) {
 
 On Android, collecting the flow subscribes to the characteristic. When collection is cancelled or completes, SimpleDroidBLE unsubscribes and waits for native cleanup to finish. The timeout above is only a compact way to demonstrate a ten-second subscription.
 
-With SimpleKtBLE, collecting the flow subscribes and ending the collection unsubscribes in the same way. When the peripheral disconnects, the flow completes, and you collect it again after reconnecting.
+With SimpleKtBLE, collecting the flow subscribes and ending the collection unsubscribes in the same way. When the peripheral disconnects, the flow completes, and you collect it again after reconnecting. With SimpleSwiftBLE, `notify()` returns once subscribed, and cancelling or dropping its stream unsubscribes. When the peripheral disconnects, the stream ends, and you call `notify()` again after reconnecting.
 
 With SimpleDartBLE, `notify()` completes once the peripheral is subscribed and returns a stream of the values. The stream ends on `unsubscribe()`, and cancelling its subscription also unsubscribes. When the peripheral disconnects, the stream ends too, and you subscribe again after reconnecting.
 

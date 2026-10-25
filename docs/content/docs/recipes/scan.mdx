@@ -1,6 +1,6 @@
 ---
-title: Scan
-description: Discover nearby BLE peripherals and collect scan results across SimpleBLE bindings.
+title: Scan for Peripherals
+description: Discover nearby BLE peripherals with SimpleBLE by scanning for a bounded time, then read the results and keep the connectable ones, in each binding.
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
@@ -18,7 +18,7 @@ Scanning is the first real interaction with the Bluetooth stack. A scan listens 
 
 ## Core scan call
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -188,6 +188,26 @@ coroutineScope {
 
 for (peripheral in adapter.scanGetResults()) {
     if (peripheral.isConnectable) println("${peripheral.identifier} is connectable")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+let adapter = try Adapter.getAdapters().first!
+
+let found = adapter.onScanFound
+let printer = Task {
+    for await peripheral in found {
+        print("Found \(peripheral.identifier) [\(peripheral.address)]")
+    }
+}
+try await adapter.scanFor(timeoutMs: 5000)
+printer.cancel()
+
+for peripheral in try adapter.scanGetResults() where peripheral.isConnectable {
+    print("\(peripheral.identifier) is connectable")
 }
 ```
 

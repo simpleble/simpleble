@@ -141,6 +141,10 @@ jobs:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simplernble.yml
 
+  simpleswiftble:
+    needs: [smoketest]
+    uses: ./.github/workflows/ci_simpleswiftble.yml
+
   # SimpleDartBLE is published by publish_simpledartble.yml, as pub.dev only
   # accepts uploads for tag pushes.
   simpledartble:
@@ -155,7 +159,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble, simplektble, simplernble, simpledartble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble, simplektble, simplernble, simpleswiftble, simpledartble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     permissions:
       contents: write
@@ -307,6 +311,73 @@ jobs:
             git tag "$tag"
             git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
           fi
+
+  # SwiftPM resolves versions from Git tags, so simpleble/simpleswiftble gets a commit and a tag for each version, like
+  # simpleble/simplegoble. Its Package.swift points at the xcframework archive attached to the tag's GitHub release.
+  publish-simpleswiftble:
+    needs: [publish-release]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: macos-15
+    concurrency:
+      group: simpleswiftble-distribution
+      cancel-in-progress: false
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - uses: actions/checkout@v4
+        with:
+          repository: simpleble/simpleswiftble
+          ref: main
+          path: simpleswiftble-distribution
+          fetch-depth: 0
+          token: ${{ secrets.SIMPLESWIFTBLE_TOKEN }}
+
+      - name: Publish the version
+        working-directory: simpleswiftble-distribution
+        env:
+          GH_TOKEN: ${{ secrets.SIMPLESWIFTBLE_TOKEN }}
+        run: |
+          version=$(tr -d ' \t\n\r' < ../VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev\.?[0-9]+)?$ ]]
+          tag="v$version"
+          repo=simpleble/simpleswiftble
+          archive="$RUNNER_TEMP/CSimpleBLE.xcframework.zip"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            # NOTE: An earlier attempt may have pushed the tag but left its release a draft.
+            gh release edit "$tag" --repo "$repo" --draft=false
+            echo "$tag is already published."
+            exit 0
+          fi
+          # NOTE: The archive goes into a draft release before the tag exists. A retried run reuses it, so the checksum
+          # in Package.swift stays valid.
+          if gh release view "$tag" --repo "$repo" > /dev/null 2>&1; then
+            gh release download "$tag" --repo "$repo" --pattern CSimpleBLE.xcframework.zip --dir "$RUNNER_TEMP"
+          else
+            ../simpleswiftble/scripts/build-xcframework.sh
+            ditto -c -k --keepParent ../simpleswiftble/build/release/CSimpleBLE.xcframework "$archive"
+            prerelease=$([[ "$version" == *-dev* ]] && echo true || echo false)
+            gh release create "$tag" "$archive" --repo "$repo" --draft --prerelease="$prerelease" --title "SimpleSwiftBLE $tag" \
+              --notes "SimpleSwiftBLE $version, built from simpleble/simpleble@$GITHUB_SHA."
+          fi
+          # Only tracked files are removed; the checkout's Git metadata stays intact.
+          git ls-files -z | while IFS= read -r -d '' path; do rm -- "$path"; done
+          # NOTE: SwiftPM's checksum is the archive's SHA-256.
+          ../simpleswiftble/scripts/package.sh . "https://github.com/$repo/releases/download/$tag/CSimpleBLE.xcframework.zip" \
+            "$(shasum -a 256 "$archive" | cut -d ' ' -f 1)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m "Published SimpleSwiftBLE $tag."
+          git tag "$tag"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
+          gh release edit "$tag" --repo "$repo" --draft=false
 
   publish-simplejsble:
     needs: [publish-release]

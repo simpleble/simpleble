@@ -83,6 +83,7 @@ SIMPLECBLE_EXPORT void simpleble_advanced_dongl_secure_connection(simpleble_peri
  * @param[in] local_name NUL-terminated name, or NULL to remove the override.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Configure before starting the local peripheral. This changes only the advertisement, not the system name.
+ *     Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.
  */
 SIMPLECBLE_EXPORT void simpleble_advanced_macos_set_advertisement_local_name(simpleble_local_peripheral_t handle,
                                                                              const char* local_name,
@@ -97,7 +98,8 @@ SIMPLECBLE_EXPORT void simpleble_advanced_macos_set_advertisement_local_name(sim
  * @return An owned peripheral handle, or NULL if not found or on failure. Release with
  * simpleble_peripheral_release_handle().
  * @note Requires a powered-on adapter. Does not scan or establish reachability.
- *     Invalid or unknown identifiers return NULL without an error.
+ *     Invalid or unknown identifiers return NULL without an error. Other backends, such as Dongl, report
+ *     OPERATION_NOT_SUPPORTED.
  */
 SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_advanced_macos_retrieve_cached_peripheral(
     simpleble_adapter_t handle, const char* identifier, simpleble_error_t** out_error);
@@ -113,6 +115,7 @@ SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_advanced_macos_retrieve_cache
  * @param[in] local_name NUL-terminated name, or NULL to remove the override.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Configure before starting the local peripheral. This changes only the advertisement, not the system name.
+ *     Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.
  */
 SIMPLECBLE_EXPORT void simpleble_advanced_ios_set_advertisement_local_name(simpleble_local_peripheral_t handle,
                                                                            const char* local_name,
@@ -127,7 +130,8 @@ SIMPLECBLE_EXPORT void simpleble_advanced_ios_set_advertisement_local_name(simpl
  * @return An owned peripheral handle, or NULL if not found or on failure. Release with
  * simpleble_peripheral_release_handle().
  * @note Requires a powered-on adapter. Does not scan or establish reachability.
- *     Invalid or unknown identifiers return NULL without an error.
+ *     Invalid or unknown identifiers return NULL without an error. Other backends, such as Dongl, report
+ *     OPERATION_NOT_SUPPORTED.
  */
 SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_advanced_ios_retrieve_cached_peripheral(
     simpleble_adapter_t handle, const char* identifier, simpleble_error_t** out_error);
@@ -143,6 +147,7 @@ SIMPLECBLE_EXPORT simpleble_peripheral_t simpleble_advanced_ios_retrieve_cached_
  * @param[in] local_name NUL-terminated name, or NULL to remove the override.
  * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
  * @note Configure before starting the local peripheral. This changes only the advertisement, not the system name.
+ *     Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.
  */
 SIMPLECBLE_EXPORT void simpleble_advanced_linux_set_advertisement_local_name(simpleble_local_peripheral_t handle,
                                                                              const char* local_name,

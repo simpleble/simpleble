@@ -48,7 +48,7 @@ export const HeroBackground = (): ReactElement => {
           }}
         >
           <Image
-            src="/footer-bg.png"
+            src="/footer-bg.webp"
             alt=""
             fill
             className="object-cover"

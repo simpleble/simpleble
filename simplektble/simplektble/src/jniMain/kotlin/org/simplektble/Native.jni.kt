@@ -19,6 +19,8 @@ internal actual object Native {
 
     actual external fun adapterRegister(adapterId: Long, callback: AdapterCallback)
 
+    actual external fun adapterRelease(adapterId: Long)
+
     actual external fun adapterIdentifier(adapterId: Long): String
 
     actual external fun adapterAddress(adapterId: Long): String
@@ -136,6 +138,8 @@ internal actual object Native {
 
     actual external fun localPeripheralRegister(peripheralId: Long, callback: LocalPeripheralCallback)
 
+    actual external fun localPeripheralRelease(peripheralId: Long)
+
     actual external fun localPeripheralAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>)
 
     actual external fun localPeripheralSetAdvertisedManufacturerData(peripheralId: Long, companyId: Int, data: ByteArray)
@@ -145,6 +149,8 @@ internal actual object Native {
     actual external fun localPeripheralSetAdvertisementLocalName(peripheralId: Long, name: String?)
 
     actual external fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
+
+    actual external fun localPeripheralServices(peripheralId: Long): LongArray
 
     actual external fun localPeripheralRemoveAllServices(peripheralId: Long)
 
@@ -156,11 +162,17 @@ internal actual object Native {
 
     actual external fun localPeripheralIsAdvertising(peripheralId: Long): Boolean
 
+    actual external fun localServiceRelease(serviceId: Long)
+
     actual external fun localServiceUuid(serviceId: Long): String
 
     actual external fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long
 
+    actual external fun localServiceCharacteristics(serviceId: Long): LongArray
+
     actual external fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback)
+
+    actual external fun localCharacteristicRelease(characteristicId: Long)
 
     actual external fun localCharacteristicUuid(characteristicId: Long): String
 

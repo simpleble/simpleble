@@ -96,7 +96,8 @@ namespace SimpleBLE::Advanced::MacOS {
  *
  * This changes only the advertisement payload, not the system Bluetooth or GAP
  * device name. Configure it before starting the local peripheral. Passing
- * std::nullopt removes the override.
+ * std::nullopt removes the override. Other backends, such as Dongl, throw
+ * OperationNotSupported.
  */
 void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
                                                    std::optional<std::string> local_name);
@@ -106,7 +107,8 @@ void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral
  *
  * This does not scan or guarantee that a returned peripheral is reachable.
  * Invalid identifiers and identifiers unknown to CoreBluetooth are omitted.
- * The adapter must be powered on.
+ * The adapter must be powered on. Other backends, such as Dongl, throw
+ * OperationNotSupported.
  *
  * NOTE: "Cached" refers to CoreBluetooth's system cache, not SimpleBLE's
  * in-memory cache.
@@ -127,7 +129,8 @@ namespace SimpleBLE::Advanced::iOS {
  * This changes only the advertisement payload, not the system Bluetooth or GAP
  * device name. CoreBluetooth does not advertise the local name while the app is
  * in the background. Configure it before starting the local peripheral. Passing
- * std::nullopt removes the override.
+ * std::nullopt removes the override. Other backends, such as Dongl, throw
+ * OperationNotSupported.
  */
 void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
                                                    std::optional<std::string> local_name);
@@ -137,7 +140,8 @@ void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral
  *
  * This does not scan or guarantee that a returned peripheral is reachable.
  * Invalid identifiers and identifiers unknown to CoreBluetooth are omitted.
- * The adapter must be powered on.
+ * The adapter must be powered on. Other backends, such as Dongl, throw
+ * OperationNotSupported.
  *
  * NOTE: "Cached" refers to CoreBluetooth's system cache, not SimpleBLE's
  * in-memory cache.
@@ -180,7 +184,8 @@ namespace SimpleBLE::Advanced::Linux {
  *
  * This changes only the advertisement payload, not the adapter alias or GAP
  * device name. Configure it before starting the local peripheral. Passing
- * std::nullopt removes the override.
+ * std::nullopt removes the override. Other backends, such as Dongl, throw
+ * OperationNotSupported.
  */
 void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
                                                    std::optional<std::string> local_name);

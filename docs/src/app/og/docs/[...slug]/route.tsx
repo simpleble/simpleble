@@ -1,4 +1,4 @@
-import { source } from "@/lib/source";
+import { getPageTitle, source } from "@/lib/source";
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 
@@ -20,7 +20,7 @@ export async function GET(
 
   return new ImageResponse(
     <MetadataImage
-      title={page.data.title}
+      title={getPageTitle(page)}
       description={page.data.description}
     />,
     await getImageResponseOptions(),

@@ -1,0 +1,311 @@
+---
+title: Usage
+description: Install SimpleSwiftBLE with Swift Package Manager and use SimpleBLE from Swift on iOS, iPadOS, macOS and Mac Catalyst with async/await calls and SwiftUI.
+---
+
+SimpleSwiftBLE brings SimpleBLE to Swift on iOS, iPadOS, macOS, and Mac Catalyst, with `async`/`await` calls and
+`AsyncStream` events. Every type is `Sendable`, so you can use it from any actor, including the main actor of a SwiftUI
+app.
+
+## Requirements
+
+- Swift 6.0 (Xcode 16) or newer.
+- One of the platforms below.
+
+| Platform | Architectures |
+| --- | --- |
+| iOS and iPadOS 15.8 or newer | arm64, and arm64 and x86_64 in the simulator |
+| Mac Catalyst 16.0 or newer | arm64, x86_64 |
+| macOS 15.0 or newer | arm64, x86_64 |
+
+## Install with Swift Package Manager
+
+In Xcode, choose **File > Add Package Dependencies**, enter `https://github.com/simpleble/simpleswiftble`, and add the
+`SimpleSwiftBLE` library to your target. In a `Package.swift`, add the package and the product:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/simpleble/simpleswiftble", from: "<version>")
+],
+targets: [
+    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleswiftble")])
+]
+```
+
+The package includes SimpleBLE prebuilt for each platform, so only the Swift layer compiles with your app.
+SimpleSwiftBLE follows SimpleBLE's release versions. Development builds of the main branch are published with a
+`-devN` suffix, such as `1.2.1-dev150`. Depend on one with `exact: "1.2.1-dev150"`, or follow the latest with
+`branch: "main"`.
+
+## Permissions
+
+Add an `NSBluetoothAlwaysUsageDescription` entry to your app's `Info.plist`, explaining why it uses Bluetooth. The
+system asks the user the first time your app uses Bluetooth. A sandboxed macOS app also needs the Bluetooth capability
+(`com.apple.security.device.bluetooth`). A command-line tool run from a terminal asks for permission for the terminal
+app. See [Bluetooth Permissions](../fundamentals/permissions) for every platform.
+
+## First scan
+
+```swift
+import SimpleSwiftBLE
+
+let adapter = try Adapter.getAdapters().first!
+
+let found = adapter.onScanFound
+let printer = Task {
+    for await peripheral in found {
+        print("\(peripheral.identifier) [\(peripheral.address)] \(peripheral.rssi) dBm")
+    }
+}
+try await adapter.scanFor(timeoutMs: 5000)
+printer.cancel()
+```
+
+For more, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the
+[SimpleSwiftBLE Examples](./examples).
+
+## Calls, events, and lifetime
+
+Calls that wait on a device or the Bluetooth stack, such as `connect()`, `read()`, `scanFor()`,
+`getPairedPeripherals()`, `isPaired()`, `unpair()`, or `powerOn()`, are `async` functions. They run on a SimpleSwiftBLE
+dispatch queue, never on Swift's cooperative thread pool, so you can call them from the main actor. `scanStart()`,
+`scanStop()`, `getAdapters()`, `isBluetoothEnabled()`, and `retrieveCachedPeripherals()` call the Bluetooth stack
+directly. Properties such as a peripheral's `identifier`, `rssi`, or `isConnected` return state the library already
+holds.
+
+A call whose task is cancelled while the Bluetooth stack works on it returns once the stack finishes the operation:
+`scanFor()` when its scan ends, `connect()` when the connection attempt is done, and a read or write when it completes.
+`disconnect()`, `unsubscribe()`, and `LocalPeripheral.stop()` finish even in a cancelled task.
+
+Events are `AsyncStream`s. An adapter has `onPowerOn`, `onPowerOff`, `onScanStart`, `onScanStop`, `onScanFound`, and
+`onScanUpdated`; a peripheral has `onConnected` and `onDisconnected`. Each time you read one of these properties, you
+get a new stream that buffers every event from then on, in the order it happened, until you stop iterating it or drop
+it. Get the stream before the call that produces the events, then iterate it in a task:
+
+```swift
+let stopped = adapter.onScanStop
+try adapter.scanStart()
+// ...
+try adapter.scanStop()
+for await _ in stopped {
+    print("Scan stopped")
+    break
+}
+```
+
+Use `scanStart()` and `scanStop()` when your application controls scan timing, and `scanGetResults()` for the
+peripherals seen by the last scan. `scanFor(timeoutMs:)` scans for that many milliseconds and returns when the scan
+ends.
+
+`isPowered()` asks whether the adapter is on. `powerOn()` and `powerOff()` switch it on macOS and Dongls; iOS and Mac
+Catalyst leave that to the user, so there they change nothing.
+
+Every call to `Adapter.getAdapters()` returns the same `Adapter` object for an adapter, and you always get the same
+`Peripheral` object for the same device, whether it came from a stream or from a list. Compare them with `===` or `==`
+and keep state on them. They are `Identifiable` and `Hashable`, so SwiftUI lists take them directly. Adapters,
+peripherals, and local peripherals stay alive for the whole process.
+
+Failures are thrown as `SimpleBLEError`. Its `code` is SimpleBLE's error code, such as `.peripheralNotConnected` or
+`.gattCharacteristicNotFound`, and its `message` describes what happened:
+
+```swift
+do {
+    try await peripheral.connect()
+} catch let error as SimpleBLEError where error.code == .operationFailed {
+    print("Connection failed: \(error.message)")
+}
+```
+
+## Use with SwiftUI
+
+A view's `.task` modifier runs while the view is on screen and cancels its task when the view goes away, which ends
+the iteration:
+
+```swift
+struct ScanView: View {
+    let adapter: Adapter
+    @State private var peripherals: [Peripheral] = []
+
+    var body: some View {
+        List(peripherals) { peripheral in
+            Text("\(peripheral.identifier) \(peripheral.rssi) dBm")
+        }
+        .task {
+            let found = adapter.onScanFound
+            try? adapter.scanStart()
+            for await peripheral in found {
+                peripherals.append(peripheral)
+            }
+        }
+        .onDisappear { try? adapter.scanStop() }
+    }
+}
+```
+
+## Connect and use GATT
+
+```swift
+let batteryService: BluetoothUUID = "0000180f-0000-1000-8000-00805f9b34fb"
+let batteryLevel: BluetoothUUID = "00002a19-0000-1000-8000-00805f9b34fb"
+
+let peripheral = try adapter.scanGetResults().first { $0.identifier == "My Sensor" }!
+try await peripheral.connect()
+
+for service in try peripheral.services() {
+    print("\(service.uuid): \(service.characteristics.map(\.uuid))")
+}
+
+let level = try await peripheral.read(service: batteryService, characteristic: batteryLevel)
+print("Battery: \(level[0])%")
+
+for await value in try await peripheral.notify(service: batteryService, characteristic: batteryLevel) {
+    print("Battery: \(value[0])%")
+}
+```
+
+UUIDs are `BluetoothUUID` values holding the full 128-bit string, which you can write as string literals, and values
+are `Data`. `services()` lists the services, characteristics, and descriptors of a connected peripheral, and each
+characteristic reports what it supports with `canRead`, `canWriteRequest`, `canWriteCommand`, `canNotify`, and
+`canIndicate`. Before connecting, `services()` lists the services the peripheral advertises, and each service's `data`
+holds the service data it advertised. `manufacturerData()` returns the manufacturer data of the latest advertisement,
+by company identifier.
+
+`writeRequest()` waits for the peripheral to confirm, while `writeCommand()` does not. `read()` and `write()` with a
+descriptor UUID access descriptors:
+
+```swift
+let userDescription: BluetoothUUID = "00002901-0000-1000-8000-00805f9b34fb"
+
+let description = try await peripheral.read(
+    service: batteryService, characteristic: batteryLevel, descriptor: userDescription)
+print("Description: \(String(decoding: description, as: UTF8.self))")
+```
+
+`notify()` and `indicate()` subscribe and return once the subscription is active, so you can trigger a notification
+right after, for example with a write. The stream they return delivers each value in the order it arrived. Cancelling
+the task that iterates it, or dropping it, unsubscribes.
+
+When the peripheral disconnects, the stream delivers the values received before the disconnection and then ends, so the
+loop finishes. After you reconnect, call `notify()` again. `unsubscribe()` ends a subscription from anywhere and ends
+its stream. A characteristic has one subscription at a time, so subscribing again while a stream is active throws
+`SimpleBLEError`. Call `disconnect()` when you are done with the peripheral.
+
+## Host a local peripheral
+
+`adapter.createLocalPeripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Add the
+advertised services, services, and characteristics, then call `start()`:
+
+```swift
+let echoService: BluetoothUUID = "12345678-1234-5678-1234-56789abcdef0"
+let echoCharacteristic: BluetoothUUID = "12345678-1234-5678-1234-56789abcdef1"
+
+let host = try adapter.createLocalPeripheral()
+try host.addAdvertisedService(echoService)
+
+let echo = try host.addService(echoService)
+    .addCharacteristic(echoCharacteristic, capabilities: [.read, .writeRequest, .notify])
+try await echo.setValue(Data("ready".utf8))
+
+// Echo each write to subscribed clients.
+let writes = echo.onWrite
+let connections = host.onClientConnected
+Task {
+    for await value in writes {
+        try? await echo.setValue(value)
+    }
+}
+Task {
+    for await address in connections {
+        print("\(address) connected")
+    }
+}
+
+try await host.start()
+```
+
+Characteristic capabilities are `.read`, `.writeRequest`, `.writeCommand`, `.notify`, and `.indicate`. `setValue()`
+updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which
+emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when
+the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's
+address.
+
+To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value,
+until you pass `nil`:
+
+```swift
+echo.setReadHandler {
+    Data(Date.now.formatted(date: .omitted, time: .standard).utf8)
+}
+```
+
+The read handler runs on a SimpleBLE thread that waits for it, so it should return promptly.
+
+`setAdvertisedManufacturerData(companyId:data:)` adds manufacturer data to the advertisement, and `setConnectable(false)`
+advertises without accepting connections, as a beacon does. See [Advertise a beacon](../recipes/advertise#advertise-a-beacon).
+`setAdvertisementLocalName(_:)` sets the local name in the advertisement, and `nil` removes it. This changes only the
+advertisement, not the system's Bluetooth name, and iOS leaves it out while the app is in the background.
+
+Configure services before `start()`. Call `stop()` before changing them, and when you no longer want to advertise.
+
+## Reconnect without scanning
+
+`adapter.retrieveCachedPeripherals(addresses)` returns the peripherals CoreBluetooth already knows, by the `address`
+values they had before, without scanning. CoreBluetooth hides peripheral addresses, so `address` is a UUID the system
+assigns to the peripheral for your app, which stays the same across launches. Unknown addresses are skipped, and each
+peripheral is the same object a scan returns, so `connect()` reaches it if it is in range. The adapter must be powered
+on.
+
+```swift
+// `savedAddress` is the `address` the peripheral had in an earlier session.
+let peripheral = try adapter.retrieveCachedPeripherals([savedAddress]).first!
+try await peripheral.connect()
+```
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE, available on macOS. Its backend is on by default, so
+`Adapter.getAdapters()` includes Dongl adapters. To use only them, take the adapters of the Dongl backend:
+
+```swift
+let adapter = try Backend.getDongl().getAdapters().first!
+```
+
+A Dongl adapter works like any other adapter. To leave Dongls out, set `Config.Dongl.useDonglBackend = false` before the
+first call that reaches a backend. `Backend.getBackends()` lists every active backend, each with its `identifier` and
+`getAdapters()`. `Config.resetAll()` restores every setting's default.
+
+Pairing through a Dongl happens without the operating system, so your application answers pairing requests. Set the
+handlers your device needs on the peripheral before `connect()`, since pairing can start as soon as the link is up:
+
+- `setPasskeyRequestHandler`: return the six digits the device shows, as typed by the user, or `nil` to reject.
+- `setPasskeyDisplayHandler`: show the passkey so the user can type it on the device.
+- `setNumericComparisonHandler`: return `true` only if the device shows the same six digits.
+
+```swift
+try peripheral.setNumericComparisonHandler { passkey in
+    print("Does the device show \(passkey)? [y/N] ", terminator: "")
+    return readLine() == "y"
+}
+try await peripheral.connect()
+```
+
+The handlers are `async` and run while `connect()` waits, so they can take as long as the user needs to answer, for
+example to show an alert. Passing `nil` removes a handler, and a request without a handler is rejected.
+
+For devices that wait for the central to start pairing, call `peripheral.secureConnection(mitm:)` after `connect()`.
+See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
+## Logging
+
+SimpleBLE writes its log to standard output, up to the `info` level. `Logging` changes that for the whole process:
+
+```swift
+Logging.level = .warn
+Logging.setCallback { entry in
+    print("[\(entry.level)] \(entry.module): \(entry.message)")
+}
+```
+
+`setCallback()` delivers each entry, with its `level`, `module`, `file`, `line`, `function`, and `message`, on the
+thread that logged it, and `nil` discards entries. `logToFile(_:)` appends them to a file instead, and `logToStdout()`
+restores the default. Levels go from `.none`, which turns logging off, to `.verbose`.

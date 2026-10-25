@@ -1,6 +1,6 @@
 ---
 title: API Reference
-description: SimpleCBLE function signatures, error handling, and ownership rules.
+description: SimpleCBLE C API reference covering the calling convention, data ownership, errors, backends, adapters, peripherals and local peripheral hosting functions.
 ---
 
 import { ApiClass, ApiMethod, ApiSection } from "@/components/api";
@@ -949,7 +949,7 @@ Error messages, version strings, native pointers, and callback payloads are borr
 
 ## Advanced APIs [#advanced-functions]
 
-Dongl functions require a Dongl peripheral. The macOS, iOS, Linux, and Android functions are provided by their corresponding native backend builds. Apple cached-peripheral lookup accepts one identifier and returns an owned handle, or `NULL` without an error when no match is found.
+Dongl functions require a Dongl peripheral. The macOS, iOS, and Linux functions exist in every build for their platform, and other backends, such as Dongl, report `OPERATION_NOT_SUPPORTED`. The Android functions are provided by Android builds. Apple cached-peripheral lookup accepts one identifier and returns an owned handle, or `NULL` without an error when no match is found.
 
 <ApiClass name="advanced.h">
 
@@ -984,7 +984,7 @@ Dongl functions require a Dongl peripheral. The macOS, iOS, Linux, and Android f
 <ApiMethod
   signature={"void simpleble_advanced_macos_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
   brief={"Sets or clears the advertised local name."}
-  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}
+  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name. Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "local_name", "type": "const char*", "description": "NUL-terminated name, or NULL to remove the override."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
@@ -992,14 +992,14 @@ Dongl functions require a Dongl peripheral. The macOS, iOS, Linux, and Android f
   signature={"simpleble_peripheral_t simpleble_advanced_macos_retrieve_cached_peripheral( simpleble_adapter_t handle, const char* identifier, simpleble_error_t** out_error)"}
   brief={"Retrieves one peripheral from the CoreBluetooth system cache."}
   detailed={"Returns: An owned peripheral handle, or NULL if not found or on failure. Release with simpleble_peripheral_release_handle()."}
-  notes={[{"content": "Requires a powered-on adapter. Does not scan or establish reachability. Invalid or unknown identifiers return NULL without an error.", "type": "info"}]}
+  notes={[{"content": "Requires a powered-on adapter. Does not scan or establish reachability. Invalid or unknown identifiers return NULL without an error. Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "identifier", "type": "const char*", "description": "NUL-terminated CoreBluetooth peripheral identifier."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
   signature={"void simpleble_advanced_ios_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
   brief={"Sets or clears the advertised local name."}
-  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}
+  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name. Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "local_name", "type": "const char*", "description": "NUL-terminated name, or NULL to remove the override."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
@@ -1007,14 +1007,14 @@ Dongl functions require a Dongl peripheral. The macOS, iOS, Linux, and Android f
   signature={"simpleble_peripheral_t simpleble_advanced_ios_retrieve_cached_peripheral( simpleble_adapter_t handle, const char* identifier, simpleble_error_t** out_error)"}
   brief={"Retrieves one peripheral from the CoreBluetooth system cache."}
   detailed={"Returns: An owned peripheral handle, or NULL if not found or on failure. Release with simpleble_peripheral_release_handle()."}
-  notes={[{"content": "Requires a powered-on adapter. Does not scan or establish reachability. Invalid or unknown identifiers return NULL without an error.", "type": "info"}]}
+  notes={[{"content": "Requires a powered-on adapter. Does not scan or establish reachability. Invalid or unknown identifiers return NULL without an error. Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "identifier", "type": "const char*", "description": "NUL-terminated CoreBluetooth peripheral identifier."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 
 <ApiMethod
   signature={"void simpleble_advanced_linux_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name, simpleble_error_t** out_error)"}
   brief={"Sets or clears the advertised local name."}
-  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name.", "type": "info"}]}
+  notes={[{"content": "Configure before starting the local peripheral. This changes only the advertisement, not the system name. Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.", "type": "info"}]}
   parameters={[{"name": "handle", "type": "simpleble_local_peripheral_t", "description": "Valid, non-NULL local peripheral handle."}, {"name": "local_name", "type": "const char*", "description": "NUL-terminated name, or NULL to remove the override."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
 />
 

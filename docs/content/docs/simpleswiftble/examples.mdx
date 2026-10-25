@@ -1,0 +1,33 @@
+---
+title: Examples
+description: Runnable SimpleSwiftBLE examples for macOS that list adapters, scan, connect, read, write, receive notifications, host a GATT service and use a Dongl.
+---
+
+The [examples](https://github.com/simpleble/simpleble/tree/main/examples/simpleswiftble)
+live alongside the other SimpleBLE binding examples:
+
+- **list_adapters**: Enumerate adapters and print names, addresses, and power state.
+- **list_backends**: Enumerate backends and list the adapters provided by each one.
+- **power_cycle**: Turn each adapter off and on again.
+- **scan**: Discover peripherals and print their names, addresses, and signal strength.
+- **connect**: Connect to a peripheral and list its services and characteristics.
+- **read**: Connect to a peripheral and read a GATT characteristic.
+- **write**: Connect to a peripheral and write text to a GATT characteristic.
+- **notify**: Connect to a peripheral and print the notifications of a characteristic.
+- **peripheral**: Host a GATT service that echoes writes to subscribed clients.
+- **dongl**: Scan with a Dongl adapter, then connect and answer pairing requests.
+
+The examples are macOS command-line tools. Build SimpleBLE from the checkout, then run an example from
+`examples/simpleswiftble`:
+
+```sh
+simpleswiftble/scripts/build-xcframework.sh
+cd examples/simpleswiftble
+swift run scan
+```
+
+macOS asks for Bluetooth permission for the terminal app the first time an example uses Bluetooth.
+
+For binding development, see the
+[contributor guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpleswiftble-development.md).
+For events, lifetime, and handlers, see [Usage](./usage).

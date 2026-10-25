@@ -24,3 +24,8 @@ target
 uv.lock
 
 node_modules/
+
+# SimpleSwiftBLE
+.build
+.swiftpm
+/simpleswiftble/build

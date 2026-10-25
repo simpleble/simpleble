@@ -1,6 +1,6 @@
 ---
 title: Usage
-description: Install and use SimpleKtBLE, the Kotlin Multiplatform binding, on Android, iOS, macOS, Windows, and Linux.
+description: Install SimpleKtBLE, the Kotlin Multiplatform binding for SimpleBLE, and use it on Android, iOS, macOS, Windows and Linux to scan, connect and host services.
 ---
 
 SimpleKtBLE brings SimpleBLE to Kotlin Multiplatform. Write your Bluetooth code once in `commonMain`, with coroutines and flows, and run it on Android, iOS, macOS, Windows, and Linux.
@@ -96,7 +96,7 @@ suspend fun scan() = coroutineScope {
 
 Calls that wait on a device or the Bluetooth stack, such as `connect()`, `read()`, `scanFor()`, `getPairedPeripherals()`, `isPaired()`, `unpair()`, or `powerOn()`, are `suspend` functions that run on `Dispatchers.IO`, so you can call them from the main thread. `scanStart()`, `scanStop()`, `getAdapters()`, `isBluetoothEnabled()`, and `retrieveCachedPeripherals()` are regular functions that call the Bluetooth stack directly, so call them from a background dispatcher where a short wait matters. Data the library already holds, such as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned directly.
 
-A call cancelled while the Bluetooth stack works on it, for example by an expired `withTimeout`, returns once the stack finishes the operation: `scanFor()` when its scan ends, `connect()` when the connection attempt is done, and a read or write when it completes. `disconnect()`, `unsubscribe()`, and `LocalPeripheral.stop()` finish even in a cancelled coroutine, so you can call them one after another in a `finally` block.
+A call cancelled while the Bluetooth stack works on it, for example by an expired `withTimeout`, returns once the stack finishes the operation: `scanFor()` when its scan ends, `connect()` when the connection attempt is done, and a read or write when it completes. `disconnect()`, `unsubscribe()`, `LocalPeripheral.stop()`, and `Adapter.close()` finish even in a cancelled coroutine, so you can call them one after another in a `finally` block.
 
 Events are flows. An adapter has `onPowerOn`, `onPowerOff`, `onScanStart`, `onScanStop`, `onScanActive`, `onScanFound`, and `onScanUpdated`; a peripheral has `onConnected`, `onDisconnected`, and `onConnectionActive`. Every event reaches each active collector, in the order it happened. Collect in a scope that lives as long as you need the events, such as a `viewModelScope`, and start the collector with `CoroutineStart.UNDISPATCHED` so it is already collecting when the call that produces the events begins.
 
@@ -131,7 +131,7 @@ peripheral.notify(batteryService, batteryLevel).collect { value ->
 }
 ```
 
-UUIDs are `BluetoothUUID` values holding the full 128-bit string, and values are `ByteArray`s. `services()` lists the services, characteristics, and descriptors of a connected peripheral, and each characteristic reports what it supports with `canRead`, `canWriteRequest`, `canWriteCommand`, `canNotify`, and `canIndicate`. Before connecting, `services()` lists the services the peripheral advertises, and each service's `data` holds the service data it advertised.
+UUIDs are `BluetoothUUID` values holding the full 128-bit string, and values are `ByteArray`s. `services()` lists the services, characteristics, and descriptors of a connected peripheral, and each characteristic reports what it supports with `canRead`, `canWriteRequest`, `canWriteCommand`, `canNotify`, and `canIndicate`, or all at once as a set of `CharacteristicCapability` values in `capabilities`. Before connecting, `services()` lists the services the peripheral advertises, and each service's `data` holds the service data it advertised.
 
 `writeRequest()` waits for the peripheral to confirm, while `writeCommand()` does not. `read()` and `write()` with a descriptor UUID access descriptors:
 
@@ -154,7 +154,7 @@ When the peripheral disconnects, the flow delivers the values received before th
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import org.simplektble.BluetoothUUID
-import org.simplektble.LocalCharacteristicCapability
+import org.simplektble.CharacteristicCapability
 
 val echoService = BluetoothUUID("12345678-1234-5678-1234-56789abcdef0")
 val echoCharacteristic = BluetoothUUID("12345678-1234-5678-1234-56789abcdef1")
@@ -164,9 +164,9 @@ host.addAdvertisedService(echoService)
 
 val echo = host.addService(echoService).addCharacteristic(
     echoCharacteristic,
-    LocalCharacteristicCapability.Read,
-    LocalCharacteristicCapability.WriteRequest,
-    LocalCharacteristicCapability.Notify
+    CharacteristicCapability.Read,
+    CharacteristicCapability.WriteRequest,
+    CharacteristicCapability.Notify
 )
 echo.setValue("ready".encodeToByteArray())
 
@@ -181,7 +181,7 @@ scope.launch(start = CoroutineStart.UNDISPATCHED) {
 host.start()
 ```
 
-Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`. `setValue()` updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
+Characteristic capabilities are `Read`, `WriteRequest`, `WriteCommand`, `Notify`, and `Indicate`, the same `CharacteristicCapability` values a peripheral's characteristics report. `setValue()` updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's address.
 
 To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value, until you pass `null`. If the function throws, the read gets the stored value:
 
@@ -223,7 +223,7 @@ val dongl = Backend.getDongl()
 val adapter = dongl.getAdapters().first()
 ```
 
-A Dongl adapter works like any other adapter. To leave Dongls out, set `Config.Dongl.useDonglBackend = false` before the first call that reaches a backend. `Backend.getBackends()` lists every active backend, each with its `identifier` and `getAdapters()`.
+A Dongl adapter works like any other adapter. Only one program can use a Dongl at a time: `adapter.close()` stops the adapter's scan and local peripherals, disconnects its peripherals, and frees the Dongl for other programs right away. The closed objects then throw `SimpleKtBleException` with `OBJECT_NOT_INITIALIZED`, and `Adapter.getAdapters()` returns a new `Adapter` for the device. To leave Dongls out, set `Config.Dongl.useDonglBackend = false` before the first call that reaches a backend. `Backend.getBackends()` lists every active backend, each with its `identifier` and `getAdapters()`.
 
 Pairing through a Dongl happens without the operating system, so your application answers pairing requests. Set the handlers your device needs on the peripheral before `connect()`, since pairing can start as soon as the link is up:
 
