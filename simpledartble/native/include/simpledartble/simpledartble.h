@@ -128,6 +128,13 @@ SIMPLEDARTBLE_EXPORT void simpledartble_log_to(int64_t token);
 SIMPLEDARTBLE_EXPORT void simpledartble_on_log(int level, const char* module, const char* file, uint32_t line,
                                                const char* function, const char* message);
 
+/**
+ * @brief Whether SimpleBLE can reach the platform.
+ *
+ * False only on Android until SimpleFlutterBLE's initializer loads the library, which gives SimpleBLE the JVM.
+ */
+SIMPLEDARTBLE_EXPORT bool simpledartble_platform_ready(void);
+
 #ifdef __cplusplus
 }
 #endif

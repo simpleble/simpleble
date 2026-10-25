@@ -72,13 +72,17 @@ final class Adapter {
 
   /// Every adapter of every available backend.
   static Future<List<Adapter>> getAdapters() async {
+    checkPlatform();
     // Claims the events first, so no handle is left over if another isolate has them.
     Events.instance;
     return [for (final handle in await lifecycle.call(_getAdapters, null)) wrap(handle)];
   }
 
   /// Whether Bluetooth is enabled on any adapter.
-  static Future<bool> isBluetoothEnabled() => lifecycle.call(_isBluetoothEnabled, null);
+  static Future<bool> isBluetoothEnabled() async {
+    checkPlatform();
+    return lifecycle.call(_isBluetoothEnabled, null);
+  }
 
   int get _live {
     if (_closing != null) throw NotInitializedException('The adapter was closed');

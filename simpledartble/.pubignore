@@ -1,0 +1,5 @@
+# Replaces .gitignore for `dart pub publish`, so the package includes the files
+# tool/prebuild.dart and tool/prepublish.dart add.
+.dart_tool/
+build/
+pubspec.lock

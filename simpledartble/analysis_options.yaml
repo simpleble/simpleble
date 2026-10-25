@@ -1,0 +1,8 @@
+include: package:lints/recommended.yaml
+
+formatter:
+  page_width: 120
+
+analyzer:
+  exclude:
+    - lib/src/internal/bindings.g.dart

@@ -28,6 +28,14 @@ T check<T>(T Function(ErrorVariable error) call) {
   }
 }
 
+/// Throws unless SimpleBLE can reach the platform. In Android apps,
+/// SimpleFlutterBLE loads the native library as the app starts.
+void checkPlatform() {
+  if (!simpledartble_platform_ready()) {
+    throw StateError('Android apps use SimpleDartBLE through the simpleflutterble package');
+  }
+}
+
 /// Converts a string SimpleCBLE allocated and frees it.
 String takeString(Pointer<Char> value) {
   try {

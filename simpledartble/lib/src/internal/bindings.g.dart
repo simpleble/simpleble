@@ -2236,6 +2236,12 @@ external void simpledartble_on_value(
   ffi.Pointer<ffi.Void> userdata,
 );
 
+/// @brief Whether SimpleBLE can reach the platform.
+///
+/// False only on Android until SimpleFlutterBLE's initializer loads the library, which gives SimpleBLE the JVM.
+@ffi.Native<ffi.Bool Function()>()
+external bool simpledartble_platform_ready();
+
 /// @brief Ends a claim, unless a later one replaced it: no more events are posted, and questions get their fallback.
 ///
 /// Takes the identifier simpledartble_claim() returned as a pointer, the signature of a NativeFinalizer, which runs

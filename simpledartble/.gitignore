@@ -1,0 +1,6 @@
+.dart_tool/
+build/
+pubspec.lock
+# tool/prebuild.dart and tool/prepublish.dart add these for the published package.
+prebuilt/
+LICENSE

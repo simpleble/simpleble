@@ -34,17 +34,27 @@ final class Backend {
   final String identifier;
 
   /// Every available backend.
-  static Future<List<Backend>> getBackends() async => [
-    for (final handle in await lifecycle.call(_getBackends, null)) _wrap(handle),
-  ];
+  static Future<List<Backend>> getBackends() async {
+    checkPlatform();
+    return [for (final handle in await lifecycle.call(_getBackends, null)) _wrap(handle)];
+  }
 
   /// The operating system's Bluetooth backend.
-  static Future<Backend> getNative() async => _wrap(await lifecycle.call(_getNative, null));
+  static Future<Backend> getNative() async {
+    checkPlatform();
+    return _wrap(await lifecycle.call(_getNative, null));
+  }
 
   /// The Dongl backend, regardless of `Config.dongl.useDonglBackend`.
-  static Future<Backend> getDongl() async => _wrap(await lifecycle.call(_getDongl, null));
+  static Future<Backend> getDongl() async {
+    checkPlatform();
+    return _wrap(await lifecycle.call(_getDongl, null));
+  }
 
-  static Future<Backend> getSimulator() async => _wrap(await lifecycle.call(_getSimulator, null));
+  static Future<Backend> getSimulator() async {
+    checkPlatform();
+    return _wrap(await lifecycle.call(_getSimulator, null));
+  }
 
   Future<bool> isBluetoothEnabled() => lifecycle.call(_isBluetoothEnabled, _handle);
 

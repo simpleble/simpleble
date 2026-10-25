@@ -1,3 +1,5 @@
+#include <simpledartble/simpledartble.h>
+
 #if defined(__ANDROID__)
 
 #include <jni.h>
@@ -7,6 +9,8 @@
 #include <simplecble/error.h>
 
 namespace {
+
+bool loaded = false;
 
 #if SIMPLEDARTBLE_BACKEND_ANDROID
 // Turns a SimpleCBLE error into a Java exception, which fails the app's start loudly.
@@ -24,6 +28,7 @@ bool throw_error(JNIEnv* env, simpleble_error_t** error) {
 // NOTE: The Dart VM opens this library with dlopen, which doesn't run JNI_OnLoad. SimpleDartBleInitializer loads it
 // from Java first, as the app starts, so SimpleBLE's Android backend gets the JVM.
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
+    loaded = true;
 #if SIMPLEDARTBLE_BACKEND_ANDROID
     simpleble_error_t* error = nullptr;
     simpleble_advanced_android_set_jvm(vm, &error);
@@ -55,5 +60,11 @@ extern "C" JNIEXPORT void JNICALL Java_org_simpledartble_SimpleDartBleInitialize
     (void)context;
 #endif
 }
+
+bool simpledartble_platform_ready() { return loaded; }
+
+#else
+
+bool simpledartble_platform_ready() { return true; }
 
 #endif
