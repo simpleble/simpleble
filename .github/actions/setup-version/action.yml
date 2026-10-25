@@ -13,10 +13,11 @@ runs:
         # Read the base version from the VERSION file
         version_str=$(cat VERSION | tr -d ' \t\n\r')
 
-        # Only a published GitHub release produces a stable version. A branch
-        # push may see a tag created at the same time, so checking only whether
-        # HEAD is tagged can accidentally publish the stable version twice.
-        if [[ "${GITHUB_EVENT_NAME:-}" != "release" ]]; then
+        # Only a published GitHub release, or the push of its vX.Y.Z tag that
+        # publishes SimpleDartBLE, produces a stable version. A branch push may
+        # see a tag created at the same time, so checking only whether HEAD is
+        # tagged can accidentally publish the stable version twice.
+        if [[ "${GITHUB_EVENT_NAME:-}" != "release" && "${GITHUB_REF:-}" != "refs/tags/v${version_str}" ]]; then
           # Get the number of commits since the last version bump
           latest_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -n "$latest_tag" ]; then
@@ -41,9 +42,17 @@ runs:
         rm simplejsble/package.json.bak
         sed -i.bak 's/^  "version": ".*",$/  "version": "'"$version_str"'",/' simplernble/package.json
         rm simplernble/package.json.bak
+        sed -i.bak 's/^version: .*/version: '"$version_str"'/' simpledartble/pubspec.yaml
+        rm simpledartble/pubspec.yaml.bak
+        # simpleflutterble depends on the simpledartble of the same version.
+        sed -i.bak -e 's/^version: .*/version: '"$version_str"'/' \
+          -e 's/^  simpledartble: .*/  simpledartble: '"$version_str"'/' simpleflutterble/pubspec.yaml
+        rm simpleflutterble/pubspec.yaml.bak
         echo "Updated VERSION file to: $version_str"
         grep '^version = ' Cargo.toml
         grep '^version = ' simpleaible/pyproject.toml
         grep '^  "version": ' simplejsble/package.json
         grep '^  "version": ' simplernble/package.json
+        grep '^version: ' simpledartble/pubspec.yaml
+        grep -E '^version: |^  simpledartble: ' simpleflutterble/pubspec.yaml
         echo "VERSION=$version_str" >> $GITHUB_ENV
