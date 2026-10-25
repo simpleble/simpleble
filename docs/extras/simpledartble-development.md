@@ -19,10 +19,9 @@ simpledartble/
 │           ├── events.dart       Delivers SimpleBLE callbacks to Dart objects
 │           ├── event_stream.dart Broadcast streams of those callbacks
 │           ├── workers.dart      Helper isolates for blocking calls, strands, keep-alive
-│           └── registry.dart     One Dart object per native object
-├── hook/
-│   ├── build.dart                Builds the native library, or takes the published one from prebuilt/
-│   └── native_library.dart       The CMake build of one target, shared with tool/prebuild.dart
+│           ├── registry.dart     One Dart object per native object
+│           └── native_library.dart  The CMake build of one target, for the hook and tool/prebuild.dart
+├── hook/build.dart               Builds the native library, or takes the published one from prebuilt/
 ├── native/                       CMake project and the C++ shim beside SimpleCBLE
 ├── test/                         Binding tests, against PLAIN
 └── tool/

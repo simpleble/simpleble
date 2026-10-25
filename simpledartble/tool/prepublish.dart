@@ -7,7 +7,7 @@
 //   dart run tool/prepublish.dart
 import 'dart:io';
 
-import '../hook/native_library.dart';
+import 'package:simpledartble/src/internal/native_library.dart';
 
 void main() {
   final package = Directory.fromUri(Platform.script.resolve('../')).path;

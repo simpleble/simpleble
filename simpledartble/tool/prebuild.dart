@@ -7,8 +7,7 @@
 import 'dart:io';
 
 import 'package:code_assets/code_assets.dart';
-
-import '../hook/native_library.dart';
+import 'package:simpledartble/src/internal/native_library.dart';
 
 Future<void> main(List<String> targets) async {
   if (targets.isEmpty || !targets.every(NativeLibrary.published.contains)) {

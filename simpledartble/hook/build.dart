@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:code_assets/code_assets.dart';
 import 'package:hooks/hooks.dart';
-
-import 'native_library.dart';
+import 'package:simpledartble/src/internal/native_library.dart';
 
 // Provides SimpleDartBLE's native library. In a checkout of the SimpleBLE
 // repository it builds the library with CMake from the sources beside this

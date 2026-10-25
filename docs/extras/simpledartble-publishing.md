@@ -17,7 +17,8 @@ so the Android module can't live in `simpledartble`. `simpleflutterble` depends 
 
 The published `simpledartble` has no SimpleBLE sources beside it, so its build hook takes the target's library from
 `prebuilt/<target>/`. `tool/prebuild.dart` builds them with the hook's CMake configuration
-(`hook/native_library.dart`). Run it from `simpledartble/` with the targets the machine builds:
+(`lib/src/internal/native_library.dart`, as pub.dev only accepts `build.dart` and `link.dart` in `hook/`). Run it from
+`simpledartble/` with the targets the machine builds:
 
 ```bash
 dart run tool/prebuild.dart macos-arm64 macos-x64

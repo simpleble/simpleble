@@ -5,6 +5,9 @@ import 'package:code_assets/code_assets.dart';
 /// SimpleDartBLE's native library for one target, built with CMake from the
 /// SimpleBLE sources beside this package. The build hook and tool/prebuild.dart
 /// share it, so the published libraries match the ones a checkout builds.
+///
+/// NOTE: pub.dev only accepts build.dart and link.dart in hook/, so this lives
+/// with the package's internal code, which the hook imports.
 final class NativeLibrary {
   NativeLibrary(this.os, this.architecture, {this.iOSSdk, this.ndk, this.androidApi = 31});
 
