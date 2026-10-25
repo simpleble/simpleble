@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -361,6 +361,41 @@ suspend fun scan() = coroutineScope {
 ```
 
 Call `scan()` from a coroutine, such as `lifecycleScope.launch { scan() }` on Android or `suspend fun main() = scan()` on the JVM. On Android, request the Bluetooth permissions first with `SimpleKtBle.requestPermissions(activity)`. On iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleKtBLE Usage](./simplektble/usage) for details.
+
+</Tab>
+<Tab value="Dart">
+
+Create a Dart program and add the package:
+
+```sh
+dart create scan
+cd scan
+dart pub add simpledartble
+```
+
+Then replace `bin/scan.dart` with this and run `dart run`:
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  print('Using adapter: ${adapter.identifier} [${adapter.address}]');
+
+  adapter.onScanFound.listen((peripheral) {
+    print('Found: ${peripheral.identifier} [${peripheral.address}] ${peripheral.rssi} dBm');
+  });
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  print('Scan results:');
+  for (final peripheral in adapter.scanGetResults()) {
+    final state = peripheral.isConnectable ? 'connectable' : 'not connectable';
+    print('- ${peripheral.identifier} [${peripheral.address}] $state');
+  }
+}
+```
+
+In a Flutter app, use SimpleFlutterBLE: run `flutter pub add simpleflutterble`, import `package:simpleflutterble/simpleflutterble.dart`, and call the same code from your app. On Android, request the Bluetooth permissions first, and on iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleFlutterBLE Usage](./simpleflutterble/usage#app-setup) for details.
 
 </Tab>
 <Tab value="Android (deprecated)">

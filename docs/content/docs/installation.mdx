@@ -21,6 +21,8 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleJSBLE](./simplejsble/usage) | JavaScript / TypeScript | Production-ready | Node.js and Electron apps | npm |
 | [SimpleRnBLE](./simplernble/usage) | JavaScript / TypeScript | Production-ready | React Native apps on iOS and Android | npm |
 | [SimpleKtBLE](./simplektble/usage) | Kotlin Multiplatform | Production-ready | Shared Kotlin code for Android, iOS, and desktop | Maven Central |
+| [SimpleDartBLE](./simpledartble/usage) | Dart | Production-ready | Dart programs on Windows, macOS, and Linux | [pub.dev](https://pub.dev/packages/simpledartble) |
+| [SimpleFlutterBLE](./simpleflutterble/usage) | Flutter | Production-ready | Flutter apps on Android, iOS, and desktop | [pub.dev](https://pub.dev/packages/simpleflutterble) |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Deprecated | Existing Android-only applications; new ones use SimpleKtBLE | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
@@ -42,7 +44,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)", "Unity", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Flutter", "Android (deprecated)", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -225,6 +227,30 @@ Linux, so nothing is compiled during your build. See [SimpleKtBLE Usage](./simpl
 and supported targets.
 
 </Tab>
+<Tab value="Dart">
+
+Add SimpleDartBLE to your Dart program, with Dart 3.10 or newer:
+
+```sh
+dart pub add simpledartble
+```
+
+The package includes the native SimpleBLE library for Windows, macOS, and Linux, so nothing is compiled during your
+build. See [SimpleDartBLE Usage](./simpledartble/usage) for permissions.
+
+</Tab>
+<Tab value="Flutter">
+
+Add SimpleFlutterBLE to your Flutter app, with Flutter 3.38 or newer:
+
+```sh
+flutter pub add simpleflutterble
+```
+
+The package includes the native SimpleBLE library for Android, iOS, macOS, Windows, and Linux, so nothing is compiled
+during your build. See [SimpleFlutterBLE Usage](./simpleflutterble/usage) for app setup and permissions.
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 Add SimpleDroidBLE to your app module:
@@ -289,7 +315,7 @@ See [MCP Server](./simpleaible/mcp) and [HTTP Server](./simpleaible/http) for ag
 
 The fastest smoke test is to scan for nearby devices:
 
-- C++, C, Python, Java, Rust, Kotlin Multiplatform, and Android users can start with [Quickstart](./quickstart).
+- C++, C, Python, Java, Rust, Kotlin Multiplatform, Dart, and Android users can start with [Quickstart](./quickstart).
 - C# users can start with the scan example in [SimpleSharpBLE Usage](./simplesharpble/usage).
 - CMake users can build the repository examples from [SimpleBLE Examples](./simpleble/examples) or [SimpleCBLE Examples](./simplecble/examples).
 - Python users can run the examples under `examples/simplepyble`.

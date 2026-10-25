@@ -47,7 +47,7 @@ Android has the most complex permission model for Bluetooth. Depending on the AP
 <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 ```
 
-Additionally, you must **request these permissions at runtime**. SimpleKtBLE provides [helpers](../simplektble/usage#permissions) for this.
+Additionally, you must **request these permissions at runtime**. SimpleKtBLE provides [helpers](../simplektble/usage#permissions) for this. SimpleFlutterBLE declares them in its manifest, and your app requests them with a plugin such as permission_handler, as shown in [SimpleFlutterBLE Usage](../simpleflutterble/usage#app-setup).
 
 **Note on Location:** On many Android versions, `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION` is required to perform Bluetooth scans because beacons can be used to infer the user's location.
 

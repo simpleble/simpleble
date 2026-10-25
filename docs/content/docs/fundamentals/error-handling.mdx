@@ -46,7 +46,7 @@ These errors carry the lower layer's message and no classification. C++ code see
 
 ## Errors in each language
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. To cover both the classified exceptions and unclassified errors, catch at two levels:
@@ -210,6 +210,22 @@ try {
         ErrorCode.PERIPHERAL_NOT_CONNECTED -> peripheral.connect()
         else -> println("BLE error ${e.code}: ${e.message}")
     }
+}
+```
+
+</Tab>
+<Tab value="Dart">
+
+Failures throw a `SimpleDartBleException`, with one subclass per kind of failure, such as `NotConnectedException` or `CharacteristicNotFoundException`. Its `code` is SimpleBLE's `ErrorCode`, such as `ErrorCode.peripheralNotConnected`. Unclassified errors are thrown as `SimpleDartBleException` itself, with the code `ErrorCode.unclassifiedException`. Arguments outside what SimpleBLE takes, such as a UUID longer than 36 characters, throw an `ArgumentError`, and values SimpleBLE rejects, such as a negative `scanFor()` duration, throw an `InvalidArgumentException`.
+
+```dart
+try {
+  final value = await peripheral.read(serviceUuid, characteristicUuid);
+  print('Read: $value');
+} on NotConnectedException {
+  await peripheral.connect();
+} on SimpleDartBleException catch (e) {
+  print('BLE error ${e.code.name}: ${e.message}');
 }
 ```
 

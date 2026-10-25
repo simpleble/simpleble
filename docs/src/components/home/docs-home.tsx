@@ -115,6 +115,20 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/simplektble/usage",
   },
   {
+    eyebrow: "Dart",
+    title: "SimpleDartBLE",
+    description:
+      "Dart bindings with futures and streams for programs on Windows, macOS, and Linux.",
+    href: "/simpledartble/usage",
+  },
+  {
+    eyebrow: "Flutter",
+    title: "SimpleFlutterBLE",
+    description:
+      "Flutter bindings for Android, iOS, and desktop apps, with SimpleDartBLE's API.",
+    href: "/simpleflutterble/usage",
+  },
+  {
     eyebrow: "Android",
     title: "SimpleDroidBLE",
     description:

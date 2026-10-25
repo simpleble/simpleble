@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -100,6 +100,14 @@ println("Read: ${value.toHexString()}")
 ```
 
 </Tab>
+<Tab value="Dart">
+
+```dart
+final value = await peripheral.read(serviceUuid, characteristicUuid);
+print('Read: $value');
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -112,7 +120,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -215,6 +223,19 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 ```
 
 </Tab>
+<Tab value="Dart">
+
+```dart
+final payload = Uint8List.fromList([0x01, 0x02, 0x03]);
+
+// Acknowledged write.
+await peripheral.writeRequest(serviceUuid, characteristicUuid, payload);
+
+// Unacknowledged write.
+await peripheral.writeCommand(serviceUuid, characteristicUuid, payload);
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -229,7 +250,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -359,6 +380,18 @@ withTimeoutOrNull(10_000) {
 ```
 
 </Tab>
+<Tab value="Dart">
+
+```dart
+final notifications = await peripheral.notify(serviceUuid, characteristicUuid);
+notifications.listen((payload) => print('Notification: $payload'));
+
+await Future<void>.delayed(const Duration(seconds: 10));
+
+await peripheral.unsubscribe(serviceUuid, characteristicUuid);
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -375,6 +408,8 @@ withTimeoutOrNull(10_000) {
 On Android, collecting the flow subscribes to the characteristic. When collection is cancelled or completes, SimpleDroidBLE unsubscribes and waits for native cleanup to finish. The timeout above is only a compact way to demonstrate a ten-second subscription.
 
 With SimpleKtBLE, collecting the flow subscribes and ending the collection unsubscribes in the same way. When the peripheral disconnects, the flow completes, and you collect it again after reconnecting.
+
+With SimpleDartBLE, `notify()` completes once the peripheral is subscribed and returns a stream of the values. The stream ends on `unsubscribe()`, and cancelling its subscription also unsubscribes. When the peripheral disconnects, the stream ends too, and you subscribe again after reconnecting.
 
 ## Production Android apps
 
