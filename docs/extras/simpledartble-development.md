@@ -23,6 +23,7 @@ simpledartble/
 │           └── native_library.dart  The CMake build of one target, for the hook and tool/prebuild.dart
 ├── hook/build.dart               Builds the native library, or takes the published one from prebuilt/
 ├── native/                       CMake project and the C++ shim beside SimpleCBLE
+├── example/                      The scan example pub.dev shows
 ├── test/                         Binding tests, against PLAIN
 └── tool/
     ├── ffigen.dart               Regenerates lib/src/internal/bindings.g.dart
@@ -31,7 +32,8 @@ simpledartble/
     └── prepublish.dart           Prepares both packages for publishing
 
 simplefltble/
-├── lib/simplefltble.dart     Re-exports SimpleDartBLE's API
+├── lib/simplefltble.dart         Re-exports SimpleDartBLE's API
+├── example/                      The Flutter scan example pub.dev shows
 └── android/                      Initializer, simpledroidbridge classes and permissions
 ```
 
