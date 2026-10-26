@@ -1,13 +1,13 @@
 #!/bin/bash
-# Assembles the package that simpleble/simpleswiftble publishes in a directory: the sources, README and license, and a
-# Package.swift that uses a published xcframework archive.
+# Assembles the package that simpleble/simpleswiftble publishes in a directory: the sources, README, license, Swift
+# Package Index configuration, and a Package.swift that uses a published xcframework archive.
 # Usage: package.sh <directory> <archive URL> <checksum>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 mkdir -p "$1"
-cp -R "$ROOT/simpleswiftble/Sources" "$ROOT/simpleswiftble/README.md" "$ROOT/LICENSE.md" "$1/"
+cp -R "$ROOT/simpleswiftble/Sources" "$ROOT/simpleswiftble/README.md" "$ROOT/simpleswiftble/.spi.yml" "$ROOT/LICENSE.md" "$1/"
 
 python3 - "$ROOT/Package.swift" "$1/Package.swift" "$2" "$3" << 'EOF'
 import re
