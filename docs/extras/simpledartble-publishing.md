@@ -1,16 +1,16 @@
-# Publishing SimpleDartBLE and SimpleFlutterBLE
+# Publishing SimpleDartBLE and SimpleFltBLE
 
-SimpleDartBLE and SimpleFlutterBLE are published to pub.dev with the same version:
+SimpleDartBLE and SimpleFltBLE are published to pub.dev with the same version:
 
 ```text
 simpledartble     The Dart API, and SimpleBLE's native library for each target under prebuilt/
-simpleflutterble  Re-exports the API, with the Android module Flutter apps need: initializer, simpledroidbridge
+simplefltble  Re-exports the API, with the Android module Flutter apps need: initializer, simpledroidbridge
                   classes, permissions
 ```
 
-Dart programs depend on `simpledartble`, and Flutter apps on `simpleflutterble`. A Flutter plugin is the only way to add
+Dart programs depend on `simpledartble`, and Flutter apps on `simplefltble`. A Flutter plugin is the only way to add
 Java code to a Flutter app, and pub installs a package that declares a Flutter SDK constraint only with the Flutter SDK,
-so the Android module can't live in `simpledartble`. `simpleflutterble` depends on the exact version of
+so the Android module can't live in `simpledartble`. `simplefltble` depends on the exact version of
 `simpledartble`, as the module and the native library call each other.
 
 ## Native libraries
@@ -37,16 +37,16 @@ PLAIN libraries are never published, and the hook refuses `backend: plain` outsi
 ## Preparing the packages
 
 `dart pub publish` has no prepack step. `tool/prepublish.dart` checks that `prebuilt/` holds every target, then copies
-in `LICENSE` for both packages and the simpledroidbridge classes for `simpleflutterble/android/bridge/`.
+in `LICENSE` for both packages and the simpledroidbridge classes for `simplefltble/android/bridge/`.
 `.gitignore` leaves them out of the repository, and each package's `.pubignore` replaces it for the archive. The
 Android module compiles the repository's `simpledroidbridge` when it's there, and `bridge/` otherwise.
-`simpleflutterble/pubspec_overrides.yaml` resolves `simpledartble` from the repository and isn't published.
+`simplefltble/pubspec_overrides.yaml` resolves `simpledartble` from the repository and isn't published.
 
 ```bash
 cd simpledartble
 dart run tool/prepublish.dart
 dart pub publish --dry-run
-cd ../simpleflutterble
+cd ../simplefltble
 flutter pub publish --dry-run
 ```
 
@@ -55,7 +55,7 @@ flutter pub publish --dry-run
 pub.dev accepts uploads from GitHub Actions only for tag pushes, and never deletes a version, so only stable releases
 are published. Pushing the release tag `vX.Y.Z` starts `publish_simpledartble.yml`, which runs
 `ci_simpledartble.yml` for the tag: it builds every target's library, then prepares, validates and packs both
-packages. The publish job then uploads `simpledartble` and `simpleflutterble` with
+packages. The publish job then uploads `simpledartble` and `simplefltble` with
 GitHub's OIDC token, skipping a package whose version is already on pub.dev.
 
 `CI Main` runs the same build for every push and release, and keeps the packed packages as the `simpledartble-pub`
@@ -69,7 +69,7 @@ uploaded by hand, from the `simpledartble-pub` artifact of the release's tag run
 ```bash
 tar -xzf simpledartble-X.Y.Z.tar.gz
 (cd simpledartble && dart pub publish)
-(cd simpleflutterble && flutter pub publish)
+(cd simplefltble && flutter pub publish)
 ```
 
 That run's publish job fails, as pub.dev doesn't know the packages yet. Then, on each package's **Admin** tab on

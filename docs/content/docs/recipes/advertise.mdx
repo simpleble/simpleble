@@ -11,7 +11,7 @@ Advertising is how this host is found. A local peripheral serves GATT, sends adv
 `SimpleBLE::Peripheral` is a remote device. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from an `Adapter`, the same object used to scan.
 
 <Callout type="info" title="Available on all supported platforms">
-SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`, and SimpleKtBLE and SimpleFlutterBLE do it for you without one.
+SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`, and SimpleKtBLE and SimpleFltBLE do it for you without one.
 </Callout>
 
 ## Flow

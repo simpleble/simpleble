@@ -1,4 +1,4 @@
-group = "org.simpleflutterble"
+group = "org.simplefltble"
 version = file("../pubspec.yaml").readLines().first { it.startsWith("version:") }.substringAfter(":").trim()
 
 buildscript {

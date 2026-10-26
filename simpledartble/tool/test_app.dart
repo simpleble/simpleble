@@ -55,7 +55,7 @@ void _configure(Directory app) {
         .replaceFirst(
           'dependencies:\n  flutter:\n    sdk: flutter\n',
           'dependencies:\n  flutter:\n    sdk: flutter\n  simpledartble:\n    path: ../..\n'
-              '  simpleflutterble:\n    path: ../../../simpleflutterble\n',
+              '  simplefltble:\n    path: ../../../simplefltble\n',
         )
         .replaceFirst('dev_dependencies:\n', 'dev_dependencies:\n  integration_test:\n    sdk: flutter\n  test: any\n');
     return '$dependencies\ndependency_overrides:\n  simpledartble:\n    path: ../..\n'

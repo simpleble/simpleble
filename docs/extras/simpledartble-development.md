@@ -1,6 +1,6 @@
 # SimpleDartBLE development
 
-This is contributor documentation for SimpleDartBLE, the Dart bindings, and SimpleFlutterBLE, the Flutter bindings
+This is contributor documentation for SimpleDartBLE, the Dart bindings, and SimpleFltBLE, the Flutter bindings
 built on them. It is kept outside
 `content/docs` and is not included in the published documentation site.
 
@@ -30,14 +30,14 @@ simpledartble/
     ├── prebuild.dart             Builds the published libraries
     └── prepublish.dart           Prepares both packages for publishing
 
-simpleflutterble/
-├── lib/simpleflutterble.dart     Re-exports SimpleDartBLE's API
+simplefltble/
+├── lib/simplefltble.dart     Re-exports SimpleDartBLE's API
 └── android/                      Initializer, simpledroidbridge classes and permissions
 ```
 
 `simpledartble` is a pure Dart package that works in Dart programs and Flutter apps alike. Flutter apps on Android also
 need Java code and manifest entries, which only a Flutter plugin can add, and pub installs a Flutter plugin only with
-the Flutter SDK, so `simpleflutterble` is the package Flutter apps use: it re-exports SimpleDartBLE's API and carries
+the Flutter SDK, so `simplefltble` is the package Flutter apps use: it re-exports SimpleDartBLE's API and carries
 the Android module, as realm does for realm_dart. The module and the native library call each other, so both packages
 always have the same version, and `pubspec_overrides.yaml` resolves simpledartble from the checkout. Web has no
 `dart:ffi`.
@@ -66,7 +66,7 @@ does what Dart can't:
 - **Shutdown.** Posting to the Dart VM after it shut down crashes, and SimpleBLE calls back while a program ends, for
   example to report a disconnection. A `NativeFinalizer` on the event receiver calls `simpledartble_release` when the
   isolate group shuts down, which ends the claim under the lock every post takes, so nothing posts afterwards.
-- **Android.** The Dart VM opens the library with dlopen, which doesn't run `JNI_OnLoad`. SimpleFlutterBLE's
+- **Android.** The Dart VM opens the library with dlopen, which doesn't run `JNI_OnLoad`. SimpleFltBLE's
   `SimpleDartBleInitializer`, a ContentProvider, loads it with `System.loadLibrary` as the app starts, so SimpleBLE gets
   the JVM, then passes the application context and starts the backend on that thread, where the bridge classes can be
   found. The module compiles the simpledroidbridge sources. Without it, `simpledartble_platform_ready()` stays false,
@@ -131,8 +131,8 @@ to SimpleBLE's.
 
 ## Examples
 
-`examples/simpledartble` is a Dart package of command-line examples, and `examples/simpleflutterble` the SimpleBLE
-Explorer app, built with SimpleFlutterBLE. Both depend on the packages by path and use the platform's backend. The app keeps only its Dart code in the
+`examples/simpledartble` is a Dart package of command-line examples, and `examples/simplefltble` the SimpleBLE
+Explorer app, built with SimpleFltBLE. Both depend on the packages by path and use the platform's backend. The app keeps only its Dart code in the
 repository: `tool/setup.dart` creates its platform projects with `flutter create` and applies SimpleBLE's minimums and
 Bluetooth declarations, and `.gitignore` leaves the projects out. Running it also runs this package's build hook, so the
 first run builds SimpleBLE for the host. To try them without hardware, add the

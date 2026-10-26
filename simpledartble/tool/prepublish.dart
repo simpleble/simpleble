@@ -1,4 +1,4 @@
-// Prepares simpledartble and simpleflutterble for `dart pub publish`. It
+// Prepares simpledartble and simplefltble for `dart pub publish`. It
 // checks that prebuilt/ holds every target's library, from tool/prebuild.dart,
 // and copies in what the packages need from the rest of the repository: the
 // license, and the simpledroidbridge classes the Android module compiles. Run
@@ -12,7 +12,7 @@ import 'package:simpledartble/src/internal/native_library.dart';
 void main() {
   final package = Directory.fromUri(Platform.script.resolve('../')).path;
   final repository = '$package../';
-  final flutter = '${repository}simpleflutterble/';
+  final flutter = '${repository}simplefltble/';
 
   final missing = [
     for (final target in NativeLibrary.published)

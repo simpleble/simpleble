@@ -123,7 +123,7 @@ jobs:
           find simpledartble/prebuilt -type f -ls
 
       - name: Attribute README links to pub.dev
-        run: sed -i 's/utm_source=github/utm_source=pub_dev/g' simpledartble/README.md simpleflutterble/README.md
+        run: sed -i 's/utm_source=github/utm_source=pub_dev/g' simpledartble/README.md simplefltble/README.md
 
       - name: Prepare the packages
         working-directory: simpledartble
@@ -132,12 +132,12 @@ jobs:
           dart run tool/prepublish.dart
 
       # NOTE: A dry run exits with 65 for warnings too, such as the missing
-      # CHANGELOG.md or simpleflutterble's exact simpledartble version, so
+      # CHANGELOG.md or simplefltble's exact simpledartble version, so
       # only validation errors fail the step.
       - name: Validate the packages
         run: |
-          for package in simpledartble simpleflutterble; do
-            if [[ "$package" == simpleflutterble ]]; then tool=flutter; else tool=dart; fi
+          for package in simpledartble simplefltble; do
+            if [[ "$package" == simplefltble ]]; then tool=flutter; else tool=dart; fi
             output=$(cd "$package" && "$tool" pub publish --dry-run 2>&1) || true
             echo "$output"
             grep -q '^Package has' <<< "$output"
@@ -149,7 +149,7 @@ jobs:
           mkdir -p package
           tar -czf "package/simpledartble-$VERSION.tar.gz" \
             --exclude=.dart_tool --exclude=build --exclude=pubspec.lock \
-            simpledartble simpleflutterble
+            simpledartble simplefltble
           tar -tzf "package/simpledartble-$VERSION.tar.gz" | grep -E 'prebuilt/|android/bridge/|LICENSE'
 
       - name: Upload packages

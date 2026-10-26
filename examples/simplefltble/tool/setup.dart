@@ -1,6 +1,6 @@
 // Creates SimpleBLE Explorer's Android, iOS, macOS, Windows and Linux projects
 // with `flutter create`, raises their minimums to SimpleBLE's and declares its
-// Bluetooth use. Run it once from examples/simpleflutterble:
+// Bluetooth use. Run it once from examples/simplefltble:
 //
 //   dart run tool/setup.dart
 import 'dart:io';
@@ -18,7 +18,7 @@ Future<void> main() async {
       '--empty',
       '--platforms=android,ios,macos,windows,linux',
       '--org=org.simpleble',
-      '--project-name=simpleflutterble_explorer',
+      '--project-name=simplefltble_explorer',
       '.',
     ],
     workingDirectory: app,

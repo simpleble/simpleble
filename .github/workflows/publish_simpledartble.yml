@@ -1,7 +1,7 @@
 name: Publish SimpleDartBLE
 
 # pub.dev only accepts uploads from GitHub Actions for tag pushes, so pushing
-# the release tag publishes SimpleDartBLE and SimpleFlutterBLE, while CI Main publishes the other
+# the release tag publishes SimpleDartBLE and SimpleFltBLE, while CI Main publishes the other
 # packages for the release.
 on:
   push:
@@ -39,13 +39,13 @@ jobs:
         working-directory: package
         run: |
           tar -xzf simpledartble-*.tar.gz
-          # simpleflutterble depends on the simpledartble version just published.
-          for package in simpledartble simpleflutterble; do
+          # simplefltble depends on the simpledartble version just published.
+          for package in simpledartble simplefltble; do
             version=$(sed -n 's/^version: //p' "$package/pubspec.yaml")
             if curl -sf "https://pub.dev/api/packages/$package/versions/$version" > /dev/null; then
               echo "$package $version is already published."
               continue
             fi
-            if [[ "$package" == simpleflutterble ]]; then tool=flutter; else tool=dart; fi
+            if [[ "$package" == simplefltble ]]; then tool=flutter; else tool=dart; fi
             (cd "$package" && "$tool" pub publish --force)
           done

@@ -1,9 +1,9 @@
 ---
 title: Usage
-description: Install SimpleFlutterBLE from pub.dev and use SimpleBLE in Flutter apps on Android, iOS, macOS, Windows and Linux, with the app setup each platform needs.
+description: Install SimpleFltBLE from pub.dev and use SimpleBLE in Flutter apps on Android, iOS, macOS, Windows and Linux, with the app setup each platform needs.
 ---
 
-SimpleFlutterBLE brings SimpleBLE to Flutter apps on Android, iOS, macOS, Windows, and Linux. Its API is [SimpleDartBLE](../simpledartble/usage)'s, with futures, streams, and one object per Bluetooth object, and it adds the setup Flutter apps need on Android.
+SimpleFltBLE brings SimpleBLE to Flutter apps on Android, iOS, macOS, Windows, and Linux. Its API is [SimpleDartBLE](../simpledartble/usage)'s, with futures, streams, and one object per Bluetooth object, and it adds the setup Flutter apps need on Android.
 
 ## Requirements
 
@@ -14,20 +14,20 @@ SimpleFlutterBLE brings SimpleBLE to Flutter apps on Android, iOS, macOS, Window
 ## Install from pub.dev
 
 ```bash
-flutter pub add simpleflutterble
+flutter pub add simplefltble
 ```
 
 The package carries the native SimpleBLE library for every supported platform, so nothing is compiled or downloaded during your build. Import it where you use Bluetooth:
 
 ```dart
-import 'package:simpleflutterble/simpleflutterble.dart';
+import 'package:simplefltble/simplefltble.dart';
 ```
 
 ## App setup
 
 Raise your app's platform minimums to SimpleBLE's: `minSdk = 31` in `android/app/build.gradle.kts`, and the deployment target to iOS 15.8 and macOS 15.0 in Xcode.
 
-On Android, SimpleFlutterBLE's manifest declares `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`, and your app asks for them at runtime before using Bluetooth, for example with [permission_handler](https://pub.dev/packages/permission_handler):
+On Android, SimpleFltBLE's manifest declares `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`, and your app asks for them at runtime before using Bluetooth, for example with [permission_handler](https://pub.dev/packages/permission_handler):
 
 ```dart
 import 'dart:io';
@@ -55,7 +55,7 @@ On iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.pl
 ## First scan
 
 ```dart
-import 'package:simpleflutterble/simpleflutterble.dart';
+import 'package:simplefltble/simplefltble.dart';
 
 Future<void> scan() async {
   final adapter = (await Adapter.getAdapters()).first;
@@ -71,13 +71,13 @@ Calls that reach the Bluetooth stack run on helper isolates, so they never hold 
 
 ## The API
 
-SimpleFlutterBLE re-exports SimpleDartBLE, so its classes, events, and exceptions are SimpleDartBLE's. [SimpleDartBLE Usage](../simpledartble/usage) covers them: [calls, events, and lifetime](../simpledartble/usage#calls-events-and-lifetime), [GATT](../simpledartble/usage#connect-and-use-gatt), [hosting a local peripheral](../simpledartble/usage#host-a-local-peripheral), [handlers](../simpledartble/usage#handlers), [backend configuration](../simpledartble/usage#configure-backends), [the Dongl](../simpledartble/usage#use-a-dongl) on Windows, macOS, and Linux, [logging](../simpledartble/usage#logging), and [platform-specific features](../simpledartble/usage#platform-specific-features).
+SimpleFltBLE re-exports SimpleDartBLE, so its classes, events, and exceptions are SimpleDartBLE's. [SimpleDartBLE Usage](../simpledartble/usage) covers them: [calls, events, and lifetime](../simpledartble/usage#calls-events-and-lifetime), [GATT](../simpledartble/usage#connect-and-use-gatt), [hosting a local peripheral](../simpledartble/usage#host-a-local-peripheral), [handlers](../simpledartble/usage#handlers), [backend configuration](../simpledartble/usage#configure-backends), [the Dongl](../simpledartble/usage#use-a-dongl) on Windows, macOS, and Linux, [logging](../simpledartble/usage#logging), and [platform-specific features](../simpledartble/usage#platform-specific-features).
 
-For more, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleFlutterBLE Examples](./examples).
+For more, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleFltBLE Examples](./examples).
 
 ## Platform notes
 
-- **Android**: SimpleFlutterBLE loads SimpleBLE's native library and gives it the application context when the app starts, so hosting a local peripheral needs no setup beyond the permissions.
+- **Android**: SimpleFltBLE loads SimpleBLE's native library and gives it the application context when the app starts, so hosting a local peripheral needs no setup beyond the permissions.
 - **macOS**: Bluetooth permission belongs to the app, with the `Info.plist` entry and entitlement from [App setup](#app-setup).
 - **Linux**: SimpleBLE talks to BlueZ over the D-Bus system bus, so the user needs access to it, as described in [Bluetooth Permissions](../fundamentals/permissions).
-- **Web**: Flutter's web platform can't load native libraries, so SimpleFlutterBLE doesn't support it.
+- **Web**: Flutter's web platform can't load native libraries, so SimpleFltBLE doesn't support it.

@@ -13,11 +13,11 @@ SimpleDartBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to Dart
 programs on Windows, macOS, and Linux. Discover and connect Bluetooth
 peripherals, read and write GATT values, subscribe to notifications, and host
 local GATT services through one API, with futures and streams. Flutter apps use
-the same API through [SimpleFlutterBLE](https://pub.dev/packages/simpleflutterble).
+the same API through [SimpleFltBLE](https://pub.dev/packages/simplefltble).
 
 ## Why SimpleDartBLE
 
-- **One cross-platform API:** Keep your Bluetooth code the same on Windows, macOS, and Linux, and share it with Flutter apps on Android and iOS through SimpleFlutterBLE.
+- **One cross-platform API:** Keep your Bluetooth code the same on Windows, macOS, and Linux, and share it with Flutter apps on Android and iOS through SimpleFltBLE.
 - **Native underneath:** Use WinRT, CoreBluetooth, and BlueZ through one maintained stack.
 - **Built for real products:** Act as a central or a peripheral on every supported platform.
 - **Commercially supported:** Ship proprietary applications with commercial licensing and direct technical support from the team that builds SimpleBLE.
@@ -40,7 +40,7 @@ dart pub add simpledartble
 
 The package includes the native SimpleBLE library for every supported platform,
 so nothing is compiled during your build. In a Flutter app, add
-[SimpleFlutterBLE](https://pub.dev/packages/simpleflutterble) instead.
+[SimpleFltBLE](https://pub.dev/packages/simplefltble) instead.
 
 Scan for five seconds and print what was found:
 
@@ -165,7 +165,7 @@ before `connect()`.
 | Linux with glibc 2.28 or newer | x64, arm64 | BlueZ and the D-Bus library |
 
 Flutter apps on Android, iOS, macOS, Windows, and Linux use
-[SimpleFlutterBLE](https://pub.dev/packages/simpleflutterble).
+[SimpleFltBLE](https://pub.dev/packages/simplefltble).
 
 ## Versions
 

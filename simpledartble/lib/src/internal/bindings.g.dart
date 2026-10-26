@@ -2238,7 +2238,7 @@ external void simpledartble_on_value(
 
 /// @brief Whether SimpleBLE can reach the platform.
 ///
-/// False only on Android until SimpleFlutterBLE's initializer loads the library, which gives SimpleBLE the JVM.
+/// False only on Android until SimpleFltBLE's initializer loads the library, which gives SimpleBLE the JVM.
 @ffi.Native<ffi.Bool Function()>()
 external bool simpledartble_platform_ready();
 

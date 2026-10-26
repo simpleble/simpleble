@@ -130,10 +130,10 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
   },
   {
     eyebrow: "Flutter",
-    title: "SimpleFlutterBLE",
+    title: "SimpleFltBLE",
     description:
       "Flutter bindings for Android, iOS, and desktop apps, with SimpleDartBLE's API.",
-    href: "/simpleflutterble/usage",
+    href: "/simplefltble/usage",
   },
   {
     eyebrow: "Android",

@@ -73,7 +73,7 @@ Before releasing a new version of the project, perform the following steps in or
    - `LICENSE.md`
    - `simpleaible/README.md`
    - `simpledartble/README.md`
-   - `simpleflutterble/README.md`
+   - `simplefltble/README.md`
    - `simpledroidble/README.md`
    - `simplegoble/README.md`
    - `simplejavable/README.md`
@@ -123,7 +123,7 @@ Before releasing a new version of the project, perform the following steps in or
    git tag -a vX.Y.Z -m "SimpleBLE vX.Y.Z release"
    ```
 
-9. Push the tag to the remote repository. Tag-only pushes intentionally do not start `CI Main`. The tag starts `Publish SimpleDartBLE`, which builds SimpleDartBLE for the tag and publishes SimpleDartBLE and SimpleFlutterBLE `X.Y.Z` to pub.dev, which only accepts uploads from tag pushes. Let it finish; if a job fails, use **Re-run failed jobs**, as pub.dev rejects a version that already exists.
+9. Push the tag to the remote repository. Tag-only pushes intentionally do not start `CI Main`. The tag starts `Publish SimpleDartBLE`, which builds SimpleDartBLE for the tag and publishes SimpleDartBLE and SimpleFltBLE `X.Y.Z` to pub.dev, which only accepts uploads from tag pushes. Let it finish; if a job fails, use **Re-run failed jobs**, as pub.dev rejects a version that already exists.
 
 10. Create and publish a stable GitHub release for that tag. A draft does not trigger publication, and the release must not be marked as a prerelease.
 
@@ -145,7 +145,7 @@ Before releasing a new version of the project, perform the following steps in or
     - SimpleRnBLE `X.Y.Z` is available on npm under the `latest` tag.
     - SimpleKtBLE `X.Y.Z` is available on Maven Central.
     - SimpleSwiftBLE `vX.Y.Z` is tagged in `simpleble/simpleswiftble`, and its GitHub release there has `CSimpleBLE.xcframework.zip`.
-    - SimpleDartBLE and SimpleFlutterBLE `X.Y.Z` are available on pub.dev.
+    - SimpleDartBLE and SimpleFltBLE `X.Y.Z` are available on pub.dev.
 
     Maven Central and NuGet can take 15 minutes or more to list a new version after its publish job succeeds.
 

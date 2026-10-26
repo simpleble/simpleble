@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:simpleflutterble/simpleflutterble.dart';
+import 'package:simplefltble/simplefltble.dart';
 
 void main() => runApp(const ExplorerApp());
 

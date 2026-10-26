@@ -3,7 +3,7 @@ title: Usage
 description: Install SimpleDartBLE from pub.dev and use SimpleBLE from Dart programs on Windows, macOS and Linux to scan, connect, use GATT and host a local peripheral.
 ---
 
-SimpleDartBLE exposes SimpleBLE to Dart with futures, streams, and one object per Bluetooth object. Flutter apps use it through [SimpleFlutterBLE](../simpleflutterble/usage), which re-exports this API, so this page covers both.
+SimpleDartBLE exposes SimpleBLE to Dart with futures, streams, and one object per Bluetooth object. Flutter apps use it through [SimpleFltBLE](../simplefltble/usage), which re-exports this API, so this page covers both.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ SimpleDartBLE exposes SimpleBLE to Dart with futures, streams, and one object pe
 dart pub add simpledartble
 ```
 
-The package carries the native SimpleBLE library for every supported platform, and its build hook picks the one your build targets, so nothing is compiled or downloaded during your build. In a Flutter app, add [SimpleFlutterBLE](../simpleflutterble/usage) instead.
+The package carries the native SimpleBLE library for every supported platform, and its build hook picks the one your build targets, so nothing is compiled or downloaded during your build. In a Flutter app, add [SimpleFltBLE](../simplefltble/usage) instead.
 
 ## First scan
 
@@ -168,7 +168,7 @@ Other platforms throw `OperationNotSupportedException` for both.
 
 ## Platform notes
 
-- **Android**: Android apps use SimpleDartBLE through SimpleFlutterBLE, which loads its native library and gives SimpleBLE the application context when the app starts. Without it, `Adapter.getAdapters()` throws a `StateError` that names it.
-- **macOS**: Bluetooth permission belongs to the app that runs the code. A Dart program run from a terminal uses the terminal app's permission, and macOS asks for it the first time; a Flutter app uses its own, with the `Info.plist` entry and entitlement from [SimpleFlutterBLE's app setup](../simpleflutterble/usage#app-setup).
+- **Android**: Android apps use SimpleDartBLE through SimpleFltBLE, which loads its native library and gives SimpleBLE the application context when the app starts. Without it, `Adapter.getAdapters()` throws a `StateError` that names it.
+- **macOS**: Bluetooth permission belongs to the app that runs the code. A Dart program run from a terminal uses the terminal app's permission, and macOS asks for it the first time; a Flutter app uses its own, with the `Info.plist` entry and entitlement from [SimpleFltBLE's app setup](../simplefltble/usage#app-setup).
 - **Linux**: SimpleDartBLE talks to BlueZ over the D-Bus system bus, so the user needs access to it, as described in [Bluetooth Permissions](../fundamentals/permissions).
 - **Web**: Flutter's web platform can't load native libraries, so SimpleDartBLE doesn't support it.

@@ -5,18 +5,18 @@
   </picture>
 </p>
 
-# SimpleFlutterBLE
+# SimpleFltBLE
 
 **Build Bluetooth once. Ship it everywhere.**
 
-SimpleFlutterBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to
+SimpleFltBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to
 Flutter apps on Android, iOS, macOS, Windows, and Linux. Discover and connect
 Bluetooth peripherals, read and write GATT values, subscribe to notifications,
 and host local GATT services through one API, with futures and streams. It is
 [SimpleDartBLE](https://pub.dev/packages/simpledartble)'s API, with the setup
 Flutter apps need on Android.
 
-## Why SimpleFlutterBLE
+## Why SimpleFltBLE
 
 - **One cross-platform API:** Keep your Bluetooth code the same on Android, iOS, macOS, Windows, and Linux, and in Dart programs on the desktop through SimpleDartBLE.
 - **Native underneath:** Use the Android Bluetooth stack, CoreBluetooth, WinRT, and BlueZ through one maintained stack.
@@ -25,18 +25,18 @@ Flutter apps need on Android.
 
 ## Support and resources
 
-- **Documentation:** The [usage guide](https://docs.simpleble.org/simpleflutterble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=support) and [example app](https://github.com/simpleble/simpleble/tree/main/examples/simpleflutterble) cover every API.
-- **Commercial support:** Visit [simpleble.org](https://simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
+- **Documentation:** The [usage guide](https://docs.simpleble.org/simplefltble/usage?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=support) and [example app](https://github.com/simpleble/simpleble/tree/main/examples/simplefltble) cover every API.
+- **Commercial support:** Visit [simpleble.org](https://simpleble.org/?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=support) or [email us](mailto:contact@simpleble.org) about licensing and professional services.
 - **Community:** Ask questions and share projects in [GitHub Discussions](https://github.com/simpleble/simpleble/discussions).
-- **Dongl:** Prototype and ship with the [official SimpleBLE USB adapter](https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=support).
-- **Contribute:** Send changes to [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simpleflutterble); the [development guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpledartble-development.md) covers builds and tests.
+- **Dongl:** Prototype and ship with the [official SimpleBLE USB adapter](https://www.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=support).
+- **Contribute:** Send changes to [simpleble/simpleble](https://github.com/simpleble/simpleble/tree/main/simplefltble); the [development guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpledartble-development.md) covers builds and tests.
 
 ## Get started
 
 Use Flutter 3.38 or newer:
 
 ```sh
-flutter pub add simpleflutterble
+flutter pub add simplefltble
 ```
 
 The package includes the native SimpleBLE library for every supported platform,
@@ -45,7 +45,7 @@ so nothing is compiled during your build.
 Scan for five seconds and print what was found:
 
 ```dart
-import 'package:simpleflutterble/simpleflutterble.dart';
+import 'package:simplefltble/simplefltble.dart';
 
 Future<void> scan() async {
   final adapter = (await Adapter.getAdapters()).first;
@@ -59,7 +59,7 @@ Future<void> scan() async {
 
 ## Permissions
 
-On Android, SimpleFlutterBLE's manifest declares `BLUETOOTH_SCAN`,
+On Android, SimpleFltBLE's manifest declares `BLUETOOTH_SCAN`,
 `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`. Request them at runtime before
 using an adapter, for example with
 [permission_handler](https://pub.dev/packages/permission_handler), and set your
@@ -138,7 +138,7 @@ Characteristics have `onWrite`, `onSubscribed`, and `onUnsubscribed`, and
 
 ## Use a Dongl
 
-A [Dongl](https://docs.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=dongl) is a USB Bluetooth adapter made for
+A [Dongl](https://docs.simpleble.org/dongl?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=dongl) is a USB Bluetooth adapter made for
 SimpleBLE. Its backend is on by default on Windows, macOS, and Linux; use the
 adapters of the Dongl backend:
 
@@ -170,12 +170,12 @@ before `connect()`.
 | Windows 10 or newer | x64, arm64 | |
 | Linux with glibc 2.28 or newer | x64, arm64 | BlueZ and the D-Bus library |
 
-See [Bluetooth permissions](https://docs.simpleble.org/fundamentals/permissions?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=platforms)
+See [Bluetooth permissions](https://docs.simpleble.org/fundamentals/permissions?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=platforms)
 for the setup each platform needs.
 
 ## Versions
 
-SimpleFlutterBLE follows SimpleBLE's release versions, `X.Y.Z`, and uses the
+SimpleFltBLE follows SimpleBLE's release versions, `X.Y.Z`, and uses the
 SimpleDartBLE of the same version.
 
 ## License
@@ -184,10 +184,10 @@ SimpleDartBLE follows the [SimpleBLE license](https://github.com/simpleble/simpl
 the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
 and commercial use needs a commercial license. We offer free commercial licenses
 for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
-or [leave us a message](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=license) to discuss your use
+or [leave us a message](https://www.simpleble.org/contact?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=license) to discuss your use
 case. Commercial licenses carry no royalties or revenue sharing; see the
-[licensing page](https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=license) for terms.
+[licensing page](https://docs.simpleble.org/licensing?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=license) for terms.
 
 ---
 
-**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=github&utm_medium=referral&utm_campaign=simpleflutterble_readme&utm_content=footer).
+**SimpleBLE** is a project powered by [The California Open Source Company](https://californiaopensource.com/?utm_source=github&utm_medium=referral&utm_campaign=simplefltble_readme&utm_content=footer).

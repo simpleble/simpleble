@@ -1,4 +1,4 @@
-name: simpleflutterble
+name: simplefltble
 description: >-
   SimpleBLE for Flutter. Discover and connect Bluetooth peripherals, read and write GATT values, subscribe
   to notifications, and host GATT services on Android, iOS, and desktop.
@@ -6,7 +6,7 @@ version: 1.2.1
 homepage: https://simpleble.org
 repository: https://github.com/simpleble/simpleble
 issue_tracker: https://github.com/simpleble/simpleble/issues
-documentation: https://docs.simpleble.org/simpleflutterble/usage
+documentation: https://docs.simpleble.org/simplefltble/usage
 topics:
   - bluetooth
   - ble
@@ -16,7 +16,7 @@ environment:
   sdk: ^3.10.0
   flutter: ">=3.38.0"
 
-# NOTE: SimpleFlutterBLE re-exports SimpleDartBLE's API. Its Android module and
+# NOTE: SimpleFltBLE re-exports SimpleDartBLE's API. Its Android module and
 # SimpleDartBLE's native library call each other, so both packages always have
 # the same version.
 dependencies:

@@ -131,7 +131,7 @@ SIMPLEDARTBLE_EXPORT void simpledartble_on_log(int level, const char* module, co
 /**
  * @brief Whether SimpleBLE can reach the platform.
  *
- * False only on Android until SimpleFlutterBLE's initializer loads the library, which gives SimpleBLE the JVM.
+ * False only on Android until SimpleFltBLE's initializer loads the library, which gives SimpleBLE the JVM.
  */
 SIMPLEDARTBLE_EXPORT bool simpledartble_platform_ready(void);
 
