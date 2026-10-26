@@ -12,10 +12,13 @@ simpleswiftble/
 ├── Tests/SimpleSwiftBLETests/    Tests against PLAIN
 ├── scripts/build-xcframework.sh  Builds SimpleCBLE into build/<flavor>/CSimpleBLE.xcframework
 ├── scripts/package.sh            Assembles the package that simpleble/simpleswiftble publishes
+├── .spi.yml                      Swift Package Index configuration, published with the package
 └── build/                        Generated, ignored by git
 ```
 
 Applications depend on [simpleble/simpleswiftble](https://github.com/simpleble/simpleswiftble), which CI generates.
+Its `.spi.yml` lets the [Swift Package Index](https://swiftpackageindex.com) build and host the DocC documentation of
+`SimpleSwiftBLE` once the package is listed there.
 `Package.swift` stays at the repository root because SwiftPM names a local package after its folder: in
 `simpleswiftble/`, it would clash with `examples/simpleswiftble`, whose package depends on it.
 
