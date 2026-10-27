@@ -186,7 +186,7 @@ for the setup each platform needs.
 
 SimpleGoBLE follows SimpleBLE's release versions. `go get` picks the latest
 stable release, `vX.Y.Z`, and development builds of the main branch are tagged
-`vX.Y.Z-devN`:
+`vX.Y.Z-dev.N`:
 
 ```sh
 go get github.com/simpleble/simplegoble@main

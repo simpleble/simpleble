@@ -52,7 +52,7 @@ each published SimpleBLE release, `publish-simpleswiftble` in `ci_main.yml` upda
 with read and write access to its contents:
 
 1. It builds the native xcframework and attaches `CSimpleBLE.xcframework.zip` to a draft release `vX.Y.Z` or
-   `vX.Y.Z-devN` there. Development builds are prereleases.
+   `vX.Y.Z-dev.N` there. Development builds are prereleases.
 2. It replaces the repository's files with the output of `scripts/package.sh`: the sources, README, license, and a
    `Package.swift` that points at that archive and its checksum.
 3. It pushes the commit to `main` and its tag in one atomic push, then publishes the release.
@@ -62,8 +62,8 @@ valid. If the tag already exists, the run only publishes its release if it is st
 tag or its archive.
 
 Development builds are never deleted. Each has its own release with one archive, so GitHub's limit of 1000 assets per
-release never applies. Applications follow the latest development build with `branch: "main"`. SwiftPM compares the `-devN` suffix
-as text, so `1.2.1-dev99` sorts after `1.2.1-dev100`, and a single development build is pinned with `exact:`.
+release never applies. Applications follow the latest development build with `branch: "main"`. SwiftPM compares the number after `-dev.`
+as a number, so `1.3.0-dev.99` sorts before `1.3.0-dev.100`, and a single development build is pinned with `exact:`.
 
 ## How a call reaches SimpleBLE
 

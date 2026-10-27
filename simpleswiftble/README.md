@@ -174,7 +174,7 @@ handlers are `async`, so they can wait for the user.
 
 SimpleSwiftBLE follows SimpleBLE's release versions. Stable releases use
 `X.Y.Z`, and development builds of the main branch are published as
-`X.Y.Z-devN`; depend on one with `exact:`, or on the latest with
+`X.Y.Z-dev.N`; depend on one with `exact:`, or on the latest with
 `branch: "main"`.
 
 ## License

@@ -13,7 +13,6 @@
     <DefineConstants Condition="'$(SimpleSharpBLEStaticLink)' == 'true'">$(DefineConstants);SIMPLESHARPBLE_STATIC</DefineConstants>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
-    <PackageVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-dev([0-9]+)$', '-dev.$1'))</PackageVersion>
     <_NativeLibraryMajorVersion>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^[0-9]+').Value)</_NativeLibraryMajorVersion>
     <Description>C# and .NET bindings for the cross-platform SimpleBLE Bluetooth Low Energy library, for Windows, macOS, Linux, Android, iOS, and Mac Catalyst. Free for non-commercial use; commercial use requires a license.</Description>
     <IsPackable>true</IsPackable>

@@ -197,10 +197,10 @@ for the setup each platform needs.
 
 SimpleRsBLE follows SimpleBLE's release versions. Cargo picks the latest stable
 release, and development builds of the main branch are published as
-pre-releases named `X.Y.Z-devN`. Pin one by its exact version to use it:
+pre-releases named `X.Y.Z-dev.N`. Pin one by its exact version to use it:
 
 ```sh
-cargo add simplersble@=X.Y.Z-devN
+cargo add simplersble@=X.Y.Z-dev.N
 ```
 
 ## License

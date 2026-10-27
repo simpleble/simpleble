@@ -76,7 +76,7 @@ repository's `LICENSE.md`, and runs `nitrogen` and the TypeScript build.
 `setup-version` writes the build's version into `simplernble/package.json`.
 `publish-simplernble` in `ci_main.yml` publishes the packed tarball:
 
-- Pushes to `main` publish `X.Y.Z-devN` under the `dev` tag.
+- Pushes to `main` publish `X.Y.Z-dev.N` under the `dev` tag.
 - Published GitHub releases publish `X.Y.Z` under `latest`.
 - A version that is already on npm is skipped.
 

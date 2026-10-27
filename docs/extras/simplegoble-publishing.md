@@ -56,8 +56,8 @@ directory, using the published module itself.
 ## Versions and publication
 
 The existing `setup-version` action reads the root `VERSION`. Main builds use
-`X.Y.Z-devN`; a published SimpleBLE GitHub release uses `X.Y.Z`. The corresponding
-Go tags are `vX.Y.Z-devN` and `vX.Y.Z`. Major versions 2 and above add Go's
+`X.Y.Z-dev.N`; a published SimpleBLE GitHub release uses `X.Y.Z`. The corresponding
+Go tags are `vX.Y.Z-dev.N` and `vX.Y.Z`. Major versions 2 and above add Go's
 `/vN` module and import suffix during packaging.
 
 After the main release gate succeeds, `publish-simplegoble` in `ci_main.yml`

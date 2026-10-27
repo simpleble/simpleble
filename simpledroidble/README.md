@@ -172,7 +172,7 @@ before changing them.
 
 SimpleDroidBLE follows SimpleBLE's release versions. Stable releases use
 `X.Y.Z`, and development builds of the main branch are published as
-`X.Y.Z-devN`.
+`X.Y.Z-dev.N`.
 
 ## License
 

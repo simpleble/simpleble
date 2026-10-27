@@ -24,7 +24,7 @@ function(parse_version FILE PROJECT)
     configure_file(${FILE} "${CMAKE_CURRENT_BINARY_DIR}/VERSION") # Required to re-run cmake on version change
     file(READ ${FILE} VERSION_STR)
     string(STRIP ${VERSION_STR} VERSION_STR)
-    if(${VERSION_STR} MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)(-[a-zA-Z0-9]+)?")
+    if(${VERSION_STR} MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)(-[a-zA-Z0-9.]+)?")
         set(FLAVOR "")
         if(NOT "${CMAKE_MATCH_4}" STREQUAL "")
             string(SUBSTRING ${CMAKE_MATCH_4} 1 -1 FLAVOR)

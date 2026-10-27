@@ -70,7 +70,7 @@ utils/gradle/gradlew -p simplejavable/java verifyReleasePublication \
 
 ## Publishing
 
-CI publishes and releases `-devN` versions from `main`. Publishing a GitHub release publishes and releases the stable
+CI publishes and releases `-dev.N` versions from `main`. Publishing a GitHub release publishes and releases the stable
 version. Maven Central versions are immutable, so every development build must have a unique suffix.
 
 To run the same signed Central Portal flow manually:

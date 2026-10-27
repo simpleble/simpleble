@@ -29,7 +29,7 @@ CI maps `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY`,
 
 ## Publishing
 
-Main pushes publish immutable `-devN` versions. Published GitHub releases publish the stable version. The CI job runs
+Main pushes publish immutable `-dev.N` versions. Published GitHub releases publish the stable version. The CI job runs
 these commands in order:
 
 ```bash

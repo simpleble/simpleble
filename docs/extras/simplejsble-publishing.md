@@ -45,7 +45,7 @@ C++ runtime and a delay-loaded `node.exe`, which Electron needs.
 `setup-version` writes the build's version into `simplejsble/package.json`.
 `publish-simplejsble` in `ci_main.yml` publishes the packed tarball:
 
-- Pushes to `main` publish `X.Y.Z-devN` under the `dev` tag.
+- Pushes to `main` publish `X.Y.Z-dev.N` under the `dev` tag.
 - Published GitHub releases publish `X.Y.Z` under `latest`.
 - A version that is already on npm is skipped.
 

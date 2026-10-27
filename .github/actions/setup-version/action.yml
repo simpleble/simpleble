@@ -23,7 +23,9 @@ runs:
           if [ -n "$latest_tag" ]; then
             commits=$(git rev-list --count "${latest_tag}"..HEAD)
             # Since HEAD is not tagged and latest_tag exists, commits > 0. Append the dev suffix.
-            version_str="${version_str}-dev${commits}"
+            # NOTE: The dot makes the commit count its own identifier, which semver compares as a number.
+            # Without it, Go and Cargo compare "dev94" and "dev135" as text and rank dev94 higher.
+            version_str="${version_str}-dev.${commits}"
           else
             # If no tags found, exit with error
             echo "Error: No tags found in the repository history." >&2
