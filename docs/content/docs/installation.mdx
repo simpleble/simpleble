@@ -21,6 +21,7 @@ SimpleBLE is a family of libraries. Start by choosing the binding that matches y
 | [SimpleJSBLE](./simplejsble/usage) | JavaScript / TypeScript | Production-ready | Node.js and Electron apps | npm |
 | [SimpleRnBLE](./simplernble/usage) | JavaScript / TypeScript | Production-ready | React Native apps on iOS and Android | npm |
 | [SimpleKtBLE](./simplektble/usage) | Kotlin Multiplatform | Production-ready | Shared Kotlin code for Android, iOS, and desktop | Maven Central |
+| [SimpleDelphiBLE](./simpledelphible/usage) | Delphi / Free Pascal | Production-ready | VCL, FMX, and Lazarus apps; test and industrial tooling | Boss or GitHub release |
 | [SimpleDroidBLE](./simpledroidble/usage) | Kotlin / Android | Deprecated | Existing Android-only applications; new ones use SimpleKtBLE | Maven Central or local composite build |
 | [SimpleBLE for Unreal](./simpleunrealble/usage) | Unreal Engine / Blueprint / C++ | Fab plugin | Unreal projects that need BLE device integration | Fab or project plugin |
 | [SimpleBLE for Unity](./simpleunityble/index) | Unity / C# | Development | Unity projects on Windows and Android | Asset Store package |
@@ -42,7 +43,7 @@ See [Bluetooth Permissions](./fundamentals/permissions) for the OS-specific perm
 
 ## Install commands
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)", "Unity", "SimpleAIBLE"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Delphi", "Android (deprecated)", "Unity", "SimpleAIBLE"]}>
 <Tab value="C++">
 
 Build and install the C++ library from source:
@@ -223,6 +224,20 @@ kotlin {
 Each target's artifact includes the native SimpleBLE library it needs, for Android, iOS, macOS, Windows, and
 Linux, so nothing is compiled during your build. See [SimpleKtBLE Usage](./simplektble/usage) for permissions
 and supported targets.
+
+</Tab>
+<Tab value="Delphi">
+
+Install SimpleDelphiBLE with [Boss](https://github.com/HashLoad/boss), for Delphi 11 or newer or Free Pascal 3.2.2
+or newer:
+
+```sh
+boss install github.com/simpleble/simpledelphible
+```
+
+Or download a [release](https://github.com/simpleble/simpledelphible/releases) and add its `source` folder to your
+search path. Both include the native SimpleBLE libraries for Windows, macOS, and Linux; deploy the ones for your target
+with your application. See [SimpleDelphiBLE Usage](./simpledelphible/usage) for deployment and Free Pascal settings.
 
 </Tab>
 <Tab value="Android (deprecated)">

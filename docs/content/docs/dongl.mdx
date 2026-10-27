@@ -28,7 +28,7 @@ The [Dongl QuickStart](https://simpleble.org/dongl/quickstart) installs SimplePy
 | --- | --- |
 | Firmware | N-Series v0.1.0 |
 | Host | Windows, macOS, or Linux, over USB (on Linux, see [Dongl permissions](./simpleble/usage#dongl-permissions-on-linux)) |
-| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), Rust ([SimpleRsBLE](./simplersble/usage)), JavaScript ([SimpleJSBLE](./simplejsble/usage)), and Kotlin Multiplatform ([SimpleKtBLE](./simplektble/usage)), version 1.2.1 or later |
+| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), Rust ([SimpleRsBLE](./simplersble/usage)), JavaScript ([SimpleJSBLE](./simplejsble/usage)), Kotlin Multiplatform ([SimpleKtBLE](./simplektble/usage)), and Delphi ([SimpleDelphiBLE](./simpledelphible/usage)), version 1.2.1 or later |
 
 The firmware acts as a BLE central. It supports scanning with scan responses and service data, connections, reads and writes, notifications and indications, descriptors, MTU reporting, and pairing with bonding. Reads return values of up to 512 bytes.
 
@@ -36,7 +36,7 @@ The firmware acts as a BLE central. It supports scanning with scan responses and
 
 From SimpleBLE 1.2.1, the Dongl backend is on by default, so plugged-in Dongls appear next to the computer's own Bluetooth adapter. To use only Dongls, take the adapters of the Dongl backend, as below. To leave Dongls out, turn the backend off before any other SimpleBLE call. With 1.2.0, turn it on first. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
 
-<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform"]}>
+<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform", "Delphi"]}>
 <Tab value="C++">
 
 ```cpp
@@ -180,6 +180,24 @@ import org.simplektble.Backend
 
 val adapter = Backend.getDongl().getAdapters().first()
 println("${adapter.identifier} [${adapter.address}]")
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+uses
+  SysUtils,
+  SimpleDelphiBLE;
+
+var
+  Adapters: TArray<TBleAdapter>;
+begin
+  Adapters := TBleBackend.GetDongl.GetAdapters;
+  if Length(Adapters) = 0 then
+    raise Exception.Create('No Dongl found');
+  WriteLn(Adapters[0].Identifier, ' [', Adapters[0].Address, ']');
+end;
 ```
 
 </Tab>
@@ -557,8 +575,9 @@ Callbacks run on a worker thread and can block while the user answers. A request
 | Rust | `simplersble::advanced::dongl::set_*_callback` |
 | Node.js | `Peripheral.setPasskeyRequestHandler`, `setPasskeyDisplayHandler`, `setNumericComparisonHandler` |
 | Kotlin Multiplatform | `Peripheral.setPasskeyRequestHandler`, `setPasskeyDisplayHandler`, `setNumericComparisonHandler` |
+| Delphi | `TBlePeripheral.OnPasskeyRequest`, `OnPasskeyDisplay`, `OnNumericComparison` |
 
-<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform"]}>
+<Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform", "Delphi"]}>
 <Tab value="C++">
 
 ```cpp
@@ -693,6 +712,23 @@ peripheral.connect()
 ```
 
 </Tab>
+<Tab value="Delphi">
+
+```pascal
+procedure TPairing.NumericComparison(Sender: TBlePeripheral; const Passkey: string; var Accept: Boolean);
+var
+  Answer: string;
+begin
+  Write('Does the device show ', Passkey, '? [y/N] ');
+  ReadLn(Answer);
+  Accept := Answer = 'y';
+end;
+
+Peripheral.OnNumericComparison := Pairing.NumericComparison;
+Peripheral.Connect;
+```
+
+</Tab>
 </Tabs>
 
 Bonds are stored on the Dongl, not on the computer:
@@ -718,6 +754,7 @@ The call blocks until the link is secured, for up to 35 seconds. If the link alr
 | Rust | `simplersble::advanced::dongl::secure_connection(&peripheral, mitm)` |
 | Node.js | `Peripheral.secureConnection(mitm)` |
 | Kotlin Multiplatform | `Peripheral.secureConnection(mitm)` |
+| Delphi | `TBlePeripheral.SecureConnection(Mitm)` |
 
 ## Update the firmware
 

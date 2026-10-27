@@ -1,0 +1,30 @@
+---
+title: Examples
+description: Runnable Bluetooth client and GATT hosting examples for SimpleDelphiBLE.
+---
+
+The [examples](https://github.com/simpleble/simpleble/tree/main/examples/simpledelphible)
+live alongside the other SimpleBLE binding examples. Each is a console program
+that asks which adapter, peripheral, or characteristic to use:
+
+- **list_adapters**: Print whether Bluetooth is enabled, and each adapter's name and address.
+- **list_backends**: List the backends and the adapters each one provides.
+- **power_cycle**: Power each adapter off and on again.
+- **scan**: Discover peripherals and print their addresses, transmit power, manufacturer data, and services.
+- **connect**: Connect to a peripheral and list its services, characteristics, and capabilities.
+- **read**: Connect to a peripheral and read a characteristic.
+- **write**: Connect to a peripheral and write text to a characteristic.
+- **notify**: Connect to a peripheral and print a characteristic's notifications for five seconds.
+- **peripheral**: Host a GATT service that echoes writes to subscribed clients.
+- **dongl**: Scan with a Dongl, connect, and answer pairing requests.
+
+Open an example's `.dpr` file in RAD Studio or Lazarus, or build it with Free
+Pascal:
+
+```sh
+fpc -Fu<simpledelphible>/source -Fi<simpledelphible>/source -Fl<simpledelphible>/lib/<platform> scan.dpr
+```
+
+Keep the native libraries for your platform next to the program when you run it.
+
+For installation, ownership, and threads, see [Usage](./usage).

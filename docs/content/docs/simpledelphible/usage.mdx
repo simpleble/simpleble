@@ -1,0 +1,351 @@
+---
+title: Usage
+description: Install and use the SimpleDelphiBLE binding for Delphi and Free Pascal.
+---
+
+SimpleDelphiBLE exposes SimpleBLE's Bluetooth client and GATT hosting APIs to
+Delphi and Free Pascal on Windows, macOS, and Linux. Its `SimpleDelphiBLE` unit
+is the only one your code lists.
+
+## Install
+
+Use Delphi 11 or newer, or Free Pascal 3.2.2 or newer with Lazarus. Install
+with [Boss](https://github.com/HashLoad/boss):
+
+```sh
+boss install github.com/simpleble/simpledelphible
+```
+
+Or download a [release](https://github.com/simpleble/simpledelphible/releases)
+and add its `source` folder to your project's search path. Both contain:
+
+- `source`: the `SimpleDelphiBLE` units.
+- `lib/<platform>`: the native SimpleBLE libraries, prebuilt for each platform.
+- `examples`: console programs that use every API.
+
+Deploy the libraries for your target with your application:
+
+| Target | Libraries | Where they go |
+| --- | --- | --- |
+| Windows x86 | `lib/win32/simplecble.dll`, `simpleble.dll` | Next to the executable |
+| Windows x64 | `lib/win64/simplecble.dll`, `simpleble.dll` | Next to the executable |
+| macOS | `lib/macos-<arch>/libsimplecble.dylib`, `libsimpleble.dylib` | The app bundle's `Contents/MacOS` folder; in Delphi, add them in the Deployment Manager |
+| Linux | `lib/linux-<arch>/libsimplecble.so`, `libsimpleble.so` | Next to the executable or on the library path |
+
+The Windows libraries carry their own C++ runtime, so they need no
+redistributable.
+
+## Platform requirements
+
+Linux uses BlueZ, D-Bus, and the system C++ runtime. Windows uses its Bluetooth
+stack. macOS apps need Bluetooth usage descriptions in `Info.plist`. Follow the
+platform's [Bluetooth permission setup](../fundamentals/permissions).
+
+## Free Pascal and Lazarus
+
+SimpleDelphiBLE's units compile in Delphi mode with Unicode strings. Use the
+same mode in your units, and on macOS and Linux list `cthreads` first in your
+program's `uses` clause:
+
+```pascal
+program scan;
+
+{$MODE DELPHIUNICODE}
+
+uses
+  {$IFDEF UNIX}cthreads,{$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+```
+
+With the command-line compiler, pass the `source` folder with `-Fu` and `-Fi`
+and the library folder with `-Fl`. In Lazarus, add them to the project's
+compiler options.
+
+## List adapters
+
+```pascal
+var
+  Adapter: TBleAdapter;
+begin
+  WriteLn('Bluetooth enabled: ', TBleAdapter.IsBluetoothEnabled);
+  for Adapter in TBleAdapter.GetAdapters do
+    WriteLn(Adapter.Identifier, ' [', Adapter.Address, ']');
+end;
+```
+
+`TBleBackend.GetBackends` lists the backends, and `GetNative`, `GetDongl`, and
+`GetSimulator` return one of them. A backend has an `Identifier`,
+`IsBluetoothEnabled`, and `GetAdapters` for its own adapters.
+
+## Ownership
+
+SimpleDelphiBLE keeps one object for each SimpleBLE object: the same adapter,
+peripheral, or backend always comes back as the same Delphi object, whether it
+came from a list or an event. Compare them with `=`, and keep them in lists or
+dictionaries.
+
+SimpleDelphiBLE owns adapters, peripherals, backends, local services, and local
+characteristics, and frees them when the program ends. Freeing one raises
+`EInvalidOperation`. Your application owns the `TBleLocalPeripheral` objects it
+creates: stop each one, then free it, which also frees its services and
+characteristics.
+
+## Events and threads
+
+Events are `procedure ... of object` properties, like those of VCL components.
+Assign a method to receive an event, and `nil` to stop receiving it.
+`TSimpleDelphiBLE.EventDelivery` decides where handlers run:
+
+- `edAuto`, the default: on the main thread in VCL, FMX, and Lazarus
+  applications, so handlers can update forms directly; on SimpleDelphiBLE's
+  event thread in console programs.
+- `edMainThread`: always on the main thread, through `TThread.Queue`. A console
+  program then calls `CheckSynchronize` to run them.
+- `edEventThread`: always on the event thread.
+
+Either way, one handler runs at a time, in the order SimpleBLE reported the
+events. An exception that a handler raises goes to
+`TSimpleDelphiBLE.OnHandlerException`. Without that handler, the application's
+exception handler receives exceptions raised on the main thread, and
+`ShowException` the others.
+
+Three handlers answer SimpleBLE instead, so they run on a SimpleBLE thread,
+which waits for them: a local characteristic's `OnReadRequest`, and a Dongl
+peripheral's `OnPasskeyRequest` and `OnNumericComparison`.
+
+Calls that wait for the Bluetooth stack, such as `Connect`, `Read`, or
+`ScanFor`, return when the operation finishes. They're safe from any thread and
+never need the main thread, so GUI applications make them from a worker thread:
+
+```pascal
+TTask.Run(
+  procedure
+  begin
+    Peripheral.Connect;
+    TThread.Queue(nil,
+      procedure
+      begin
+        StatusLabel.Caption := 'Connected';
+      end);
+  end);
+```
+
+Free Pascal 3.2 has no anonymous methods; use `TThread.ExecuteInThread` with a
+method instead.
+
+## Configure backends
+
+`TBleConfig` holds process-wide settings, grouped by backend: `SimpleBluez`
+(Linux), `WinRT` (Windows), `CoreBluetooth` (macOS), `Android`, and `Dongl`.
+Set them at startup, before the first call that gets a backend or an adapter:
+
+```pascal
+TBleConfig.SimpleBluez.ConnectionTimeoutMs := 5000;
+TBleConfig.Dongl.UseDonglBackend := False;
+```
+
+Each group's `Reset` restores its defaults, and `TBleConfig.ResetAll` restores
+them all.
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE. Its backend
+is on by default; take the adapters of the Dongl backend:
+
+```pascal
+Adapters := TBleBackend.GetDongl.GetAdapters;
+if Length(Adapters) = 0 then
+  raise Exception.Create('No Dongl found');
+```
+
+A Dongl adapter works like any other adapter. Pairing through it happens
+without the operating system, so your application answers pairing requests.
+Assign the handlers your device needs on the peripheral before `Connect`:
+
+- `OnPasskeyRequest(Sender; var Passkey: string; var Accept: Boolean)`: set
+  `Passkey` to the six digits the user typed and `Accept` to `True`, or leave
+  `Accept` as `False` to reject.
+- `OnPasskeyDisplay(Sender; const Passkey: string)`: show the passkey so the
+  user can type it on the device.
+- `OnNumericComparison(Sender; const Passkey: string; var Accept: Boolean)`:
+  set `Accept` to `True` only if the device shows the same six digits.
+
+```pascal
+procedure TPairing.NumericComparison(Sender: TBlePeripheral; const Passkey: string; var Accept: Boolean);
+var
+  Answer: string;
+begin
+  Write('Does the device show ', Passkey, '? [y/N] ');
+  ReadLn(Answer);
+  Accept := Answer = 'y';
+end;
+
+Peripheral.OnNumericComparison := Pairing.NumericComparison;
+Peripheral.Connect;
+```
+
+`OnPasskeyRequest` and `OnNumericComparison` run on SimpleBLE's pairing thread
+and can wait while the user answers. A GUI application that asks with a dialog
+uses `TThread.Synchronize` in the handler and calls `Connect` from a worker
+thread, so the main thread is free to show it. An exception, or a passkey other
+than six digits, rejects pairing. `OnPasskeyDisplay` is an ordinary event.
+
+Assigning a pairing handler on a peripheral of another backend raises
+`EBleOperationNotSupported`, and so does `SecureConnection(Mitm)`, which
+secures a Dongl connection with LE Secure Connections.
+
+The [dongl example](./examples) scans with a Dongl and answers pairing requests
+from the terminal.
+
+## Power and scan control
+
+Adapters provide `IsPowered`, `PowerOn`, `PowerOff`, `ScanStart`, `ScanStop`,
+`ScanIsActive`, and `ScanFor(TimeoutMs)`. Power control follows the platform's
+capabilities. `ScanFor` returns when the scan ends; use `ScanStart` and
+`ScanStop` when your application controls timing.
+
+The events `OnPowerOn`, `OnPowerOff`, `OnScanStart`, and `OnScanStop` report
+these changes.
+
+## Discover peripherals
+
+After scanning, `ScanGetResults` returns the peripherals found.
+`GetPairedPeripherals` and `GetConnectedPeripherals` return the adapter's
+paired and connected devices.
+
+`OnScanFound` and `OnScanUpdated` receive each advertisement as it arrives,
+with the peripheral that sent it.
+
+On macOS, `RetrieveCachedPeripherals(Identifiers)` returns the peripherals
+CoreBluetooth already knows, by the identifiers `Address` returned earlier,
+without scanning. Unknown identifiers are skipped, and each peripheral is the
+same object a scan returns, so `Connect` reaches it if it is in range. The
+adapter must be powered on. Other platforms raise `EBleOperationNotSupported`.
+
+Peripherals have the properties `Identifier`, `Address`, `AddressType`, `Rssi`,
+`TxPower`, and `IsConnectable`, and `ManufacturerData` returns the
+manufacturer data by company. `Rssi` and `TxPower` are `-32768` when the
+platform doesn't report them. `Services` returns the advertised services and
+their service data before connecting, and the discovered GATT services after.
+
+## Connect and use GATT
+
+Use `Connect` and `Disconnect` to control the connection, `IsConnected` and
+`IsPaired` to check state, `Unpair` to remove pairing, and `Mtu` to query the
+negotiated MTU. `OnConnected` and `OnDisconnected` report connection changes.
+
+Read a peripheral's battery level:
+
+```pascal
+const
+  BatteryService = '0000180f-0000-1000-8000-00805f9b34fb';
+  BatteryLevel = '00002a19-0000-1000-8000-00805f9b34fb';
+
+Peripheral.Connect;
+try
+  WriteLn('Battery: ', Peripheral.Read(BatteryService, BatteryLevel)[0], '%');
+finally
+  Peripheral.Disconnect;
+end;
+```
+
+Each `TBleService` record has the service's `Uuid`, `Data`, and
+`Characteristics`, and each `TBleCharacteristic` its `Uuid`, `Descriptors`,
+and capabilities: `CanRead`, `CanWriteRequest`, `CanWriteCommand`, `CanNotify`,
+and `CanIndicate`. Use `Read`, `WriteRequest`, and `WriteCommand` for
+characteristics, and `ReadDescriptor` and `WriteDescriptor` for descriptors.
+UUIDs are full 128-bit UUID strings. Values are `TBytes`, and empty values are
+supported.
+
+`Notify(Service, Characteristic, OnValue)` and `Indicate` subscribe, and return
+once subscribed. Your `OnValue` handler receives each value with its service
+and characteristic UUIDs, as an ordinary event. `Unsubscribe` ends the
+subscription, and values that arrive later are dropped. Subscribing again to
+the same characteristic replaces the handler.
+
+## Host local GATT services
+
+`Adapter.CreateLocalPeripheral` creates a host. Add primary services with
+`AddService(Uuid)` and characteristics with
+`AddCharacteristic(Uuid, Capabilities)`, where `Capabilities` is a set of
+`lcRead`, `lcWriteRequest`, `lcWriteCommand`, `lcNotify`, and `lcIndicate`:
+
+```pascal
+Host := Adapter.CreateLocalPeripheral;
+Host.AddAdvertisedService(BatteryService);
+Battery := Host.AddService(BatteryService).AddCharacteristic(BatteryLevel, [lcRead, lcNotify]);
+Battery.SetValue(TBytes.Create(100));
+Host.Start;
+```
+
+Add advertisement UUIDs with `AddAdvertisedService`, manufacturer data with
+`SetAdvertisedManufacturerData(CompanyId, Data)`, and make the host
+non-connectable with `SetConnectable(False)`, for example to
+[advertise a beacon](../recipes/advertise#advertise-a-beacon). Configure the
+GATT layout and advertisement before `Start`, which publishes the services and
+starts advertising. `IsStarted` and `IsAdvertising` report state, and `Stop`
+ends hosting. After stopping, `RemoveAllServices` clears the layout so you can
+build another; the removed services' objects stay valid until you free the host.
+
+On macOS and Linux, `SetAdvertisementLocalName(Name)` sets the local name in
+the advertisement before `Start`, and `ClearAdvertisementLocalName` removes it.
+This changes only the advertisement, not the system's Bluetooth name. Other
+platforms raise `EBleOperationNotSupported`.
+
+A characteristic's `SetValue` updates the stored value and publishes it to
+subscribed clients on a best-effort basis, and `Value` returns the stored
+value. `OnWrite` receives each written value after it's stored, and may call
+`SetValue` to echo it to subscribers. `OnSubscribed` reports the first client
+subscribing, and `OnUnsubscribed` the last one leaving. The host's
+`OnClientConnected` and `OnClientDisconnected` receive the client's address or
+platform identifier.
+
+`OnReadRequest(Sender; var Value: TBytes)` supplies the value for each read
+instead of the stored one. It runs on a SimpleBLE thread, so set `Value`
+promptly from your application's data and make no Bluetooth calls in it.
+Assign `nil` to serve the stored value again.
+
+Stop the host before freeing it. Freeing it drops its events that haven't run
+yet; free it from the thread its events run on.
+
+The [peripheral example](./examples) hosts a service that echoes incoming writes.
+
+## Logging
+
+`TBleLogging.Level` sets how much SimpleBLE logs, from `llNone` to `llVerbose`.
+`TBleLogging.OnLog` receives each entry as a `TBleLogEntry` with its `Level`,
+`Module`, `FileName`, `Line`, `FunctionName`, and `Message`, as an ordinary
+event. `LogToStdout` and `LogToFile(Path)` write the log instead.
+
+## Errors
+
+A failed call raises an `EBleError` subclass with SimpleBLE's error code in
+`Code` and its message in `Message`:
+
+```pascal
+try
+  Peripheral.Read(BatteryService, BatteryLevel);
+except
+  on E: EBleNotConnected do
+    WriteLn('Connect first: ', E.Message);
+end;
+```
+
+The subclasses are `EBleInvalidArgument`, `EBleNotInitialized`,
+`EBleInvalidReference`, `EBleNotConnected`, `EBleServiceNotFound`,
+`EBleCharacteristicNotFound`, `EBleDescriptorNotFound`,
+`EBleOperationNotSupported`, `EBleOperationFailed`, `EBleWinRTAccessDenied`,
+`EBleWinRT`, `EBleCoreBluetooth`, and `EBleAdapterInUse`. Out-of-memory and
+unclassified failures raise `EBleError` itself.
+
+See the [examples](./examples) for runnable applications.
+
+## Versions
+
+SimpleDelphiBLE follows SimpleBLE's release versions: stable releases are
+`X.Y.Z`, and development builds of the main branch are `X.Y.Z-devN`.
+`TSimpleDelphiBLE.Version` returns the version of the SimpleBLE library in use.
+
+For binding development and local builds, see the
+[contributor guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpledelphible-development.md).
