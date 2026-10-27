@@ -36,13 +36,14 @@ with the `Quickstart`_. For tutorials, recipes, platform notes, and API referenc
 Dongl: Official SimpleBLE Hardware
 ----------------------------------
 
-`Dongl`_ is the official SimpleBLE hardware companion. Its N-Series firmware is available for nRF52840-based boards,
-with pre-loaded production hardware coming soon.
+`Dongl`_ is a USB Bluetooth adapter made for SimpleBLE. Its Bluetooth stack runs in firmware we develop together with
+the library, so it behaves the same on every Windows, macOS, and Linux computer.
 
 Use Dongl when you want firmware visibility, customizability, and direct support from the team building SimpleBLE.
 
-* Flash the Dongl N-Series firmware onto existing nRF52840 hardware for prototyping.
-* Join the waitlist for official pre-loaded Dongl hardware.
+* Plug in several Dongls next to the computer's own adapter; SimpleBLE lists each one as an adapter.
+* Get real device addresses on macOS and Windows, and answer pairing requests without system dialogs.
+* Evaluate the firmware on Nordic's nRF52840 Dongle or DK.
 
 Documentation and Support
 -------------------------
