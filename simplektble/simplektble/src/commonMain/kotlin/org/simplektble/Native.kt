@@ -54,6 +54,9 @@ internal expect object Native {
 
     fun adapterRegister(adapterId: Long, callback: AdapterCallback)
 
+    /** Releases an adapter and its peripherals, and ends their subscriptions. Their IDs then name nothing. */
+    fun adapterRelease(adapterId: Long)
+
     fun adapterIdentifier(adapterId: Long): String
 
     fun adapterAddress(adapterId: Long): String
@@ -167,6 +170,8 @@ internal expect object Native {
 
     fun localPeripheralRegister(peripheralId: Long, callback: LocalPeripheralCallback)
 
+    fun localPeripheralRelease(peripheralId: Long)
+
     fun localPeripheralAddAdvertisedService(peripheralId: Long, serviceUuids: Array<String>)
 
     fun localPeripheralSetAdvertisedManufacturerData(peripheralId: Long, companyId: Int, data: ByteArray)
@@ -176,6 +181,8 @@ internal expect object Native {
     fun localPeripheralSetAdvertisementLocalName(peripheralId: Long, name: String?)
 
     fun localPeripheralAddService(peripheralId: Long, uuid: String): Long
+
+    fun localPeripheralServices(peripheralId: Long): LongArray
 
     fun localPeripheralRemoveAllServices(peripheralId: Long)
 
@@ -187,11 +194,17 @@ internal expect object Native {
 
     fun localPeripheralIsAdvertising(peripheralId: Long): Boolean
 
+    fun localServiceRelease(serviceId: Long)
+
     fun localServiceUuid(serviceId: Long): String
 
     fun localServiceAddCharacteristic(serviceId: Long, uuid: String, capabilities: Int): Long
 
+    fun localServiceCharacteristics(serviceId: Long): LongArray
+
     fun localCharacteristicRegister(characteristicId: Long, callback: LocalCharacteristicCallback)
+
+    fun localCharacteristicRelease(characteristicId: Long)
 
     fun localCharacteristicUuid(characteristicId: Long): String
 

@@ -266,6 +266,25 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterRegister(JN
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterRelease(JNIEnv* env, jobject, jlong adapter_id) {
+    call(env, [adapter_id] {
+        // NOTE: SimpleBLE keeps an adapter's callbacks while anything holds the adapter, so they are cleared first.
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        adapter.set_callback_on_power_on({});
+        adapter.set_callback_on_power_off({});
+        adapter.set_callback_on_scan_start({});
+        adapter.set_callback_on_scan_stop({});
+        adapter.set_callback_on_scan_found({});
+        adapter.set_callback_on_scan_updated({});
+
+        // NOTE: The subscriptions end after the values queued before them, as on a disconnection.
+        auto ended = NativeCache::get().remove_adapter(adapter_id);
+        callback_runner.enqueue([ended = std::move(ended)] {
+            for (const auto& data_callback : ended) data_callback->on_ended();
+        });
+    });
+}
+
 extern "C" JNIEXPORT jstring JNICALL Java_org_simplektble_Native_adapterIdentifier(JNIEnv* env, jobject,
                                                                                                 jlong adapter_id) {
     return call(env, [adapter_id] {
@@ -652,6 +671,21 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_adapterCreateLoca
     });
 }
 
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralRelease(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    call(env, [peripheral_id] { NativeCache::get().remove_local_peripheral(peripheral_id); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localServiceRelease(
+    JNIEnv* env, jobject, jlong service_id) {
+    call(env, [service_id] { NativeCache::get().remove_local_service(service_id); });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localCharacteristicRelease(
+    JNIEnv* env, jobject, jlong characteristic_id) {
+    call(env, [characteristic_id] { NativeCache::get().remove_local_characteristic(characteristic_id); });
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralRegister(
     JNIEnv* env, jobject, jlong peripheral_id, jobject callback) {
     call(env, [peripheral_id, callback] {
@@ -727,6 +761,17 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_localPeripheralAd
     });
 }
 
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_localPeripheralServices(
+    JNIEnv* env, jobject, jlong peripheral_id) {
+    return call(env, [peripheral_id] {
+        std::vector<int64_t> service_ids;
+        for (auto service : NativeCache::get().local_peripheral(peripheral_id).services()) {
+            service_ids.push_back(NativeCache::get().add_local_service(std::move(service)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(service_ids).release();
+    });
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_localPeripheralRemoveAllServices(
     JNIEnv* env, jobject, jlong peripheral_id) {
     call(env, [peripheral_id] { NativeCache::get().local_peripheral(peripheral_id).remove_all_services(); });
@@ -778,6 +823,17 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_simplektble_Native_localServiceAddCh
         auto characteristic = NativeCache::get().local_service(service_id).add_characteristic(
             SimpleJNI::String<SimpleJNI::LocalRef>(uuid).str(), std::move(native_capabilities));
         return static_cast<jlong>(NativeCache::get().add_local_characteristic(std::move(characteristic)));
+    });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_localServiceCharacteristics(
+    JNIEnv* env, jobject, jlong service_id) {
+    return call(env, [service_id] {
+        std::vector<int64_t> characteristic_ids;
+        for (auto characteristic : NativeCache::get().local_service(service_id).characteristics()) {
+            characteristic_ids.push_back(NativeCache::get().add_local_characteristic(std::move(characteristic)));
+        }
+        return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(characteristic_ids).release();
     });
 }
 

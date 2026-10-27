@@ -1,0 +1,5 @@
+# NOTE: Resolves simpledartble from this repository. Only the root package's
+# overrides apply, and the published package leaves this file out.
+dependency_overrides:
+  simpledartble:
+    path: ../simpledartble

@@ -1,0 +1,14 @@
+# tool/setup.dart creates these with `flutter create`.
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/.metadata
+
+.dart_tool/
+.idea/
+*.iml
+build/
+pubspec.lock
+.flutter-plugins-dependencies

@@ -5,22 +5,36 @@ import kotlinx.atomicfu.locks.synchronized
 
 public class LocalService internal constructor(private val instanceId: Long) {
     private val characteristicsLock = SynchronizedObject()
-    private val configuredCharacteristics = mutableListOf<LocalCharacteristic>()
+    private val characteristicsById = mutableMapOf<Long, LocalCharacteristic>()
 
     public val uuid: BluetoothUUID = BluetoothUUID(Native.localServiceUuid(instanceId))
 
-    public val characteristics: List<LocalCharacteristic>
-        get() = synchronized(characteristicsLock) { configuredCharacteristics.toList() }
+    private fun characteristic(characteristicId: Long): LocalCharacteristic {
+        return synchronized(characteristicsLock) {
+            characteristicsById.getOrPut(characteristicId) { LocalCharacteristic(characteristicId) }
+        }
+    }
 
-    @Throws(SimpleKtBleException::class, IllegalArgumentException::class)
+    @Throws(SimpleKtBleException::class)
+    public fun characteristics(): List<LocalCharacteristic> {
+        return Native.localServiceCharacteristics(instanceId).map(::characteristic)
+    }
+
+    /** Releases this local service and its characteristics. */
+    internal fun release() {
+        val characteristicIds = synchronized(characteristicsLock) {
+            characteristicsById.keys.toList().also { characteristicsById.clear() }
+        }
+        characteristicIds.forEach(Native::localCharacteristicRelease)
+        Native.localServiceRelease(instanceId)
+    }
+
+    @Throws(SimpleKtBleException::class)
     public fun addCharacteristic(
         uuid: BluetoothUUID,
-        vararg capabilities: LocalCharacteristicCapability
+        vararg capabilities: CharacteristicCapability
     ): LocalCharacteristic {
-        require(capabilities.isNotEmpty()) { "A local characteristic requires at least one capability." }
         val mask = capabilities.fold(0) { result, capability -> result or capability.bit }
-        val characteristic = LocalCharacteristic(Native.localServiceAddCharacteristic(instanceId, uuid.value, mask))
-        synchronized(characteristicsLock) { configuredCharacteristics += characteristic }
-        return characteristic
+        return characteristic(Native.localServiceAddCharacteristic(instanceId, uuid.value, mask))
     }
 }

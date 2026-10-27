@@ -1,6 +1,6 @@
 package org.simplektble
 
-public enum class LocalCharacteristicCapability(internal val bit: Int) {
+public enum class CharacteristicCapability(internal val bit: Int) {
     Read(1),
     WriteRequest(2),
     WriteCommand(4),

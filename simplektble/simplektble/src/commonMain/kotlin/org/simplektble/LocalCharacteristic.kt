@@ -37,8 +37,8 @@ public class LocalCharacteristic internal constructor(private val instanceId: Lo
 
     public val uuid: BluetoothUUID = BluetoothUUID(Native.localCharacteristicUuid(instanceId))
 
-    public val capabilities: Set<LocalCharacteristicCapability> = Native.localCharacteristicCapabilities(instanceId)
-        .let { mask -> LocalCharacteristicCapability.entries.filterTo(linkedSetOf()) { mask and it.bit != 0 } }
+    public val capabilities: Set<CharacteristicCapability> = Native.localCharacteristicCapabilities(instanceId)
+        .let { mask -> CharacteristicCapability.entries.filterTo(linkedSetOf()) { mask and it.bit != 0 } }
 
     /** The stored value, which [setValue] changes. */
     public val value: ByteArray

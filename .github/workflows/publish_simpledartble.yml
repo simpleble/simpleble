@@ -1,0 +1,51 @@
+name: Publish SimpleDartBLE
+
+# pub.dev only accepts uploads from GitHub Actions for tag pushes, so pushing
+# the release tag publishes SimpleDartBLE and SimpleFltBLE, while CI Main publishes the other
+# packages for the release.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/ci_simpledartble.yml
+
+  publish:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+    steps:
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # NOTE: With the id-token permission, setup-dart signs pub in to pub.dev
+      # with GitHub's OIDC token, which pub.dev checks against the tag.
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          name: simpledartble-pub
+          path: package
+
+      - name: Publish to pub.dev
+        working-directory: package
+        run: |
+          tar -xzf simpledartble-*.tar.gz
+          # simplefltble depends on the simpledartble version just published.
+          for package in simpledartble simplefltble; do
+            version=$(sed -n 's/^version: //p' "$package/pubspec.yaml")
+            if curl -sf "https://pub.dev/api/packages/$package/versions/$version" > /dev/null; then
+              echo "$package $version is already published."
+              continue
+            fi
+            if [[ "$package" == simplefltble ]]; then tool=flutter; else tool=dart; fi
+            (cd "$package" && "$tool" pub publish --force)
+          done

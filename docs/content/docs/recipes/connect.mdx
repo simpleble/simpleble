@@ -1,6 +1,6 @@
 ---
-title: Connect
-description: Connect to a BLE peripheral and inspect its services, characteristics, and descriptors.
+title: Connect to a Peripheral
+description: Connect to a BLE peripheral with SimpleBLE and list its GATT services, characteristics and descriptors, with tips for picking the right device from a scan.
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
@@ -20,7 +20,7 @@ Connecting moves from BLE advertisements into the GATT database. Once connected,
 
 ## Connect and list GATT objects
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -206,6 +206,46 @@ for (service in peripheral.services()) {
 }
 
 peripheral.disconnect()
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+let peripheral = try adapter.scanGetResults()[selectedIndex]
+
+try await peripheral.connect()
+
+print("MTU: \(peripheral.mtu)")
+for service in try peripheral.services() {
+    print("Service: \(service.uuid)")
+    for characteristic in service.characteristics {
+        print("  Characteristic: \(characteristic.uuid)")
+        print("    notify=\(characteristic.canNotify) read=\(characteristic.canRead)")
+    }
+}
+
+try await peripheral.disconnect()
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+final peripheral = adapter.scanGetResults()[selectedIndex];
+
+await peripheral.connect();
+
+print('MTU: ${peripheral.mtu}');
+for (final service in peripheral.services()) {
+  print('Service: ${service.uuid}');
+  for (final characteristic in service.characteristics) {
+    print('  Characteristic: ${characteristic.uuid}');
+    print('    Capabilities: ${characteristic.capabilities.map((c) => c.name).join(' ')}');
+  }
+}
+
+await peripheral.disconnect();
 ```
 
 </Tab>

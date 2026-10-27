@@ -1,0 +1,7 @@
+.dart_tool/
+pubspec.lock
+android/.gradle/
+android/build/
+# simpledartble/tool/prepublish.dart copies these in for the published package.
+LICENSE
+android/bridge/

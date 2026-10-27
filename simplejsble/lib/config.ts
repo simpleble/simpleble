@@ -19,9 +19,9 @@ function group<T extends object>(name: string, settings: Record<keyof T, Propert
 export interface SimpleBluezConfig {
   /** Reach BlueZ over the D-Bus system bus (true) or the session bus. */
   useSystemBus: boolean;
-  /** How long connect() waits for BlueZ, in milliseconds. */
+  /** How long connect() waits for BlueZ, in milliseconds. Fractions round up. */
   connectionTimeout: number;
-  /** How long disconnect() waits for BlueZ, in milliseconds. */
+  /** How long disconnect() waits for BlueZ, in milliseconds. Fractions round up. */
   disconnectionTimeout: number;
 }
 

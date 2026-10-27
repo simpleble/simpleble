@@ -1,0 +1,26 @@
+---
+title: Examples
+description: SimpleBLE Explorer, a runnable SimpleFltBLE example app that scans, connects, reads, writes and subscribes, with the steps to set it up and run it.
+---
+
+[SimpleBLE Explorer](https://github.com/simpleble/simpleble/tree/main/examples/simplefltble)
+is a Flutter app for Android, iOS, macOS, Windows, and Linux. It scans with the
+first adapter, then connects to the peripheral you pick and lists its services,
+with buttons to read, write, and subscribe to each characteristic. It requests
+the Android Bluetooth permissions with permission_handler. Its setup script
+creates the platform projects with `flutter create` and adds the Android minimum,
+the iOS and macOS deployment targets, and the Bluetooth usage description and
+entitlement.
+
+```sh
+cd examples/simplefltble
+dart run tool/setup.dart
+flutter run
+```
+
+The [SimpleDartBLE examples](../simpledartble/examples) show each operation as a
+short Dart program, with the same API.
+
+For binding development, see the
+[development guide](https://github.com/simpleble/simpleble/blob/main/docs/extras/simpledartble-development.md).
+For setup and the API, see [Usage](./usage).

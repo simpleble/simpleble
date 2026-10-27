@@ -1,0 +1,160 @@
+name: Build SimpleDartBLE
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.config.name }})
+    runs-on: ${{ matrix.config.runner-os }}
+    container: ${{ matrix.config.container-image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          # Linux builds run in manylinux containers, so the library only needs glibc 2.28.
+          - { name: linux-x64, runner-os: ubuntu-22.04, container-image: 'quay.io/pypa/manylinux_2_28_x86_64', targets: linux-x64 }
+          - { name: linux-arm64, runner-os: ubuntu-22.04-arm, container-image: 'quay.io/pypa/manylinux_2_28_aarch64', targets: linux-arm64 }
+          - { name: apple, runner-os: macos-15, targets: 'macos-arm64 macos-x64 ios-iphoneos-arm64 ios-iphonesimulator-arm64 ios-iphonesimulator-x64' }
+          - { name: windows-x64, runner-os: windows-2022, targets: windows-x64 }
+          - { name: windows-arm64, runner-os: windows-11-arm, targets: windows-arm64 }
+          # The runner has the Android NDK in ANDROID_NDK_HOME.
+          - { name: android, runner-os: ubuntu-22.04, targets: 'android-arm android-arm64 android-x64' }
+    defaults:
+      run:
+        shell: bash
+        working-directory: simpledartble
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Install Linux build dependencies
+        if: matrix.config.container-image != ''
+        run: dnf install -y dbus-devel unzip
+
+      # NOTE: Running the tool builds the checkout's own PLAIN library first, for the host.
+      - name: Install Ubuntu build dependencies
+        if: matrix.config.name == 'android'
+        run: |
+          sudo -H apt-get update -y
+          sudo -H apt-get install -y libdbus-1-dev
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Build the libraries
+        run: |
+          dart pub get
+          dart run tool/prebuild.dart ${{ matrix.config.targets }}
+
+      # Each target's file gets its own name, as the release step collects them all.
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifact
+          for file in prebuilt/*/*; do
+            target=$(basename "$(dirname "$file")")
+            cp "$file" "artifact/simpledartble-$target.${file##*.}"
+          done
+
+      - name: Upload libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: simpledartble-prebuilt-${{ matrix.config.name }}
+          path: simpledartble/artifact/simpledartble-*
+          if-no-files-found: error
+
+  package:
+    needs: build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      # NOTE: Running the tool builds the checkout's own PLAIN library first.
+      - name: Install Ubuntu build dependencies
+        run: |
+          sudo -H apt-get update -y
+          sudo -H apt-get install -y libdbus-1-dev
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Download libraries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simpledartble-prebuilt-*
+          path: artifact
+          merge-multiple: true
+
+      - name: Arrange libraries by target
+        run: |
+          for file in artifact/simpledartble-*; do
+            name=$(basename "$file")
+            target=${name#simpledartble-}
+            target=${target%.*}
+            case "$target" in
+              windows-*) library=simpledartble.dll ;;
+              macos-* | ios-*) library=libsimpledartble.dylib ;;
+              *) library=libsimpledartble.so ;;
+            esac
+            mkdir -p "simpledartble/prebuilt/$target"
+            cp "$file" "simpledartble/prebuilt/$target/$library"
+          done
+          find simpledartble/prebuilt -type f -ls
+
+      - name: Attribute README links to pub.dev
+        run: sed -i 's/utm_source=github/utm_source=pub_dev/g' simpledartble/README.md simplefltble/README.md
+
+      - name: Prepare the packages
+        working-directory: simpledartble
+        run: |
+          dart pub get
+          dart run tool/prepublish.dart
+
+      # NOTE: A dry run exits with 65 for warnings too, such as the missing
+      # CHANGELOG.md or simplefltble's exact simpledartble version, so
+      # only validation errors fail the step.
+      - name: Validate the packages
+        run: |
+          for package in simpledartble simplefltble; do
+            if [[ "$package" == simplefltble ]]; then tool=flutter; else tool=dart; fi
+            output=$(cd "$package" && "$tool" pub publish --dry-run 2>&1) || true
+            echo "$output"
+            grep -q '^Package has' <<< "$output"
+            if grep -q 'validation found the following error' <<< "$output"; then exit 1; fi
+          done
+
+      - name: Pack
+        run: |
+          mkdir -p package
+          tar -czf "package/simpledartble-$VERSION.tar.gz" \
+            --exclude=.dart_tool --exclude=build --exclude=pubspec.lock \
+            simpledartble simplefltble
+          tar -tzf "package/simpledartble-$VERSION.tar.gz" | grep -E 'prebuilt/|android/bridge/|LICENSE'
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: simpledartble-pub
+          path: package/simpledartble-*.tar.gz
+          if-no-files-found: error

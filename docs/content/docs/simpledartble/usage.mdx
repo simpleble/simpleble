@@ -1,0 +1,174 @@
+---
+title: Usage
+description: Install SimpleDartBLE from pub.dev and use SimpleBLE from Dart programs on Windows, macOS and Linux to scan, connect, use GATT and host a local peripheral.
+---
+
+SimpleDartBLE exposes SimpleBLE to Dart with futures, streams, and one object per Bluetooth object. Flutter apps use it through [SimpleFltBLE](../simplefltble/usage), which re-exports this API, so this page covers both.
+
+## Requirements
+
+- Dart 3.10 or newer, on Windows, macOS, or Linux with glibc 2.28 or newer.
+- On Linux, BlueZ and the D-Bus library (`libdbus-1-3` on Debian and Ubuntu).
+
+## Install from pub.dev
+
+```bash
+dart pub add simpledartble
+```
+
+The package carries the native SimpleBLE library for every supported platform, and its build hook picks the one your build targets, so nothing is compiled or downloaded during your build. In a Flutter app, add [SimpleFltBLE](../simplefltble/usage) instead.
+
+## First scan
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+
+  adapter.onScanFound.listen((peripheral) {
+    print('${peripheral.identifier} ${peripheral.address} ${peripheral.rssi}');
+  });
+  await adapter.scanFor(const Duration(seconds: 5));
+}
+```
+
+For more, see [Quickstart](../quickstart), [Read, Write, Notify](../recipes/read-write-notify), and the [SimpleDartBLE Examples](./examples).
+
+## Calls, events, and lifetime
+
+Calls that reach the Bluetooth stack return futures and run on helper isolates, so your isolate, such as Flutter's UI isolate, never waits on Bluetooth. Calls on one object run in the order they were made: a `read()` issued after `connect()` waits for the connection, while calls on different peripherals run side by side. Data the library already holds, such as `identifier`, `rssi`, `manufacturerData()`, or `services()`, is returned directly.
+
+Events are broadcast streams, such as `adapter.onScanFound` and `peripheral.onDisconnected`. They are delivered on your isolate in the order they happened, and an exception in a listener is an uncaught error, as with any other stream. One isolate of a program uses SimpleDartBLE at a time; after a Flutter hot restart, the new isolate takes over.
+
+Every enumeration returns the same `Adapter` object for an adapter, and an adapter gives you one `Peripheral` object per device, whether it came from `onScanFound`, `scanGetResults()`, or `getConnectedPeripherals()`. Compare them with `identical()` or `==` and keep state on them.
+
+Objects with listeners, subscriptions, or an open connection stay alive without other references. An active scan, an open connection, and a started local peripheral keep a Dart program running until they end, so a program exits once it stops scanning, disconnects, and stops hosting.
+
+Failures throw a `SimpleDartBleException`, with one subclass per kind of failure, such as `NotConnectedException` or `CharacteristicNotFoundException`. Its `code` is SimpleBLE's error code, such as `ErrorCode.peripheralNotConnected`. Arguments outside what SimpleBLE takes, such as a UUID longer than 36 characters or a duration beyond 32-bit milliseconds, throw an `ArgumentError`, and values SimpleBLE rejects, such as a negative `scanFor()` duration, throw an `InvalidArgumentException`.
+
+## Connect and use GATT
+
+```dart
+const batteryService = '0000180f-0000-1000-8000-00805f9b34fb';
+const batteryLevel = '00002a19-0000-1000-8000-00805f9b34fb';
+
+peripheral.onDisconnected.listen((_) => print('Disconnected'));
+await peripheral.connect();
+
+for (final service in peripheral.services()) {
+  print('${service.uuid} ${service.characteristics.map((c) => c.uuid)}');
+}
+
+final level = await peripheral.read(batteryService, batteryLevel);
+final levels = await peripheral.notify(batteryService, batteryLevel);
+levels.listen((value) => print('Battery: ${value[0]}%'));
+```
+
+UUIDs are full 128-bit strings, passed to SimpleBLE as they are. Values are `Uint8List`s. `writeRequest()` waits for the peripheral to confirm, while `writeCommand()` does not.
+
+`notify()` and `indicate()` complete once the peripheral is subscribed and return a single-subscription stream of the values. The stream ends on `unsubscribe()`, on a disconnection, or when another `notify()` or `indicate()` for the same characteristic replaces it; after a disconnection, subscribe again once reconnected. Cancelling the stream's subscription unsubscribes.
+
+## Host a local peripheral
+
+`adapter.createLocalPeripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Configure the advertisement and services, then call `start()`; call `stop()` before changing them.
+
+```dart
+const service = '12345678-1234-5678-1234-56789abcdef0';
+const echoUuid = '12345678-1234-5678-1234-56789abcdef1';
+
+final host = adapter.createLocalPeripheral();
+host.addAdvertisedService(service);
+
+final echo = host.addService(service).addCharacteristic(echoUuid, {
+  CharacteristicCapability.read,
+  CharacteristicCapability.writeRequest,
+  CharacteristicCapability.notify,
+});
+await echo.setValue(utf8.encode('ready'));
+
+// Echo each write to subscribed clients.
+echo.onWrite.listen(echo.setValue);
+host.onClientConnected.listen((address) => print('$address connected'));
+
+await host.start();
+```
+
+`setValue()` stores a value and publishes it to subscribed clients when the characteristic can notify or indicate. Characteristics have `onWrite` with the written value, which `value` already returns, and `onSubscribed` and `onUnsubscribed` for when the first client subscribes and the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected` with the client's address, or a platform-specific identifier where the platform hides it.
+
+`setAdvertisedManufacturerData(companyId, data)` adds manufacturer-specific data to the advertisement, and `setConnectable(false)` makes it non-connectable, for example to [advertise a beacon](../recipes/advertise#advertise-a-beacon).
+
+To compute values on demand, `setReadHandler()` takes a function that answers each read instead of the stored value, until you pass `null`. It can return a future, and the client's read waits for it.
+
+## Handlers
+
+Read handlers and the Dongl pairing handlers below answer questions SimpleBLE waits on. A handler can return a future and take as long as it needs, for example to ask the user; the operation waits for the answer.
+
+A handler runs in the zone it was set in. If it throws, the error is an uncaught error of that zone, and SimpleBLE gets a default answer: an empty value for a read, and a rejection for pairing.
+
+Setting a handler returns a future that completes once the native object uses it. Await it before the operation that needs it.
+
+## Configure backends
+
+`Config` holds process-wide settings grouped by backend: `Config.simpleBluez` (Linux), `Config.winRT` (Windows), `Config.android`, and `Config.dongl`. Set them at startup, before the first call that reaches a backend.
+
+```dart
+Config.simpleBluez.connectionTimeout = const Duration(seconds: 5);
+Config.android.connectionPriorityRequest = ConnectionPriorityRequest.high;
+```
+
+Timeouts are `Duration`s, kept in whole milliseconds. Each group has a `reset()` that restores its defaults, and `Config.resetAll()` restores them all.
+
+## Use a Dongl
+
+A [Dongl](../dongl) is a USB Bluetooth adapter made for SimpleBLE, for Windows, macOS, and Linux. Its backend is on by default, so `Adapter.getAdapters()` includes Dongl adapters; to use only them, take the adapters of the Dongl backend:
+
+```dart
+final dongl = await Backend.getDongl();
+final adapter = (await dongl.getAdapters()).first;
+```
+
+A Dongl adapter works like any other adapter. Only one program can use a Dongl at a time: `await adapter.close()` stops the adapter's scan and local peripherals, disconnects its peripherals, and frees the Dongl for other programs right away. The closed objects then throw `NotInitializedException`, and their streams end.
+
+Pairing through a Dongl happens without the operating system, so your application answers pairing requests. Set the handlers your device needs before `connect()`, since pairing can start as soon as the link is up:
+
+- `setPasskeyRequestHandler(handler)`: return the six digits the peer shows, or `null` to reject.
+- `setPasskeyDisplayHandler(handler)`: show the passkey so the user can type it on the peer.
+- `setNumericComparisonHandler(handler)`: return `true` only if the peer shows the same six digits.
+
+```dart
+await peripheral.setNumericComparisonHandler((passkey) async {
+  stdout.write('Does the device show $passkey? [y/N] ');
+  return stdin.readLineSync() == 'y';
+});
+await peripheral.connect();
+```
+
+Passing `null` removes a handler. A request without a handler is rejected, and peripherals of other adapters reject the setters with `OperationNotSupportedException`.
+
+For devices that wait for the central to start pairing, call `await peripheral.secureConnection(mitm: true)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
+## Logging
+
+SimpleBLE writes its log to standard output, up to the `info` level. `Logging` changes that for the whole process:
+
+```dart
+Logging.level = LogLevel.warn;
+Logging.setCallback((entry) => print('[${entry.level.name}] ${entry.module}: ${entry.message}'));
+```
+
+`setCallback()` delivers each entry, with its `level`, `module`, `file`, `line`, `function`, and `message`, on your isolate in the order SimpleBLE logged them, and `null` discards entries. `logToFile(path)` appends them to a file instead, and `logToStdout()` restores the default. Levels go from `LogLevel.none`, which turns logging off, to `LogLevel.verbose`.
+
+## Platform-specific features
+
+- On iOS, macOS, and Linux, `host.setAdvertisementLocalName('Name')` sets the local name in a local peripheral's advertisement before `start()`, and `null` removes it. This changes only the advertisement, not the system Bluetooth name.
+- On iOS and macOS, `await adapter.retrieveCachedPeripherals(identifiers)` returns the peripherals CoreBluetooth already knows, by the identifiers `address` returned earlier, without scanning. Unknown identifiers are skipped, and each peripheral is the same object a scan returns. `connect()` then reaches it if it is in range.
+
+Other platforms throw `OperationNotSupportedException` for both.
+
+## Platform notes
+
+- **Android**: Android apps use SimpleDartBLE through SimpleFltBLE, which loads its native library and gives SimpleBLE the application context when the app starts. Without it, `Adapter.getAdapters()` throws a `StateError` that names it.
+- **macOS**: Bluetooth permission belongs to the app that runs the code. A Dart program run from a terminal uses the terminal app's permission, and macOS asks for it the first time; a Flutter app uses its own, with the `Info.plist` entry and entitlement from [SimpleFltBLE's app setup](../simplefltble/usage#app-setup).
+- **Linux**: SimpleDartBLE talks to BlueZ over the D-Bus system bus, so the user needs access to it, as described in [Bluetooth Permissions](../fundamentals/permissions).
+- **Web**: Flutter's web platform can't load native libraries, so SimpleDartBLE doesn't support it.

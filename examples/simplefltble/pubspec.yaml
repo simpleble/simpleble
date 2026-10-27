@@ -1,0 +1,26 @@
+name: simplefltble_explorer
+description: SimpleBLE Explorer, a SimpleFltBLE example app.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  permission_handler: ^12.0.1
+  simplefltble:
+    path: ../../simplefltble
+
+# NOTE: SimpleFltBLE depends on the published SimpleDartBLE, so the example
+# overrides it with the one in this repository.
+dependency_overrides:
+  simpledartble:
+    path: ../../simpledartble
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

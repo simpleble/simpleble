@@ -10,7 +10,10 @@
 using SimpleBLE::Error;
 using SimpleBLE::ErrorCode;
 
-#if SIMPLEBLE_BACKEND_MACOS
+// NOTE: The platform functions exist in every build for their platform, as advanced.h declares them. PLAIN builds and
+// backends without the feature, such as Dongl, report OPERATION_NOT_SUPPORTED.
+
+#if defined(__APPLE__) && TARGET_OS_OSX
 
 void simpleble_advanced_macos_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name,
                                                            simpleble_error_t** out_error) {
@@ -68,7 +71,7 @@ simpleble_peripheral_t simpleble_advanced_macos_retrieve_cached_peripheral(simpl
 
 #endif
 
-#if SIMPLEBLE_BACKEND_IOS
+#if defined(__APPLE__) && TARGET_OS_IOS
 
 void simpleble_advanced_ios_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name,
                                                          simpleble_error_t** out_error) {
@@ -126,7 +129,7 @@ simpleble_peripheral_t simpleble_advanced_ios_retrieve_cached_peripheral(simpleb
 
 #endif
 
-#if SIMPLEBLE_BACKEND_LINUX
+#if defined(__linux__) && !defined(__ANDROID__)
 
 void simpleble_advanced_linux_set_advertisement_local_name(simpleble_local_peripheral_t handle, const char* local_name,
                                                            simpleble_error_t** out_error) {

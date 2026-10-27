@@ -1,6 +1,6 @@
 ---
-title: Advertise
-description: Host a local BLE peripheral and advertise a GATT service so nearby centrals can connect.
+title: Advertise a GATT Service
+description: Host a local BLE peripheral with SimpleBLE, advertise a GATT service that centrals can connect to, and broadcast beacon advertisements such as iBeacon.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -11,7 +11,7 @@ Advertising is how this host is found. A local peripheral serves GATT, sends adv
 `SimpleBLE::Peripheral` is a remote device. `SimpleBLE::Local::Peripheral` is this host. Create the local peripheral from an `Adapter`, the same object used to scan.
 
 <Callout type="info" title="Available on all supported platforms">
-SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`, and SimpleKtBLE does it for you without one.
+SimpleBLE can host a local peripheral on every supported platform, and every language binding exposes the same flow. Native Android applications must provide their application context with `SimpleBLE::Advanced::Android::set_context()` before creating the local peripheral. SimpleDroidBLE does this for you when you pass a `Context`, and SimpleKtBLE and SimpleFltBLE do it for you without one.
 </Callout>
 
 ## Flow
@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -242,9 +242,9 @@ val characteristic = peripheral
     .addService(BluetoothUUID("12345678-1234-5678-1234-56789abcdef0"))
     .addCharacteristic(
         BluetoothUUID("12345678-1234-5678-1234-56789abcdef1"),
-        LocalCharacteristicCapability.Read,
-        LocalCharacteristicCapability.WriteRequest,
-        LocalCharacteristicCapability.Notify
+        CharacteristicCapability.Read,
+        CharacteristicCapability.WriteRequest,
+        CharacteristicCapability.Notify
     )
 characteristic.setValue("ready".encodeToByteArray())
 
@@ -257,6 +257,68 @@ scope.launch(start = CoroutineStart.UNDISPATCHED) {
 }
 
 peripheral.start()
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+let adapter = try Adapter.getAdapters().first!
+let peripheral = try adapter.createLocalPeripheral()
+
+try peripheral.addAdvertisedService("12345678-1234-5678-1234-56789abcdef0")
+
+let characteristic = try peripheral
+    .addService("12345678-1234-5678-1234-56789abcdef0")
+    .addCharacteristic("12345678-1234-5678-1234-56789abcdef1", capabilities: [.read, .writeRequest, .notify])
+try await characteristic.setValue(Data("ready".utf8))
+
+// Echo the written value to subscribed clients. The streams buffer events until their tasks run.
+let writes = characteristic.onWrite
+let connections = peripheral.onClientConnected
+Task {
+    for await value in writes {
+        try? await characteristic.setValue(value)
+    }
+}
+Task {
+    for await address in connections {
+        print("Client connected: \(address)")
+    }
+}
+
+try await peripheral.start()
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:convert';
+
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  final peripheral = adapter.createLocalPeripheral();
+
+  peripheral.addAdvertisedService('12345678-1234-5678-1234-56789abcdef0');
+
+  final service = peripheral.addService('12345678-1234-5678-1234-56789abcdef0');
+  final characteristic = service.addCharacteristic('12345678-1234-5678-1234-56789abcdef1', {
+    CharacteristicCapability.read,
+    CharacteristicCapability.writeRequest,
+    CharacteristicCapability.notify,
+  });
+  await characteristic.setValue(utf8.encode('ready'));
+
+  // Echo the written value to subscribed clients.
+  characteristic.onWrite.listen(characteristic.setValue);
+
+  peripheral.onClientConnected.listen((address) => print('Client connected: $address'));
+
+  await peripheral.start();
+}
 ```
 
 </Tab>
@@ -305,7 +367,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -425,6 +487,48 @@ val ibeacon = listOf(
 peripheral.setAdvertisedManufacturerData(0x004c, ibeacon)
 peripheral.setConnectable(false)
 peripheral.start()
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+let adapter = try Adapter.getAdapters().first!
+let peripheral = try adapter.createLocalPeripheral()
+
+// iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+let ibeacon = Data([
+    0x02, 0x15,
+    0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+    0x00, 0x01, 0x00, 0x02, 0xc5,
+])
+try peripheral.setAdvertisedManufacturerData(companyId: 0x004c, data: ibeacon)
+try peripheral.setConnectable(false)
+try await peripheral.start()
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:typed_data';
+
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  final peripheral = adapter.createLocalPeripheral();
+
+  // iBeacon: 0x02 0x15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+  final ibeacon = Uint8List.fromList([
+    0x02, 0x15,
+    0xe2, 0xc5, 0x6d, 0xb5, 0xdf, 0xfb, 0x48, 0xd2, 0xb0, 0x60, 0xd0, 0xf5, 0xa7, 0x10, 0x96, 0xe0,
+    0x00, 0x01, 0x00, 0x02, 0xc5,
+  ]);
+  peripheral.setAdvertisedManufacturerData(0x004c, ibeacon);
+  peripheral.setConnectable(false);
+  await peripheral.start();
+}
 ```
 
 </Tab>

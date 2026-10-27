@@ -16,7 +16,8 @@ SimpleBLE
 |CI Main| |Latest Release| |License|
 
 SimpleBLE is the cross-platform Bluetooth Low Energy stack for Windows, macOS, Linux, iOS, and Android. Use it from
-C++, C, C#, Python, Java, Kotlin, Go, Rust, JavaScript, or React Native, with a dedicated API for Unreal Engine.
+C++, C, C#, Python, Java, Kotlin, Swift, Dart, Go, Rust, JavaScript, React Native, or Flutter, with a dedicated API
+for Unreal Engine.
 
 Why SimpleBLE
 -------------

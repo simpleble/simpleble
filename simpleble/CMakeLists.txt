@@ -212,6 +212,7 @@ if(SIMPLEBLE_PLAIN)
     message(STATUS "Plain Flavor Requested")
 
     target_sources(simpleble PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/AdvancedPlain.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/plain/BackendPlain.cpp)
 elseif(SIMPLEBLE_BACKEND_LINUX)
     message(STATUS "Linux Host Detected")

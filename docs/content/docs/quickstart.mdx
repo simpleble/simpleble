@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: Get to a first successful BLE scan with SimpleBLE in your language.
+description: Run a first Bluetooth Low Energy scan with SimpleBLE in C++, C, Python, Java, Rust, Node.js, React Native, Kotlin, Swift, Unity or Unreal to check your setup.
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Android (deprecated)", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -361,6 +361,81 @@ suspend fun scan() = coroutineScope {
 ```
 
 Call `scan()` from a coroutine, such as `lifecycleScope.launch { scan() }` on Android or `suspend fun main() = scan()` on the JVM. On Android, request the Bluetooth permissions first with `SimpleKtBle.requestPermissions(activity)`. On iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleKtBLE Usage](./simplektble/usage) for details.
+
+</Tab>
+<Tab value="Swift">
+
+Add the package in Xcode with **File > Add Package Dependencies**, or in your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/simpleble/simpleswiftble", from: "<version>")
+],
+targets: [
+    .target(name: "MyApp", dependencies: [.product(name: "SimpleSwiftBLE", package: "simpleswiftble")])
+]
+```
+
+Then scan:
+
+```swift
+import SimpleSwiftBLE
+
+let adapter = try Adapter.getAdapters().first!
+print("Using adapter: \(adapter.identifier) [\(adapter.address)]")
+
+let found = adapter.onScanFound
+let printer = Task {
+    for await peripheral in found {
+        print("Found: \(peripheral.identifier) [\(peripheral.address)] \(peripheral.rssi) dBm")
+    }
+}
+try await adapter.scanFor(timeoutMs: 5000)
+printer.cancel()
+
+print("Scan results:")
+for peripheral in try adapter.scanGetResults() {
+    let state = peripheral.isConnectable ? "connectable" : "not connectable"
+    print("- \(peripheral.identifier) [\(peripheral.address)] \(state)")
+}
+```
+
+Run it from asynchronous code, such as a SwiftUI `.task` modifier or the `main.swift` of a command-line tool. Add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleSwiftBLE Usage](./simpleswiftble/usage) for details.
+
+</Tab>
+<Tab value="Dart">
+
+Create a Dart program and add the package:
+
+```sh
+dart create scan
+cd scan
+dart pub add simpledartble
+```
+
+Then replace `bin/scan.dart` with this and run `dart run`:
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  print('Using adapter: ${adapter.identifier} [${adapter.address}]');
+
+  adapter.onScanFound.listen((peripheral) {
+    print('Found: ${peripheral.identifier} [${peripheral.address}] ${peripheral.rssi} dBm');
+  });
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  print('Scan results:');
+  for (final peripheral in adapter.scanGetResults()) {
+    final state = peripheral.isConnectable ? 'connectable' : 'not connectable';
+    print('- ${peripheral.identifier} [${peripheral.address}] $state');
+  }
+}
+```
+
+In a Flutter app, use SimpleFltBLE: run `flutter pub add simplefltble`, import `package:simplefltble/simplefltble.dart`, and call the same code from your app. On Android, request the Bluetooth permissions first, and on iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleFltBLE Usage](./simplefltble/usage#app-setup) for details.
 
 </Tab>
 <Tab value="Android (deprecated)">

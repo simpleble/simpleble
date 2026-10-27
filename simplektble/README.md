@@ -162,8 +162,8 @@ host.addAdvertisedService(batteryService)
 
 val battery = host.addService(batteryService).addCharacteristic(
     batteryLevel,
-    LocalCharacteristicCapability.Read,
-    LocalCharacteristicCapability.Notify
+    CharacteristicCapability.Read,
+    CharacteristicCapability.Notify
 )
 battery.setValue(byteArrayOf(100))
 
