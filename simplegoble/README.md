@@ -118,7 +118,8 @@ of a connected peripheral. `Read`, `WriteRequest`, and `WriteCommand` access
 characteristic values; `ReadDescriptor` and `WriteDescriptor` access
 descriptors. `Notify` and `Indicate` call your function with each value as a
 byte slice, and `Unsubscribe` stops them. Failures are `*ble.Error` values with
-SimpleBLE's error code in `Code`.
+SimpleBLE's error code in `Code`, and methods on closed wrappers return
+`ble.ErrClosed`.
 
 ## Host a GATT service
 

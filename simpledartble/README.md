@@ -76,11 +76,11 @@ and `scanGetResults()` for the peripherals seen by the last scan. An adapter
 always gives you the same `Peripheral` object for the same device, whether it
 came from an event or from a list.
 
-Calls that talk to the Bluetooth stack return futures, run in the order they
-were made, and never block your isolate. Data the library already holds, such
-as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned
-directly. An active scan or connection keeps a Dart program running until it
-ends.
+Calls that talk to the Bluetooth stack return futures and never block your
+isolate, and calls on one object run in the order they were made. Data the
+library already holds, such as a peripheral's `identifier`, `rssi`, or
+`manufacturerData()`, is returned directly. An active scan, an open connection,
+or a started local peripheral keeps a Dart program running until it ends.
 
 ## Connect and use GATT
 
@@ -147,8 +147,8 @@ final adapter = (await dongl.getAdapters()).first;
 await adapter.close();
 ```
 
-`close()` stops the adapter's scan, disconnects its peripherals, and frees the
-Dongl for other programs.
+`close()` stops the adapter's scan and local peripherals, disconnects its
+peripherals, and frees the Dongl for other programs.
 
 `Config` holds the Dongl, BlueZ, WinRT, and Android backend settings; set them
 before the first call that reaches a backend. Pairing through a Dongl happens

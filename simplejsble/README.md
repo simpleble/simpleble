@@ -65,8 +65,8 @@ and `scanGetResults()` for the peripherals seen by the last scan. An adapter
 always gives you the same `Peripheral` object for the same device, whether it
 came from an event or from a list.
 
-Calls that talk to the Bluetooth stack return promises and run in the order
-they were made. Data the library already holds, such as a peripheral's
+Calls that talk to the Bluetooth stack return promises, and calls on one
+object run in the order they were made. Data the library already holds, such as a peripheral's
 `identifier()`, `rssi()`, or `manufacturerData()`, is returned directly. An
 active scan or connection keeps Node.js running until it ends.
 
@@ -140,7 +140,8 @@ Dongl for other programs. Adapters also support `await using`.
 `Config` holds the Dongl, BlueZ, and WinRT backend settings; set them before the
 first call that reaches a backend. Pairing through a Dongl happens without the
 operating system: set `setPasskeyRequestHandler`, `setPasskeyDisplayHandler`, or
-`setNumericComparisonHandler` on the peripheral before `connect()`.
+`setNumericComparisonHandler` on the peripheral, and await the promise it
+returns, before `connect()`.
 
 ## Electron
 

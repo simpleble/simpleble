@@ -74,8 +74,8 @@ Use `scanStart()` and `scanStop()` when your app controls scan timing, and
 gives you the same `Peripheral` object for the same device, whether it came from
 an event or from a list, so it works as a React key and in state.
 
-Calls that talk to the Bluetooth stack return promises and run in the order
-they were made, without blocking the JavaScript thread. Data the library already
+Calls that talk to the Bluetooth stack return promises without blocking the
+JavaScript thread, and calls on one object run in the order they were made. Data the library already
 holds, such as a peripheral's `identifier()`, `rssi()`, or `manufacturerData()`,
 is returned directly.
 

@@ -117,7 +117,10 @@ without scanning.
 
 Calls that wait on a device or the Bluetooth stack, such as `connect()`,
 `read()`, and `scanFor()`, are `suspend` functions that run on
-`Dispatchers.IO`, so you can call them from the main thread. Data the library
+`Dispatchers.IO`, so you can call them from the main thread. `scanStart()`,
+`scanStop()`, `getAdapters()`, `isBluetoothEnabled()`, and
+`retrieveCachedPeripherals()` call the Bluetooth stack directly, so call them
+from a background dispatcher where a short wait matters. Data the library
 already holds, such as a peripheral's `identifier`, `rssi`, or
 `manufacturerData()`, is returned directly. The
 [usage guide](https://docs.simpleble.org/simplektble/usage?utm_source=github&utm_medium=referral&utm_campaign=simplektble_readme&utm_content=scanning) covers

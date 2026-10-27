@@ -81,8 +81,8 @@ and `scanGetResults()` for the peripherals seen by the last scan. An adapter
 always gives you the same `Peripheral` object for the same device, whether it
 came from an event or from a list.
 
-Calls that talk to the Bluetooth stack return futures, run in the order they
-were made, and never block your isolate. Data the library already holds, such
+Calls that talk to the Bluetooth stack return futures and never block your
+isolate, and calls on one object run in the order they were made. Data the library already holds, such
 as a peripheral's `identifier`, `rssi`, or `manufacturerData()`, is returned
 directly.
 
@@ -151,8 +151,8 @@ final adapter = (await dongl.getAdapters()).first;
 await adapter.close();
 ```
 
-`close()` stops the adapter's scan, disconnects its peripherals, and frees the
-Dongl for other programs.
+`close()` stops the adapter's scan and local peripherals, disconnects its
+peripherals, and frees the Dongl for other programs.
 
 `Config` holds the Dongl, BlueZ, WinRT, and Android backend settings; set them
 before the first call that reaches a backend. Pairing through a Dongl happens
@@ -180,7 +180,7 @@ SimpleDartBLE of the same version.
 
 ## License
 
-SimpleDartBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleble/blob/main/LICENSE.md),
+SimpleFltBLE follows the [SimpleBLE license](https://github.com/simpleble/simpleble/blob/main/LICENSE.md),
 the Business Source License 1.1 (BUSL-1.1). It is free for non-commercial use,
 and commercial use needs a commercial license. We offer free commercial licenses
 for small projects and early-stage companies: [email us](mailto:contact@simpleble.org)
