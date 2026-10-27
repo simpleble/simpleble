@@ -23,21 +23,14 @@ runs:
           fi
           version_str="${BASH_REMATCH[1]}"
         else
-          # Other builds are development versions of the release after the last tag. Starting from HEAD^ keeps the
-          # version of a commit that is built again after being tagged.
-          latest_tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2>/dev/null || echo "")
-          if [[ ! "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "Error: No vX.Y.Z tag found in the repository history." >&2
+          # Other builds are development versions of the release VERSION names. Its -dev suffix marks local builds,
+          # which CI replaces with the number of commits since the last tag. Starting from HEAD^ keeps the version of a
+          # commit that is built again after being tagged.
+          version_str=${version_str%-dev}
+          latest_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$latest_tag" ]; then
+            echo "Error: No tags found in the repository history." >&2
             exit 1
-          fi
-          tag_major=${BASH_REMATCH[1]}
-          tag_minor=${BASH_REMATCH[2]}
-          tag_patch=${BASH_REMATCH[3]}
-          IFS=. read -r major minor patch <<< "$version_str"
-          # NOTE: VERSION only matters when it names a later release than the last tag, such as the next minor one.
-          # Otherwise the next release is the patch after the last tag.
-          if (( major < tag_major || (major == tag_major && (minor < tag_minor || (minor == tag_minor && patch <= tag_patch))) )); then
-            version_str="${tag_major}.${tag_minor}.$((tag_patch + 1))"
           fi
           commits=$(git rev-list --count "${latest_tag}"..HEAD)
           # NOTE: The dot makes the commit count its own identifier, which semver compares as a number.

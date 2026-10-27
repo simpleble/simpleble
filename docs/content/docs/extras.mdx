@@ -63,7 +63,7 @@ Documentation is written in MDX (Markdown with JSX), allowing you to use React c
 
 ## Release checklist
 
-The tag of a published GitHub release sets the version of every package that release publishes. Every other build is a development version of the next release, `X.Y.Z-dev.N`, where `N` counts the commits since the last tag. The next release is the patch after the last tag, unless `VERSION` names a later one, such as the next minor release.
+The tag of a published GitHub release sets the version of every package that release publishes. Between releases, `VERSION` names the next release with a `-dev` suffix, such as `1.3.1-dev`, so local builds never carry a published version. CI builds replace the suffix with `-dev.N`, where `N` counts the commits since the last tag.
 
 Perform the following steps in order.
 
@@ -88,9 +88,12 @@ Perform the following steps in order.
    - `simplesharpble/README.md`
    - `simpleswiftble/README.md`
 
-2. In `docs/content/docs/changelog.mdx`, give the release's section its version and date. Search the repository for the previous version with `git grep` to catch references such as migration guides.
+2. Set the release version:
 
-   For a minor or major release, `VERSION`, `Cargo.toml`, `Cargo.lock`, and `simpleaible/pyproject.toml` name the release version, so that development builds already carry it. Set them as soon as `main` has changes for that release.
+   - Remove the `-dev` suffix in `VERSION`, `Cargo.toml`, `Cargo.lock`, `simpleaible/pyproject.toml`, `simpledartble/pubspec.yaml`, and `simplefltble/pubspec.yaml`, including its `simpledartble` dependency.
+   - In `docs/content/docs/changelog.mdx`, give the release's section its version and date.
+
+   For a minor or major release, such as `1.4.0` while these files name `1.3.1-dev`, use its version instead, and search the repository for the previous version with `git grep` to catch references such as migration guides.
 
 3. Run the Hardware In The Loop tests listed below.
 
@@ -142,7 +145,7 @@ Perform the following steps in order.
 
 9. Replace references to development builds outside this repository now that the stable packages are available, such as the SimplePyBLE version pinned by the Dongl quickstart on simpleble.org. Search sibling checkouts for `.devN`, `-dev.N`, and `-devN` pins, and deploy any site that changes.
 
-10. Add an empty section for the next version to the changelog, and commit and push it. Development builds move to the next patch version on their own.
+10. Start the next version: set the files from step 2 to the next patch version with a `-dev` suffix, such as `1.3.1-dev`, add an empty section for it to the changelog, and commit and push them. Until then, `CI Main` fails on every new commit, as `VERSION` still names a released version.
 
 11. From the documentation root, run `berth app deploy` to deploy the documentation.
 
