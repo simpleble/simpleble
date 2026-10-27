@@ -19,10 +19,10 @@ sudo apt-get install libdbus-1-dev
 ## Install from crates.io
 
 ```bash
-cargo add simplersble
+cargo add simplersble futures tokio --features tokio/full
 ```
 
-The crate builds the native SimpleBLE components during the Cargo build.
+The examples on this page use Tokio and `futures`, so they're added alongside the crate. The crate builds the native SimpleBLE components during the Cargo build.
 
 ## Use a local checkout
 
