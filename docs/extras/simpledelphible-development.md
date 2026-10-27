@@ -134,13 +134,17 @@ built as shared libraries: `win32`, `win64`, `macos-arm64`, `macos-x64`, `linux-
 `utils/package_simpledelphible.sh <libraries> <output>` assembles it from a folder per platform and zips it as
 `simpledelphible-<version>.zip`.
 
-The libraries are SimpleCBLE's shared build with two changes:
+The libraries are SimpleCBLE's shared build with three changes:
 
 - The Windows DLLs link the MSVC runtime statically (`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`), so applications
   need no redistributable.
 - The macOS and Linux libraries are unversioned (`CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON`). A versioned build
   identifies itself as `libsimplecble.1.dylib` or `libsimplecble.so.1`, so an application linked against
   `libsimplecble.dylib` would need that other file at run time.
+- `libsimplecble` names itself relative to the program that loads it: its install name is
+  `@executable_path/libsimplecble.dylib` on macOS, and its SONAME is `$ORIGIN/libsimplecble.so` on Linux. A program
+  records that name when it links, so it loads the library from its own folder, or an app bundle's `Contents/MacOS`,
+  without an rpath. `libsimplecble` already finds `libsimpleble` next to itself (`@loader_path` and `$ORIGIN`).
 
 ## CI distribution
 

@@ -31,9 +31,10 @@ jobs:
       - name: Test the binding
         run: utils/build_simpledelphible.sh
 
-  # The distribution ships SimpleCBLE's shared build with two changes: the Windows libraries link the MSVC runtime
-  # statically, so applications need no redistributable, and the macOS and Linux libraries are unversioned, so
-  # applications load the libsimplecble and libsimpleble files the documentation names.
+  # The distribution ships SimpleCBLE's shared build with three changes: the Windows libraries link the MSVC runtime
+  # statically, so applications need no redistributable; the macOS and Linux libraries are unversioned, so
+  # applications load the libsimplecble and libsimpleble files the documentation names; and libsimplecble names itself
+  # relative to the program, so applications load it from their own folder without an rpath.
   build-lib:
     runs-on: ${{ matrix.config.runner-os }}
     container: ${{ matrix.config.container-image }}
@@ -79,6 +80,17 @@ jobs:
             test ! -L "install_simpledelphible_lib/$library"
             cp "install_simpledelphible_lib/$library" "lib/${{ matrix.config.platform }}/"
           done
+          # NOTE: A program records the name a library gives itself when it links against it. libsimplecble finds
+          # libsimpleble next to itself already.
+          if [[ "${{ matrix.config.os }}" == "macos" ]]; then
+            install_name_tool -id @executable_path/libsimplecble.dylib "lib/${{ matrix.config.platform }}/libsimplecble.dylib"
+            codesign --force --sign - "lib/${{ matrix.config.platform }}/libsimplecble.dylib"
+          elif [[ "${{ matrix.config.os }}" == "linux" ]]; then
+            apt-get update -qq && apt-get install -y -qq patchelf
+            # $ORIGIN is for the dynamic linker, not the shell.
+            # shellcheck disable=SC2016
+            patchelf --set-soname '$ORIGIN/libsimplecble.so' "lib/${{ matrix.config.platform }}/libsimplecble.so"
+          fi
           if [[ "${{ matrix.config.os }}" == "windows" ]] && grep -a -i -l -E 'vcruntime140|msvcp140' lib/*/*.dll; then
             echo "::error::The libraries import the dynamic MSVC runtime."
             exit 1
