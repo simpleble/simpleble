@@ -23,6 +23,7 @@ simpledelphible/
 └── README.md
 examples/simpledelphible/                     Interactive console programs, one per .dpr
 utils/build_simpledelphible.sh                Builds PLAIN and runs the tests with Free Pascal
+utils/package_simpledelphible.sh              Assembles the distribution
 ```
 
 The code compiles with Delphi and with Free Pascal 3.2.2 in `{$MODE DELPHIUNICODE}`. It stays within what Free Pascal
@@ -128,8 +129,39 @@ dcc32 -NSSystem -U..\source -I..\source -E<out> SimpleDelphiBLETests.dpr
 
 ## Packaging
 
-A release holds `source`, `examples`, the README, the license, and `lib/<platform>` with SimpleBLE built as shared
-libraries: `win32`, `win64`, `macos-arm64`, `macos-x64`, `linux-x64` and `linux-arm64`. The Windows DLLs link the
-MSVC runtime statically (`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`), so applications need no redistributable. Boss
-installs from a generated `simpleble/simpledelphible` repository with a `boss.json`, the way SimpleGoBLE publishes to
-`simpleble/simplegoble`.
+A release holds `source`, `examples`, the README, the license, a `boss.json`, and `lib/<platform>` with SimpleBLE
+built as shared libraries: `win32`, `win64`, `macos-arm64`, `macos-x64`, `linux-x64` and `linux-arm64`.
+`utils/package_simpledelphible.sh <libraries> <output>` assembles it from a folder per platform and zips it as
+`simpledelphible-<version>.zip`.
+
+The libraries are SimpleCBLE's shared build with two changes:
+
+- The Windows DLLs link the MSVC runtime statically (`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`), so applications
+  need no redistributable.
+- The macOS and Linux libraries are unversioned (`CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON`). A versioned build
+  identifies itself as `libsimplecble.1.dylib` or `libsimplecble.so.1`, so an application linked against
+  `libsimplecble.dylib` would need that other file at run time.
+
+## CI distribution
+
+`ci_simpledelphible.yml`, called by `ci_main.yml`, runs the tests with Free Pascal on Linux and macOS, builds the
+libraries for each platform, assembles the package, and compiles every example from it against `lib/linux-x64`.
+
+## Versions and publication
+
+Boss resolves versions from Git tags, so SimpleDelphiBLE is published like SimpleGoBLE. For each `main` build and each
+published SimpleBLE release, `publish-simpledelphible` in `ci_main.yml` updates the generated
+[simpleble/simpledelphible](https://github.com/simpleble/simpledelphible) repository using `SIMPLEDELPHIBLE_TOKEN`, a
+token with read and write access to its contents:
+
+1. It replaces the repository's files with the package, and pushes the commit to `main` and its tag `vX.Y.Z` or
+   `vX.Y.Z-dev.N` in one atomic push.
+2. It creates the tag's GitHub release with `simpledelphible-X.Y.Z.zip`. Development builds are prereleases.
+
+If the tag already exists, the run only creates its release when it is missing. Never replace a published tag or its
+archive.
+
+Without a version, Boss installs the highest stable tag: its default constraint, `>0.0.0`, excludes prereleases. A
+project follows a development build by naming it in its `boss.json`, such as
+`"github.com/simpleble/simpledelphible": "1.3.0-dev.5"`. The package's `mainsrc` puts `source` on the project's search
+path, in a `.dproj` or a Lazarus `.lpi`.

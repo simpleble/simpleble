@@ -145,6 +145,10 @@ jobs:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simpleswiftble.yml
 
+  simpledelphible:
+    needs: [smoketest]
+    uses: ./.github/workflows/ci_simpledelphible.yml
+
   # SimpleDartBLE is published by publish_simpledartble.yml, as pub.dev only
   # accepts uploads for tag pushes.
   simpledartble:
@@ -159,7 +163,7 @@ jobs:
       libraries: ${{ needs.libraries.outputs.values }}
 
   publish-release:
-    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble, simplektble, simplernble, simpleswiftble, simpledartble]
+    needs: [simpleble, simplepyble, simpleaible, simplejavable, simpledroidble, simplecble, simplersble, simplesharpble, simplegoble, simplejsble, simplektble, simplernble, simpleswiftble, simpledelphible, simpledartble]
     if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     permissions:
       contents: write
@@ -378,6 +382,62 @@ jobs:
           git tag "$tag"
           git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
           gh release edit "$tag" --repo "$repo" --draft=false
+
+  # Boss resolves versions from Git tags, so simpleble/simpledelphible gets a commit and a tag for each version, like
+  # simpleble/simplegoble. The tag's GitHub release there has the same files as a zip.
+  publish-simpledelphible:
+    needs: [publish-release]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    runs-on: ubuntu-22.04
+    concurrency:
+      group: simpledelphible-distribution
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: simpledelphible-package
+          path: delphi-package
+      - uses: actions/checkout@v4
+        with:
+          repository: simpleble/simpledelphible
+          ref: main
+          path: simpledelphible-distribution
+          fetch-depth: 0
+          token: ${{ secrets.SIMPLEDELPHIBLE_TOKEN }}
+
+      - name: Publish the version
+        working-directory: simpledelphible-distribution
+        env:
+          GH_TOKEN: ${{ secrets.SIMPLEDELPHIBLE_TOKEN }}
+        run: |
+          archive=$(ls "$GITHUB_WORKSPACE"/delphi-package/simpledelphible-*.zip)
+          unzip -q "$archive" -d "$RUNNER_TEMP/simpledelphible-unpacked"
+          package_dir="$RUNNER_TEMP/simpledelphible-unpacked/$(basename "$archive" .zip)"
+          version=$(jq -r .version "$package_dir/boss.json")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev\.[0-9]+)?$ ]]
+          tag="v$version"
+          repo=simpleble/simpledelphible
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo "$tag is already pushed."
+          else
+            # Only tracked files are removed; the checkout's Git metadata stays intact.
+            git ls-files -z | while IFS= read -r -d '' path; do rm -- "$path"; done
+            cp -R "$package_dir/." .
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add --all
+            git commit -m "Published SimpleDelphiBLE $tag."
+            git tag "$tag"
+            git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
+          fi
+          # NOTE: An earlier attempt may have pushed the tag without creating its release.
+          if gh release view "$tag" --repo "$repo" > /dev/null 2>&1; then
+            echo "$tag is already published."
+          else
+            prerelease=$([[ "$version" == *-dev* ]] && echo true || echo false)
+            gh release create "$tag" "$archive" --repo "$repo" --verify-tag --prerelease="$prerelease" \
+              --title "SimpleDelphiBLE $tag" --notes "SimpleDelphiBLE $version, built from simpleble/simpleble@$GITHUB_SHA."
+          fi
 
   publish-simplejsble:
     needs: [publish-release]

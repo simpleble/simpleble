@@ -1,0 +1,145 @@
+name: Build SimpleDelphiBLE
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  # The runners have no Bluetooth; the tests run against PLAIN.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-22.04, macos-15]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Install Free Pascal (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo -H apt-get update -y
+          sudo -H apt-get install -y fpc
+
+      - name: Install Free Pascal (macOS)
+        if: runner.os == 'macOS'
+        run: brew install fpc
+
+      - name: Test the binding
+        run: utils/build_simpledelphible.sh
+
+  # The distribution ships SimpleCBLE's shared build with two changes: the Windows libraries link the MSVC runtime
+  # statically, so applications need no redistributable, and the macOS and Linux libraries are unversioned, so
+  # applications load the libsimplecble and libsimpleble files the documentation names.
+  build-lib:
+    runs-on: ${{ matrix.config.runner-os }}
+    container: ${{ matrix.config.container-image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { runner-os: windows-2022, os: windows, architecture: x86, platform: win32, libraries: 'bin/simplecble.dll bin/simpleble.dll', cmake-options: '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' }
+          - { runner-os: windows-2022, os: windows, architecture: x64, platform: win64, libraries: 'bin/simplecble.dll bin/simpleble.dll', cmake-options: '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' }
+          - { runner-os: macos-15, os: macos, architecture: aarch64, platform: macos-arm64, libraries: 'lib/libsimplecble.dylib lib/libsimpleble.dylib', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: macos-15, os: macos, architecture: x64, platform: macos-x64, libraries: 'lib/libsimplecble.dylib lib/libsimpleble.dylib', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: ubuntu-22.04, os: linux, architecture: x64, platform: linux-x64, container-image: dockcross/linux-x64, libraries: 'lib/libsimplecble.so lib/libsimpleble.so', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: ubuntu-22.04, os: linux, architecture: aarch64, platform: linux-arm64, container-image: dockcross/linux-arm64, libraries: 'lib/libsimplecble.so lib/libsimpleble.so', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Build SimpleCBLE Library (Shared)
+        uses: ./.github/actions/build-native
+        with:
+          source-dir: "$GITHUB_WORKSPACE/simplecble"
+          build-dir: "$GITHUB_WORKSPACE/build_simpledelphible_lib"
+          install-prefix: "$GITHUB_WORKSPACE/install_simpledelphible_lib"
+          build-config: "Release"
+          os: "${{ matrix.config.os }}"
+          target-arch: "${{ matrix.config.architecture }}"
+          cmake-options: "-DBUILD_SHARED_LIBS=ON ${{ matrix.config.cmake-options }}"
+
+      # Each platform's archive gets its own name, as the release step collects them all.
+      - name: Package the libraries
+        shell: bash
+        run: |
+          mkdir -p "lib/${{ matrix.config.platform }}"
+          for library in ${{ matrix.config.libraries }}; do
+            # NOTE: A versioned build installs this name as a symlink to the versioned file the library identifies as.
+            test ! -L "install_simpledelphible_lib/$library"
+            cp "install_simpledelphible_lib/$library" "lib/${{ matrix.config.platform }}/"
+          done
+          if [[ "${{ matrix.config.os }}" == "windows" ]] && grep -a -i -l -E 'vcruntime140|msvcp140' lib/*/*.dll; then
+            echo "::error::The libraries import the dynamic MSVC runtime."
+            exit 1
+          fi
+          cd "lib/${{ matrix.config.platform }}"
+          cmake -E tar cf "../../simpledelphible-lib-${{ matrix.config.platform }}.zip" --format=zip .
+
+      - name: Upload the libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: simpledelphible-lib-${{ matrix.config.platform }}
+          path: simpledelphible-lib-${{ matrix.config.platform }}.zip
+          if-no-files-found: error
+
+  package:
+    needs: [test, build-lib]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add Version Suffix
+        uses: ./.github/actions/setup-version
+
+      - name: Download the libraries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simpledelphible-lib-*
+          path: native-artifacts
+          merge-multiple: true
+
+      - name: Assemble the distribution
+        run: |
+          for archive in native-artifacts/simpledelphible-lib-*.zip; do
+            platform=${archive#native-artifacts/simpledelphible-lib-}
+            unzip -q "$archive" -d "build_simpledelphible_libraries/${platform%.zip}"
+          done
+          utils/package_simpledelphible.sh build_simpledelphible_libraries build_simpledelphible_package
+          find build_simpledelphible_package -type f -ls
+
+      - name: Install Free Pascal
+        run: |
+          sudo -H apt-get update -y
+          sudo -H apt-get install -y fpc
+
+      # Compiling links every function the binding declares for Linux against the distributed libraries.
+      - name: Build the examples from the distribution
+        run: |
+          package_dir="build_simpledelphible_package/simpledelphible-$VERSION"
+          mkdir -p "$RUNNER_TEMP/examples"
+          for example in "$package_dir"/examples/*.dpr; do
+            fpc -O1 -vewn -Fu"$package_dir/source" -Fi"$package_dir/source" -Fl"$package_dir/lib/linux-x64" \
+              -FU"$RUNNER_TEMP/examples" -FE"$RUNNER_TEMP/examples" "$example"
+          done
+
+      - name: Upload the distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: simpledelphible-package
+          path: build_simpledelphible_package/simpledelphible-*.zip
+          if-no-files-found: error
