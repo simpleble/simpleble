@@ -6,8 +6,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
@@ -45,13 +47,14 @@ class ErrorCodeTest {
         }
         assertCode(ErrorCode.OPERATION_FAILED) { activePeripheral.read(TEST_SERVICE, ERROR_VALUE) }
 
-        // The binding's own failures carry a code too.
-        val collecting = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeout(5_000) { activePeripheral.notify(BATTERY_SERVICE, BATTERY_LEVEL).first() }
+        // The binding's own failures carry a code too. The first collector holds the subscription until it is
+        // cancelled.
+        val collecting = launch(start = CoroutineStart.UNDISPATCHED) {
+            activePeripheral.notify(BATTERY_SERVICE, BATTERY_LEVEL).collect {}
         }
         delay(100)
         assertCode(ErrorCode.OPERATION_FAILED) { activePeripheral.notify(BATTERY_SERVICE, BATTERY_LEVEL).first() }
-        collecting.await()
+        collecting.cancelAndJoin()
         activePeripheral.disconnect()
     }
 
