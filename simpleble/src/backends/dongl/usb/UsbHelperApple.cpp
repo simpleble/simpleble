@@ -59,7 +59,7 @@ UsbHelperApple::UsbHelperApple(const std::string& device_path) : UsbHelperImpl(d
         // Open and configure the serial port
         if (!_open_serial_port()) {
             if (errno == EBUSY) throw Exception::AdapterInUse(_device_path);
-            throw std::runtime_error("Failed to open serial port " + _device_path + ": " + strerror(errno));
+            throw Exception::OperationFailed("Failed to open serial port " + _device_path + ": " + strerror(errno));
         }
 
         _running = true;
@@ -76,12 +76,12 @@ UsbHelperApple::~UsbHelperApple() {
 
 void UsbHelperApple::tx(const kvn::bytearray& data) {
     if (!_running) {
-        throw std::runtime_error("Serial port reader for " + _device_path + " is not running");
+        throw Exception::OperationFailed("Serial port reader for " + _device_path + " is not running");
     }
 
     const ssize_t written = write(_serial_fd, data.data(), data.size());
     if (written != data.size()) {
-        throw std::runtime_error("Failed to write to serial port: " + std::string(strerror(errno)));
+        throw Exception::OperationFailed("Failed to write to serial port: " + std::string(strerror(errno)));
     }
 }
 
@@ -176,7 +176,7 @@ void UsbHelperApple::_configure_serial_port() {
 
     // Get current serial port settings
     if (tcgetattr(_serial_fd, &tty) != 0) {
-        throw std::runtime_error("Failed to get serial port attributes: " + std::string(strerror(errno)));
+        throw Exception::OperationFailed("Failed to get serial port attributes: " + std::string(strerror(errno)));
     }
 
     // Configure serial port settings
@@ -210,12 +210,12 @@ void UsbHelperApple::_configure_serial_port() {
 
     // Apply the settings
     if (tcsetattr(_serial_fd, TCSANOW, &tty) != 0) {
-        throw std::runtime_error("Failed to set serial port attributes: " + std::string(strerror(errno)));
+        throw Exception::OperationFailed("Failed to set serial port attributes: " + std::string(strerror(errno)));
     }
 
     speed_t speed = 1000000;  // Set 1 Mbps
     if (ioctl(_serial_fd, IOSSIOSPEED, &speed) == -1) {
-        throw std::runtime_error("Failed to set serial port speed: " + std::string(strerror(errno)));
+        throw Exception::OperationFailed("Failed to set serial port speed: " + std::string(strerror(errno)));
     }
 
     // Flush any existing data

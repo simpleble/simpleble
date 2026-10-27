@@ -224,10 +224,12 @@ try await host.start()
 ```
 
 Characteristic capabilities are `.read`, `.writeRequest`, `.writeCommand`, `.notify`, and `.indicate`. `setValue()`
-updates the stored value and notifies subscribers, and `value` returns it. A local characteristic has `onWrite`, which
-emits each written value, and `onSubscribed` and `onUnsubscribed`, which emit when the first client subscribes and when
-the last one leaves. The local peripheral has `onClientConnected` and `onClientDisconnected`, which emit the client's
-address.
+updates the stored value and publishes the latest value to subscribers on a best-effort basis, and `value` returns it.
+A local characteristic has `onWrite`, which emits each written value, and `onSubscribed` and `onUnsubscribed`, which
+emit when the first client subscribes and when the last one leaves. The local peripheral has `onClientConnected` and
+`onClientDisconnected`, which emit the client's address. CoreBluetooth reports no connections, so these follow a
+client's first subscription and its last unsubscription, and the address is the identifier CoreBluetooth assigns to the
+client.
 
 To compute values on demand, `setReadHandler` takes a function that answers each read instead of the stored value,
 until you pass `nil`:
@@ -242,8 +244,11 @@ The read handler runs on a SimpleBLE thread that waits for it, so it should retu
 
 `setAdvertisedManufacturerData(companyId:data:)` adds manufacturer data to the advertisement, and `setConnectable(false)`
 advertises without accepting connections, as a beacon does. See [Advertise a beacon](../recipes/advertise#advertise-a-beacon).
+CoreBluetooth advertises only a local name and service UUIDs, always connectable, so on it both throw `SimpleBLEError`
+with `.operationNotSupported`.
 `setAdvertisementLocalName(_:)` sets the local name in the advertisement, and `nil` removes it. This changes only the
-advertisement, not the system's Bluetooth name, and iOS leaves it out while the app is in the background.
+advertisement, not the system's Bluetooth name. macOS leaves it out when it doesn't fit beside the advertised service
+UUIDs, and iOS while the app is in the background.
 
 Configure services before `start()`. Call `stop()` before changing them, and when you no longer want to advertise.
 

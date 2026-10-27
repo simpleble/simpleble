@@ -1,6 +1,7 @@
 #include "Protocol.h"
 
 #include <cstring>
+#include <simpleble/Exceptions.h>
 #include "protocol/simpleble.pb.h"
 
 using namespace SimpleBLE::Dongl::Serial;
@@ -155,7 +156,7 @@ simpleble_ReadRsp Protocol::simpleble_read(uint16_t conn_handle, uint16_t handle
 simpleble_WriteRsp Protocol::simpleble_write(uint16_t conn_handle, uint16_t handle, simpleble_WriteOperation operation,
                                              const std::vector<uint8_t>& data) {
     if (data.size() > sizeof(simpleble_WriteCmd_data_t::bytes)) {
-        throw std::length_error("Payload exceeds maximum size of 512 bytes");
+        throw Exception::OperationFailed("Payload exceeds maximum size of 512 bytes");
     }
 
     dongl_Command command = dongl_Command_init_zero;

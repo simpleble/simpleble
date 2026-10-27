@@ -27,7 +27,8 @@ public final class LocalPeripheral: Sendable {
         try check { simpleble_local_peripheral_add_advertised_service(handle.raw, nativeUUID(uuid), $0) }
     }
 
-    /// Adds manufacturer data to the advertisement.
+    /// Adds manufacturer data to the advertisement. CoreBluetooth can't advertise it, so there this throws
+    /// `operationNotSupported`.
     public func setAdvertisedManufacturerData(companyId: UInt16, data: Data) throws {
         try data.withUnsafeBytes { bytes in
             try check {
@@ -37,13 +38,15 @@ public final class LocalPeripheral: Sendable {
         }
     }
 
-    /// Advertises without accepting connections when false, as a beacon does.
+    /// Advertises without accepting connections when false, as a beacon does. CoreBluetooth advertisements are always
+    /// connectable, so there false throws `operationNotSupported`.
     public func setConnectable(_ connectable: Bool) throws {
         try check { simpleble_local_peripheral_set_connectable(handle.raw, connectable, $0) }
     }
 
     /// Sets the local name in the advertisement, or removes it with nil. This changes only the advertisement, not the
-    /// system's Bluetooth name, and iOS leaves it out while the app is in the background.
+    /// system's Bluetooth name. macOS leaves it out when it doesn't fit beside the advertised service UUIDs, and iOS
+    /// while the app is in the background.
     public func setAdvertisementLocalName(_ name: String?) throws {
         #if os(macOS)
             try check { simpleble_advanced_macos_set_advertisement_local_name(handle.raw, name, $0) }
@@ -88,10 +91,12 @@ public final class LocalPeripheral: Sendable {
         try await blocking { [handle] in try check { simpleble_local_peripheral_is_advertising(handle.raw, $0) } }
     }
 
-    /// Emits the address of each client that connects.
+    /// Emits the address of each client that connects. CoreBluetooth reports no connections, so this follows a client's
+    /// first subscription, and the address is the identifier CoreBluetooth assigns to the client.
     public var onClientConnected: AsyncStream<BluetoothAddress> { clientConnectedEvents.stream() }
 
-    /// Emits the address of each client that disconnects.
+    /// Emits the address of each client that disconnects. With CoreBluetooth, this follows a client's last
+    /// unsubscription.
     public var onClientDisconnected: AsyncStream<BluetoothAddress> { clientDisconnectedEvents.stream() }
 
     static func create(_ raw: UnsafeMutableRawPointer) -> LocalPeripheral {
@@ -219,7 +224,7 @@ public final class LocalCharacteristic: Sendable {
         return takeData(bytes, count: length)
     }
 
-    /// Updates the stored value and sends it to subscribed clients.
+    /// Updates the stored value and publishes the latest value to subscribed clients on a best-effort basis.
     public func setValue(_ value: Data) async throws {
         try await blocking { [handle] in
             try value.withUnsafeBytes { bytes in

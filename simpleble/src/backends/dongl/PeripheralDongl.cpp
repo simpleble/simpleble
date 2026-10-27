@@ -734,8 +734,10 @@ PeripheralDongl::CharacteristicDefinition& PeripheralDongl::_find_characteristic
 
 PeripheralDongl::CharacteristicDefinition& PeripheralDongl::_find_characteristic_from_uuid(
     BluetoothUUID const& service_uuid, BluetoothUUID const& characteristic_uuid) {
+    bool service_found = false;
     for (auto& service : _services) {
         if (service.uuid == service_uuid) {
+            service_found = true;
             for (auto& characteristic : service.characteristics) {
                 if (characteristic.uuid == characteristic_uuid) {
                     return characteristic;
@@ -744,7 +746,8 @@ PeripheralDongl::CharacteristicDefinition& PeripheralDongl::_find_characteristic
         }
     }
 
-    throw std::runtime_error(fmt::format("Characteristic {} not found", characteristic_uuid));
+    if (!service_found) throw Exception::ServiceNotFound(service_uuid);
+    throw Exception::CharacteristicNotFound(characteristic_uuid);
 }
 
 PeripheralDongl::DescriptorDefinition& PeripheralDongl::_find_descriptor_from_uuid(
@@ -756,5 +759,5 @@ PeripheralDongl::DescriptorDefinition& PeripheralDongl::_find_descriptor_from_uu
         }
     }
 
-    throw std::runtime_error(fmt::format("Descriptor {} not found", descriptor_uuid));
+    throw Exception::DescriptorNotFound(descriptor_uuid);
 }
