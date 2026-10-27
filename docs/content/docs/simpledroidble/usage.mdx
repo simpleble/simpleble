@@ -60,20 +60,14 @@ SimpleDroidBLE uses the Android Bluetooth backend.
 
 ## Android Permissions
 
-Declare Android 12+ Bluetooth permissions in your app manifest:
+SimpleDroidBLE declares the Bluetooth permissions it needs, and Gradle merges them into your app's manifest. Android delivers scan results only to apps that also hold `ACCESS_FINE_LOCATION`, unless the app states that it never derives location from them. If yours doesn't, say so in your app's manifest, and declare Bluetooth LE as a required feature if your app can't work without it:
 
 ```xml
 <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
-<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 <uses-permission
     android:name="android.permission.BLUETOOTH_SCAN"
     android:usesPermissionFlags="neverForLocation" />
 ```
-
-If your app uses BLE scans to infer physical location, review Android location policy before using `neverForLocation`.
 
 Request the runtime permissions before calling adapter APIs. The permission helpers are stateless; the native library loads automatically on the first adapter call.
 
@@ -194,7 +188,7 @@ Call `stop()` from your lifecycle cleanup. Advertising data, services, and chara
 
 SimpleDroidBLE includes the phone's system Bluetooth name. Android's public advertising API cannot set an arbitrary per-advertisement name.
 
-Peripheral mode currently uses legacy advertising, including its 31-byte payload limits, and rejects prepared writes. Use regular write requests or write commands within the negotiated GATT payload size.
+Peripheral mode uses legacy advertising, with its 31-byte payload limit, and rejects prepared writes. Use regular write requests or write commands within the negotiated GATT payload size.
 
 ## Lifecycle And Threading
 
@@ -205,15 +199,15 @@ Peripheral mode currently uses legacy advertising, including its 31-byte payload
 - Only one `notify` or `indicate` collector may be active for a characteristic. Cancel and join the old collector before starting another.
 - Notification and indication flows use bounded buffers and fail with `SimpleDroidBleException` if a collector cannot keep up. Place `buffer(256)` directly after `notify` or `indicate` to increase capacity, or explicitly opt into dropping with `buffer(256, onBufferOverflow = BufferOverflow.DROP_OLDEST)` or `BufferOverflow.DROP_LATEST`.
 - Flow collectors resume in their own coroutine context. Keep payload parsing short; blocking GATT operations dispatch to `Dispatchers.IO` internally.
-- Android exposes one active Bluetooth adapter through the backend today. `Adapter.getAdapters()` returns a list for API consistency.
+- Android has one Bluetooth adapter. `Adapter.getAdapters()` returns it in a list, as on other platforms.
 
 ## Error Handling
 
 Native SimpleBLE operation failures are surfaced as `SimpleDroidBleException`, an unchecked Kotlin/Java exception. Wrap scan, connect, read, write, notify, unsubscribe, and disconnect operations in normal Kotlin `try`/`catch` blocks and show errors to users. Bluetooth can fail because permissions are missing, Bluetooth is off, a device disappeared, a GATT operation timed out, or a characteristic does not support the requested operation.
 
-## Current Limitations
+## Android Behavior
 
-- The JNI layer still keeps process-local native caches for adapters, peripherals, and active notification callbacks. Treat adapter and peripheral objects as app-process objects, not serializable handles.
-- Reconnection works through the backend after disconnect, but apps should refresh services after each new connection.
-- Android address type is reported as unspecified on API levels where Android does not expose it.
-- Programmatic unpairing is intentionally not relied on because Android restricts bond removal.
+- Adapter and peripheral objects belong to the app process, along with their active notification callbacks. Keep them in memory rather than serializing them.
+- A peripheral reconnects after a disconnect. Read its `services()` again after each new connection.
+- The address type is unspecified on API levels where Android doesn't expose it.
+- Android leaves bond removal to the system settings, so `unpair()` doesn't remove a bond.
