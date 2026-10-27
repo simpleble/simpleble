@@ -34,7 +34,7 @@ const RESOURCES: ReadonlyArray<CardLink> = [
     href: "/fundamentals/ble_basics",
   },
   {
-    title: "BluetoothPermissions",
+    title: "Bluetooth Permissions",
     description: "Understanding platform-specific permissions for Bluetooth.",
     href: "/fundamentals/permissions",
   },
@@ -80,11 +80,25 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/simplecble/usage",
   },
   {
+    eyebrow: "C#",
+    title: "SimpleSharpBLE",
+    description:
+      ".NET bindings for desktop, mobile, and MAUI apps, available from NuGet.",
+    href: "/simplesharpble/usage",
+  },
+  {
     eyebrow: "Java",
     title: "SimpleJavaBLE",
     description:
-      "Java bindings for Android and cross-platform Java applications.",
+      "Java bindings for JVM desktop apps on Windows, macOS, and Linux.",
     href: "/simplejavable/examples",
+  },
+  {
+    eyebrow: "Go",
+    title: "SimpleGoBLE",
+    description:
+      "Go bindings without cgo for desktop apps, tools, and services.",
+    href: "/simplegoble/usage",
   },
   {
     eyebrow: "Rust",
@@ -160,7 +174,7 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     eyebrow: "Unity",
     title: "SimpleBLE for Unity",
     description:
-      "C# plugin for Windows and Android with IL2CPP support.",
+      "C# plugin for Windows, macOS, Linux, iOS, and Android with IL2CPP support.",
     href: "/simpleunityble",
   },
   {
