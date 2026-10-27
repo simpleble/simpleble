@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -127,7 +127,7 @@ WriteLn;
 ```
 
 </Tab>
-<Tab value="Android (deprecated)">
+<Tab value="Android">
 
 ```kotlin
 val value = peripheral.read(serviceUuid, characteristicUuid)
@@ -139,7 +139,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -281,7 +281,7 @@ Peripheral.WriteCommand(ServiceUuid, CharacteristicUuid, Payload);
 ```
 
 </Tab>
-<Tab value="Android (deprecated)">
+<Tab value="Android">
 
 ```kotlin
 val payload = byteArrayOf(0x01, 0x02, 0x03)
@@ -295,7 +295,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -473,7 +473,7 @@ Peripheral.Unsubscribe(ServiceUuid, CharacteristicUuid);
 ```
 
 </Tab>
-<Tab value="Android (deprecated)">
+<Tab value="Android">
 
 ```kotlin
 withTimeoutOrNull(10_000) {

@@ -1,9 +1,6 @@
-@file:Suppress("DEPRECATION")
-
 package org.simpleble.android
 
 /** Set configuration before retrieving adapters. */
-@Deprecated("SimpleDroidBLE is deprecated. Use SimpleKtBLE (org.simpleble:simplektble) instead.")
 object Config {
     init { SimpleDroidBle.ensureLoaded() }
 

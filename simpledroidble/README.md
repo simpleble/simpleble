@@ -7,15 +7,21 @@
 
 # SimpleDroidBLE
 
+**Build Bluetooth once. Ship it everywhere.**
+
 SimpleDroidBLE brings [SimpleBLE](https://github.com/simpleble/simpleble) to
 Kotlin on Android. Discover and connect Bluetooth peripherals, read and write
 GATT values, follow notifications, and host local GATT services, with
 coroutines and flows throughout.
 
-New apps use [SimpleKtBLE](https://docs.simpleble.org/simplektble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=intro), which
-has the same Kotlin API on Android and also runs on iOS, macOS, Windows, and
-Linux. The [usage guide](https://docs.simpleble.org/simpledroidble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=intro#migrate-to-simplektble)
-lists the steps to move over.
+To share Bluetooth code with iOS and desktop, use [SimpleKtBLE](https://docs.simpleble.org/simplektble/usage?utm_source=github&utm_medium=referral&utm_campaign=simpledroidble_readme&utm_content=intro#moving-from-simpledroidble).
+
+## Why SimpleDroidBLE
+
+- **Kotlin-first:** Call suspend functions and collect flows, safely from the main thread.
+- **Native underneath:** Use Android's Bluetooth stack through the same core that runs SimpleBLE on every platform.
+- **Built for real products:** Act as a central or a peripheral, with helpers for Android's runtime permissions.
+- **Commercially supported:** Ship proprietary applications with commercial licensing and direct technical support from the team that builds SimpleBLE.
 
 ## Support and resources
 

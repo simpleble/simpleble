@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -354,7 +354,7 @@ Peripheral.Start;
 ```
 
 </Tab>
-<Tab value="Android (deprecated)">
+<Tab value="Android">
 
 ```kotlin
 val adapter = Adapter.getAdapters().first()
@@ -399,7 +399,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]}>
 <Tab value="C++">
 
 ```cpp
@@ -580,7 +580,7 @@ Peripheral.Start;
 ```
 
 </Tab>
-<Tab value="Android (deprecated)">
+<Tab value="Android">
 
 ```kotlin
 val adapter = Adapter.getAdapters().first()

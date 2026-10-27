@@ -3,32 +3,11 @@ title: Usage
 description: Install SimpleDroidBLE from Maven Central and use SimpleBLE from Kotlin on Android to scan, connect and host a peripheral, with permissions and threading.
 ---
 
-<Callout type="warn" title="SimpleDroidBLE is deprecated">
-Use [SimpleKtBLE](/simplektble/usage) instead. It has the same Kotlin API on Android, and the same code also runs on
-iOS, macOS, Windows, and Linux. New features land in SimpleKtBLE.
-</Callout>
-
-## Migrate to SimpleKtBLE
-
-- Depend on `org.simpleble:simplektble` instead of `org.simpleble:simpledroidble`, and import `org.simplektble`
-  instead of `org.simpleble.android`. Remove SimpleDroidBLE when you add SimpleKtBLE: an app can't use both.
-- `adapter.createLocalPeripheral()` takes no `Context`; SimpleKtBLE gets the application context on its own.
-- `SimpleDroidBle.hasPermissions` and the other permission helpers become `SimpleKtBle.hasPermissions` and so on, and
-  `SimpleDroidBle.getVersion()` becomes `SimpleKtBle.version`. The helpers are extension functions, so import each
-  one, such as `org.simplektble.hasPermissions`. Pass your own request code to `requestPermissions` if you need to
-  recognize the result.
-- Errors are `SimpleKtBleException`. Flows never drop events: a slow notification collector keeps receiving values
-  instead of failing with a buffer overflow.
-- `notify()` and `indicate()` flows complete when the peripheral disconnects, so `collect` returns instead of waiting
-  until it is cancelled.
-- `isPaired`, `scanIsActive`, and `isAdvertising` become `suspend` functions, and a local characteristic's value is
-  set with `setValue()`, since each of them waits on the Bluetooth stack.
-
 ## About SimpleDroidBLE
 
 SimpleDroidBLE is the Android/Kotlin wrapper around the SimpleBLE Android backend, with Kotlin APIs, Android runtime permission helpers, coroutine-friendly operations, and flows for scan, connection, and notification events.
 
-If you are writing native C++ inside an Android app, use SimpleBLE directly and include `simpledroidbridge`.
+If you are writing native C++ inside an Android app, use SimpleBLE directly and include `simpledroidbridge`. To share Bluetooth code with iOS and desktop, use [SimpleKtBLE](/simplektble/usage#moving-from-simpledroidble).
 
 ## Requirements
 

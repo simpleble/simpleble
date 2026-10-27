@@ -242,3 +242,14 @@ peripheral.connect()
 The handlers run while `connect()` waits, so they can take as long as the user needs to answer. Passing `null` removes a handler, and a request without a handler is rejected.
 
 For devices that wait for the central to start pairing, call `peripheral.secureConnection(mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
+
+## Moving from SimpleDroidBLE
+
+An Android app built on [SimpleDroidBLE](../simpledroidble/usage) moves to SimpleKtBLE with these changes:
+
+- Depend on `org.simpleble:simplektble` instead of `org.simpleble:simpledroidble`, and import `org.simplektble` instead of `org.simpleble.android`. Remove SimpleDroidBLE when you add SimpleKtBLE: an app can't use both.
+- `adapter.createLocalPeripheral()` takes no `Context`; SimpleKtBLE gets the application context on its own.
+- `SimpleDroidBle.hasPermissions` and the other permission helpers become `SimpleKtBle.hasPermissions` and so on, and `SimpleDroidBle.getVersion()` becomes `SimpleKtBle.version`. The helpers are extension functions, so import each one, such as `org.simplektble.hasPermissions`. Pass your own request code to `requestPermissions` if you need to recognize the result.
+- Errors are `SimpleKtBleException`. Flows never drop events: a slow notification collector keeps receiving values instead of failing with a buffer overflow.
+- `notify()` and `indicate()` flows complete when the peripheral disconnects, so `collect` returns instead of waiting until it is cancelled.
+- `isPaired`, `scanIsActive`, and `isAdvertising` become `suspend` functions, and a local characteristic's value is set with `setValue()`, since each of them waits on the Bluetooth stack.

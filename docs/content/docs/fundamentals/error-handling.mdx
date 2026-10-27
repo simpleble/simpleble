@@ -46,7 +46,7 @@ These errors carry the lower layer's message and no classification. C++ code see
 
 ## Errors in each language
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]}>
 <Tab value="C++">
 
 All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. To cover both the classified exceptions and unclassified errors, catch at two levels:
@@ -262,7 +262,7 @@ end;
 ```
 
 </Tab>
-<Tab value="Android (deprecated)">
+<Tab value="Android">
 
 Native failures are thrown as `SimpleDroidBleException`, an unchecked exception that carries the native message.
 

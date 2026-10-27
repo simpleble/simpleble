@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package org.simpleble.android
 
 import androidx.test.ext.junit.runners.AndroidJUnit4

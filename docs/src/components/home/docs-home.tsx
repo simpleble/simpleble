@@ -146,7 +146,7 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     eyebrow: "Android",
     title: "SimpleDroidBLE",
     description:
-      "Deprecated Android-only bindings. New Android apps use SimpleKtBLE.",
+      "Kotlin bindings with coroutines and flows for Android apps.",
     href: "/simpledroidble/usage",
   },
   {
