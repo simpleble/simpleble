@@ -1,24 +1,19 @@
 name: Publish SimpleDartBLE
 
-# pub.dev only accepts uploads from GitHub Actions for tag pushes, so pushing
-# the release tag publishes SimpleDartBLE and SimpleFltBLE, while CI Main publishes the other
-# packages for the release.
+# pub.dev only accepts uploads from GitHub Actions runs on a tag, so CI Main runs this workflow on the tag of a
+# published release. It uploads the SimpleDartBLE and SimpleFltBLE packages that CI Main built and attached to that
+# release.
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    uses: ./.github/workflows/ci_simpledartble.yml
-
   publish:
-    needs: build
     runs-on: ubuntu-22.04
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: subosito/flutter-action@v2
@@ -30,10 +25,15 @@ jobs:
       - uses: dart-lang/setup-dart@v1
 
       - name: Download packages
-        uses: actions/download-artifact@v4
-        with:
-          name: simpledartble-pub
-          path: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Run this workflow on the vX.Y.Z tag of a published release."
+            exit 1
+          fi
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir package \
+            --pattern "simpledartble-${BASH_REMATCH[1]}.tar.gz"
 
       - name: Publish to pub.dev
         working-directory: package

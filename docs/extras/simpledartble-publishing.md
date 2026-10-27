@@ -52,19 +52,18 @@ flutter pub publish --dry-run
 
 ## Publishing
 
-pub.dev accepts uploads from GitHub Actions only for tag pushes, and never deletes a version, so only stable releases
-are published. Pushing the release tag `vX.Y.Z` starts `publish_simpledartble.yml`, which runs
-`ci_simpledartble.yml` for the tag: it builds every target's library, then prepares, validates and packs both
-packages. The publish job then uploads `simpledartble` and `simplefltble` with
-GitHub's OIDC token, skipping a package whose version is already on pub.dev.
-
-`CI Main` runs the same build for every push and release, and keeps the packed packages as the `simpledartble-pub`
-artifact, `simpledartble-<version>.tar.gz`, without publishing them.
+pub.dev accepts uploads from GitHub Actions only for runs on a tag, and never deletes a version, so only stable
+releases are published. `CI Main` runs `ci_simpledartble.yml` for every push and release: it builds every target's
+library, then prepares, validates and packs both packages as the `simpledartble-pub` artifact,
+`simpledartble-<version>.tar.gz`. A published GitHub release attaches that file to the release, and
+`publish-simpledartble` runs `publish_simpledartble.yml` on the release tag and waits for it. That workflow downloads
+the file from the release and uploads `simpledartble` and `simplefltble` with GitHub's OIDC token, skipping a package
+whose version is already on pub.dev.
 
 ### pub.dev setup
 
 Automated publishing can only be turned on for a package that exists, so the first version of each package is
-uploaded by hand, from the `simpledartble-pub` artifact of the release's tag run:
+uploaded by hand, from the `simpledartble-pub` artifact of a `CI Main` run:
 
 ```bash
 tar -xzf simpledartble-X.Y.Z.tar.gz
@@ -72,8 +71,8 @@ tar -xzf simpledartble-X.Y.Z.tar.gz
 (cd simplefltble && flutter pub publish)
 ```
 
-That run's publish job fails, as pub.dev doesn't know the packages yet. Then, on each package's **Admin** tab on
-pub.dev, enable publishing from GitHub Actions for the repository `simpleble/simpleble` with the tag pattern
-`v{{version}}`. Later releases publish from their tag.
+Then, on each package's **Admin** tab on pub.dev, enable publishing from GitHub Actions for the repository
+`simpleble/simpleble` with the tag pattern `v{{version}}`, and enable publishing from `workflow_dispatch` events.
+Later releases publish from their tag.
 
 Never reuse a published version: pub.dev rejects it.

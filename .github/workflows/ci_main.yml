@@ -149,8 +149,7 @@ jobs:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simpledelphible.yml
 
-  # SimpleDartBLE is published by publish_simpledartble.yml, as pub.dev only
-  # accepts uploads for tag pushes.
+  # A release attaches the SimpleDartBLE packages, and publish-simpledartble uploads them to pub.dev.
   simpledartble:
     needs: [smoketest]
     uses: ./.github/workflows/ci_simpledartble.yml
@@ -438,6 +437,24 @@ jobs:
             gh release create "$tag" "$archive" --repo "$repo" --verify-tag --prerelease="$prerelease" \
               --title "SimpleDelphiBLE $tag" --notes "SimpleDelphiBLE $version, built from simpleble/simpleble@$GITHUB_SHA."
           fi
+
+  # pub.dev only accepts uploads from GitHub Actions runs on a tag, so the release runs publish_simpledartble.yml on
+  # its tag to upload the packages attached above, and waits for it.
+  publish-simpledartble:
+    needs: [publish-release]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+    steps:
+      - name: Publish to pub.dev
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/publish_simpledartble.yml/dispatches" \
+            -f ref="$GITHUB_REF_NAME" -F return_run_details=true --jq .workflow_run_id)
+          echo "Publishing in $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run_id"
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --interval 30 --exit-status
 
   publish-simplejsble:
     needs: [publish-release]

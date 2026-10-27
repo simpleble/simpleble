@@ -13,24 +13,36 @@ runs:
         # Read the base version from the VERSION file
         version_str=$(cat VERSION | tr -d ' \t\n\r')
 
-        # Only a published GitHub release, or the push of its vX.Y.Z tag that
-        # publishes SimpleDartBLE, produces a stable version. A branch push may
-        # see a tag created at the same time, so checking only whether HEAD is
-        # tagged can accidentally publish the stable version twice.
-        if [[ "${GITHUB_EVENT_NAME:-}" != "release" && "${GITHUB_REF:-}" != "refs/tags/v${version_str}" ]]; then
-          # Get the number of commits since the last version bump
-          latest_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$latest_tag" ]; then
-            commits=$(git rev-list --count "${latest_tag}"..HEAD)
-            # Since HEAD is not tagged and latest_tag exists, commits > 0. Append the dev suffix.
-            # NOTE: The dot makes the commit count its own identifier, which semver compares as a number.
-            # Without it, Go and Cargo compare "dev94" and "dev135" as text and rank dev94 higher.
-            version_str="${version_str}-dev.${commits}"
-          else
-            # If no tags found, exit with error
-            echo "Error: No tags found in the repository history." >&2
+        # Only a published GitHub release produces a stable version, and its tag names that version. A branch push may
+        # see a tag created at the same time, so checking only whether HEAD is tagged can accidentally publish the
+        # stable version twice.
+        if [[ "${GITHUB_EVENT_NAME:-}" == "release" ]]; then
+          if [[ ! "${GITHUB_REF:-}" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Error: The release tag (${GITHUB_REF:-}) is not vX.Y.Z." >&2
             exit 1
           fi
+          version_str="${BASH_REMATCH[1]}"
+        else
+          # Other builds are development versions of the release after the last tag. Starting from HEAD^ keeps the
+          # version of a commit that is built again after being tagged.
+          latest_tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2>/dev/null || echo "")
+          if [[ ! "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Error: No vX.Y.Z tag found in the repository history." >&2
+            exit 1
+          fi
+          tag_major=${BASH_REMATCH[1]}
+          tag_minor=${BASH_REMATCH[2]}
+          tag_patch=${BASH_REMATCH[3]}
+          IFS=. read -r major minor patch <<< "$version_str"
+          # NOTE: VERSION only matters when it names a later release than the last tag, such as the next minor one.
+          # Otherwise the next release is the patch after the last tag.
+          if (( major < tag_major || (major == tag_major && (minor < tag_minor || (minor == tag_minor && patch <= tag_patch))) )); then
+            version_str="${tag_major}.${tag_minor}.$((tag_patch + 1))"
+          fi
+          commits=$(git rev-list --count "${latest_tag}"..HEAD)
+          # NOTE: The dot makes the commit count its own identifier, which semver compares as a number.
+          # Without it, Go and Cargo compare "dev94" and "dev135" as text and rank dev94 higher.
+          version_str="${version_str}-dev.${commits}"
         fi
 
         # Use a backup suffix for compatibility with both GNU and BSD sed,

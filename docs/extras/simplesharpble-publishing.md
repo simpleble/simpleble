@@ -8,10 +8,11 @@ SimpleSharpBLE is published by `ci_main.yml`:
 | Published GitHub release | `1.1.1` | nuget.org and GitHub release assets |
 | Pull request or other branch | `1.1.1-dev.123` | CI artifacts |
 
-Versions above are examples. `.github/actions/setup-version` reads the root
-`VERSION` and appends `-dev.N` using the commit count since the preceding tag,
-so NuGet sorts development builds numerically. The .NET project reads that file
-directly. Continue using the repository's usual version bump and release process.
+Versions above are examples. `.github/actions/setup-version` writes the build's
+version to the root `VERSION`: the release tag's version for a published release,
+and otherwise the next release's version with `-dev.N`, using the commit count
+since the preceding tag, so NuGet sorts development builds numerically. The .NET
+project reads that file directly.
 
 CI publishes the built `SimpleSharpBLE-nuget` artifact. It contains the managed
 assembly with its XML documentation and the native libraries for Windows
