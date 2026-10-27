@@ -28,13 +28,13 @@ The [Dongl QuickStart](https://simpleble.org/dongl/quickstart) installs SimplePy
 | --- | --- |
 | Firmware | N-Series v0.1.0 |
 | Host | Windows, macOS, or Linux, over USB (on Linux, see [Dongl permissions](./simpleble/usage#dongl-permissions-on-linux)) |
-| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), Rust ([SimpleRsBLE](./simplersble/usage)), JavaScript ([SimpleJSBLE](./simplejsble/usage)), Kotlin Multiplatform ([SimpleKtBLE](./simplektble/usage)), Swift ([SimpleSwiftBLE](./simpleswiftble/usage)), Dart ([SimpleDartBLE](./simpledartble/usage)), Flutter ([SimpleFltBLE](./simplefltble/usage)), and Delphi ([SimpleDelphiBLE](./simpledelphible/usage)), version 1.2.1 or later |
+| Languages | C++ ([SimpleBLE](./simpleble/usage)), C ([SimpleCBLE](./simplecble/usage)), Python ([SimplePyBLE](./simplepyble/usage)), and C# ([SimpleSharpBLE](./simplesharpble/usage)), version 1.2.0 or later; Go ([SimpleGoBLE](./simplegoble/usage)), Java ([SimpleJavaBLE](./simplejavable/usage)), Rust ([SimpleRsBLE](./simplersble/usage)), JavaScript ([SimpleJSBLE](./simplejsble/usage)), Kotlin Multiplatform ([SimpleKtBLE](./simplektble/usage)), Swift ([SimpleSwiftBLE](./simpleswiftble/usage)), Dart ([SimpleDartBLE](./simpledartble/usage)), Flutter ([SimpleFltBLE](./simplefltble/usage)), and Delphi ([SimpleDelphiBLE](./simpledelphible/usage)), version 1.3.0 or later |
 
 The firmware acts as a BLE central. It supports scanning with scan responses and service data, connections, reads and writes, notifications and indications, descriptors, MTU reporting, and pairing with bonding. Reads return values of up to 512 bytes.
 
 ## Select a Dongl
 
-From SimpleBLE 1.2.1, the Dongl backend is on by default, so plugged-in Dongls appear next to the computer's own Bluetooth adapter. To use only Dongls, take the adapters of the Dongl backend, as below. To leave Dongls out, turn the backend off before any other SimpleBLE call. With 1.2.0, turn it on first. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
+From SimpleBLE 1.3.0, the Dongl backend is on by default, so plugged-in Dongls appear next to the computer's own Bluetooth adapter. To use only Dongls, take the adapters of the Dongl backend, as below. To leave Dongls out, turn the backend off before any other SimpleBLE call. With 1.2.0, turn it on first. Each Dongl identifies itself as `SimpleBLE Dongl N-Series`, and `address()` returns its own Bluetooth address. Listing adapters doesn't open any Dongl: each one opens on its first operation, such as a scan, and stays open while your program holds its adapter.
 
 <Tabs items={["C++", "C", "Python", "C#", "Go", "Java", "Rust", "Node.js", "Kotlin Multiplatform", "Swift", "Dart", "Delphi"]}>
 <Tab value="C++">
@@ -226,7 +226,7 @@ A Dongl adapter works like any other SimpleBLE adapter, and the [recipes](./reci
 
 ## Use several Dongls
 
-Each Dongl is a separate adapter with its own radio. Plug in as many as your setup needs, for example one per test fixture, and drive each from its own thread. `address()` identifies a unit across restarts and USB ports. Using several Dongls from C or C# requires SimpleBLE 1.2.1 or later.
+Each Dongl is a separate adapter with its own radio. Plug in as many as your setup needs, for example one per test fixture, and drive each from its own thread. `address()` identifies a unit across restarts and USB ports. Using several Dongls from C or C# requires SimpleBLE 1.3.0 or later.
 
 The programs below check three devices in parallel, one per Dongl.
 

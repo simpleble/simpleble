@@ -2,7 +2,7 @@ name: simpledartble
 description: >-
   SimpleBLE for Dart. Discover and connect Bluetooth peripherals, read and write GATT values, subscribe to
   notifications, and host local GATT services through one API.
-version: 1.2.1
+version: 1.3.0
 homepage: https://simpleble.org
 repository: https://github.com/simpleble/simpleble
 issue_tracker: https://github.com/simpleble/simpleble/issues

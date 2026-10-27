@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.1] - 2026-XX-XX
+## [1.3.0] - 2026-10-27
 
 **Notes**
 
@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Added**
 
 - (SimpleBLE) Added experimental Simulator backend.
+- (SimpleBLE) Added the `AdapterInUse` exception and `ADAPTER_IN_USE` error code.
+- (SimpleBLE) Added direct access to the native, Dongl and Simulator backends.
+- (SimpleBLE) Added manufacturer data and non-connectable advertising to local peripherals.
+- (SimpleCBLE) Added identity functions.
+- (Dongl) Added `secure_connection()` to C++ and the bindings to pair with LE Secure Connections from the host.
 - (SimpleGoBLE) Added Go bindings.
 - (SimpleJSBLE) Added Node.js bindings.
 - (SimpleRnBLE) Added React Native bindings.
@@ -24,47 +29,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleDartBLE) Added Dart bindings.
 - (SimpleFltBLE) Added Flutter bindings.
 - (SimpleDelphiBLE) Added Delphi and Free Pascal bindings.
-- (SimpleKtBLE) Added adapter power, error codes, service data, cached peripherals, local names and Android settings.
-- (SimpleBLE) Added the `AdapterInUse` exception and `ADAPTER_IN_USE` error code.
-- (SimpleBLE) Added direct access to the native, Dongl and Simulator backends.
-- (SimpleBLE) Added manufacturer data and non-connectable advertising to local peripherals.
 - (SimplePyBLE) Added local peripheral hosting and Dongl pairing callbacks.
 - (SimplePyBLE) Added `SimpleBLEError` and one subclass per error, carrying the error code.
 - (SimpleRsBLE) Added error codes to `Error`.
+- (SimpleRsBLE) Added local peripheral hosting, configuration, backend enumeration and Dongl pairing callbacks.
 - (SimpleJavaBLE) Added local peripheral hosting, configuration, backend enumeration and Dongl pairing callbacks.
 - (SimpleJavaBLE) Added adapter power and connected peripherals.
 - (SimpleJavaBLE) Added `SimpleJavaBleException` and one subclass per error, carrying the error code.
-- (SimpleRsBLE) Added local peripheral hosting, configuration, backend enumeration and Dongl pairing callbacks.
-- (SimpleCBLE) Added identity functions.
-- (Dongl) Added `secure_connection()` to C++ and the bindings to pair with LE Secure Connections from the host.
 
 **Changed**
 
-- (SimpleBLE) Advertising data reflects the latest advertisement and scan response.
-- (SimpleBLE) `scan_for()` throws `InvalidArgument` exception for a negative duration.
-- (SimplePyBLE) Declared the BUSL-1.1 license in package metadata.
-- (SimpleAIBLE) Declared the BUSL-1.1 license in package metadata and included the license file.
-- (SimpleRsBLE) Included the license file in the crate.
-- (SimpleBLE) Declared the BUSL-1.1 license in pkg-config files.
-- (Dongl) Listing adapters no longer opens Dongls. Each Dongl opens on its first operation.
-- (Dongl) The Dongl backend is enabled by default.
-- (SimpleBLE) macOS 15.0 is the minimum supported version.
 - **API CHANGE**: (SimpleCBLE) Replaced count and get-by-index calls with lists that are read once and released by the caller.
 - **API CHANGE**: (SimpleRsBLE) `scan_for()` takes a `Duration`.
 - **API CHANGE**: (SimpleRsBLE) Event streams yield events instead of `Result`s.
 - **API CHANGE**: (SimpleJavaBLE) `scanForAsync()` returns `CompletableFuture<Void>`.
+- (SimpleBLE) Advertising data reflects the latest advertisement and scan response.
+- (SimpleBLE) `scan_for()` throws `InvalidArgument` exception for a negative duration.
+- (SimpleBLE) Declared the BUSL-1.1 license in pkg-config files.
+- (SimpleBLE) macOS 15.0 is the minimum supported version.
+- (Dongl) Listing adapters no longer opens Dongls. Each Dongl opens on its first operation.
+- (Dongl) The Dongl backend is enabled by default.
+- (SimplePyBLE) Declared the BUSL-1.1 license in package metadata.
+- (SimpleAIBLE) Declared the BUSL-1.1 license in package metadata and included the license file.
+- (SimpleRsBLE) Included the license file in the crate.
 
 **Fixed**
 
+- (SimpleBLE) Fixed the macOS, iOS and Linux advanced functions missing from builds without their native backend.
 - (Android) Fixed MTU negotiation and payload size reporting.
 - (Android) Fixed compilation with NDK 30 by updating vendored fmt.
 - (Android) Fixed paired peripherals not sharing callbacks with the same scanned device.
 - (Android) Fixed `is_connectable()` returning an undefined value for paired peripherals that were never scanned.
-- (Python) Fixed GIL deadlocks when replacing or clearing callbacks.
-- (SimpleSharpBLE) Fixed local read handlers attaching to the wrong characteristic on the PLAIN backend.
-- (SimpleSharpBLE) Fixed iOS and Mac Catalyst minimum versions.
-- (SimpleSharpBLE/SimpleGoBLE) Fixed lists repeating or missing entries, or failing with "index is out of range", during a scan.
-- (SimpleBLE) Fixed the macOS, iOS and Linux advanced functions missing from builds without their native backend.
+- (Linux) Fixed scans missing devices that don't advertise as discoverable, like most beacons.
+- (Windows) Fixed local peripheral notifications failing after a client write.
+- (Windows) Fixed x86 BLE clients failing when radio management is unavailable.
+- (MacOS) Fixed exceptions thrown by disconnection and notification callbacks crashing the program.
 - (Dongl) Fixed C and C# adapter lists breaking with several Dongls plugged in.
 - (Dongl) Fixed another program opening a Dongl's port on macOS and Linux silently breaking its adapter.
 - (Dongl) Fixed a Dongl held by another process breaking the whole adapter list.
@@ -72,10 +71,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed an unplugged Dongl leaving its peripherals connected and commands waiting for a timeout.
 - (Dongl) Fixed Bluetooth being reported as enabled without a Dongl plugged in.
 - (Dongl) Fixed timeouts, serial port failures and missing attributes being reported as unclassified errors.
-- (Linux) Fixed scans missing devices that don't advertise as discoverable, like most beacons.
-- (Windows) Fixed local peripheral notifications failing after a client write.
-- (Windows) Fixed x86 BLE clients failing when radio management is unavailable.
-- (MacOS) Fixed exceptions thrown by disconnection and notification callbacks crashing the program.
+- (SimpleSharpBLE) Fixed iOS and Mac Catalyst minimum versions.
+- (SimpleSharpBLE) Fixed lists repeating or missing entries, or failing with "index is out of range", during a scan.
 - (SimpleJavaBLE) Fixed several Dongls appearing as one adapter.
 - (SimpleJavaBLE) Fixed adapter listeners stopping after adapters were enumerated again.
 - (SimpleJavaBLE) Fixed races between scan callbacks and other calls.
@@ -85,6 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleJavaBLE) Fixed programs not exiting after `main` returned.
 - (SimpleJavaBLE) Fixed programs hanging at exit while callbacks were running.
 - (SimpleJavaBLE) Fixed `Async` calls blocking the common pool.
+- (SimplePyBLE) Fixed GIL deadlocks when replacing or clearing callbacks.
 - (SimplePyBLE) Fixed `asyncio` deprecation warnings on Python 3.14.
 - (SimplePyBLE) Fixed `aio` programs crashing at exit on macOS when Bluetooth access isn't granted.
 - (SimplePyBLE) Fixed programs aborting at exit while a callback or subscription was still registered.

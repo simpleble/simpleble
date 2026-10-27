@@ -17,7 +17,7 @@ With a Dongl, the firmware runs those procedures and SimpleBLE's calls block unt
 
 1. **Plug in a Dongl.** To evaluate with the nRF52840 Dongle or DK you already have, [flash it with the Dongl firmware](../dongl#update-the-firmware).
 2. **Install SimpleBLE 1.2.0 or later:** `pip install --upgrade simplepyble` for Python, the [SimpleSharpBLE](../simplesharpble/usage) NuGet package for C#, or a [source build](../installation) for C++ and C.
-3. **Select the Dongl in code.** Take the adapters from the `Dongl` backend. SimpleBLE 1.2.1 includes that backend by default; with 1.2.0, enable it before any other SimpleBLE call. [Select a Dongl](../dongl#select-a-dongl) shows it in every supported language.
+3. **Select the Dongl in code.** Take the adapters from the `Dongl` backend. SimpleBLE 1.3.0 includes that backend by default; with 1.2.0, enable it before any other SimpleBLE call. [Select a Dongl](../dongl#select-a-dongl) shows it in every supported language.
 
 Your code no longer names a serial port or a baud rate. SimpleBLE finds Dongls by their USB vendor and product IDs, and the same code runs on the computer's built-in Bluetooth when you select a native adapter instead.
 
@@ -119,7 +119,7 @@ With pc-ble-driver, the events of every connection arrive in one dispatcher, whi
 
 With SimpleBLE, each device is a `Peripheral` with its own blocking calls, and each can run in its own thread with straight-line code: scan, connect, read, disconnect. To add radios, plug in more Dongls; each one is another adapter. [Use several Dongls](../dongl#use-several-dongls) has complete programs in C++, C, Python, and C#. Tell Dongls apart by `adapter.address()`, which stays the same across restarts and USB ports, rather than by serial port name.
 
-For a Windows application, use [SimpleSharpBLE](../simplesharpble/usage) from NuGet, or link the C++ library, which builds as a static library by default. Using several Dongls from C# requires SimpleBLE 1.2.1 or later. Each Dongl unit includes a commercial license to use SimpleBLE through the Dongl backend; [Dongl Licenses](https://www.simpleble.org/dongl-licenses) has the full terms.
+For a Windows application, use [SimpleSharpBLE](../simplesharpble/usage) from NuGet, or link the C++ library, which builds as a static library by default. Using several Dongls from C# requires SimpleBLE 1.3.0 or later. Each Dongl unit includes a commercial license to use SimpleBLE through the Dongl backend; [Dongl Licenses](https://www.simpleble.org/dongl-licenses) has the full terms.
 
 ## Pairing and bonding
 

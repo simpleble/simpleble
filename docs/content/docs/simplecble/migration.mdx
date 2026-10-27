@@ -3,7 +3,7 @@ title: Migration Guide
 description: Migrate C and FFI code to the refactored SimpleCBLE API, covering the public header, error objects, returned values, owned collections and callbacks.
 ---
 
-This guide covers the breaking C API refactor following SimpleCBLE 1.1.0, listed in the [1.2.0 changelog](../changelog), and the lists that replace count and index calls, listed in the 1.2.1 changelog. It changes function signatures, error reporting, collections, and the layout and ownership of returned data.
+This guide covers the breaking C API refactor following SimpleCBLE 1.1.0, listed in the [1.2.0 changelog](../changelog), and the lists that replace count and index calls, listed in the 1.3.0 changelog. It changes function signatures, error reporting, collections, and the layout and ownership of returned data.
 
 Rebuild C callers against the new headers. For FFI bindings, update function declarations, struct layouts, and cleanup code together before loading the new library. Recompiling an old declaration or keeping the old fixed-array layout is not sufficient.
 
