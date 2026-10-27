@@ -129,6 +129,8 @@ jobs:
         run: |
           for archive in native-artifacts/simpledelphible-lib-*.zip; do
             platform=${archive#native-artifacts/simpledelphible-lib-}
+            # NOTE: unzip creates the -d folder but not its parents.
+            mkdir -p "build_simpledelphible_libraries/${platform%.zip}"
             unzip -q "$archive" -d "build_simpledelphible_libraries/${platform%.zip}"
           done
           utils/package_simpledelphible.sh build_simpledelphible_libraries build_simpledelphible_package
