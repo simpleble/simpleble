@@ -24,6 +24,8 @@ The first time your application attempts to use Bluetooth, the operating system 
 
 If your app targets older versions of macOS, you might also need `NSBluetoothPeripheralUsageDescription`.
 
+In Delphi, set these keys for the macOS target in **Project > Options > Application > Version Info**. Lazarus applications add them to the `Info.plist` in their application bundle.
+
 Similar to Windows, any pairing requests will trigger a macOS system UI that the user must interact with to complete the process.
 
 ### Linux

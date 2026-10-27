@@ -20,7 +20,7 @@ Connecting moves from BLE advertisements into the GATT database. Once connected,
 
 ## Connect and list GATT objects
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -246,6 +246,30 @@ for (final service in peripheral.services()) {
 }
 
 await peripheral.disconnect();
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+Peripheral := Peripherals[SelectedIndex];
+
+Peripheral.Connect;
+
+WriteLn('MTU: ', Peripheral.Mtu);
+for Service in Peripheral.Services do
+begin
+  WriteLn('Service: ', Service.Uuid);
+
+  for Characteristic in Service.Characteristics do
+  begin
+    WriteLn('  Characteristic: ', Characteristic.Uuid);
+    WriteLn('    read=', Characteristic.CanRead, ' notify=', Characteristic.CanNotify,
+      ' write_request=', Characteristic.CanWriteRequest, ' write_command=', Characteristic.CanWriteCommand);
+  end;
+end;
+
+Peripheral.Disconnect;
 ```
 
 </Tab>

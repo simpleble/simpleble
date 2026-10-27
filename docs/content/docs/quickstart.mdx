@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: Run a first Bluetooth Low Energy scan with SimpleBLE in C++, C, Python, Java, Rust, Node.js, React Native, Kotlin, Swift, Unity or Unreal to check your setup.
+description: Run a Bluetooth Low Energy scan with SimpleBLE in C++, C, Python, Java, Rust, Node.js, React Native, Kotlin, Swift, Delphi, Unity or Unreal to check your setup.
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
@@ -16,7 +16,7 @@ This quickstart gets you to the first adoption milestone: your application can s
 
 ## Scan for nearby devices
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)", "Unreal", "Unity"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)", "Unreal", "Unity"]}>
 <Tab value="C++">
 
 ```cpp
@@ -436,6 +436,75 @@ Future<void> main() async {
 ```
 
 In a Flutter app, use SimpleFltBLE: run `flutter pub add simplefltble`, import `package:simplefltble/simplefltble.dart`, and call the same code from your app. On Android, request the Bluetooth permissions first, and on iOS and macOS, add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. See [SimpleFltBLE Usage](./simplefltble/usage#app-setup) for details.
+
+</Tab>
+<Tab value="Delphi">
+
+Install SimpleDelphiBLE with [Boss](https://github.com/HashLoad/boss), or add the `source` folder of a [release](https://github.com/simpleble/simpledelphible/releases) to your search path:
+
+```sh
+boss install github.com/simpleble/simpledelphible
+```
+
+Then scan from a console program:
+
+```pascal
+program scan;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+type
+  TScanPrinter = class
+    procedure ScanFound(Sender: TBleAdapter; Peripheral: TBlePeripheral);
+  end;
+
+procedure TScanPrinter.ScanFound(Sender: TBleAdapter; Peripheral: TBlePeripheral);
+begin
+  WriteLn('Found: ', Peripheral.Identifier, ' [', Peripheral.Address, '] ', Peripheral.Rssi, ' dBm');
+end;
+
+var
+  Adapters: TArray<TBleAdapter>;
+  Adapter: TBleAdapter;
+  Peripheral: TBlePeripheral;
+  Printer: TScanPrinter;
+begin
+  if not TBleAdapter.IsBluetoothEnabled then
+    raise Exception.Create('Bluetooth is not enabled or permission is missing.');
+
+  Adapters := TBleAdapter.GetAdapters;
+  if Length(Adapters) = 0 then
+    raise Exception.Create('No Bluetooth adapters found.');
+
+  Adapter := Adapters[0];
+  WriteLn('Using adapter: ', Adapter.Identifier, ' [', Adapter.Address, ']');
+
+  Printer := TScanPrinter.Create;
+  Adapter.OnScanFound := Printer.ScanFound;
+  Adapter.ScanFor(5000);
+
+  WriteLn('Scan results:');
+  for Peripheral in Adapter.ScanGetResults do
+    if Peripheral.IsConnectable then
+      WriteLn('- ', Peripheral.Identifier, ' [', Peripheral.Address, '] connectable')
+    else
+      WriteLn('- ', Peripheral.Identifier, ' [', Peripheral.Address, '] not connectable');
+end.
+```
+
+Keep the native SimpleBLE libraries for your platform next to the program, and on macOS add `NSBluetoothAlwaysUsageDescription` to your app's `Info.plist`. In VCL, FMX, and Lazarus applications, `OnScanFound` runs on the main thread. See [SimpleDelphiBLE Usage](./simpledelphible/usage) for deployment and Free Pascal settings.
 
 </Tab>
 <Tab value="Android (deprecated)">

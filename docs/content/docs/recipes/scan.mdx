@@ -18,7 +18,7 @@ Scanning is the first real interaction with the Bluetooth stack. A scan listens 
 
 ## Core scan call
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -224,6 +224,27 @@ await adapter.scanFor(const Duration(seconds: 5));
 for (final peripheral in adapter.scanGetResults()) {
   if (peripheral.isConnectable) print('${peripheral.identifier} is connectable');
 }
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+procedure TScanPrinter.ScanFound(Sender: TBleAdapter; Peripheral: TBlePeripheral);
+begin
+  WriteLn('Found ', Peripheral.Identifier, ' [', Peripheral.Address, ']');
+end;
+
+Adapters := TBleAdapter.GetAdapters;
+Adapter := Adapters[0];
+
+Adapter.OnScanFound := Printer.ScanFound;
+
+Adapter.ScanFor(5000);
+
+for Peripheral in Adapter.ScanGetResults do
+  if Peripheral.IsConnectable then
+    WriteLn(Peripheral.Identifier, ' is connectable.');
 ```
 
 </Tab>

@@ -18,7 +18,7 @@ The snippets below assume you already have a connected `peripheral`, a `service_
 
 ## Read
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -116,6 +116,17 @@ print('Read: $value');
 ```
 
 </Tab>
+<Tab value="Delphi">
+
+```pascal
+Value := Peripheral.Read(ServiceUuid, CharacteristicUuid);
+Write('Read:');
+for B in Value do
+  Write(' ', IntToHex(B, 2));
+WriteLn;
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -128,7 +139,7 @@ Log.d("SimpleBLE", "Read: ${value.joinToString(" ") { "%02x".format(it) }}")
 
 ## Write
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -257,6 +268,19 @@ await peripheral.writeCommand(serviceUuid, characteristicUuid, payload);
 ```
 
 </Tab>
+<Tab value="Delphi">
+
+```pascal
+Payload := TBytes.Create($01, $02, $03);
+
+// Acknowledged write.
+Peripheral.WriteRequest(ServiceUuid, CharacteristicUuid, Payload);
+
+// Unacknowledged write.
+Peripheral.WriteCommand(ServiceUuid, CharacteristicUuid, Payload);
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -271,7 +295,7 @@ peripheral.writeCommand(serviceUuid, characteristicUuid, payload)
 
 ## Notify
 
-<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -428,6 +452,27 @@ await peripheral.unsubscribe(serviceUuid, characteristicUuid);
 ```
 
 </Tab>
+<Tab value="Delphi">
+
+```pascal
+procedure TMonitor.Notification(Sender: TBlePeripheral; const Service, Characteristic: string; const Data: TBytes);
+var
+  B: Byte;
+begin
+  Write('Notification:');
+  for B in Data do
+    Write(' ', IntToHex(B, 2));
+  WriteLn;
+end;
+
+Peripheral.Notify(ServiceUuid, CharacteristicUuid, Monitor.Notification);
+
+Sleep(10000);
+
+Peripheral.Unsubscribe(ServiceUuid, CharacteristicUuid);
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -446,6 +491,8 @@ On Android, collecting the flow subscribes to the characteristic. When collectio
 With SimpleKtBLE, collecting the flow subscribes and ending the collection unsubscribes in the same way. When the peripheral disconnects, the flow completes, and you collect it again after reconnecting. With SimpleSwiftBLE, `notify()` returns once subscribed, and cancelling or dropping its stream unsubscribes. When the peripheral disconnects, the stream ends, and you call `notify()` again after reconnecting.
 
 With SimpleDartBLE, `notify()` completes once the peripheral is subscribed and returns a stream of the values. The stream ends on `unsubscribe()`, and cancelling its subscription also unsubscribes. When the peripheral disconnects, the stream ends too, and you subscribe again after reconnecting.
+
+With SimpleDelphiBLE, `Notify` returns once subscribed, and your handler receives each value as an event until `Unsubscribe`. In VCL, FMX, and Lazarus applications, events run on the main thread, so unsubscribe later, for example from a timer, instead of sleeping. When the peripheral disconnects, call `Notify` again after reconnecting.
 
 ## Production Android apps
 

@@ -46,7 +46,7 @@ These errors carry the lower layer's message and no classification. C++ code see
 
 ## Errors in each language
 
-<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "C", "C#", "Python", "Java", "Go", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 All library-defined exceptions live in the `SimpleBLE::Exception` namespace (declared in `simpleble/Exceptions.h`) and derive from `SimpleBLE::Exception::BaseException`, which itself derives from `std::runtime_error`. To cover both the classified exceptions and unclassified errors, catch at two levels:
@@ -243,6 +243,22 @@ try {
 } on SimpleDartBleException catch (e) {
   print('BLE error ${e.code.name}: ${e.message}');
 }
+```
+
+</Tab>
+<Tab value="Delphi">
+
+Failures raise an `EBleError`, with one subclass per kind of failure, such as `EBleNotConnected` or `EBleCharacteristicNotFound`. Its `Code` is SimpleBLE's error code, such as `ecPeripheralNotConnected`. Out-of-memory and unclassified failures raise `EBleError` itself, with the code `ecOutOfMemory` or `ecUnclassifiedException`. Arguments outside what SimpleBLE takes, such as a UUID longer than 36 characters, raise an `EBleInvalidArgument`, like the values SimpleBLE rejects. Exceptions that your event handlers raise go to `TSimpleDelphiBLE.OnHandlerException` when you set it.
+
+```pascal
+try
+  Value := Peripheral.Read(ServiceUuid, CharacteristicUuid);
+except
+  on EBleNotConnected do
+    Peripheral.Connect;
+  on E: EBleError do
+    WriteLn('BLE error ', E.ClassName, ': ', E.Message);
+end;
 ```
 
 </Tab>

@@ -25,7 +25,7 @@ SimpleBLE can host a local peripheral on every supported platform, and every lan
 
 ## Advertise a readable characteristic
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -322,6 +322,38 @@ Future<void> main() async {
 ```
 
 </Tab>
+<Tab value="Delphi">
+
+```pascal
+procedure THost.CharacteristicWrite(Sender: TBleLocalCharacteristic; const Data: TBytes);
+begin
+  // Echo the written value to subscribed clients.
+  Sender.SetValue(Data);
+end;
+
+procedure THost.ClientConnected(Sender: TBleLocalPeripheral; const Address: string);
+begin
+  WriteLn('Client connected: ', Address);
+end;
+
+Adapters := TBleAdapter.GetAdapters;
+Peripheral := Adapters[0].CreateLocalPeripheral;
+
+Peripheral.AddAdvertisedService('12345678-1234-5678-1234-56789abcdef0');
+
+Service := Peripheral.AddService('12345678-1234-5678-1234-56789abcdef0');
+Characteristic := Service.AddCharacteristic('12345678-1234-5678-1234-56789abcdef1',
+  [lcRead, lcWriteRequest, lcNotify]);
+Characteristic.SetValue(TEncoding.UTF8.GetBytes('ready'));
+
+Characteristic.OnWrite := Host.CharacteristicWrite;
+
+Peripheral.OnClientConnected := Host.ClientConnected;
+
+Peripheral.Start;
+```
+
+</Tab>
 <Tab value="Android (deprecated)">
 
 ```kotlin
@@ -367,7 +399,7 @@ SimpleBLE permits the same adapter to scan while the local peripheral is started
 
 A beacon is a non-connectable local peripheral without services. Manufacturer data carries its payload, such as an iBeacon frame or a format of your own.
 
-<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Android (deprecated)"]}>
+<Tabs items={["C++", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android (deprecated)"]}>
 <Tab value="C++">
 
 ```cpp
@@ -529,6 +561,22 @@ Future<void> main() async {
   peripheral.setConnectable(false);
   await peripheral.start();
 }
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+Adapters := TBleAdapter.GetAdapters;
+Peripheral := Adapters[0].CreateLocalPeripheral;
+
+// iBeacon: $02 $15, a 16-byte UUID, major, minor, and the measured power at 1 m.
+Peripheral.SetAdvertisedManufacturerData($004C, TBytes.Create(
+  $02, $15,
+  $E2, $C5, $6D, $B5, $DF, $FB, $48, $D2, $B0, $60, $D0, $F5, $A7, $10, $96, $E0,
+  $00, $01, $00, $02, $C5));
+Peripheral.SetConnectable(False);
+Peripheral.Start;
 ```
 
 </Tab>

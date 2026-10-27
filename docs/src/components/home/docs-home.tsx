@@ -136,6 +136,13 @@ const PRODUCTS: ReadonlyArray<CardLink> = [
     href: "/simplefltble/usage",
   },
   {
+    eyebrow: "Delphi",
+    title: "SimpleDelphiBLE",
+    description:
+      "Delphi and Free Pascal bindings for VCL, FMX, and Lazarus apps on Windows, macOS, and Linux.",
+    href: "/simpledelphible/usage",
+  },
+  {
     eyebrow: "Android",
     title: "SimpleDroidBLE",
     description:
