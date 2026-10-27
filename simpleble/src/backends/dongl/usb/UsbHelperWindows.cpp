@@ -199,6 +199,9 @@ std::string to_utf8(std::wstring_view text) {
     return result;
 }
 
+// Describes an error code returned by GetLastError().
+std::string error_message(DWORD error) { return std::system_category().message(static_cast<int>(error)); }
+
 // The serial port is a function of the Dongl's USB device, whose instance ID ends with the USB serial number,
 // as in USB\VID_3918&PID_0001\F994D61716DB.
 std::string get_usb_serial(HDEVINFO device_info_set, SP_DEVINFO_DATA& device_info) {
@@ -243,8 +246,7 @@ UsbHelperWindows::UsbHelperWindows(const std::string& device_path) : UsbHelperIm
         if (error == ERROR_ACCESS_DENIED || error == ERROR_SHARING_VIOLATION) {
             throw Exception::AdapterInUse(_device_path);
         }
-        throw std::system_error(static_cast<int>(error), std::system_category(),
-                                "Failed to open serial port " + _device_path);
+        throw Exception::OperationFailed("Failed to open serial port " + _device_path + ": " + error_message(error));
     }
 
     try {
@@ -271,7 +273,7 @@ void UsbHelperWindows::tx(const kvn::bytearray& data) {
     std::scoped_lock tx_lock(_tx_mutex);
 
     if (!_running || _serial_handle == nullptr) {
-        throw std::runtime_error("Serial port is not available: " + _device_path);
+        throw Exception::OperationFailed("Serial port is not available: " + _device_path);
     }
     HANDLE serial_handle = static_cast<HANDLE>(_serial_handle);
 
@@ -291,11 +293,12 @@ void UsbHelperWindows::tx(const kvn::bytearray& data) {
              GetLastError() != ERROR_IO_PENDING) ||
             !GetOverlappedResult(serial_handle, &overlapped, &bytes_written, TRUE)) {
             const DWORD error = GetLastError();
-            throw std::system_error(static_cast<int>(error), std::system_category(),
-                                    "Failed to write to serial port " + _device_path);
+            throw Exception::OperationFailed("Failed to write to serial port " + _device_path + ": " +
+                                             error_message(error));
         }
         if (bytes_written == 0) {
-            throw std::runtime_error("Failed to write to serial port " + _device_path + ": no bytes were written");
+            throw Exception::OperationFailed("Failed to write to serial port " + _device_path +
+                                             ": no bytes were written");
         }
         offset += bytes_written;
     }
@@ -371,8 +374,8 @@ void UsbHelperWindows::_configure_serial_port() {
     config.DCBlength = sizeof(config);
     if (!GetCommState(serial_handle, &config)) {
         const DWORD error = GetLastError();
-        throw std::system_error(static_cast<int>(error), std::system_category(),
-                                "Failed to get serial port attributes for " + _device_path);
+        throw Exception::OperationFailed("Failed to get serial port attributes for " + _device_path + ": " +
+                                         error_message(error));
     }
 
     config.BaudRate = 1000000;
@@ -396,8 +399,8 @@ void UsbHelperWindows::_configure_serial_port() {
 
     if (!SetCommState(serial_handle, &config)) {
         const DWORD error = GetLastError();
-        throw std::system_error(static_cast<int>(error), std::system_category(),
-                                "Failed to set serial port attributes for " + _device_path);
+        throw Exception::OperationFailed("Failed to set serial port attributes for " + _device_path + ": " +
+                                         error_message(error));
     }
 
     COMMTIMEOUTS timeouts{};
@@ -407,14 +410,13 @@ void UsbHelperWindows::_configure_serial_port() {
     timeouts.WriteTotalTimeoutConstant = WRITE_TIMEOUT_MS;
     if (!SetCommTimeouts(serial_handle, &timeouts)) {
         const DWORD error = GetLastError();
-        throw std::system_error(static_cast<int>(error), std::system_category(),
-                                "Failed to set serial port timeouts for " + _device_path);
+        throw Exception::OperationFailed("Failed to set serial port timeouts for " + _device_path + ": " +
+                                         error_message(error));
     }
 
     if (!PurgeComm(serial_handle, PURGE_RXCLEAR | PURGE_TXCLEAR)) {
         const DWORD error = GetLastError();
-        throw std::system_error(static_cast<int>(error), std::system_category(),
-                                "Failed to flush serial port " + _device_path);
+        throw Exception::OperationFailed("Failed to flush serial port " + _device_path + ": " + error_message(error));
     }
 }
 

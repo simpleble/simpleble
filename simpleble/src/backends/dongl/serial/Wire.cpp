@@ -3,6 +3,7 @@
 #include <cstring>
 #include <kvn/kvn_bytearray.h>
 #include <fmt/format.h>
+#include <simpleble/Exceptions.h>
 
 using namespace SimpleBLE::Dongl::Serial;
 
@@ -34,7 +35,7 @@ void Wire::send_packet(const std::vector<uint8_t>& payload) {
 
 void Wire::send_packet(const uint8_t* data, size_t length) {
     if (length > MAX_PAYLOAD_SIZE) {
-        throw std::runtime_error("Payload length exceeds maximum allowed");
+        throw Exception::OperationFailed("Payload length exceeds maximum allowed");
     }
 
     // Create the encoded packet

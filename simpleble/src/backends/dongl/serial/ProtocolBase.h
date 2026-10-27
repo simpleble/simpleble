@@ -30,7 +30,7 @@ class ProtocolBase {
      * @param command The command to send.
      * @param timeout How long to wait for the response.
      * @return The response when it arrives.
-     * @throws std::runtime_error if another exchange is already pending, if timeout occurs, or if the port is lost.
+     * @throws Exception::OperationFailed if the command can't be sent, if timeout occurs, or if the port is lost.
      */
     dongl_Response exchange(dongl_Command command, std::chrono::milliseconds timeout = std::chrono::milliseconds(1000));
 

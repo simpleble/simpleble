@@ -6,6 +6,7 @@ using namespace SimpleBLE::Dongl::Serial;
 #include "nanopb/pb_encode.h"
 
 #include <fmt/format.h>
+#include <simpleble/Exceptions.h>
 
 #include "LoggingInternal.h"
 
@@ -83,7 +84,7 @@ dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::millis
     // Clear any previous response and send the command
     {
         std::unique_lock<std::mutex> lock(_pending_mutex);
-        if (_lost) throw std::runtime_error("Lost the connection to the Dongl");
+        if (_lost) throw Exception::OperationFailed("Lost the connection to the Dongl");
 
         _pending_response.reset();  // Ensure it's empty to indicate we're waiting
         _expected_id = command.id;
@@ -98,7 +99,7 @@ dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::millis
         bool status = pb_encode(&stream, dongl_Command_fields, &command);
         if (!status) {
             // TODO: Handle encoding failure
-            throw std::runtime_error("Failed to encode command");
+            throw Exception::OperationFailed("Failed to encode command");
         }
 
         _wire->send_packet(tx_buffer_raw);
@@ -117,11 +118,11 @@ dongl_Response ProtocolBase::exchange(dongl_Command command, std::chrono::millis
             _pending_response.reset();
             return response;
         } else if (_lost) {
-            throw std::runtime_error("Lost the connection to the Dongl");
+            throw Exception::OperationFailed("Lost the connection to the Dongl");
         } else {
             // Timeout occurred, reset pending state
             _pending_response.reset();
-            throw std::runtime_error("Timeout waiting for response");
+            throw Exception::OperationFailed("Timeout waiting for response");
         }
     }
 }

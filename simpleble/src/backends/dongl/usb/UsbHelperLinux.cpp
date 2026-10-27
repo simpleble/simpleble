@@ -77,7 +77,7 @@ std::optional<std::filesystem::path> dongl_usb_device(const std::filesystem::pat
 UsbHelperLinux::UsbHelperLinux(const std::string& device_path) : UsbHelperImpl(device_path) {
     if (!_open_serial_port()) {
         if (errno == EBUSY) throw Exception::AdapterInUse(_device_path);
-        throw std::runtime_error("Failed to open serial port " + _device_path + ": " + std::strerror(errno));
+        throw Exception::OperationFailed("Failed to open serial port " + _device_path + ": " + std::strerror(errno));
     }
 
     try {
@@ -103,7 +103,7 @@ UsbHelperLinux::~UsbHelperLinux() {
 void UsbHelperLinux::tx(const kvn::bytearray& data) {
     std::scoped_lock lock(_serial_mutex);
     if (!_running || _serial_fd < 0) {
-        throw std::runtime_error("Serial port is not available: " + _device_path);
+        throw Exception::OperationFailed("Serial port is not available: " + _device_path);
     }
 
     size_t offset = 0;
@@ -132,18 +132,19 @@ void UsbHelperLinux::tx(const kvn::bytearray& data) {
             if (poll_result == 0) {
                 _running = false;
                 _close_serial_port();
-                throw std::runtime_error("Timed out writing to serial port: " + _device_path);
+                throw Exception::OperationFailed("Timed out writing to serial port: " + _device_path);
             }
 
             _running = false;
             _close_serial_port();
-            throw std::runtime_error("Serial port became unavailable while writing: " + _device_path);
+            throw Exception::OperationFailed("Serial port became unavailable while writing: " + _device_path);
         }
 
         const int write_error = bytes_written == 0 ? EIO : errno;
         _running = false;
         _close_serial_port();
-        throw std::runtime_error("Failed to write to serial port " + _device_path + ": " + std::strerror(write_error));
+        throw Exception::OperationFailed("Failed to write to serial port " + _device_path + ": " +
+                                         std::strerror(write_error));
     }
 }
 
@@ -213,7 +214,7 @@ void UsbHelperLinux::_close_serial_port() {
 void UsbHelperLinux::_configure_serial_port() {
     termios tty;
     if (tcgetattr(_serial_fd, &tty) != 0) {
-        throw std::runtime_error("Failed to get serial port attributes: " + std::string(std::strerror(errno)));
+        throw Exception::OperationFailed("Failed to get serial port attributes: " + std::string(std::strerror(errno)));
     }
 
     cfmakeraw(&tty);
@@ -223,13 +224,13 @@ void UsbHelperLinux::_configure_serial_port() {
     tty.c_cc[VTIME] = 0;
 
     if (cfsetispeed(&tty, B1000000) != 0 || cfsetospeed(&tty, B1000000) != 0) {
-        throw std::runtime_error("Failed to set serial port speed: " + std::string(std::strerror(errno)));
+        throw Exception::OperationFailed("Failed to set serial port speed: " + std::string(std::strerror(errno)));
     }
     if (tcsetattr(_serial_fd, TCSANOW, &tty) != 0) {
-        throw std::runtime_error("Failed to set serial port attributes: " + std::string(std::strerror(errno)));
+        throw Exception::OperationFailed("Failed to set serial port attributes: " + std::string(std::strerror(errno)));
     }
     if (tcflush(_serial_fd, TCIOFLUSH) != 0) {
-        throw std::runtime_error("Failed to flush serial port: " + std::string(std::strerror(errno)));
+        throw Exception::OperationFailed("Failed to flush serial port: " + std::string(std::strerror(errno)));
     }
 }
 
