@@ -170,7 +170,10 @@ simpleble_WriteRsp Protocol::simpleble_write(uint16_t conn_handle, uint16_t hand
     command.cmd.simpleble.cmd.write.data.size = data.size();
     memcpy(command.cmd.simpleble.cmd.write.data.bytes, data.data(), data.size());
 
-    dongl_Response response = exchange(command);
+    // The Dongl answers a write request once the peer does, which can take as long as a read.
+    dongl_Response response = operation == simpleble_WriteOperation_WRITE_REQ
+                                  ? exchange(command, std::chrono::milliseconds(15000))
+                                  : exchange(command);
     return response.rsp.simpleble.rsp.write;
 }
 

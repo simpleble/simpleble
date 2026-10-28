@@ -55,10 +55,16 @@ class AdapterDongl : public AdapterBase {
     void _update_firmware();
     void _scan_received_callback(Dongl::advertising_data_t data);
     void _on_simpleble_event(const simpleble_Event& event);
+    std::vector<std::shared_ptr<PeripheralDongl>> _peripherals();
+    std::shared_ptr<PeripheralDongl> _peripheral_by_address(const BluetoothAddress& address);
+    std::shared_ptr<PeripheralDongl> _peripheral_by_conn_handle(uint16_t conn_handle);
 
     std::string _device_path;
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;  // Set by _open() under _open_mutex.
     std::mutex _open_mutex;
+    // The serial reader thread and user threads both use the peripheral maps.
+    // NOTE: Never hold _peripherals_mutex while running a user callback or sending a Dongl command.
+    std::mutex _peripherals_mutex;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralDongl>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralDongl>> seen_peripherals_;
 

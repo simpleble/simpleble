@@ -26,6 +26,8 @@ struct DecodedServiceData {
     std::map<BluetoothUUID, ByteArray> data;
 };
 
+static constexpr uint32_t RECOMMENDED_FIRMWARE_VERSION = 1001;
+
 bool AdapterDongl::bluetooth_enabled() { return true; }
 
 // Formats a USB serial number such as F994D61716DB as F9:94:D6:17:16:DB, or returns an empty string.
@@ -92,10 +94,13 @@ bool AdapterDongl::is_powered() {
 
 void AdapterDongl::scan_start() {
     _open();
-    seen_peripherals_.clear();
+    {
+        std::scoped_lock lock(_peripherals_mutex);
+        seen_peripherals_.clear();
+    }
     auto response = _serial_protocol->simpleble_scan_start();
     if (response.ret_code != 0) {
-        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to start Dongl scan: {}", response.ret_code));
+        throw Exception::OperationFailed(fmt::format("Failed to start Dongl scan: {}", response.ret_code));
     }
     SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
 }
@@ -104,7 +109,7 @@ void AdapterDongl::scan_stop() {
     _open();
     auto response = _serial_protocol->simpleble_scan_stop();
     if (response.ret_code != 0) {
-        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to stop Dongl scan: {}", response.ret_code));
+        throw Exception::OperationFailed(fmt::format("Failed to stop Dongl scan: {}", response.ret_code));
     }
     SAFE_CALLBACK_CALL(this->_callback_on_scan_stop);
 }
@@ -120,7 +125,10 @@ bool AdapterDongl::scan_is_active() {
     return _serial_protocol->simpleble_scan_is_active().is_active;
 }
 
-SharedPtrVector<PeripheralBase> AdapterDongl::scan_get_results() { return Util::values(seen_peripherals_); }
+SharedPtrVector<PeripheralBase> AdapterDongl::scan_get_results() {
+    std::scoped_lock lock(_peripherals_mutex);
+    return Util::values(seen_peripherals_);
+}
 
 SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
     _open();
@@ -137,6 +145,7 @@ SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
         }
 
         BluetoothAddress address = std::string(response.address);
+        std::scoped_lock lock(_peripherals_mutex);
         auto peripheral = peripherals_.find(address);
         if (peripheral == peripherals_.end()) {
             Dongl::advertising_data_t data{};
@@ -172,7 +181,7 @@ void AdapterDongl::_open() {
 
     // Without the Dongl, none of its connections exist anymore.
     _serial_protocol->set_lost_callback([this]() {
-        for (auto& [address, peripheral] : this->peripherals_) {
+        for (auto& peripheral : _peripherals()) {
             peripheral->notify_lost();
         }
     });
@@ -181,6 +190,14 @@ void AdapterDongl::_open() {
         auto response_whoami = _serial_protocol->basic_whoami();
         SIMPLEBLE_LOG_DEBUG(fmt::format("Dongl adapter opened: {} [{}] (firmware {})", response_whoami.identifier,
                                         response_whoami.mac_address, response_whoami.version));
+
+        // Print warning to notify users that an update is available.
+        if (response_whoami.version < RECOMMENDED_FIRMWARE_VERSION) {
+            const uint32_t version = response_whoami.version;
+            SIMPLEBLE_LOG_WARN(fmt::format("Dongl {} runs firmware {}.{}.{}, please update it to 0.1.1 or newer",
+                                           response_whoami.mac_address, version / 1000000, version / 1000 % 1000,
+                                           version % 1000));
+        }
 
         auto response_init = _serial_protocol->simpleble_init();
         if (response_init.ret_code != 0) {
@@ -198,27 +215,54 @@ void AdapterDongl::_open() {
 }
 
 void AdapterDongl::_scan_received_callback(Dongl::advertising_data_t data) {
-    if (this->peripherals_.count(data.mac_address) == 0) {
-        // If the incoming peripheral has never been seen before, create and save a reference to it.
-        auto base_peripheral = std::make_shared<PeripheralDongl>(_serial_protocol, data);
-        this->peripherals_.insert(std::make_pair(data.mac_address, base_peripheral));
+    std::shared_ptr<PeripheralDongl> base_peripheral;
+    {
+        std::scoped_lock lock(_peripherals_mutex);
+        if (this->peripherals_.count(data.mac_address) == 0) {
+            // If the incoming peripheral has never been seen before, create and save a reference to it.
+            this->peripherals_.emplace(data.mac_address, std::make_shared<PeripheralDongl>(_serial_protocol, data));
+        }
+        base_peripheral = this->peripherals_.at(data.mac_address);
     }
 
     // Update the received advertising data.
-    auto base_peripheral = this->peripherals_.at(data.mac_address);
     base_peripheral->update_advertising_data(data);
 
     // Convert the base object into an external-facing Peripheral object
     Peripheral peripheral = Factory::build(base_peripheral);
 
-    // Check if the device has been seen before, to forward the correct call to the user.
-    if (this->seen_peripherals_.count(data.mac_address) == 0) {
-        // Store it in our table of seen peripherals
-        this->seen_peripherals_.insert(std::make_pair(data.mac_address, base_peripheral));
+    // Store it in our table of seen peripherals, and forward the correct call to the user.
+    bool first_seen;
+    {
+        std::scoped_lock lock(_peripherals_mutex);
+        first_seen = this->seen_peripherals_.emplace(data.mac_address, base_peripheral).second;
+    }
+    if (first_seen) {
         SAFE_CALLBACK_CALL(this->_callback_on_scan_found, peripheral);
     } else {
         SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, peripheral);
     }
+}
+
+SharedPtrVector<PeripheralDongl> AdapterDongl::_peripherals() {
+    std::scoped_lock lock(_peripherals_mutex);
+    return Util::values(peripherals_);
+}
+
+std::shared_ptr<PeripheralDongl> AdapterDongl::_peripheral_by_address(const BluetoothAddress& address) {
+    std::scoped_lock lock(_peripherals_mutex);
+    for (auto& [peripheral_address, peripheral] : this->peripherals_) {
+        if (peripheral->address() == address) return peripheral;
+    }
+    return nullptr;
+}
+
+std::shared_ptr<PeripheralDongl> AdapterDongl::_peripheral_by_conn_handle(uint16_t conn_handle) {
+    std::scoped_lock lock(_peripherals_mutex);
+    for (auto& [address, peripheral] : this->peripherals_) {
+        if (peripheral->conn_handle() == conn_handle) return peripheral;
+    }
+    return nullptr;
 }
 
 void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
@@ -255,99 +299,81 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
         }
 
         case simpleble_Event_connection_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->address() == std::string(event.evt.connection_evt.address)) {
-                    peripheral->notify_connected(event.evt.connection_evt.conn_handle);
-                    break;
-                }
+            auto peripheral = _peripheral_by_address(std::string(event.evt.connection_evt.address));
+            if (peripheral) {
+                peripheral->notify_connected(event.evt.connection_evt.conn_handle);
             }
             break;
         }
 
         case simpleble_Event_disconnection_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.disconnection_evt.conn_handle) {
-                    peripheral->notify_disconnected();
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.disconnection_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_disconnected();
             }
             break;
         }
 
         case simpleble_Event_service_discovered_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.service_discovered_evt.conn_handle) {
-                    peripheral->notify_service_discovered(event.evt.service_discovered_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.service_discovered_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_service_discovered(event.evt.service_discovered_evt);
             }
             break;
         }
 
         case simpleble_Event_characteristic_discovered_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.characteristic_discovered_evt.conn_handle) {
-                    peripheral->notify_characteristic_discovered(event.evt.characteristic_discovered_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.characteristic_discovered_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_characteristic_discovered(event.evt.characteristic_discovered_evt);
             }
             break;
         }
 
         case simpleble_Event_descriptor_discovered_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.descriptor_discovered_evt.conn_handle) {
-                    peripheral->notify_descriptor_discovered(event.evt.descriptor_discovered_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.descriptor_discovered_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_descriptor_discovered(event.evt.descriptor_discovered_evt);
             }
             break;
         }
 
         case simpleble_Event_connect_complete_evt_tag: {
             // Routed by address: failed attempts have no connection handle.
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->address() == std::string(event.evt.connect_complete_evt.address)) {
-                    peripheral->notify_connect_complete(event.evt.connect_complete_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_address(std::string(event.evt.connect_complete_evt.address));
+            if (peripheral) {
+                peripheral->notify_connect_complete(event.evt.connect_complete_evt);
             }
             break;
         }
 
         case simpleble_Event_value_changed_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.value_changed_evt.conn_handle) {
-                    peripheral->notify_value_changed(event.evt.value_changed_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.value_changed_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_value_changed(event.evt.value_changed_evt);
             }
             break;
         }
 
         case simpleble_Event_passkey_display_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.passkey_display_evt.conn_handle) {
-                    peripheral->notify_passkey_display(event.evt.passkey_display_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.passkey_display_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_passkey_display(event.evt.passkey_display_evt);
             }
             break;
         }
 
         case simpleble_Event_auth_key_request_evt_tag: {
-            for (auto& [address, peripheral] : this->peripherals_) {
-                if (peripheral->conn_handle() == event.evt.auth_key_request_evt.conn_handle) {
-                    peripheral->notify_auth_key_request(event.evt.auth_key_request_evt);
-                    break;
-                }
+            auto peripheral = _peripheral_by_conn_handle(event.evt.auth_key_request_evt.conn_handle);
+            if (peripheral) {
+                peripheral->notify_auth_key_request(event.evt.auth_key_request_evt);
             }
             break;
         }
 
         case simpleble_Event_security_complete_evt_tag: {
             // Routed by request id: the link might be gone by the time the result arrives.
-            for (auto& [address, peripheral] : this->peripherals_) {
+            for (auto& peripheral : _peripherals()) {
                 peripheral->notify_security_complete(event.evt.security_complete_evt);
             }
             break;

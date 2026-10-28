@@ -120,8 +120,8 @@ class PeripheralDongl : public PeripheralBase {
 
     static constexpr std::chrono::milliseconds CONNECT_TIMEOUT{10000};
     static constexpr std::chrono::milliseconds CONNECT_RESULT_MARGIN{5000};
-    // The Dongl gives up on securing a connection after 30 seconds.
     static constexpr std::chrono::milliseconds SECURITY_RESULT_TIMEOUT{35000};
+    static constexpr std::chrono::milliseconds DISCONNECT_TIMEOUT{7000};
 
     void _resolve_missing_uuids();
 

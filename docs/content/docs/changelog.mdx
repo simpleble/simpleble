@@ -20,10 +20,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Changed**
 
 - (SimpleCBLE) The shared library includes SimpleBLE.
+- (Dongl) Repeated scan calls need Dongl firmware 0.1.1. Older firmware logs a warning.
 
 **Fixed**
 
--
+- (Dongl) Fixed a failed write to an unplugged Dongl on Linux leaving its peripherals connected.
+- (Dongl) Fixed write requests failing when the peripheral takes more than a second to answer.
+- (Dongl) Fixed `scan_start()` and `scan_stop()` reporting success when the Dongl fails.
+- (Dongl) Fixed `disconnect()` throwing when the disconnection takes more than half a second.
+- (Dongl) Fixed scan results and peripheral lookups racing with events from the Dongl.
 
 **Removed**
 
