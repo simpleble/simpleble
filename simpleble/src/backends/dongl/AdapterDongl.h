@@ -62,6 +62,8 @@ class AdapterDongl : public AdapterBase {
     std::string _device_path;
     std::shared_ptr<Dongl::Serial::Protocol> _serial_protocol;  // Set by _open() under _open_mutex.
     std::mutex _open_mutex;
+    // NOTE: Opening the port powers the radio on, so the Dongl counts as powered before the first open.
+    std::atomic_bool _powered{true};
     // The serial reader thread and user threads both use the peripheral maps.
     // NOTE: Never hold _peripherals_mutex while running a user callback or sending a Dongl command.
     std::mutex _peripherals_mutex;

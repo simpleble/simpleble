@@ -28,7 +28,7 @@ struct DecodedServiceData {
 
 static constexpr uint32_t RECOMMENDED_FIRMWARE_VERSION = 1001;
 
-bool AdapterDongl::bluetooth_enabled() { return true; }
+bool AdapterDongl::bluetooth_enabled() { return _powered; }
 
 // Formats a USB serial number such as F994D61716DB as F9:94:D6:17:16:DB, or returns an empty string.
 static BluetoothAddress address_from_serial(const std::string& serial) {
@@ -80,11 +80,17 @@ BluetoothAddress AdapterDongl::address() { return _address; }
 void AdapterDongl::power_on() {
     _open();
     _serial_protocol->basic_power_on();
+    if (!_powered.exchange(true)) {
+        SAFE_CALLBACK_CALL(this->_callback_on_power_on);
+    }
 }
 
 void AdapterDongl::power_off() {
     _open();
     _serial_protocol->basic_power_off();
+    if (_powered.exchange(false)) {
+        SAFE_CALLBACK_CALL(this->_callback_on_power_off);
+    }
 }
 
 bool AdapterDongl::is_powered() {
