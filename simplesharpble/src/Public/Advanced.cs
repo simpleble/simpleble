@@ -72,7 +72,7 @@ public static class Advanced
     {
         /// <summary>
         /// Initializes Android on the application thread after Bluetooth is enabled and permissions are granted.
-        /// Load simpleble with JavaSystem.LoadLibrary first. Pass the Java VM invocation pointer
+        /// Load simplecble with JavaSystem.LoadLibrary first. Pass the Java VM invocation pointer
         /// and an application Context JNI handle; the native backend retains the context.
         /// </summary>
         public static void Initialize(nint javaVm, nint applicationContext)

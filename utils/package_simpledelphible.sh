@@ -2,7 +2,7 @@
 # Assembles the SimpleDelphiBLE distribution, which is both the release zip and the contents of the generated
 # simpleble/simpledelphible repository that Boss installs from.
 # Usage: package_simpledelphible.sh <libraries directory> <output directory>
-# The libraries directory has a folder per platform with SimpleCBLE and SimpleBLE built as shared libraries.
+# The libraries directory has a folder per platform with SimpleCBLE built as a shared library, SimpleBLE included.
 set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -15,17 +15,20 @@ mkdir -p "$package_dir/lib"
 cp -R "$repo_root/simpledelphible/source" "$package_dir/source"
 cp -R "$repo_root/examples/simpledelphible" "$package_dir/examples"
 cp "$repo_root/simpledelphible/README.md" "$repo_root/LICENSE.md" "$package_dir/"
+# The Lazarus package finds source and lib/<platform> next to itself.
+cp "$repo_root/simpledelphible/SimpleDelphiBLEPackage.lpk" "$repo_root/simpledelphible/SimpleDelphiBLEPackage.pas" \
+    "$package_dir/"
 
-while read -r platform c_library library; do
+while read -r platform library; do
     mkdir -p "$package_dir/lib/$platform"
-    cp "$1/$platform/$c_library" "$1/$platform/$library" "$package_dir/lib/$platform/"
+    cp "$1/$platform/$library" "$package_dir/lib/$platform/"
 done <<'PLATFORMS'
-win32 simplecble.dll simpleble.dll
-win64 simplecble.dll simpleble.dll
-macos-arm64 libsimplecble.dylib libsimpleble.dylib
-macos-x64 libsimplecble.dylib libsimpleble.dylib
-linux-x64 libsimplecble.so libsimpleble.so
-linux-arm64 libsimplecble.so libsimpleble.so
+win32 simplecble.dll
+win64 simplecble.dll
+macos-arm64 libsimplecble.dylib
+macos-x64 libsimplecble.dylib
+linux-x64 libsimplecble.so
+linux-arm64 libsimplecble.so
 PLATFORMS
 
 # Boss resolves versions from the repository's tags and adds mainsrc to the project's search path.

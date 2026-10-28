@@ -20,6 +20,8 @@ simpledelphible/
 │   ├── SimpleDelphiBLE.Native.pas            One cdecl external per SimpleCBLE function
 │   └── SimpleDelphiBLE.inc                   Compiler settings for both units
 ├── tests/SimpleDelphiBLETests.dpr            Binding tests against PLAIN
+├── SimpleDelphiBLEPackage.lpk                Lazarus runtime package
+├── SimpleDelphiBLEPackage.pas                Its main unit, written by Lazarus
 └── README.md
 examples/simpledelphible/                     Interactive console programs, one per .dpr
 utils/build_simpledelphible.sh                Builds PLAIN and runs the tests with Free Pascal
@@ -129,12 +131,23 @@ dcc32 -NSSystem -U..\source -I..\source -E<out> SimpleDelphiBLETests.dpr
 
 ## Packaging
 
-A release holds `source`, `examples`, the README, the license, a `boss.json`, and `lib/<platform>` with SimpleBLE
-built as shared libraries: `win32`, `win64`, `macos-arm64`, `macos-x64`, `linux-x64` and `linux-arm64`.
-`utils/package_simpledelphible.sh <libraries> <output>` assembles it from a folder per platform and zips it as
-`simpledelphible-<version>.zip`.
+A release holds `source`, `examples`, the README, the license, a `boss.json`, the Lazarus package, and
+`lib/<platform>` with SimpleBLE built as a shared library: `win32`, `win64`, `macos-arm64`, `macos-x64`, `linux-x64`
+and `linux-arm64`. `utils/package_simpledelphible.sh <libraries> <output>` assembles it from a folder per platform and
+zips it as `simpledelphible-<version>.zip`.
 
-The libraries are SimpleCBLE's shared build with three changes:
+`SimpleDelphiBLEPackage.lpk` sits next to `source` and `lib` in the release, as in the repository. It is named apart
+from the `SimpleDelphiBLE` unit because Lazarus generates a main unit with the package's name. It compiles the units
+into `units/<cpu>-<os>`, and its conditionals add `lib/<platform>` to the library path of projects that require it on
+macOS and Linux, where Free Pascal links `libsimplecble`. Windows programs need no library path. A new unit or include
+file goes in the `.lpk` too; Lazarus rewrites `SimpleDelphiBLEPackage.pas` when the units change, so commit it with the
+`.lpk`. Check the package with:
+
+```bash
+lazbuild simpledelphible/SimpleDelphiBLEPackage.lpk
+```
+
+The libraries are SimpleCBLE's shared build, which has SimpleBLE built in, with three changes:
 
 - The Windows DLLs link the MSVC runtime statically (`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`), so applications
   need no redistributable.
@@ -144,7 +157,7 @@ The libraries are SimpleCBLE's shared build with three changes:
 - `libsimplecble` names itself relative to the program that loads it: its install name is
   `@executable_path/libsimplecble.dylib` on macOS, and its SONAME is `$ORIGIN/libsimplecble.so` on Linux. A program
   records that name when it links, so it loads the library from its own folder, or an app bundle's `Contents/MacOS`,
-  without an rpath. `libsimplecble` already finds `libsimpleble` next to itself (`@loader_path` and `$ORIGIN`).
+  without an rpath.
 
 ## CI distribution
 

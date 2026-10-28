@@ -41,8 +41,8 @@ boss install github.com/simpleble/simpledelphible
 
 or download a [release](https://github.com/simpleble/simpledelphible/releases)
 and add its `source` folder to your search path. Both include the native
-SimpleBLE libraries for every supported platform, prebuilt in `lib`; ship the
-ones for your target next to your executable.
+SimpleBLE library for every supported platform, prebuilt in `lib`; ship the one
+for your target next to your executable.
 
 Scan for five seconds and print what was found:
 
@@ -171,6 +171,14 @@ uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   SimpleDelphiBLE;
 ```
+
+In Lazarus, use the `SimpleDelphiBLEPackage.lpk` runtime package that comes
+with Boss and with each release. Open it with **Package > Open Package File
+(.lpk)** and choose **Use > Add to Project**, or build it with
+`lazbuild SimpleDelphiBLEPackage.lpk` and add `SimpleDelphiBLEPackage` as a
+**New Requirement** in the Project Inspector. The package supplies the units
+and the library path for your target, so your project needs no search paths or
+linker options.
 
 ## Platforms
 

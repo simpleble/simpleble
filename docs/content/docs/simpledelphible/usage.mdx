@@ -20,19 +20,20 @@ Or download a [release](https://github.com/simpleble/simpledelphible/releases)
 and add its `source` folder to your project's search path. Both contain:
 
 - `source`: the `SimpleDelphiBLE` units.
-- `lib/<platform>`: the native SimpleBLE libraries, prebuilt for each platform.
+- `lib/<platform>`: the native SimpleBLE library, prebuilt for each platform.
 - `examples`: console programs that use every API.
+- `SimpleDelphiBLEPackage.lpk`: the Lazarus runtime package.
 
-Deploy the libraries for your target with your application:
+Deploy the library for your target with your application:
 
-| Target | Libraries | Where they go |
+| Target | Library | Where it goes |
 | --- | --- | --- |
-| Windows x86 | `lib/win32/simplecble.dll`, `simpleble.dll` | Next to the executable |
-| Windows x64 | `lib/win64/simplecble.dll`, `simpleble.dll` | Next to the executable |
-| macOS | `lib/macos-<arch>/libsimplecble.dylib`, `libsimpleble.dylib` | The app bundle's `Contents/MacOS` folder; in Delphi, add them in the Deployment Manager |
-| Linux | `lib/linux-<arch>/libsimplecble.so`, `libsimpleble.so` | Next to the executable |
+| Windows x86 | `lib/win32/simplecble.dll` | Next to the executable |
+| Windows x64 | `lib/win64/simplecble.dll` | Next to the executable |
+| macOS | `lib/macos-<arch>/libsimplecble.dylib` | The app bundle's `Contents/MacOS` folder; in Delphi, add it in the Deployment Manager |
+| Linux | `lib/linux-<arch>/libsimplecble.so` | Next to the executable |
 
-The Windows libraries carry their own C++ runtime, so they need no
+The Windows library carries its own C++ runtime, so it needs no
 redistributable.
 
 ## Platform requirements
@@ -58,9 +59,22 @@ uses
   SimpleDelphiBLE;
 ```
 
+In Lazarus, use the `SimpleDelphiBLEPackage.lpk` runtime package. Open it with
+**Package > Open Package File (.lpk)** and choose **Use > Add to Project**, or
+add `SimpleDelphiBLEPackage` as a **New Requirement** in the Project Inspector.
+The package supplies the units and the library path for your target, so your
+project needs no search paths or linker options.
+
+`lazbuild` builds and registers the package, then builds the projects that
+require it:
+
+```sh
+lazbuild SimpleDelphiBLEPackage.lpk
+lazbuild scan.lpi
+```
+
 With the command-line compiler, pass the `source` folder with `-Fu` and `-Fi`
-and the library folder with `-Fl`. In Lazarus, add them to the project's
-compiler options.
+and the library folder with `-Fl`.
 
 ## List adapters
 

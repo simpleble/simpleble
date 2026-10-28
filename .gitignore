@@ -29,3 +29,6 @@ node_modules/
 .build
 .swiftpm
 /simpleswiftble/build
+
+# SimpleDelphiBLE
+/simpledelphible/units

@@ -151,7 +151,7 @@ public class MainActivity : Activity
                     return;
                 }
                 // Preload the Java bridge on the application thread before worker calls.
-                Java.Lang.JavaSystem.LoadLibrary("simpleble");
+                Java.Lang.JavaSystem.LoadLibrary("simplecble");
                 Advanced.Android.Initialize(JniEnvironment.Runtime.InvocationPointer, Application.Context.Handle);
                 initialized = true;
             }
