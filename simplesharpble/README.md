@@ -161,7 +161,7 @@ On Android, initialize SimpleSharpBLE once on the main thread, after the
 permissions are granted and Bluetooth is on:
 
 ```csharp
-Java.Lang.JavaSystem.LoadLibrary("simpleble");
+Java.Lang.JavaSystem.LoadLibrary("simplecble");
 Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointer,
     Android.App.Application.Context.Handle);
 ```

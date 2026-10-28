@@ -7,17 +7,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(SIMPLEBLE_PLAIN ON CACHE BOOL "No hardware in managed tests" FORCE)
 set(BUILD_SHARED_LIBS ON)
 add_subdirectory("${REPO_ROOT}/simplecble" "${CMAKE_BINARY_DIR}/simplecble")
-add_library(simplesharpble_test_native SHARED fixture.cpp
-    "${REPO_ROOT}/simpleble/src/backends/common/ServiceBase.cpp"
-    "${REPO_ROOT}/simpleble/src/backends/common/CharacteristicBase.cpp"
-    "${REPO_ROOT}/simpleble/src/backends/common/DescriptorBase.cpp")
-target_compile_features(simplesharpble_test_native PRIVATE cxx_std_17)
-target_include_directories(simplesharpble_test_native PRIVATE
+# NOTE: SimpleBLE is built into simplecble, so the fixture goes into the same library to reach the same SimpleBLE.
+target_sources(simplecble PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fixture.cpp")
+target_include_directories(simplecble PRIVATE
     "${REPO_ROOT}/simpleble/src/backends/common" "${REPO_ROOT}/simpleble/src/builders"
     "${REPO_ROOT}/simpleble/src" "${REPO_ROOT}/dependencies/internal/include"
     "${REPO_ROOT}/dependencies/external")
-target_link_libraries(simplesharpble_test_native PRIVATE simplecble simpleble)
 if(MSVC)
     # The fixture includes simpleble headers that use fmt, which requires UTF-8.
-    target_compile_options(simplesharpble_test_native PRIVATE "/utf-8")
+    target_compile_options(simplecble PRIVATE "/utf-8")
 endif()

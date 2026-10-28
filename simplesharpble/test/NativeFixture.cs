@@ -7,7 +7,7 @@ namespace SimpleSharpBLE.Tests;
 
 internal static class NativeFixture
 {
-    private const string Library = "simplesharpble_test_native";
+    private const string Library = "simplecble";
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint test_remote();
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint test_clone_remote(nint handle);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void test_emit(nint handle);

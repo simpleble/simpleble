@@ -20,7 +20,7 @@ cmake -S simplecble -B build_simplecble -DCMAKE_BUILD_TYPE=Release
 cmake --build build_simplecble
 ```
 
-This builds both `simplecble` and its `simpleble` dependency. Add `-DBUILD_SHARED_LIBS=ON` for shared libraries. `SIMPLEBLE_LOG_LEVEL` controls compiled logging verbosity; the default is `INFO`.
+This builds both `simplecble` and its `simpleble` dependency. Add `-DBUILD_SHARED_LIBS=ON` for a shared `simplecble` library, which has SimpleBLE built in. `SIMPLEBLE_LOG_LEVEL` controls compiled logging verbosity; the default is `INFO`.
 
 To install the headers and libraries into a chosen prefix:
 

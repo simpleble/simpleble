@@ -41,8 +41,8 @@ boss install github.com/simpleble/simpledelphible
 
 or download a [release](https://github.com/simpleble/simpledelphible/releases)
 and add its `source` folder to your search path. Both include the native
-SimpleBLE libraries for every supported platform, prebuilt in `lib`; ship the
-ones for your target next to your executable.
+SimpleBLE library for every supported platform, prebuilt in `lib`; ship the one
+for your target next to your executable.
 
 Scan for five seconds and print what was found:
 

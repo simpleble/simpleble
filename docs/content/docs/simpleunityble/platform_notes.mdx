@@ -98,10 +98,10 @@ The Editor and player use the host's BlueZ adapter and system D-Bus access polic
 `Bluetooth.InitializeAsync()` does not install services or grant Linux permissions.
 
 Select Linux x86_64 as the player target. For IL2CPP builds, install Unity's
-**Linux Build Support (IL2CPP)** module. Both Linux plugins must be included:
-`libsimplecble.so` and `libsimpleble.so`. Keep them together in the built player's
-`*_Data/Plugins/x86_64` directory. D-Bus and the C/C++ runtimes come from the OS.
-Do not rename the plugins or replace them with versioned symlinks.
+**Linux Build Support (IL2CPP)** module. The Linux plugin, `libsimplecble.so`,
+must be in the built player's `*_Data/Plugins/x86_64` directory. D-Bus and the
+C/C++ runtimes come from the OS. Do not rename the plugin or replace it with a
+versioned symlink.
 
 The native build baseline is Ubuntu 22.04. Unity's
 [6.3 requirements](https://docs.unity3d.com/6000.3/Documentation/Manual/system-requirements.html)

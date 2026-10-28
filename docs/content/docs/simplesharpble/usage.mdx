@@ -372,7 +372,7 @@ bridge classes and ProGuard rules to the app. Declare and request
 services), enable Bluetooth, then initialize once on the application thread:
 
 ```csharp
-Java.Lang.JavaSystem.LoadLibrary("simpleble");
+Java.Lang.JavaSystem.LoadLibrary("simplecble");
 SimpleSharpBLE.Advanced.Android.Initialize(Java.Interop.JniEnvironment.Runtime.InvocationPointer,
     Android.App.Application.Context.Handle);
 ```

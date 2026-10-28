@@ -21,7 +21,11 @@ if(SIMPLECBLE_TEST)
     set(SIMPLEBLE_PLAIN ON)
 endif()
 
+# SimpleBLE is always built statically, so a shared SimpleCBLE is a single library that holds it.
+set(SIMPLECBLE_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../simpleble ${CMAKE_BINARY_DIR}/simpleble)
+set(BUILD_SHARED_LIBS ${SIMPLECBLE_BUILD_SHARED_LIBS})
 
 set(SIMPLEBLE_C_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simplecble.cpp
@@ -79,13 +83,6 @@ target_include_directories(simplecble SYSTEM PUBLIC
 # Configure linked libraries for simplecble
 target_link_libraries(simplecble PRIVATE simpleble::simpleble)
 target_compile_definitions(simplecble PRIVATE SIMPLEBLE_VERSION="${PROJECT_VERSION}")
-
-# Apply OS-specific settings for simplecble
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set_property(TARGET simplecble PROPERTY INSTALL_RPATH $ORIGIN)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set_property(TARGET simplecble PROPERTY INSTALL_RPATH @loader_path)
-endif()
 
 apply_build_options(simplecble
     "${PRIVATE_COMPILE_DEFINITIONS}"

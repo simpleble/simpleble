@@ -31,10 +31,10 @@ jobs:
       - name: Test the binding
         run: utils/build_simpledelphible.sh
 
-  # The distribution ships SimpleCBLE's shared build with three changes: the Windows libraries link the MSVC runtime
+  # The distribution ships SimpleCBLE's shared build with three changes: the Windows library links the MSVC runtime
   # statically, so applications need no redistributable; the macOS and Linux libraries are unversioned, so
-  # applications load the libsimplecble and libsimpleble files the documentation names; and libsimplecble names itself
-  # relative to the program, so applications load it from their own folder without an rpath.
+  # applications load the file the documentation names; and the library names itself relative to the program, so
+  # applications load it from their own folder without an rpath.
   build-lib:
     runs-on: ${{ matrix.config.runner-os }}
     container: ${{ matrix.config.container-image }}
@@ -42,12 +42,12 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { runner-os: windows-2022, os: windows, architecture: x86, platform: win32, libraries: 'bin/simplecble.dll bin/simpleble.dll', cmake-options: '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' }
-          - { runner-os: windows-2022, os: windows, architecture: x64, platform: win64, libraries: 'bin/simplecble.dll bin/simpleble.dll', cmake-options: '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' }
-          - { runner-os: macos-15, os: macos, architecture: aarch64, platform: macos-arm64, libraries: 'lib/libsimplecble.dylib lib/libsimpleble.dylib', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
-          - { runner-os: macos-15, os: macos, architecture: x64, platform: macos-x64, libraries: 'lib/libsimplecble.dylib lib/libsimpleble.dylib', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
-          - { runner-os: ubuntu-22.04, os: linux, architecture: x64, platform: linux-x64, container-image: dockcross/linux-x64, libraries: 'lib/libsimplecble.so lib/libsimpleble.so', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
-          - { runner-os: ubuntu-22.04, os: linux, architecture: aarch64, platform: linux-arm64, container-image: dockcross/linux-arm64, libraries: 'lib/libsimplecble.so lib/libsimpleble.so', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: windows-2022, os: windows, architecture: x86, platform: win32, library: 'bin/simplecble.dll', cmake-options: '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' }
+          - { runner-os: windows-2022, os: windows, architecture: x64, platform: win64, library: 'bin/simplecble.dll', cmake-options: '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded' }
+          - { runner-os: macos-15, os: macos, architecture: aarch64, platform: macos-arm64, library: 'lib/libsimplecble.dylib', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: macos-15, os: macos, architecture: x64, platform: macos-x64, library: 'lib/libsimplecble.dylib', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: ubuntu-22.04, os: linux, architecture: x64, platform: linux-x64, container-image: dockcross/linux-x64, library: 'lib/libsimplecble.so', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
+          - { runner-os: ubuntu-22.04, os: linux, architecture: aarch64, platform: linux-arm64, container-image: dockcross/linux-arm64, library: 'lib/libsimplecble.so', cmake-options: '-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON' }
 
     steps:
       - name: Clone Repository
@@ -75,13 +75,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p "lib/${{ matrix.config.platform }}"
-          for library in ${{ matrix.config.libraries }}; do
-            # NOTE: A versioned build installs this name as a symlink to the versioned file the library identifies as.
-            test ! -L "install_simpledelphible_lib/$library"
-            cp "install_simpledelphible_lib/$library" "lib/${{ matrix.config.platform }}/"
-          done
-          # NOTE: A program records the name a library gives itself when it links against it. libsimplecble finds
-          # libsimpleble next to itself already.
+          # NOTE: A versioned build installs this name as a symlink to the versioned file the library identifies as.
+          test ! -L "install_simpledelphible_lib/${{ matrix.config.library }}"
+          cp "install_simpledelphible_lib/${{ matrix.config.library }}" "lib/${{ matrix.config.platform }}/"
+          # NOTE: A program records the name a library gives itself when it links against it.
           if [[ "${{ matrix.config.os }}" == "macos" ]]; then
             install_name_tool -id @executable_path/libsimplecble.dylib "lib/${{ matrix.config.platform }}/libsimplecble.dylib"
             codesign --force --sign - "lib/${{ matrix.config.platform }}/libsimplecble.dylib"
