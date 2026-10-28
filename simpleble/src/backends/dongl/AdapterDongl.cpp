@@ -297,6 +297,11 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
                 data.service_data[Dongl::uuid_from_proto(event.evt.adv_evt.service_data[i].uuid)] = service_data;
             }
 
+            // Listed service UUIDs are advertised services without data, and don't replace the data of the same UUID.
+            for (int i = 0; i < event.evt.adv_evt.service_uuids_count; i++) {
+                data.service_data.emplace(Dongl::uuid_from_proto(event.evt.adv_evt.service_uuids[i]), ByteArray());
+            }
+
             _scan_received_callback(data);
             break;
         }

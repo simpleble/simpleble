@@ -93,8 +93,8 @@ extern const pb_msgdesc_t dongl_D2H_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define DONGL_D2H_PB_H_MAX_SIZE                  dongl_D2H_size
-#define dongl_D2H_size                           537
-#define dongl_Event_size                         531
+#define dongl_D2H_size                           898
+#define dongl_Event_size                         895
 #define dongl_Response_size                      534
 
 #ifdef __cplusplus
