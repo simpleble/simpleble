@@ -134,11 +134,11 @@ void PeripheralDongl::disconnect() {
     }
 
     // Wait for the disconnection to be confirmed.
+    // NOTE: The connection handle stays set on a timeout, so that a late confirmation still fires on_disconnected.
     std::unique_lock<std::mutex> lock(disconnection_mutex_);
-    disconnection_cv_.wait_for(lock, 500ms, [this]() { return !is_connected(); });
+    disconnection_cv_.wait_for(lock, DISCONNECT_TIMEOUT, [this]() { return !is_connected(); });
 
     if (is_connected()) {
-        _conn_handle = BLE_CONN_HANDLE_INVALID;
         throw Exception::OperationFailed(fmt::format("Timeout while waiting for disconnection confirmation"));
     }
 }
@@ -229,7 +229,7 @@ void PeripheralDongl::secure_connection(bool mitm) {
     if (result.ret_code != 0) {
         // The Dongl disconnects when it can't secure the connection, so wait for the disconnection.
         std::unique_lock<std::mutex> lock(disconnection_mutex_);
-        disconnection_cv_.wait_for(lock, 500ms, [this]() { return !is_connected(); });
+        disconnection_cv_.wait_for(lock, DISCONNECT_TIMEOUT, [this]() { return !is_connected(); });
         throw Exception::OperationFailed(fmt::format("Failed to secure the connection: {}", result.ret_code));
     }
 }
@@ -505,7 +505,11 @@ void PeripheralDongl::notify_connected(uint16_t conn_handle) {
 
 void PeripheralDongl::notify_disconnected() {
     const bool notify = _connection_announced.exchange(false);
-    _conn_handle = BLE_CONN_HANDLE_INVALID;
+    {
+        // NOTE: Changing the handle under the lock keeps a waiting disconnect() from missing the wakeup.
+        std::lock_guard<std::mutex> lock(disconnection_mutex_);
+        _conn_handle = BLE_CONN_HANDLE_INVALID;
+    }
     _mtu = 0;
     disconnection_cv_.notify_all();
 
