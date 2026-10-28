@@ -130,18 +130,15 @@ void UsbHelperLinux::tx(const kvn::bytearray& data) {
                 continue;
             }
             if (poll_result == 0) {
-                _running = false;
                 _close_serial_port();
                 throw Exception::OperationFailed("Timed out writing to serial port: " + _device_path);
             }
 
-            _running = false;
             _close_serial_port();
             throw Exception::OperationFailed("Serial port became unavailable while writing: " + _device_path);
         }
 
         const int write_error = bytes_written == 0 ? EIO : errno;
-        _running = false;
         _close_serial_port();
         throw Exception::OperationFailed("Failed to write to serial port " + _device_path + ": " +
                                          std::strerror(write_error));
@@ -241,10 +238,14 @@ void UsbHelperLinux::_run() {
         int serial_fd;
         {
             std::scoped_lock lock(_serial_mutex);
-            if (!_running || _serial_fd < 0) {
-                break;
-            }
             serial_fd = _serial_fd;
+        }
+        // NOTE: tx() closes the port when a write fails, so report it like an unplug.
+        if (serial_fd < 0) {
+            _running = false;
+            SIMPLEBLE_LOG_ERROR(fmt::format("Failed to write to serial port {}", _device_path));
+            _lost_callback();
+            break;
         }
 
         pollfd descriptor{serial_fd, POLLIN, 0};
@@ -278,7 +279,7 @@ void UsbHelperLinux::_run() {
         {
             std::scoped_lock lock(_serial_mutex);
             if (!_running || _serial_fd != serial_fd) {
-                break;
+                continue;
             }
             bytes_read = read(_serial_fd, buffer, sizeof(buffer));
             if (bytes_read < 0) {
