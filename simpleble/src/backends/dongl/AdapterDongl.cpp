@@ -210,8 +210,6 @@ void AdapterDongl::_open() {
         _serial_protocol.reset();
         throw;
     }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 void AdapterDongl::_scan_received_callback(Dongl::advertising_data_t data) {
