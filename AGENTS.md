@@ -11,6 +11,15 @@ The notes record context and constraints; the code, tests, and git history remai
 the source of truth. If the folder is unavailable, avoid broad lifetime changes
 and ask the maintainer when the intended behavior cannot be established locally.
 
+## Releases
+
+The release checklist in `docs/content/docs/extras.mdx` has every step with its
+commands, and `docs/extras/` has each binding's packaging and publishing guide.
+Committed versions always end in `-dev`; only the release-prep commit removes
+it. Pushing to `main`, creating a release and deploying the documentation
+publish versions that can't be replaced, so do them only when the maintainer
+asks.
+
 ## Validation
 
 SimpleDBus and SimpleBluez tests require D-Bus and are primarily exercised on

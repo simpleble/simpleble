@@ -107,47 +107,57 @@ Perform the following steps in order.
 
 5. Commit and push the release changes, and wait for the branch-triggered `CI Main` workflow to finish successfully. Like every `main` push, it publishes development packages: `X.Y.Z-dev.N` to crates.io, Maven Central, and NuGet, `X.Y.Z.devN` to PyPI, `X.Y.Z-dev.N` to npm under the `dev` tag, and `vX.Y.Z-dev.N` tags to `simpleble/simpleswiftble`, `simpleble/simplegoble`, and `simpleble/simpledelphible`.
 
-   If a job fails for a reason unrelated to the release, such as an interrupted Android SDK download, use **Re-run failed jobs** on that run.
+   ```bash
+   gh run list -R simpleble/simpleble --workflow ci_main.yml --event push --commit <commit>
+   gh run watch <run-id> -R simpleble/simpleble --interval 60 --exit-status
+   ```
+
+   Every publish job waits for every build job, so one failed build skips all publication. If a job fails for a reason unrelated to the release, such as an interrupted Android SDK download, an error pulling a manylinux image, or a timeout uploading an artifact, use **Re-run failed jobs** on that run, or `gh run rerun <run-id> -R simpleble/simpleble --failed`. It also runs the jobs the failure skipped.
 
 ### Publish the release
 
-6. Create and publish a stable GitHub release whose new tag `vX.Y.Z` points at that commit:
+6. Write the release notes in a file outside the repository, starting from the version's changelog section. 1.3.0's opened with a summary, followed by sections for the new bindings with their install commands, highlights, breaking changes, and the license. Then create and publish a stable GitHub release whose new tag `vX.Y.Z` points at that commit:
 
    ```bash
-   gh release create vX.Y.Z --target <commit> --title "SimpleBLE vX.Y.Z" --notes-file <notes>
+   gh release create vX.Y.Z -R simpleble/simpleble --target <commit> --title "SimpleBLE vX.Y.Z" --notes-file <notes>
    ```
 
-   A draft does not trigger publication, and the release must not be marked as a prerelease.
+   A draft does not trigger publication, and the release must not be marked as a prerelease. The command creates the tag, so don't push it beforehand: a tag push starts no workflow, and `--target` is ignored for an existing tag.
 
 7. Wait for the release-triggered `CI Main` workflow to finish. It builds every package from the tag, attaches the artifacts to the release, and publishes the stable packages. Its `publish-simpledartble` job runs `Publish SimpleDartBLE` on the tag, as pub.dev only accepts uploads from runs on a tag, and waits for it to upload SimpleDartBLE and SimpleFltBLE.
 
+   ```bash
+   gh run list -R simpleble/simpleble --workflow ci_main.yml --event release --limit 1
+   gh run watch <run-id> -R simpleble/simpleble --interval 60 --exit-status
+   gh run view <run-id> -R simpleble/simpleble --log-failed
+   ```
+
    - Do not cancel it, unpublish and republish the release, or run `CI Main` manually on the tag. Runs for the tag cancel each other. Editing the release notes is safe.
-   - If a job fails, use **Re-run failed jobs**, never **Re-run all jobs**. PyPI, NuGet, npm, and pub.dev skip versions that already exist, but crates.io and Maven Central reject them, so repeating a publish job that already succeeded fails.
+   - If a job fails, use **Re-run failed jobs**, never **Re-run all jobs**. PyPI, NuGet, npm, and pub.dev skip versions that already exist, and the SimpleGoBLE, SimpleSwiftBLE, and SimpleDelphiBLE jobs skip tags that already exist, but crates.io and Maven Central reject an existing version, so repeating their publish jobs after they succeeded fails.
+   - If only the pub.dev upload failed, run `gh workflow run publish_simpledartble.yml -R simpleble/simpleble --ref vX.Y.Z`.
 
-8. Verify the published release:
+8. Verify the published release by running the following in bash with its version. Every line should name `X.Y.Z`, with the GitHub release neither a draft nor a prerelease and without development filenames, crates.io `yanked=false`, Maven Central `HTTP 200`, and npm's `latest` tag on the release:
 
-   - The GitHub release contains the expected artifacts and no filenames with a development suffix.
-   - SimplePyBLE `X.Y.Z` is available on PyPI.
-   - SimpleAIBLE `X.Y.Z` is available on PyPI.
-   - SimpleRsBLE `X.Y.Z` is available and not yanked on crates.io.
-   - SimpleJavaBLE `X.Y.Z` is available on Maven Central.
-   - SimpleDroidBLE and SimpleDroidBridge `X.Y.Z` are available on Maven Central.
-   - SimpleSharpBLE `X.Y.Z` is available on NuGet.
-   - SimpleJSBLE `X.Y.Z` is available on npm under the `latest` tag.
-   - SimpleRnBLE `X.Y.Z` is available on npm under the `latest` tag.
-   - SimpleKtBLE `X.Y.Z` is available on Maven Central.
-   - SimpleGoBLE `vX.Y.Z` is tagged in `simpleble/simplegoble`.
-   - SimpleSwiftBLE `vX.Y.Z` is tagged in `simpleble/simpleswiftble`, and its GitHub release there has `CSimpleBLE.xcframework.zip`.
-   - SimpleDelphiBLE `vX.Y.Z` is tagged in `simpleble/simpledelphible`, and its GitHub release there has `simpledelphible-X.Y.Z.zip`.
-   - SimpleDartBLE and SimpleFltBLE `X.Y.Z` are available on pub.dev.
+   ```bash
+   V=X.Y.Z
+   gh release view "v$V" -R simpleble/simpleble --json isDraft,isPrerelease,assets --jq '"GitHub release: draft=\(.isDraft) prerelease=\(.isPrerelease) assets=\(.assets | length) dev-named=\([.assets[].name | select(test("dev"))] | length)"'
+   for p in simplepyble simpleaible; do echo "PyPI $p: $(curl -s https://pypi.org/pypi/$p/$V/json | jq -r '"\(.info.version // "missing") (\(.urls | length) files)"')"; done
+   echo "crates.io simplersble: $(curl -s -A simpleble-release-check https://crates.io/api/v1/crates/simplersble/$V | jq -r '.version | "\(.num // "missing") yanked=\(.yanked)"')"
+   for a in simplejavable simpledroidble simpledroidbridge simplektble; do echo "Maven Central $a: HTTP $(curl -s -o /dev/null -w '%{http_code}' https://repo1.maven.org/maven2/org/simpleble/$a/$V/)"; done
+   echo "NuGet SimpleSharpBLE: $(curl -s https://api.nuget.org/v3-flatcontainer/simplesharpble/index.json | jq -r --arg v "$V" 'if (.versions | index($v)) then $v else "not listed yet" end')"
+   for p in simplejsble simplernble; do echo "npm $p: $(curl -s https://registry.npmjs.org/$p | jq -r '."dist-tags" | "latest=\(.latest) dev=\(.dev)"')"; done
+   echo "Go proxy simplegoble: $(curl -s https://proxy.golang.org/github.com/simpleble/simplegoble/@v/v$V.info)"
+   for r in simpleswiftble simpledelphible; do echo "$r: $(gh api repos/simpleble/$r/releases/tags/v$V --jq '"\(.tag_name) prerelease=\(.prerelease) assets=\([.assets[].name] | join(","))"')"; done
+   for p in simpledartble simplefltble; do echo "pub.dev $p: $(curl -s https://pub.dev/api/packages/$p/versions/$V | jq -r '.version // "missing"')"; done
+   ```
 
-   Maven Central and NuGet can take 15 minutes or more to list a new version after its publish job succeeds.
+   Maven Central and NuGet can take 15 minutes or more to list a new version after its publish job succeeds. Check again later rather than rerunning the job.
 
 9. Replace references to development builds outside this repository now that the stable packages are available, such as the SimplePyBLE version pinned by the Dongl quickstart on simpleble.org. Search sibling checkouts for `.devN`, `-dev.N`, and `-devN` pins, and deploy any site that changes.
 
-10. Start the next version: set the files from step 2 to the next patch version with a `-dev` suffix, such as `1.3.1-dev`, add an empty section for it to the changelog, and commit and push them. Until then, `CI Main` fails on every new commit, as `VERSION` still names a released version.
+10. Start the next version: set the files from step 2 to the next patch version with a `-dev` suffix, such as `1.3.1-dev`, add an empty section for it to the changelog, check them with `./scripts/check_version.sh`, and commit and push them. Until then, `CI Main` fails on every new commit, as `VERSION` still names a released version.
 
-11. From the documentation root, run `berth app deploy` to deploy the documentation.
+11. From the documentation root, run `berth app deploy` to deploy the documentation, as pushing to `main` doesn't update it. `berth app status` shows the running image. Berth builds a `linux/amd64` image with Docker, which on an Apple silicon Mac needs 32 GB of memory for Docker's VM: with Docker Desktop's default of about 8 GB, the build fails with loader timeouts.
 
 
 ## Hardware In The Loop - Recommended Tests
