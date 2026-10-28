@@ -172,6 +172,14 @@ uses
   SimpleDelphiBLE;
 ```
 
+In Lazarus, use the `SimpleDelphiBLEPackage.lpk` runtime package that comes
+with Boss and with each release. Open it with **Package > Open Package File
+(.lpk)** and choose **Use > Add to Project**, or build it with
+`lazbuild SimpleDelphiBLEPackage.lpk` and add `SimpleDelphiBLEPackage` as a
+**New Requirement** in the Project Inspector. The package supplies the units
+and the library path for your target, so your project needs no search paths or
+linker options.
+
 ## Platforms
 
 | Platform | Architectures | Compilers | Requirements |

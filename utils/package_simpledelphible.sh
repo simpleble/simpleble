@@ -15,6 +15,9 @@ mkdir -p "$package_dir/lib"
 cp -R "$repo_root/simpledelphible/source" "$package_dir/source"
 cp -R "$repo_root/examples/simpledelphible" "$package_dir/examples"
 cp "$repo_root/simpledelphible/README.md" "$repo_root/LICENSE.md" "$package_dir/"
+# The Lazarus package finds source and lib/<platform> next to itself.
+cp "$repo_root/simpledelphible/SimpleDelphiBLEPackage.lpk" "$repo_root/simpledelphible/SimpleDelphiBLEPackage.pas" \
+    "$package_dir/"
 
 while read -r platform c_library library; do
     mkdir -p "$package_dir/lib/$platform"
