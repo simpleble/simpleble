@@ -149,7 +149,6 @@ SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
         auto peripheral = peripherals_.find(address);
         if (peripheral == peripherals_.end()) {
             Dongl::advertising_data_t data{};
-            data.identifier = address;
             data.address_type = static_cast<BluetoothAddressType>(response.address_type);
             data.mac_address = address;
             data.connectable = true;
