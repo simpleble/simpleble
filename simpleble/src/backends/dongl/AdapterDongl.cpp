@@ -26,6 +26,8 @@ struct DecodedServiceData {
     std::map<BluetoothUUID, ByteArray> data;
 };
 
+static constexpr uint32_t RECOMMENDED_FIRMWARE_VERSION = 1001;
+
 bool AdapterDongl::bluetooth_enabled() { return true; }
 
 // Formats a USB serial number such as F994D61716DB as F9:94:D6:17:16:DB, or returns an empty string.
@@ -95,7 +97,7 @@ void AdapterDongl::scan_start() {
     seen_peripherals_.clear();
     auto response = _serial_protocol->simpleble_scan_start();
     if (response.ret_code != 0) {
-        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to start Dongl scan: {}", response.ret_code));
+        throw Exception::OperationFailed(fmt::format("Failed to start Dongl scan: {}", response.ret_code));
     }
     SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
 }
@@ -104,7 +106,7 @@ void AdapterDongl::scan_stop() {
     _open();
     auto response = _serial_protocol->simpleble_scan_stop();
     if (response.ret_code != 0) {
-        SIMPLEBLE_LOG_ERROR(fmt::format("Failed to stop Dongl scan: {}", response.ret_code));
+        throw Exception::OperationFailed(fmt::format("Failed to stop Dongl scan: {}", response.ret_code));
     }
     SAFE_CALLBACK_CALL(this->_callback_on_scan_stop);
 }
@@ -181,6 +183,14 @@ void AdapterDongl::_open() {
         auto response_whoami = _serial_protocol->basic_whoami();
         SIMPLEBLE_LOG_DEBUG(fmt::format("Dongl adapter opened: {} [{}] (firmware {})", response_whoami.identifier,
                                         response_whoami.mac_address, response_whoami.version));
+
+        // Print warning to notify users that an update is available.
+        if (response_whoami.version < RECOMMENDED_FIRMWARE_VERSION) {
+            const uint32_t version = response_whoami.version;
+            SIMPLEBLE_LOG_WARN(fmt::format("Dongl {} runs firmware {}.{}.{}, please update it to 0.1.1 or newer",
+                                           response_whoami.mac_address, version / 1000000, version / 1000 % 1000,
+                                           version % 1000));
+        }
 
         auto response_init = _serial_protocol->simpleble_init();
         if (response_init.ret_code != 0) {

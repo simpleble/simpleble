@@ -19,12 +19,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 **Changed**
 
--
+- (Dongl) Repeated scan calls need Dongl firmware 0.1.1. Older firmware logs a warning.
 
 **Fixed**
 
 - (Dongl) Fixed a failed write to an unplugged Dongl on Linux leaving its peripherals connected.
 - (Dongl) Fixed write requests failing when the peripheral takes more than a second to answer.
+- (Dongl) Fixed `scan_start()` and `scan_stop()` reporting success when the Dongl fails.
 
 **Removed**
 
