@@ -1,0 +1,85 @@
+---
+title: Disconnects and Android Error 133
+description: Why BLE connections drop, what the disconnect reason codes mean, what Android's GATT error 133 is, and how SimpleBLE reports disconnections and reconnects.
+---
+
+A BLE connection ends when one side closes it, when the link goes silent for too long, or when it never gets established. The application learns about it from a status or reason code, sometimes seconds after the device is gone. This page explains how a connection is lost, what the codes mean, including Android's status 133, and how to handle disconnects with SimpleBLE.
+
+## How a connection is lost
+
+A connection is a schedule. The two radios meet at every connection interval, between 7.5 ms and 4 s, and the peripheral latency lets the peripheral skip a number of those meetings to save power. The supervision timeout, agreed when the connection is set up, decides how much silence is allowed. When either side hears no valid packet for that long, the connection is lost.
+
+The Bluetooth Core Specification allows a supervision timeout from 100 ms to 32 s, and requires it to be longer than `(1 + peripheral latency) × connection interval × 2`, so that the skips a healthy device is allowed never end the connection. Apple's accessory design guidelines ask peripherals for 6 to 18 s.
+
+When a device loses power or goes out of range, nothing closes the connection. The central reports the disconnect only after the supervision timeout has passed, which can be several seconds after the device is gone. Operations started in that window may block or fail; [Error Handling](./error-handling#what-happens-to-in-flight-operations-on-disconnect) describes what each platform does with them.
+
+## Disconnect reason codes
+
+When a connection ends, the Bluetooth controller reports a reason. These are the common ones:
+
+| Code | Name | Meaning |
+| --- | --- | --- |
+| `0x08` (8) | Connection Timeout | The supervision timeout expired: the other side went silent. |
+| `0x13` (19) | Remote User Terminated Connection | The device closed the connection. |
+| `0x16` (22) | Connection Terminated by Local Host | This computer's Bluetooth stack closed the connection. |
+| `0x3E` (62) | Connection Failed to be Established | The link was set up, but the device didn't answer in its first connection events. |
+
+The codes say who closed the connection and whether it timed out. They don't say why a device went silent. Look up any other code with the [Bluetooth Error Decoder](https://www.simpleble.org/tools/bluetooth-error-decoder).
+
+## Android status 133
+
+On Android, `onConnectionStateChange` carries a status whose meaning depends on what happened:
+
+- **An established connection ended.** The status is the reason code from the table above: 8, 19, 22 and so on.
+- **A connection attempt failed.** The status is Android's own code, 133. It is `GATT_ERROR` (`0x85`) in Android's Bluetooth stack. Android's public API has no constant for it, and it is not an error the device sent.
+
+Through Android 14, every failed attempt reports 133, including a direct connection attempt that times out after 30 seconds. Android 15 added `GATT_CONNECTION_TIMEOUT` (147) for that case, and current Android source reports 147 for a timeout and 133 for any other failure to establish the connection.
+
+133 therefore says only that the connection wasn't established. To narrow it down:
+
+1. **Scan before connecting.** A device that isn't advertising as connectable, or is out of range, can't accept a connection. Many devices stop advertising while another central is connected.
+2. **Close every `BluetoothGatt` when you're done with it.** Each one keeps a GATT client registration until `close()`, and Android has a limited number shared by every app. When none is free, connecting fails with 257 (`GATT_FAILURE`).
+3. **Retry with backoff.** The [Reconnect Loop](../recipes/reconnect-loop) recipe shows the pattern.
+
+Read every status together with the callback that delivered it. Status 8 in `onConnectionStateChange` is a connection timeout, while status 8 from a read or write is `GATT_INSUFFICIENT_AUTHORIZATION`.
+
+## Disconnects in SimpleBLE
+
+`connect()` returns once the device is connected and its services are discovered. If the connection can't be established, it throws an exception after its timeout; the [timeout reference](./concurrency#timeout-reference) lists the values for each platform. On Android, SimpleBLE requests the LE transport, and it closes the `BluetoothGatt` object after every failed attempt and every lost connection, so no attempt holds a client registration. The Android status, 133 included, is recorded in SimpleBLE's log with every connection state change.
+
+`set_callback_on_disconnected` runs when the connection ends, on every platform. Register it before `connect()`, so that a drop during setup is reported too:
+
+```python
+import threading
+
+import simplepyble
+
+HEART_RATE = "0000180d-0000-1000-8000-00805f9b34fb"
+HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+peripheral = next(
+    p for p in adapter.scan_get_results()
+    if HEART_RATE in {service.uuid() for service in p.services()}
+)
+
+link_lost = threading.Event()
+peripheral.set_callback_on_disconnected(link_lost.set)
+
+peripheral.connect()
+peripheral.notify(HEART_RATE, HEART_RATE_MEASUREMENT, lambda data: print(data.hex()))
+
+link_lost.wait()
+print("Disconnected. Connect again and subscribe again.")
+```
+
+The callback only signals the main thread, which decides what to do next; see [Concurrency](./concurrency#calling-simpleble-from-inside-a-callback) for why. To reconnect, call `connect()` again on the same `Peripheral`. The GATT session ends with the connection, so subscribe to notifications again after every reconnect. The [Reconnect Loop](../recipes/reconnect-loop) recipe puts this together with backoff, in C++ and Python.
+
+## Common mistakes
+
+- **Expecting an immediate disconnect.** A device that loses power is reported only after the supervision timeout.
+- **Treating 133 as a device error.** It is Android's status for a connection that wasn't established. The device may never have received anything.
+- **Leaving `BluetoothGatt` objects open.** Every unclosed object holds a client registration until the app closes it.
+- **Keeping subscriptions after a reconnect.** Notifications stop when the connection ends. Subscribe again after every `connect()`.
+- **Reconnecting from inside the disconnect callback.** The callback runs on SimpleBLE's thread. Signal another thread and reconnect there.

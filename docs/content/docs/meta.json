@@ -19,6 +19,7 @@
     "fundamentals/permissions",
     "fundamentals/concurrency",
     "fundamentals/error-handling",
+    "fundamentals/disconnects",
     "fundamentals/cmake_primer",
     "---Recipes---",
     "recipes/scan",
