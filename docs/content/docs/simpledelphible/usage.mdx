@@ -17,7 +17,8 @@ boss install github.com/simpleble/simpledelphible
 ```
 
 Or download a [release](https://github.com/simpleble/simpledelphible/releases)
-and add its `source` folder to your project's search path. Both contain:
+and add its `source` folder to your project's search path. Each release's
+`SHA256SUMS` file has the zip's checksum. Both contain:
 
 - `source`: the `SimpleDelphiBLE` units.
 - `lib/<platform>`: the native SimpleBLE library, prebuilt for each platform.
@@ -36,6 +37,13 @@ Deploy the library for your target with your application:
 The Windows library carries its own C++ runtime, so it needs no
 redistributable.
 
+SimpleDelphiBLE loads the library the first time you use it, from the program's
+folder and then through the system's library search. Set
+`TSimpleDelphiBLE.LibraryPath` to the library or its folder before then to load
+it from elsewhere. `TSimpleDelphiBLE.IsAvailable` tells whether it loads; when it
+doesn't, calls raise `EBleLibraryNotFound`, and the rest of your application
+keeps running.
+
 ## Platform requirements
 
 Linux uses BlueZ, D-Bus, and the system C++ runtime. Windows uses its Bluetooth
@@ -44,26 +52,38 @@ platform's [Bluetooth permission setup](../fundamentals/permissions).
 
 ## Free Pascal and Lazarus
 
-SimpleDelphiBLE's units compile in Delphi mode with Unicode strings. Use the
-same mode in your units, and on macOS and Linux list `cthreads` first in your
-program's `uses` clause:
+On macOS and Linux, list `cthreads` first in your program's `uses` clause.
+SimpleDelphiBLE's units set their own mode, so your code can use any. In
+Lazarus's default `{$mode objfpc}{$H+}`, assign handlers with `@` and declare
+their string parameters as `UnicodeString`, the type SimpleDelphiBLE uses for
+strings:
 
 ```pascal
-program scan;
+program monitor;
 
-{$MODE DELPHIUNICODE}
+{$mode objfpc}{$H+}
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   SysUtils,
   SimpleDelphiBLE;
+
+type
+  TMonitor = class
+    procedure Received(Sender: TBlePeripheral; const Service, Characteristic: UnicodeString;
+      const Data: TBytes);
+  end;
+
+// ...
+  Peripheral.Notify(BatteryService, BatteryLevel, @Monitor.Received);
 ```
+
+With `{$MODE DELPHIUNICODE}`, the code reads as in Delphi.
 
 In Lazarus, use the `SimpleDelphiBLEPackage.lpk` runtime package. Open it with
 **Package > Open Package File (.lpk)** and choose **Use > Add to Project**, or
 add `SimpleDelphiBLEPackage` as a **New Requirement** in the Project Inspector.
-The package supplies the units and the library path for your target, so your
-project needs no search paths or linker options.
+The package supplies the units, so your project needs no search paths.
 
 `lazbuild` builds and registers the package, then builds the projects that
 require it:
@@ -73,8 +93,7 @@ lazbuild SimpleDelphiBLEPackage.lpk
 lazbuild scan.lpi
 ```
 
-With the command-line compiler, pass the `source` folder with `-Fu` and `-Fi`
-and the library folder with `-Fl`.
+With the command-line compiler, pass the `source` folder with `-Fu` and `-Fi`.
 
 ## List adapters
 
@@ -130,23 +149,35 @@ peripheral's `OnPasskeyRequest` and `OnNumericComparison`.
 
 Calls that wait for the Bluetooth stack, such as `Connect`, `Read`, or
 `ScanFor`, return when the operation finishes. They're safe from any thread and
-never need the main thread, so GUI applications make them from a worker thread:
+never need the main thread. Each has an `Async` version for GUI applications:
+`ScanForAsync`, `ConnectAsync`, `DisconnectAsync`, `ReadAsync`,
+`WriteRequestAsync`, `WriteCommandAsync`, `NotifyAsync`, `IndicateAsync`,
+`UnsubscribeAsync`, `ReadDescriptorAsync`, `WriteDescriptorAsync`, and
+`SecureConnectionAsync`. It runs the call on a worker thread and reports the end
+to an `OnDone` handler, delivered like other events, so on the main thread in
+VCL, FMX, and Lazarus applications. `Error` is `nil` when the call succeeded,
+and SimpleDelphiBLE frees it once the handler returns:
 
 ```pascal
-TTask.Run(
-  procedure
-  begin
-    Peripheral.Connect;
-    TThread.Queue(nil,
-      procedure
-      begin
-        StatusLabel.Caption := 'Connected';
-      end);
-  end);
-```
+procedure TMainForm.ConnectClick(Sender: TObject);
+begin
+  FPeripheral.ConnectAsync(PeripheralConnected);
+end;
 
-Free Pascal 3.2 has no anonymous methods; use `TThread.ExecuteInThread` with a
-method instead.
+procedure TMainForm.PeripheralConnected(Sender: TObject; Error: Exception);
+begin
+  if Error = nil then
+    FPeripheral.ReadAsync(BatteryService, BatteryLevel, BatteryRead)
+  else
+    StatusLabel.Caption := Error.Message;
+end;
+
+procedure TMainForm.BatteryRead(Sender: TBlePeripheral; const Data: TBytes; Error: Exception);
+begin
+  if Error = nil then
+    StatusLabel.Caption := Format('Battery: %d%%', [Data[0]]);
+end;
+```
 
 ## Configure backends
 

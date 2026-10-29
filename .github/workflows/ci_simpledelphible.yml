@@ -31,10 +31,9 @@ jobs:
       - name: Test the binding
         run: utils/build_simpledelphible.sh
 
-  # The distribution ships SimpleCBLE's shared build with three changes: the Windows library links the MSVC runtime
-  # statically, so applications need no redistributable; the macOS and Linux libraries are unversioned, so
-  # applications load the file the documentation names; and the library names itself relative to the program, so
-  # applications load it from their own folder without an rpath.
+  # The distribution ships SimpleCBLE's shared build with two changes: the Windows library links the MSVC runtime
+  # statically, so applications need no redistributable; and the macOS and Linux libraries are unversioned, so the
+  # binding loads the file the documentation names.
   build-lib:
     runs-on: ${{ matrix.config.runner-os }}
     container: ${{ matrix.config.container-image }}
@@ -78,16 +77,6 @@ jobs:
           # NOTE: A versioned build installs this name as a symlink to the versioned file the library identifies as.
           test ! -L "install_simpledelphible_lib/${{ matrix.config.library }}"
           cp "install_simpledelphible_lib/${{ matrix.config.library }}" "lib/${{ matrix.config.platform }}/"
-          # NOTE: A program records the name a library gives itself when it links against it.
-          if [[ "${{ matrix.config.os }}" == "macos" ]]; then
-            install_name_tool -id @executable_path/libsimplecble.dylib "lib/${{ matrix.config.platform }}/libsimplecble.dylib"
-            codesign --force --sign - "lib/${{ matrix.config.platform }}/libsimplecble.dylib"
-          elif [[ "${{ matrix.config.os }}" == "linux" ]]; then
-            apt-get update -qq && apt-get install -y -qq patchelf
-            # $ORIGIN is for the dynamic linker, not the shell.
-            # shellcheck disable=SC2016
-            patchelf --set-soname '$ORIGIN/libsimplecble.so' "lib/${{ matrix.config.platform }}/libsimplecble.so"
-          fi
           if [[ "${{ matrix.config.os }}" == "windows" ]] && grep -a -i -l -E 'vcruntime140|msvcp140' lib/*/*.dll; then
             echo "::error::The libraries import the dynamic MSVC runtime."
             exit 1
@@ -138,15 +127,25 @@ jobs:
           sudo -H apt-get update -y
           sudo -H apt-get install -y fpc
 
-      # Compiling links every function the binding declares for Linux against the distributed libraries.
-      - name: Build the examples from the distribution
+      # The examples build from the distribution, and its Linux library has every function the binding loads.
+      - name: Check the distribution
         run: |
           package_dir="build_simpledelphible_package/simpledelphible-$VERSION"
           mkdir -p "$RUNNER_TEMP/examples"
-          for example in "$package_dir"/examples/*.dpr; do
-            fpc -O1 -vewn -Fu"$package_dir/source" -Fi"$package_dir/source" -Fl"$package_dir/lib/linux-x64" \
+          cat > "$RUNNER_TEMP/version.dpr" <<'EOF'
+          program version;
+          {$MODE DELPHIUNICODE}
+          uses cthreads, SimpleDelphiBLE;
+          begin
+            TSimpleDelphiBLE.LibraryPath := ParamStr(1);
+            WriteLn('SimpleBLE ', TSimpleDelphiBLE.Version);
+          end.
+          EOF
+          for example in "$package_dir"/examples/*.dpr "$RUNNER_TEMP/version.dpr"; do
+            fpc -O1 -vewn -Fu"$package_dir/source" -Fi"$package_dir/source" \
               -FU"$RUNNER_TEMP/examples" -FE"$RUNNER_TEMP/examples" "$example"
           done
+          "$RUNNER_TEMP/examples/version" "$package_dir/lib/linux-x64"
 
       - name: Upload the distribution
         uses: actions/upload-artifact@v4

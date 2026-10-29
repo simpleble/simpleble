@@ -159,6 +159,7 @@ class function TBleAdapter.IsBluetoothEnabled: Boolean;
 var
   Call: TNativeCall;
 begin
+  RequireLibrary;
   Call.Enter;
   Result := simpleble_adapter_is_bluetooth_enabled(Call.Error);
   Call.Leave;
@@ -170,6 +171,7 @@ var
   List: simpleble_adapter_list_t;
   Count: NativeUInt;
 begin
+  RequireLibrary;
   Call.Enter;
   Count := simpleble_adapter_get_adapters(List, Call.Error);
   Call.Leave;

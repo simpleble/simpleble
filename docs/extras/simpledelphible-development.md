@@ -17,7 +17,8 @@ simpledelphible/
 │   ├── SimpleDelphiBLE.Peripheral.inc        TBlePeripheral
 │   ├── SimpleDelphiBLE.LocalPeripheral.inc   TBleLocalPeripheral, TBleLocalService, TBleLocalCharacteristic
 │   ├── SimpleDelphiBLE.Config.inc            TBleConfig, TBleLogging and TSimpleDelphiBLE
-│   ├── SimpleDelphiBLE.Native.pas            One cdecl external per SimpleCBLE function
+│   ├── SimpleDelphiBLE.Async.inc             The Async methods and their worker thread
+│   ├── SimpleDelphiBLE.Native.pas            SimpleCBLE's functions, bound when the library loads
 │   └── SimpleDelphiBLE.inc                   Compiler settings for both units
 ├── tests/SimpleDelphiBLETests.dpr            Binding tests against PLAIN
 ├── SimpleDelphiBLEPackage.lpk                Lazarus runtime package
@@ -48,8 +49,8 @@ ABI in both compilers; the GATT tests cover it, in both directions, since notifi
 value too.
 
 SimpleCBLE defines the platform-specific advanced functions (`simpleble_advanced_{macos,ios,linux}_*`) in every build
-for their platform, PLAIN included, where they report `OPERATION_NOT_SUPPORTED`. A missing `external` stops the
-program from loading, so `SimpleDelphiBLE.inc` defines `SIMPLEDELPHIBLE_MACOS` and `SIMPLEDELPHIBLE_LINUX`, and
+for their platform, PLAIN included, where they report `OPERATION_NOT_SUPPORTED`. Loading the library fails when it
+lacks a declared function, so `SimpleDelphiBLE.inc` defines `SIMPLEDELPHIBLE_MACOS` and `SIMPLEDELPHIBLE_LINUX`, and
 the units declare and call each platform's functions only under its symbol. Elsewhere, `RetrieveCachedPeripherals`
 and `SetAdvertisementLocalName` raise `EBleOperationNotSupported` without calling SimpleCBLE. The iOS and Android
 functions wait for mobile support.
@@ -87,6 +88,10 @@ look up their object and queue their event under the same lock. So an event is e
 The lock is never held while calling SimpleBLE: SimpleBLE's adapter and peripheral callbacks hold a
 `kvn::safe_callback` mutex while they run, and may be waiting for the lock.
 
+An `Async` method starts a `TBleAsyncWorker` thread that makes the blocking call, like `Task.Run` in SimpleSharpBLE,
+and queues an `ekDone` event with the result or the exception. The worker counts in `InFlight` like a callback, so
+shutdown waits for it.
+
 ## Shutdown
 
 The unit's finalization sets `ShuttingDown`, clears every registered callback, waits for running callbacks
@@ -97,8 +102,6 @@ for the main thread, the shared state is left allocated instead of being freed u
 
 ## Free Pascal
 
-- Free Pascal on macOS doesn't link the library its `external` declarations name, so the native unit adds
-  `{$LINKLIB simplecble}` on Unix.
 - Free Pascal 3.2.2 names the mask type `TFPUExceptionMask`, and has no `exAllArithmeticExceptions`.
 - Specializing its `TDictionary` warns about abstract methods in its own enumerators (4046), and private constructors
   warn (3018); `SimpleDelphiBLE.pas` turns both off.
@@ -111,18 +114,19 @@ for the main thread, the shared state is left allocated instead of being freed u
 
 ## Testing
 
-The tests check the binding layer against PLAIN's fixture (`plain-backend.md`): wiring, conversions, events crossing
-threads in each delivery mode, identity, ownership, error mapping, the local GATT loopback and exiting while
-callbacks arrive. On macOS or Linux, with Free Pascal installed:
+The tests check the binding layer against PLAIN's fixture (`plain-backend.md`): loading the library, wiring,
+conversions, events crossing threads in each delivery mode, identity, ownership, error mapping, Async results and
+errors, the local GATT loopback and exiting while callbacks arrive. Loading runs first, before any other call has
+loaded the library. On macOS or Linux, with Free Pascal installed:
 
 ```bash
 utils/build_simpledelphible.sh
 ```
 
-With Delphi on Windows, build SimpleCBLE with `-DSIMPLEBLE_PLAIN=ON -DBUILD_SHARED_LIBS=ON` for each architecture,
-then compile the test program with the source folder on the unit and include paths, and run it with the two DLLs next
-to it. The units list RTL units without their `System.` scope, as Free Pascal names them, so the command line passes
-the scope that IDE projects set by default:
+With Delphi on Windows, build SimpleCBLE with `-DSIMPLEBLE_PLAIN=ON -DBUILD_SHARED_LIBS=ON` for each architecture, then
+compile the test program with the source folder on the unit and include paths, and run it with `simplecble.dll` next to
+it. The units list RTL units without their `System.` scope, as Free Pascal names them, so the command line passes the
+scope that IDE projects set by default:
 
 ```bat
 dcc64 -NSSystem -U..\source -I..\source -E<out> SimpleDelphiBLETests.dpr
@@ -138,31 +142,31 @@ zips it as `simpledelphible-<version>.zip`.
 
 `SimpleDelphiBLEPackage.lpk` sits next to `source` and `lib` in the release, as in the repository. It is named apart
 from the `SimpleDelphiBLE` unit because Lazarus generates a main unit with the package's name. It compiles the units
-into `units/<cpu>-<os>`, and its conditionals add `lib/<platform>` to the library path of projects that require it on
-macOS and Linux, where Free Pascal links `libsimplecble`. Windows programs need no library path. A new unit or include
-file goes in the `.lpk` too; Lazarus rewrites `SimpleDelphiBLEPackage.pas` when the units change, so commit it with the
-`.lpk`. Check the package with:
+into `units/<cpu>-<os>`. A new unit or include file goes in the `.lpk` too; Lazarus rewrites
+`SimpleDelphiBLEPackage.pas` when the units change, so commit it with the `.lpk`. Check the package with:
 
 ```bash
 lazbuild simpledelphible/SimpleDelphiBLEPackage.lpk
 ```
 
-The libraries are SimpleCBLE's shared build, which has SimpleBLE built in, with three changes:
+The libraries are SimpleCBLE's shared build, which has SimpleBLE built in, with two changes:
 
 - The Windows DLLs link the MSVC runtime statically (`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`), so applications
   need no redistributable.
-- The macOS and Linux libraries are unversioned (`CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON`). A versioned build
-  identifies itself as `libsimplecble.1.dylib` or `libsimplecble.so.1`, so an application linked against
-  `libsimplecble.dylib` would need that other file at run time.
-- `libsimplecble` names itself relative to the program that loads it: its install name is
-  `@executable_path/libsimplecble.dylib` on macOS, and its SONAME is `$ORIGIN/libsimplecble.so` on Linux. A program
-  records that name when it links, so it loads the library from its own folder, or an app bundle's `Contents/MacOS`,
-  without an rpath.
+- The macOS and Linux libraries are unversioned (`CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON`), so the file is the
+  `libsimplecble.dylib` or `libsimplecble.so` that the binding loads, not a symlink to `libsimplecble.1.dylib` or
+  `libsimplecble.so.1`.
+
+`RequireLibrary` loads the library on the first call that needs it: the class-level entry points (backends,
+adapters, configuration, logging, version) call it, and every other object comes from them. It tries
+`TSimpleDelphiBLE.LibraryPath`, or else the program's folder and then the bare name, which leaves the search to the
+system. A failed load isn't remembered, so setting another path and calling again retries.
 
 ## CI distribution
 
 `ci_simpledelphible.yml`, called by `ci_main.yml`, runs the tests with Free Pascal on Linux and macOS, builds the
-libraries for each platform, assembles the package, and compiles every example from it against `lib/linux-x64`.
+libraries for each platform, assembles the package, compiles every example from it, and loads `lib/linux-x64` with
+a small program that prints the version.
 
 ## Versions and publication
 
@@ -173,7 +177,8 @@ token with read and write access to its contents:
 
 1. It replaces the repository's files with the package, and pushes the commit to `main` and its tag `vX.Y.Z` or
    `vX.Y.Z-dev.N` in one atomic push.
-2. It creates the tag's GitHub release with `simpledelphible-X.Y.Z.zip`. Development builds are prereleases.
+2. It creates the tag's GitHub release with `simpledelphible-X.Y.Z.zip` and a `SHA256SUMS` file with the zip's
+   checksum. Development builds are prereleases.
 
 If the tag already exists, the run only creates its release when it is missing. Never replace a published tag or its
 archive.

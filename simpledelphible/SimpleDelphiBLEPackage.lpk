@@ -15,22 +15,10 @@
           <SyntaxMode Value="DelphiUnicode"/>
         </SyntaxOptions>
       </Parsing>
-      <Conditionals Value="// Programs link with libsimplecble on macOS and Linux, so they get the library folder for their target.
-if TargetOS = &apos;darwin&apos; then begin
-  if TargetCPU = &apos;aarch64&apos; then
-    UsageLibraryPath := &apos;lib/macos-arm64&apos;
-  else
-    UsageLibraryPath := &apos;lib/macos-x64&apos;;
-end else if TargetOS = &apos;linux&apos; then begin
-  if TargetCPU = &apos;aarch64&apos; then
-    UsageLibraryPath := &apos;lib/linux-arm64&apos;
-  else
-    UsageLibraryPath := &apos;lib/linux-x64&apos;;
-end;"/>
     </CompilerOptions>
     <Description Value="SimpleBLE for Delphi and Free Pascal: Bluetooth Low Energy on Windows, macOS, and Linux."/>
     <License Value="Business Source License 1.1 (BUSL-1.1)"/>
-    <Files Count="11">
+    <Files Count="12">
       <Item1>
         <Filename Value="source/SimpleDelphiBLE.pas"/>
         <UnitName Value="SimpleDelphiBLE"/>
@@ -75,6 +63,10 @@ end;"/>
         <Filename Value="source/SimpleDelphiBLE.Config.inc"/>
         <Type Value="Include"/>
       </Item11>
+      <Item12>
+        <Filename Value="source/SimpleDelphiBLE.Async.inc"/>
+        <Type Value="Include"/>
+      </Item12>
     </Files>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

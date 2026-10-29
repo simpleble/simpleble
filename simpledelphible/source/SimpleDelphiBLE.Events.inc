@@ -102,6 +102,18 @@ begin
     Handler(Characteristic);
 end;
 
+procedure DeliverDone(const Event: TBleEvent);
+begin
+  try
+    if Assigned(Event.OnReadDone) then
+      Event.OnReadDone(TBlePeripheral(Event.Target), Event.Data, Event.Error)
+    else if Assigned(Event.OnDone) then
+      Event.OnDone(Event.Target, Event.Error);
+  finally
+    Event.Error.Free;
+  end;
+end;
+
 procedure Deliver(const Event: TBleEvent);
 var
   LogHandler: TBleLogEvent;
@@ -120,6 +132,8 @@ begin
           if Assigned(LogHandler) then
             LogHandler(Event.Log);
         end;
+      ekDone:
+        DeliverDone(Event);
     end;
   except
     on E: Exception do
