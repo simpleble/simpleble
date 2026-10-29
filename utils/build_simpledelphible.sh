@@ -12,7 +12,12 @@ build_directory="$repo_root/build_simpledelphible_tests"
 mkdir -p "$build_directory/tests"
 "${FPC:-fpc}" -O1 -vewn \
     -Fu"$repo_root/simpledelphible/source" -Fi"$repo_root/simpledelphible/source" \
-    -Fl"$build_directory/native/lib" -k-rpath -k"$build_directory/native/lib" \
     -FU"$build_directory/tests" -FE"$build_directory/tests" \
     "$repo_root/simpledelphible/tests/SimpleDelphiBLETests.dpr"
+# The binding loads the library from the program's folder.
+case "$(uname -s)" in
+    Darwin) library=libsimplecble.dylib ;;
+    *) library=libsimplecble.so ;;
+esac
+cp -L "$build_directory/native/lib/$library" "$build_directory/tests/"
 "$build_directory/tests/SimpleDelphiBLETests"

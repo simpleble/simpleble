@@ -26,8 +26,10 @@ Windows controls the friendly name placed in a discoverable advertisement. WinRT
 
 ### Peripheral Identifiers (UUIDs)
 On macOS and iOS, the operating system does not expose the raw MAC address of Bluetooth peripherals to applications. Instead, it assigns a unique UUID to each peripheral.
-*   **Persistent UUIDs:** These UUIDs are generally persistent for a given device on a given host, meaning if you restart your app, the UUID for a specific peripheral should remain the same.
+*   **Persistent on one host:** An application can store the UUID and use it to reconnect later on the same computer, as Apple's Core Bluetooth guide describes. If the device has changed its private address since, scan for it again.
 *   **Not Global:** The UUID for a specific peripheral will be different on different macOS/iOS devices. You cannot use this UUID to identify a peripheral across different host devices.
+
+See [Bluetooth Addresses](../fundamentals/addresses) for how to recognize a device across computers.
 
 ### Connection Management
 macOS and iOS manage Bluetooth connections at the OS level.

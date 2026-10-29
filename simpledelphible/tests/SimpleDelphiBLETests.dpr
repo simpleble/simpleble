@@ -57,6 +57,10 @@ type
     HandlerThreads: array of TThreadID;
     HandlerFailed: Boolean;
     HandlerError: string;
+    Done: Boolean;
+    DoneSender: TObject;
+    DoneData: TBytes;
+    DoneError: string;
     procedure Reset;
     procedure PowerOn(Sender: TBleAdapter);
     procedure PowerOff(Sender: TBleAdapter);
@@ -79,6 +83,8 @@ type
     procedure RaiseOnPowerOff(Sender: TBleAdapter);
     procedure HandlerException(E: Exception);
     procedure WakeMainThread(Sender: TObject);
+    procedure Completed(Sender: TObject; Error: Exception);
+    procedure ReadCompleted(Sender: TBlePeripheral; const Data: TBytes; Error: Exception);
   end;
 
 var
@@ -109,6 +115,10 @@ begin
   HandlerThreads := nil;
   HandlerFailed := False;
   HandlerError := '';
+  Done := False;
+  DoneSender := nil;
+  DoneData := nil;
+  DoneError := '';
 end;
 
 procedure TRecorder.PowerOn(Sender: TBleAdapter);
@@ -229,6 +239,20 @@ end;
 
 procedure TRecorder.WakeMainThread(Sender: TObject);
 begin
+end;
+
+procedure TRecorder.Completed(Sender: TObject; Error: Exception);
+begin
+  DoneSender := Sender;
+  if Error <> nil then
+    DoneError := Error.ClassName;
+  Done := True;
+end;
+
+procedure TRecorder.ReadCompleted(Sender: TBlePeripheral; const Data: TBytes; Error: Exception);
+begin
+  DoneData := Data;
+  Completed(Sender, Error);
 end;
 
 procedure Fail(const Description: string);
@@ -359,6 +383,21 @@ begin
     if not Adapter.IsPowered then
       Adapter.PowerOn;
   end;
+end;
+
+{ Loading }
+
+// Runs first, before any other call has loaded the library.
+procedure TestLibraryLoading;
+var
+  Folder: string;
+begin
+  Folder := ExtractFilePath(ParamStr(0));
+  TSimpleDelphiBLE.LibraryPath := Folder + 'missing';
+  Check(not TSimpleDelphiBLE.IsAvailable, 'available from a file that doesn''t exist');
+  TSimpleDelphiBLE.LibraryPath := Folder;
+  Check(TSimpleDelphiBLE.IsAvailable, 'not available from the program''s folder after a failed load');
+  Check(TSimpleDelphiBLE.Version <> '', 'no version from the loaded library');
 end;
 
 { Scanning }
@@ -652,6 +691,31 @@ begin
     Peripheral.Unsubscribe(TestService, BinaryValue);
     CheckEquals(BinaryValue, Recorder.ValueCharacteristic, 'indication characteristic');
     CheckBytes(Bytes([$00, $7F, $80, $FF]), Recorder.ValueData, 'indication value');
+  finally
+    Peripheral.Disconnect;
+  end;
+end;
+
+procedure TestAsyncCalls;
+var
+  Peripheral: TBlePeripheral;
+begin
+  Peripheral := PlainPeripheral;
+  Recorder.Reset;
+  Peripheral.ConnectAsync(Recorder.Completed);
+  WaitFor(Recorder.Done, 'ConnectAsync');
+  Check(Recorder.DoneSender = Peripheral, 'ConnectAsync reported another sender');
+  CheckEquals('', Recorder.DoneError, 'ConnectAsync error');
+  Check(Peripheral.IsConnected, 'not connected after ConnectAsync');
+  try
+    Recorder.Reset;
+    Peripheral.ReadAsync(TestService, BinaryValue, Recorder.ReadCompleted);
+    WaitFor(Recorder.Done, 'ReadAsync');
+    CheckBytes(Bytes([$00, $7F, $80, $FF]), Recorder.DoneData, 'ReadAsync value');
+    Recorder.Reset;
+    Peripheral.ReadAsync(TestService, ErrorValue, Recorder.ReadCompleted);
+    WaitFor(Recorder.Done, 'failing ReadAsync');
+    CheckEquals('EBleOperationFailed', Recorder.DoneError, 'ReadAsync error');
   finally
     Peripheral.Disconnect;
   end;
@@ -1137,6 +1201,7 @@ end;
 
 begin
   Recorder := TRecorder.Create;
+  Run('library loading', TestLibraryLoading);
   Run('version and operating system', TestVersionAndOperatingSystem);
   Run('adapters', TestAdapters);
   Run('power', TestPower);
@@ -1151,6 +1216,7 @@ begin
   Run('descriptors', TestDescriptors);
   Run('notify and indicate', TestNotifyAndIndicate);
   Run('GATT errors', TestGattErrors);
+  Run('async calls', TestAsyncCalls);
   Run('local configuration', TestLocalConfiguration);
   Run('local loopback', TestLocalLoopback);
   Run('freeing a local peripheral drops its events', TestLocalFreeDropsEvents);

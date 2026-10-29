@@ -52,6 +52,9 @@ type
   EBleCoreBluetooth = class(EBleError);
   EBleAdapterInUse = class(EBleError);
 
+  // SimpleBLE's native library couldn't be loaded. The message says why for each file tried.
+  EBleLibraryNotFound = class(Exception);
+
   TBleAddressType = (atPublic, atRandom, atUnspecified);
 
   TBleOperatingSystem = (osWindows, osMacOS, osLinux, osIOS, osAndroid, osUnknown);
@@ -113,6 +116,10 @@ type
   TBleLocalReadEvent = procedure(Sender: TBleLocalCharacteristic; var Value: TBytes) of object;
   TBleLogEvent = procedure(const Entry: TBleLogEntry) of object;
   TBleHandlerExceptionEvent = procedure(E: Exception) of object;
+  // Reports the end of an Async call: Error is nil when the call succeeded. SimpleDelphiBLE frees Error once the
+  // handler returns.
+  TBleCompletionEvent = procedure(Sender: TObject; Error: Exception) of object;
+  TBleReadCompletionEvent = procedure(Sender: TBlePeripheral; const Data: TBytes; Error: Exception) of object;
 
   // The base of the classes that wrap a SimpleBLE object.
   TBleNativeObject = class
@@ -178,6 +185,8 @@ type
     procedure ScanStart;
     procedure ScanStop;
     procedure ScanFor(TimeoutMs: Integer);
+    // Runs ScanFor on a worker thread and reports its end to OnDone, which is delivered like an event.
+    procedure ScanForAsync(TimeoutMs: Integer; OnDone: TBleCompletionEvent);
     function ScanIsActive: Boolean;
     function ScanGetResults: TArray<TBlePeripheral>;
     function GetPairedPeripherals: TArray<TBlePeripheral>;
@@ -246,6 +255,25 @@ type
     // Secures a Dongl connection with LE Secure Connections. With Mitm, the peer must also be authenticated through
     // OnPasskeyRequest, OnPasskeyDisplay or OnNumericComparison.
     procedure SecureConnection(Mitm: Boolean = False);
+    // The Async versions run the call on a worker thread and report its end to OnDone, which is delivered like an
+    // event, so GUI applications get it on the main thread.
+    procedure ConnectAsync(OnDone: TBleCompletionEvent);
+    procedure DisconnectAsync(OnDone: TBleCompletionEvent);
+    procedure ReadAsync(const Service, Characteristic: string; OnDone: TBleReadCompletionEvent);
+    procedure WriteRequestAsync(const Service, Characteristic: string; const Data: TBytes;
+      OnDone: TBleCompletionEvent);
+    procedure WriteCommandAsync(const Service, Characteristic: string; const Data: TBytes;
+      OnDone: TBleCompletionEvent);
+    procedure NotifyAsync(const Service, Characteristic: string; OnValue: TBleValueEvent;
+      OnDone: TBleCompletionEvent);
+    procedure IndicateAsync(const Service, Characteristic: string; OnValue: TBleValueEvent;
+      OnDone: TBleCompletionEvent);
+    procedure UnsubscribeAsync(const Service, Characteristic: string; OnDone: TBleCompletionEvent);
+    procedure ReadDescriptorAsync(const Service, Characteristic, Descriptor: string;
+      OnDone: TBleReadCompletionEvent);
+    procedure WriteDescriptorAsync(const Service, Characteristic, Descriptor: string; const Data: TBytes;
+      OnDone: TBleCompletionEvent);
+    procedure SecureConnectionAsync(Mitm: Boolean; OnDone: TBleCompletionEvent);
     property Identifier: string read GetIdentifier;
     property Address: string read GetAddress;
     property AddressType: TBleAddressType read GetAddressType;
@@ -441,11 +469,18 @@ type
 
   TSimpleDelphiBLE = class
   private
+    class var FLibraryPath: string;
     class var FEventDelivery: TBleEventDelivery;
     class var FOnHandlerException: TBleHandlerExceptionEvent;
     class function GetVersion: string; static;
     class function GetOperatingSystem: TBleOperatingSystem; static;
   public
+    // Loads SimpleBLE's native library if it isn't loaded yet, and tells whether it is. Every other call loads it the
+    // same way, and raises EBleLibraryNotFound when it can't.
+    class function IsAvailable: Boolean; static;
+    // The native library's file, or the folder that holds it. When empty, SimpleDelphiBLE loads it from the program's
+    // folder, then through the system's library search. Set it before the library is first loaded.
+    class property LibraryPath: string read FLibraryPath write FLibraryPath;
     class property Version: string read GetVersion;
     class property OperatingSystem: TBleOperatingSystem read GetOperatingSystem;
     class property EventDelivery: TBleEventDelivery read FEventDelivery write FEventDelivery;
@@ -481,7 +516,7 @@ type
 
   TBleEventKind = (ekPowerOn, ekPowerOff, ekScanStart, ekScanStop, ekScanFound, ekScanUpdated, ekConnected,
     ekDisconnected, ekValue, ekPasskeyDisplay, ekClientConnected, ekClientDisconnected, ekLocalWrite,
-    ekLocalSubscribed, ekLocalUnsubscribed, ekLog);
+    ekLocalSubscribed, ekLocalUnsubscribed, ekLog, ekDone);
 
   TBleEvent = record
     Kind: TBleEventKind;
@@ -494,6 +529,33 @@ type
     Text: string;
     Data: TBytes;
     Log: TBleLogEntry;
+    // The end of an Async call.
+    OnDone: TBleCompletionEvent;
+    OnReadDone: TBleReadCompletionEvent;
+    Error: Exception;
+  end;
+
+  TBleAsyncCall = (acScanFor, acConnect, acDisconnect, acRead, acWriteRequest, acWriteCommand, acNotify, acIndicate,
+    acUnsubscribe, acReadDescriptor, acWriteDescriptor, acSecureConnection);
+
+  // Runs the blocking call behind an Async method, then posts its end as an event.
+  TBleAsyncWorker = class(TThread)
+  private
+    FCall: TBleAsyncCall;
+    FTarget: TBleNativeObject;
+    FService: string;
+    FCharacteristic: string;
+    FDescriptor: string;
+    FData: TBytes;
+    FTimeoutMs: Integer;
+    FMitm: Boolean;
+    FOnValue: TBleValueEvent;
+    FOnDone: TBleCompletionEvent;
+    FOnReadDone: TBleReadCompletionEvent;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(Call: TBleAsyncCall; Target: TBleNativeObject);
   end;
 
   TBleEventThread = class(TThread)
@@ -543,6 +605,9 @@ var
   InFlight: Integer;
   // Points writes of empty values somewhere valid, since SimpleCBLE rejects a NULL buffer.
   EmptyByte: Byte;
+  // Guards loading the native library, which happens once.
+  LibraryLock: TCriticalSection;
+  LibraryLoaded: Boolean;
 
 // NOTE: The implementation continues in include files, in the order its routines depend on each other.
 {$I SimpleDelphiBLE.Support.inc}
@@ -603,6 +668,7 @@ end;
 {$I SimpleDelphiBLE.Peripheral.inc}
 {$I SimpleDelphiBLE.LocalPeripheral.inc}
 {$I SimpleDelphiBLE.Config.inc}
+{$I SimpleDelphiBLE.Async.inc}
 
 { Shutdown }
 
@@ -648,6 +714,7 @@ begin
   Backends.Free;
   Dispatcher.Free;
   Targets.Free;
+  LibraryLock.Free;
   Lock.Free;
 end;
 
@@ -655,6 +722,7 @@ initialization
   // NOTE: SimpleBLE's threads call into Pascal code, so the memory manager must be thread-safe from the start.
   IsMultiThread := True;
   Lock := TCriticalSection.Create;
+  LibraryLock := TCriticalSection.Create;
   Targets := TDictionary<NativeUInt, TBleNativeObject>.Create;
   Adapters := TDictionary<Pointer, TBleAdapter>.Create;
   Backends := TDictionary<string, TBleBackend>.Create;

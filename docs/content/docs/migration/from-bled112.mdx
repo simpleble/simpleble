@@ -1,0 +1,178 @@
+---
+title: Migrating from the BLED112
+description: Move from a Silicon Labs BLED112 and BGAPI, through pygatt or BGLib, to SimpleBLE with a Dongl, an nRF52840 USB dongle, with blocking calls that address characteristics by UUID.
+---
+
+Silicon Labs discontinued the BLED112, and its last order date passed in May 2025. If your production tests or desktop tools depend on a BLED112, SimpleBLE with a [Dongl](../dongl) keeps a dedicated USB radio and replaces BGAPI's commands and events with blocking calls. A Dongl is an nRF52840 USB dongle whose firmware we maintain together with the library. For an overview, see [BLED112 replacement](https://www.simpleble.org/bled112-replacement).
+
+This guide maps pygatt's BGAPI backend and the BGAPI commands you call through BGLib onto SimpleBLE, then walks through a Python production test, applications that talk to several devices, pairing, and C integrations.
+
+## From BGAPI to blocking calls
+
+A BLED112 appears as a virtual serial port. A BGAPI application opens that port, sends binary commands, and handles the events that come back: `gap_scan_response` for each advertisement, `connection_status` when a link is up, `attclient_group_found` and `attclient_find_information_found` while it maps the device's attribute handles, and `attclient_attribute_value` or `attclient_procedure_completed` when a read or write finishes. Each event is matched to its request by connection handle and attribute handle. pygatt runs that flow for you, and you still pass each device's address type to connect.
+
+With a Dongl, the firmware runs those procedures and SimpleBLE's calls block until they finish. `connect()` returns after the link is up, the MTU is exchanged, and services are discovered. `read()` returns the value or raises an error. You address characteristics by service and characteristic UUID, and connection and attribute handles never appear in your code.
+
+## Switch to a Dongl
+
+1. **Plug in a Dongl.** To evaluate with an nRF52840 Dongle or DK from Nordic, [flash it with the Dongl firmware](../dongl#update-the-firmware).
+2. **Install SimpleBLE 1.2.0 or later:** `pip install --upgrade simplepyble` for Python, the [SimpleSharpBLE](../simplesharpble/usage) NuGet package for C#, or a [source build](../installation) for C++ and C.
+3. **Select the Dongl in code.** Take the adapters from the `Dongl` backend. SimpleBLE 1.3.0 includes that backend by default; with 1.2.0, enable it before any other SimpleBLE call. [Select a Dongl](../dongl#select-a-dongl) shows it in every supported language.
+
+Your code no longer names a COM port. SimpleBLE finds Dongls by their USB vendor and product IDs, and the same code runs on the computer's built-in Bluetooth when you select a native adapter instead.
+
+## API mapping
+
+| Task | pygatt with a BLED112 | SimplePyBLE with a Dongl |
+| --- | --- | --- |
+| Open the adapter | `pygatt.BGAPIBackend(serial_port)`, then `adapter.start()` | Call the `Dongl` backend's `adapters()` |
+| Scan | `adapter.scan(timeout)` returns a list of dictionaries | `scan_for(ms)` and `scan_get_results()`, or `scan_start()` with `set_callback_on_scan_found()` |
+| Connect | `adapter.connect(address, address_type=...)` | `peripheral.connect()` on a scanned peripheral |
+| Discover characteristics | Done by `connect()`; `device.discover_characteristics()` | Done by `connect()`; list with `peripheral.services()` |
+| MTU | Not exposed by the BGAPI backend | Negotiated by the Dongl; read with `peripheral.mtu()` |
+| Read | `device.char_read(uuid)` | `peripheral.read(service, characteristic)` returns `bytes` and raises on failure |
+| Write | `device.char_write(uuid, value, wait_for_response=...)` | `peripheral.write_request(...)` / `peripheral.write_command(...)` |
+| Notifications | `device.subscribe(uuid, callback, indication=...)` | `peripheral.notify(service, characteristic, callback)` / `peripheral.indicate(...)` |
+| Pair and bond | `device.bond()` | Started by the device; see [Pairing and bonding](#pairing-and-bonding) |
+| Disconnect | `device.disconnect()` | `peripheral.disconnect()` |
+| Close | `adapter.stop()` | Release the SimpleBLE objects |
+
+pygatt finds a characteristic by its UUID alone. SimpleBLE takes the service UUID too, as listed by `peripheral.services()` or the device's documentation; see [Bluetooth UUIDs](../fundamentals/uuids) for the format.
+
+SimpleBLE runs callbacks on its own threads. Keep them short and pass longer work to a thread of your own; see [Concurrency](../fundamentals/concurrency). The C mapping is in [Driving the Dongl from your own application](#driving-the-dongl-from-your-own-application).
+
+## Production test in Python
+
+A typical production test connects to the device under test by its MAC address, reads one characteristic, and disconnects.
+
+**pygatt with a BLED112:**
+
+```python
+import pygatt
+
+DEVICE_ADDRESS = "C4:2B:91:0E:5A:17"
+FIRMWARE_REVISION = "00002a26-0000-1000-8000-00805f9b34fb"
+
+adapter = pygatt.BGAPIBackend(serial_port="COM7")
+adapter.start()
+try:
+    device = adapter.connect(DEVICE_ADDRESS, address_type=pygatt.BLEAddressType.random)
+    print("Firmware:", device.char_read(FIRMWARE_REVISION).decode())
+    device.disconnect()
+finally:
+    adapter.stop()
+```
+
+**SimplePyBLE with a Dongl:**
+
+```python
+import sys
+
+import simplepyble
+
+DEVICE_ADDRESS = "C4:2B:91:0E:5A:17"
+DEVICE_INFORMATION = "0000180a-0000-1000-8000-00805f9b34fb"
+FIRMWARE_REVISION = "00002a26-0000-1000-8000-00805f9b34fb"
+
+adapters = simplepyble.Backend.get_dongl().adapters()
+if not adapters:
+    sys.exit("No Dongl found.")
+adapter = adapters[0]
+
+adapter.scan_for(5000)
+device = next((p for p in adapter.scan_get_results() if p.address() == DEVICE_ADDRESS), None)
+if device is None:
+    sys.exit(f"{DEVICE_ADDRESS} not found.")
+
+device.connect()
+try:
+    print("Firmware:", device.read(DEVICE_INFORMATION, FIRMWARE_REVISION).decode())
+finally:
+    device.disconnect()
+```
+
+The scan finds the device and its address type, so the script doesn't need to know whether the device uses a public or a random address. `connect()` and `read()` raise an exception on failure, and an unhandled exception fails the test. To stop scanning as soon as the device appears, use `scan_start()` with a found callback, as in the [scan recipe](../recipes/scan). Because the Dongl reports real MAC addresses on macOS as well as Windows, the same script runs on both. Write `DEVICE_ADDRESS` in uppercase, as the Dongl reports it.
+
+## Several devices at once
+
+With BGAPI, the events of every connection arrive on one serial port, and your code routes them by connection handle to the code that handles each device.
+
+With SimpleBLE, each device is a `Peripheral` with its own blocking calls, and each can run in its own thread with straight-line code: scan, connect, read, disconnect. To add radios, plug in more Dongls; each one is another adapter. [Use several Dongls](../dongl#use-several-dongls) has complete programs in C++, C, Python, and C#. Tell Dongls apart by `adapter.address()`, which stays the same across restarts and USB ports, rather than by COM port.
+
+For a Windows application, use [SimpleSharpBLE](../simplesharpble/usage) from NuGet, or link the C++ library, which builds as a static library by default. Using several Dongls from C# requires SimpleBLE 1.3.0 or later. Each Dongl unit includes a commercial license to use SimpleBLE through the Dongl backend; [Dongl Licenses](https://www.simpleble.org/dongl-licenses) has the full terms.
+
+## Pairing and bonding
+
+A BGAPI application enables bonding with `sm_set_bondable_mode` and starts encryption with `sm_encrypt_start` after connecting; pygatt's `device.bond()` does the same. The BLED112 implements Bluetooth 4.0, so it pairs with LE legacy pairing.
+
+With a Dongl, the device under test starts pairing by sending a security request, and the Dongl runs LE Secure Connections and bonding. Your code only answers passkey or numeric-comparison requests, through a callback registered before `connect()`. [Pairing and bonding](../dongl#pairing-and-bonding) shows the callbacks in every supported language.
+
+Bonds are stored on the Dongl and persist across script runs, power cycles, and computers. SimplePyBLE can list and remove them:
+
+```python
+for peripheral in adapter.get_paired_peripherals():
+    print("Bonded:", peripheral.address())
+
+if device.is_paired():
+    device.unpair()  # Remove the bond so the Dongl is ready for the next unit.
+```
+
+On a production line, unpair each unit after its test so that bonds don't accumulate on the Dongl.
+
+## Driving the Dongl from your own application
+
+If your application calls BGAPI through BGLib, from C, C++, or any tool that loads C libraries, use [SimpleCBLE](../simplecble/usage), SimpleBLE's C API.
+
+| Task | BGLib with a BLED112 | SimpleCBLE with a Dongl |
+| --- | --- | --- |
+| Open the adapter | Open the COM port and set `bglib_output` to a function that writes to it | `simpleble_backend_get_adapters` on the `Dongl` backend |
+| Scan | `ble_cmd_gap_discover`, then `ble_evt_gap_scan_response` | `simpleble_adapter_scan_for`, then `simpleble_adapter_scan_get_results` |
+| Connect | `ble_cmd_gap_connect_direct`, then `ble_evt_connection_status` | `simpleble_peripheral_connect` |
+| Discover | `ble_cmd_attclient_read_by_group_type` and `ble_cmd_attclient_find_information`, then their events | Done by `simpleble_peripheral_connect` |
+| Read | `ble_cmd_attclient_read_by_handle`, then `ble_evt_attclient_attribute_value` | `simpleble_peripheral_read` |
+| Write | `ble_cmd_attclient_attribute_write` / `ble_cmd_attclient_write_command` | `simpleble_peripheral_write_request` / `simpleble_peripheral_write_command` |
+| Notifications | `ble_cmd_attclient_attribute_write` to the CCCD, then `ble_evt_attclient_attribute_value` | `simpleble_peripheral_notify` |
+| Pair and bond | `ble_cmd_sm_set_bondable_mode`, `ble_cmd_sm_encrypt_start` | `simpleble_advanced_dongl_set_*_callback`, then connect |
+| Disconnect | `ble_cmd_connection_disconnect`, then `ble_evt_connection_disconnected` | `simpleble_peripheral_disconnect` |
+| Close | Close the COM port | `simpleble_adapter_release_handle` |
+
+With BGLib, every command's result arrives later in an event callback, and your code reads the serial port and dispatches those events itself. With SimpleCBLE, select the adapter as in [Select a Dongl](../dongl#select-a-dongl), scan as in the [scan recipe](../recipes/scan), then connect and read with blocking calls. Each call reports failure through an owned error object:
+
+```c
+bool read_firmware_revision(simpleble_peripheral_t peripheral) {
+    simpleble_uuid_t service = {"0000180a-0000-1000-8000-00805f9b34fb"};
+    simpleble_uuid_t characteristic = {"00002a26-0000-1000-8000-00805f9b34fb"};
+    simpleble_error_t* error = NULL;
+
+    simpleble_peripheral_connect(peripheral, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        simpleble_error_release(&error);
+        return false;
+    }
+
+    size_t length = 0;
+    uint8_t* value = simpleble_peripheral_read(peripheral, service, characteristic, &length, &error);
+    bool success = error == NULL;
+    if (success) {
+        printf("Firmware: %.*s\n", (int)length, value ? (const char*)value : "");
+    } else {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+    }
+    simpleble_free(value);
+
+    simpleble_peripheral_disconnect(peripheral, &error);
+    if (error) {
+        fprintf(stderr, "%s\n", simpleble_error_message(error));
+        success = false;
+    }
+    simpleble_error_release(&error);
+    return success;
+}
+```
+
+The [C tutorial](../simplecble/tutorial) covers handle ownership and cleanup.
+
+## Licensing
+
+SimpleBLE is source-available under the Business Source License 1.1 and free for non-commercial use; commercial licenses are described in [Licensing](../licensing). The Dongl firmware has its own [license terms](https://www.simpleble.org/dongl-licenses).

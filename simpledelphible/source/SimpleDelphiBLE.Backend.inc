@@ -53,6 +53,7 @@ var
   I: Integer;
   Handle: simpleble_backend_t;
 begin
+  RequireLibrary;
   Call.Enter;
   Count := simpleble_backend_get_backends(List, Call.Error);
   Call.Leave;
@@ -76,6 +77,7 @@ var
   Call: TNativeCall;
   Handle: simpleble_backend_t;
 begin
+  RequireLibrary;
   Call.Enter;
   Handle := simpleble_backend_get_native(Call.Error);
   Call.Leave;
@@ -87,6 +89,7 @@ var
   Call: TNativeCall;
   Handle: simpleble_backend_t;
 begin
+  RequireLibrary;
   Call.Enter;
   Handle := simpleble_backend_get_dongl(Call.Error);
   Call.Leave;
@@ -98,6 +101,7 @@ var
   Call: TNativeCall;
   Handle: simpleble_backend_t;
 begin
+  RequireLibrary;
   Call.Enter;
   Handle := simpleble_backend_get_simulator(Call.Error);
   Call.Leave;

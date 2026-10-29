@@ -178,6 +178,13 @@ jobs:
       - name: List all artifacts
         run: find artifacts -type f -ls | sort
 
+      # Each line names an asset by the file name the release shows it with.
+      - name: Write checksums
+        run: |
+          find artifacts -type f -exec sha256sum {} + | sed 's|  .*/|  |' | sort -k 2 > "$RUNNER_TEMP/SHA256SUMS"
+          mv "$RUNNER_TEMP/SHA256SUMS" artifacts/SHA256SUMS
+          cat artifacts/SHA256SUMS
+
       - name: Upload artifacts to release
         uses: svenstaro/upload-release-action@v2
         if: github.event_name == 'release'
@@ -434,8 +441,10 @@ jobs:
             echo "$tag is already published."
           else
             prerelease=$([[ "$version" == *-dev* ]] && echo true || echo false)
-            gh release create "$tag" "$archive" --repo "$repo" --verify-tag --prerelease="$prerelease" \
-              --title "SimpleDelphiBLE $tag" --notes "SimpleDelphiBLE $version, built from simpleble/simpleble@$GITHUB_SHA."
+            (cd "$(dirname "$archive")" && sha256sum "$(basename "$archive")") > "$RUNNER_TEMP/SHA256SUMS"
+            gh release create "$tag" "$archive" "$RUNNER_TEMP/SHA256SUMS" --repo "$repo" --verify-tag \
+              --prerelease="$prerelease" --title "SimpleDelphiBLE $tag" \
+              --notes "SimpleDelphiBLE $version, built from simpleble/simpleble@$GITHUB_SHA."
           fi
 
   # pub.dev only accepts uploads from GitHub Actions runs on a tag, so the release runs publish_simpledartble.yml on

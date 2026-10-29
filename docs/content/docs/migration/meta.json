@@ -3,6 +3,7 @@
   "pages": [
     "from-bleak",
     "from-noble",
-    "from-pc-ble-driver"
+    "from-pc-ble-driver",
+    "from-bled112"
   ]
 }

@@ -24,6 +24,8 @@ Peripherals send out small packets of data called **Advertisements** to announce
 
 Centrals perform **Scanning** to listen for these advertisements. Once a Central finds a Peripheral it's interested in, it can initiate a **Connection**.
 
+For the packet format, scan responses and how SimpleBLE reports advertising data, see [BLE Advertising](./advertising).
+
 ## Services and Characteristics (GATT)
 
 Once connected, devices communicate using the **Generic Attribute Profile (GATT)**. Data is organized into a hierarchy:
@@ -42,6 +44,8 @@ Characteristics can have different properties, such as:
 Every Service and Characteristic is identified by a **Universally Unique Identifier (UUID)**. 
 *   Standardized UUIDs (defined by the Bluetooth SIG) are 16-bit (e.g., `0x180D` for Heart Rate Service). A 16-bit UUID is shorthand for a 128-bit UUID built on the Bluetooth Base UUID, `xxxxxxxx-0000-1000-8000-00805F9B34FB`: `0x180D` stands for `0000180D-0000-1000-8000-00805F9B34FB`.
 *   Custom UUIDs are random 128-bit values (e.g., `fca861e8-99c5-4d2f-bac5-767ccfb6b080`), generated with a tool such as `uuidgen`. They must not use the Bluetooth Base UUID range, which is reserved for values assigned by the Bluetooth SIG.
+
+For the format SimpleBLE uses and how to compare UUIDs, see [Bluetooth UUIDs](./uuids).
 
 ## Connections and Pairing
 

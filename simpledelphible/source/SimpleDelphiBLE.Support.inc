@@ -123,6 +123,48 @@ begin
   raise ErrorClasses[ErrorCode].Create(ErrorCode, Message);
 end;
 
+{ The native library }
+
+// Loads the native library the first time the binding needs it: from LibraryPath, or else from the program's folder
+// and then through the system's library search.
+procedure RequireLibrary;
+var
+  Path: string;
+  Candidates: TArray<string>;
+  Candidate: string;
+  Error: string;
+  Errors: string;
+begin
+  if LibraryLoaded then
+    Exit;
+  LibraryLock.Enter;
+  try
+    if LibraryLoaded then
+      Exit;
+    Path := TSimpleDelphiBLE.FLibraryPath;
+    if Path = '' then
+      Candidates := [ExtractFilePath(ParamStr(0)) + SimpleCBLELibraryName, SimpleCBLELibraryName]
+    else if DirectoryExists(Path) then
+      Candidates := [IncludeTrailingPathDelimiter(Path) + SimpleCBLELibraryName]
+    else
+      Candidates := [Path];
+    Errors := '';
+    for Candidate in Candidates do
+    begin
+      if LoadSimpleCBLE(Candidate, Error) then
+      begin
+        LibraryLoaded := True;
+        Exit;
+      end;
+      Errors := Errors + sLineBreak + Error;
+    end;
+    Errors := 'SimpleBLE''s native library could not be loaded:' + Errors;
+    raise EBleLibraryNotFound.Create({$IFDEF FPC}AnsiString(Errors){$ELSE}Errors{$ENDIF});
+  finally
+    LibraryLock.Leave;
+  end;
+end;
+
 procedure TNativeCall.Enter;
 begin
   Error := nil;

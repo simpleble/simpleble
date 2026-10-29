@@ -1,0 +1,76 @@
+---
+title: Bluetooth UUIDs
+description: How Bluetooth Low Energy UUIDs work, including the 16-bit and 128-bit forms, the Bluetooth Base UUID, standard and custom UUIDs, and the format SimpleBLE uses.
+---
+
+Every service, characteristic and descriptor in Bluetooth Low Energy is named by a UUID, a 128-bit identifier. Standard UUIDs also have a short 16-bit form. Both forms name the same thing, and code that treats them as different values can't find the characteristic it is looking for.
+
+## 16-bit and 128-bit forms
+
+UUIDs are 128 bits long. The Bluetooth SIG reserves one range of them, built on the **Bluetooth Base UUID**:
+
+```
+00000000-0000-1000-8000-00805f9b34fb
+```
+
+A 16-bit UUID is shorthand for a full UUID in that range. Put the four hex digits in place of `xxxx`:
+
+```
+0000xxxx-0000-1000-8000-00805f9b34fb
+```
+
+So `0x2A37` and `00002a37-0000-1000-8000-00805f9b34fb` are the same UUID. A 32-bit UUID expands the same way into the first eight hex digits, `xxxxxxxx-0000-1000-8000-00805f9b34fb`.
+
+The Bluetooth Core Specification compares UUIDs only in their full form. Expand both sides to 128 bits before comparing them.
+
+| Name | 16-bit | 128-bit |
+| --- | --- | --- |
+| Heart Rate service | `0x180D` | `0000180d-0000-1000-8000-00805f9b34fb` |
+| Heart Rate Measurement characteristic | `0x2A37` | `00002a37-0000-1000-8000-00805f9b34fb` |
+| Battery service | `0x180F` | `0000180f-0000-1000-8000-00805f9b34fb` |
+| Battery Level characteristic | `0x2A19` | `00002a19-0000-1000-8000-00805f9b34fb` |
+| Device Information service | `0x180A` | `0000180a-0000-1000-8000-00805f9b34fb` |
+| Firmware Revision String characteristic | `0x2A26` | `00002a26-0000-1000-8000-00805f9b34fb` |
+| Client Characteristic Configuration descriptor | `0x2902` | `00002902-0000-1000-8000-00805f9b34fb` |
+
+## Standard and custom UUIDs
+
+The Bluetooth SIG assigns 16-bit UUIDs to standard services, characteristics and descriptors and publishes them in Assigned Numbers. Look one up with the [GATT UUID Lookup](https://www.simpleble.org/tools/gatt-uuid-lookup) or browse the [Bluetooth Assigned Numbers](https://www.simpleble.org/tools/bluetooth-assigned-numbers).
+
+A device's own services and characteristics use either a random 128-bit UUID or a 16-bit value the Bluetooth SIG assigned to the company. Generate a random one with `uuidgen` or the [BLE UUID Generator](https://www.simpleble.org/tools/ble-uuid-generator). A custom UUID must not fall in the Base UUID range, which is reserved for values the SIG assigns.
+
+Assigned Numbers says nothing about a custom UUID. What it holds and how to decode it is defined by the device's own protocol documentation.
+
+## UUIDs in SimpleBLE
+
+SimpleBLE reports every UUID in its full 128-bit form, in lowercase, on every platform and backend: services, characteristics, descriptors and advertised service UUIDs alike. Pass UUIDs to `read()`, `write_request()`, `write_command()`, `notify()` and the other calls in the same form.
+
+When a UUID comes from somewhere else, such as a datasheet that lists `2A37` or a tool that prints uppercase, convert it once where it enters your code:
+
+```python
+BASE = "-0000-1000-8000-00805f9b34fb"
+
+
+def full_uuid(uuid: str) -> str:
+    uuid = uuid.lower().removeprefix("0x")
+    if len(uuid) == 4:
+        return f"0000{uuid}{BASE}"
+    if len(uuid) == 8:
+        return f"{uuid}{BASE}"
+    return uuid
+
+
+HEART_RATE = full_uuid("180D")
+HEART_RATE_MEASUREMENT = full_uuid("2A37")
+
+peripheral.notify(HEART_RATE, HEART_RATE_MEASUREMENT, on_measurement)
+```
+
+The rest of your code then works with one spelling.
+
+## Common mistakes
+
+- **Comparing different forms as strings.** `2a37` and `00002a37-0000-1000-8000-00805f9b34fb` never match as text. Expand both before comparing.
+- **Mixing uppercase and lowercase.** `00002A37-...` and `00002a37-...` are the same UUID but different strings. Lowercase both.
+- **Reversing the bytes in firmware.** A UUID entered with its bytes in the wrong order is a different UUID, and clients won't find it. `0x2902` entered as `0x0229` no longer names the Client Characteristic Configuration descriptor.
+- **Building custom UUIDs on the Base UUID.** A value such as `0000fff1-0000-1000-8000-00805f9b34fb` sits in the range the SIG reserves. Use a random 128-bit UUID instead.

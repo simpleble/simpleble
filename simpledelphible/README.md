@@ -42,7 +42,8 @@ boss install github.com/simpleble/simpledelphible
 or download a [release](https://github.com/simpleble/simpledelphible/releases)
 and add its `source` folder to your search path. Both include the native
 SimpleBLE library for every supported platform, prebuilt in `lib`; ship the one
-for your target next to your executable.
+for your target next to your executable. SimpleDelphiBLE loads it on first use,
+and `TSimpleDelphiBLE.LibraryPath` points it elsewhere.
 
 Scan for five seconds and print what was found:
 
@@ -119,9 +120,11 @@ of a connected peripheral. `Read`, `WriteRequest`, and `WriteCommand` access
 characteristic values; `ReadDescriptor` and `WriteDescriptor` access
 descriptors. `Notify` and `Indicate` call your handler with each value as
 `TBytes`, and `Unsubscribe` stops them. Calls like `Connect` and `Read` wait for
-the device, so GUI applications make them from a worker thread. Failures raise
-an `EBleError` subclass, such as `EBleNotConnected`, with SimpleBLE's error code
-in `Code`.
+the device. In GUI applications, use their `Async` versions, such as
+`ConnectAsync` and `ReadAsync`: they run the call on a worker thread and report
+the result to your `OnDone` handler on the main thread. Failures raise an
+`EBleError` subclass, such as `EBleNotConnected`, with SimpleBLE's error code
+in `Code`, or reach `OnDone` as its `Error`.
 
 ## Host a GATT service
 
@@ -161,24 +164,30 @@ without the operating system: assign `OnPasskeyRequest`, `OnPasskeyDisplay`, or
 
 ## Free Pascal and Lazarus
 
-Compile in Delphi mode with Unicode strings, and on macOS and Linux list
-`cthreads` first in your program's `uses` clause:
+On macOS and Linux, list `cthreads` first in your program's `uses` clause. Your
+code can use any mode. In Lazarus's default `{$mode objfpc}{$H+}`, assign
+handlers with `@` and declare their string parameters as `UnicodeString`, the
+type SimpleDelphiBLE uses for strings:
 
 ```pascal
-{$MODE DELPHIUNICODE}
+{$mode objfpc}{$H+}
 
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   SimpleDelphiBLE;
+
+procedure TBatteryMonitor.BatteryChanged(Sender: TBlePeripheral;
+  const Service, Characteristic: UnicodeString; const Data: TBytes);
 ```
+
+`{$MODE DELPHIUNICODE}` lets you write the code as in Delphi instead.
 
 In Lazarus, use the `SimpleDelphiBLEPackage.lpk` runtime package that comes
 with Boss and with each release. Open it with **Package > Open Package File
 (.lpk)** and choose **Use > Add to Project**, or build it with
 `lazbuild SimpleDelphiBLEPackage.lpk` and add `SimpleDelphiBLEPackage` as a
-**New Requirement** in the Project Inspector. The package supplies the units
-and the library path for your target, so your project needs no search paths or
-linker options.
+**New Requirement** in the Project Inspector. The package supplies the units,
+so your project needs no search paths.
 
 ## Platforms
 
