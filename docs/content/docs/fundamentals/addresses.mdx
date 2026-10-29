@@ -1,0 +1,110 @@
+---
+title: Bluetooth Addresses
+description: What a Bluetooth address is, why BLE devices change it, why macOS and iOS report a UUID instead of the MAC address, and how to recognize a device again with SimpleBLE.
+---
+
+Every Bluetooth Low Energy device has a 48-bit address, written as six hexadecimal bytes such as `C4:2B:91:0E:5A:17`. It is often called the MAC address. It looks like a permanent identity, but a device can change it for privacy, and macOS and iOS never show it to applications. Code that saves an address to find a device later works on the bench and fails in the field.
+
+## Address types
+
+An advertisement states whether the address is public or random, and the two most significant bits of a random address give its subtype:
+
+| Type | How long it stays the same | Typical use |
+| --- | --- | --- |
+| Public | Permanently | Devices whose manufacturer assigns addresses from an IEEE-registered block |
+| Random static | At least until the next power cycle | Devices that keep one address without an IEEE assignment |
+| Resolvable private | Until the device generates a new one | Devices with LE privacy, such as phones and wearables |
+| Non-resolvable private | Until the device generates a new one | Broadcasters that never need to be recognized |
+
+Paste an address into the [Bluetooth Address Lookup](https://www.simpleble.org/tools/bluetooth-address-lookup) to classify it and, for a public address, find the registered manufacturer.
+
+## Why the address changes
+
+A device that uses LE privacy advertises with a resolvable private address and replaces it when a timer expires. The Bluetooth Core Specification recommends fifteen minutes and allows at most one hour. To anyone scanning, each new address looks like a new device. That is the purpose: it keeps the device from being tracked, including by your application.
+
+A device that uses private addresses also has an identity address, its public or static address. During pairing, the device can give a bonded central its Identity Resolving Key (IRK). With the IRK, the central's Bluetooth stack resolves each new private address to the device's identity address. Whether an application then sees the identity address or the current private address depends on the operating system.
+
+## macOS and iOS report a UUID
+
+CoreBluetooth doesn't expose the Bluetooth address. Instead, the first time a Mac or iPhone encounters a device, the system assigns it a UUID, and that is the only handle an application receives. On macOS and iOS, SimpleBLE's `address()` returns that UUID as a string, and `address_type()` returns unspecified.
+
+- **On the same computer**, an application can store the identifier and use it to reconnect later. Apple's [Core Bluetooth guide](https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/BestPracticesForInteractingWithARemotePeripheralDevice/BestPracticesForInteractingWithARemotePeripheralDevice.html) recommends this. If the device has changed its private address since, the stored identifier no longer reaches it, and the application has to scan again.
+- **On another computer**, the same device has a different identifier. Don't share identifiers between computers or compare them with an address printed on a label.
+
+SimpleBLE returns the devices CoreBluetooth already knows by their identifiers, without scanning:
+
+```python
+import simplepyble
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+
+# Identifiers that address() returned on this Mac in an earlier session.
+saved = ["8F3A6C2E-1B4D-4E5F-9A7B-2C3D4E5F6A7B"]
+
+for peripheral in simplepyble.advanced.macos.retrieve_cached_peripherals(adapter, saved):
+    try:
+        peripheral.connect()
+        print("Reconnected to", peripheral.address())
+        break
+    except simplepyble.SimpleBLEError:
+        continue  # Out of range or no longer at that address. Scan for it instead.
+```
+
+Unknown identifiers are skipped, and a returned device may be out of range. The same call exists in C++ as `SimpleBLE::Advanced::MacOS::retrieve_cached_peripherals()` and for iOS under `SimpleBLE::Advanced::iOS`.
+
+With a [Dongl](../dongl), the Bluetooth stack runs on the Dongl instead of CoreBluetooth, so `address()` returns the real address and `address_type()` reports public or random on macOS too. A Mac test station can then match devices by the address printed on their label.
+
+## What each platform reports
+
+| Platform | `address()` | `address_type()` |
+| --- | --- | --- |
+| Windows | Bluetooth address | Public or random |
+| Linux | Bluetooth address | Public or random |
+| Android | Bluetooth address | Unspecified |
+| macOS, iOS | CoreBluetooth identifier, a UUID | Unspecified |
+| Dongl, on any operating system | Bluetooth address | Public or random |
+
+A Linux computer can also use private addresses for itself; see [LE Privacy](../simpleble/platform_notes#le-privacy).
+
+## Recognize a device again
+
+An address, or a CoreBluetooth identifier, is how to reach a device now. To recognize a device later, use something that belongs to the device:
+
+1. **Bond when the product allows it.** The central keeps the device's IRK and can resolve its private addresses.
+2. **Rediscover candidates by what they advertise.** Service UUIDs and manufacturer data identify the kind of device; see [BLE Advertising](./advertising). A name is a convenience, not an identity: many devices of one product share it.
+3. **Confirm the device after connecting.** If you control the firmware, give each unit a unique serial number readable over GATT, for example in the Device Information service's Serial Number String, and key your records on it.
+
+```python
+import simplepyble
+
+HEART_RATE = "0000180d-0000-1000-8000-00805f9b34fb"
+DEVICE_INFORMATION = "0000180a-0000-1000-8000-00805f9b34fb"
+SERIAL_NUMBER = "00002a25-0000-1000-8000-00805f9b34fb"
+SAVED_SERIAL = "PX-004217"
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+candidates = [
+    p for p in adapter.scan_get_results()
+    if HEART_RATE in {service.uuid() for service in p.services()}
+]
+
+for peripheral in candidates:
+    peripheral.connect()
+    serial = peripheral.read(DEVICE_INFORMATION, SERIAL_NUMBER).decode()
+    if serial == SAVED_SERIAL:
+        print(f"Found {serial} at {peripheral.address()}")
+        break
+    peripheral.disconnect()
+```
+
+The match works whatever address the device uses today and on every platform, including macOS. To skip the connection, also put the serial number in the manufacturer data and match it during the scan.
+
+## Common mistakes
+
+- **Keying device records on the address.** A private address changes, and on macOS and iOS `address()` isn't a Bluetooth address at all. Key records on a serial number the device reports.
+- **Validating the address format.** Code that expects six hexadecimal bytes rejects every device on macOS and iOS, where `address()` returns a UUID.
+- **Sharing CoreBluetooth identifiers between computers.** Each Mac or iPhone assigns its own.
+- **Identifying a device by its name.** Every unit of a product usually advertises the same name.
+- **Reading "random" as "changing".** A random static address stays the same at least until the device is power cycled.

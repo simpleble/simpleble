@@ -35,7 +35,7 @@ Peripheral mode still depends on the host adapter and driver supporting the role
 
 <Accordion title="Why do I get UUIDs for the peripheral address on MacOS?" id="macos-uuid">
 
-MacOS has a policy of not allowing applications to access the Bluetooth address of peripherals. Instead, it provides a UUID that is unique to the peripheral. This UUID is not persistent across reboots, so you should not use it to identify a peripheral. Instead, you should use the name of the peripheral, which is persistent across reboots.
+macOS and iOS don't give applications the Bluetooth address of a peripheral. CoreBluetooth assigns each device a UUID the first time the Mac or iPhone encounters it, and SimpleBLE's `address()` returns that UUID. On the same computer, you can store the UUID and use it to reconnect later; another computer assigns a different one. To recognize a device on any computer, see [Bluetooth Addresses](../fundamentals/addresses#recognize-a-device-again).
 
 </Accordion>
 
