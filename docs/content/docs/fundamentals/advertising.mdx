@@ -1,0 +1,111 @@
+---
+title: BLE Advertising
+description: How Bluetooth Low Energy advertising works, including advertising packets and AD structures, the 31-byte limit, scan responses, extended advertising, and how SimpleBLE reports advertising data.
+---
+
+A Bluetooth Low Energy peripheral is found through advertising. It broadcasts short packets, called advertisements, that announce it and describe what it offers. A central scans for those packets and decides which devices to list, ignore or connect to. Before a connection, everything a central learns about a device comes from its advertisements.
+
+## How advertising works
+
+A peripheral sends each advertisement on three advertising channels: 37, 38 and 39, at 2402, 2426 and 2480 MHz. It repeats at its advertising interval, anywhere from 20 ms to 10.24 s, plus a random delay of up to 10 ms so that two devices don't keep colliding. A short interval makes a device quick to find. A long interval saves battery.
+
+The advertising type tells a scanner what it can do next:
+
+| Type | Connectable | Scannable | Typical use |
+| --- | --- | --- | --- |
+| `ADV_IND` | Yes | Yes | Devices that accept connections |
+| `ADV_DIRECT_IND` | Yes | No | Reconnecting to one known central |
+| `ADV_SCAN_IND` | No | Yes | Broadcasters with extra data in a scan response |
+| `ADV_NONCONN_IND` | No | No | Beacons |
+
+## Advertising data
+
+Legacy advertising carries up to 31 bytes of advertising data. The data is a sequence of AD structures, each made of a length byte, a type byte and the data itself:
+
+```
+02 01 06                Flags: LE General Discoverable, BR/EDR not supported
+03 03 0d 18             Complete list of 16-bit service UUIDs: 0x180D
+06 09 50 75 6c 73 65    Complete local name: "Pulse"
+05 ff 59 00 01 02       Manufacturer specific data: company 0x0059, data 01 02
+```
+
+The length counts the type byte and the data, not itself. Multi-byte values are little-endian, so `0x180D` is sent as `0d 18` and company `0x0059` as `59 00`.
+
+These are the AD types you will see most often:
+
+| Type | Name | Contents |
+| --- | --- | --- |
+| `0x01` | Flags | Discoverable mode and BR/EDR support |
+| `0x02`, `0x03` | 16-bit service UUIDs | Incomplete or complete list |
+| `0x06`, `0x07` | 128-bit service UUIDs | Incomplete or complete list |
+| `0x08`, `0x09` | Local name | Shortened or complete device name |
+| `0x0A` | TX power level | Transmit power in dBm |
+| `0x16` | Service data | A 16-bit service UUID followed by its data |
+| `0x19` | Appearance | Device category, such as a heart rate sensor |
+| `0xFF` | Manufacturer specific data | A company identifier followed by its data |
+
+Paste any advertisement into the [BLE Advertisement Decoder](https://www.simpleble.org/tools/ble-advertisement-decoder) to split it into structures, or compose one with the [BLE Advertisement Builder](https://www.simpleble.org/tools/ble-advertisement-builder). For how service UUIDs are written, see [Bluetooth UUIDs](./uuids).
+
+## Scan responses
+
+31 bytes fill quickly. Flags take 3 bytes, one 128-bit service UUID takes 18, and manufacturer data with a six-byte payload takes 10. That is all 31, with no room left for a name.
+
+A scannable advertiser can send a second packet, the scan response, with another 31 bytes. Devices commonly put their full name or more service UUIDs there. A central receives it only when it scans actively: it sends a scan request after an advertisement, and the advertiser replies. A passive scanner never asks, so it never sees the scan response.
+
+The scan response arrives after the advertisement. Data it carries, such as the device name, can reach your application after the device was first reported.
+
+## Extended advertising
+
+Bluetooth 5.0 added extended advertising. A short packet on the advertising channels points to the data, which is sent on a secondary channel. Larger payloads are split across chained packets, up to 1,650 bytes of advertising data per advertising set. The AD structures inside are the same as in legacy advertising. Extended advertising also works with the 2M PHY and the long-range Coded PHY.
+
+A central receives extended advertisements only when its Bluetooth controller and operating system support them. Use legacy advertising when a device must be found by every central, and extended advertising when the centrals you target support Bluetooth 5.
+
+## Advertising data in SimpleBLE
+
+SimpleBLE reports each device through two scan callbacks. `set_callback_on_scan_found` runs the first time a device is seen during a scan. `set_callback_on_scan_updated` runs for every advertisement or scan response after that. Extended advertisements arrive through the same callbacks when the adapter and operating system receive them.
+
+A `Peripheral` holds the latest advertising data. When the advertisement and the scan response carry the same field, the advertisement's value is kept.
+
+| Call | Returns |
+| --- | --- |
+| `identifier()` | The device name |
+| `address()` | The device address, or a per-device identifier on macOS and iOS |
+| `rssi()` | Received signal strength in dBm |
+| `tx_power()` | Advertised transmit power in dBm, or -32768 when it isn't advertised |
+| `is_connectable()` | Whether the device accepts connections |
+| `manufacturer_data()` | Manufacturer specific data, keyed by company identifier |
+| `services()` | Advertised service UUIDs, with any service data in each service's `data()` |
+
+Run the same check in both callbacks, so a device that sends its name in the scan response still matches:
+
+```python
+import simplepyble
+
+TARGET_NAME = "Pulse"
+matches = {}
+
+
+def consider(peripheral):
+    if peripheral.identifier() == TARGET_NAME:
+        matches[peripheral.address()] = peripheral
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.set_callback_on_scan_found(consider)
+adapter.set_callback_on_scan_updated(consider)
+adapter.scan_for(5000)
+
+for peripheral in matches.values():
+    for company_id, data in peripheral.manufacturer_data().items():
+        print(f"Company 0x{company_id:04x}: {data.hex()}")
+```
+
+SimpleBLE also advertises. Create a local peripheral from an adapter, add the service UUIDs and manufacturer data to advertise, and call `start()`. The [Advertise a GATT Service](/recipes/advertise) recipe shows the flow in every binding, and the [platform notes](/simpleble/platform_notes) list what each operating system lets an application advertise.
+
+## Common mistakes
+
+- **Filtering only when a device is first found.** The name or other data can arrive in a scan response after the first report. Check in both scan callbacks.
+- **Expecting every field in every advertisement.** 31 bytes rarely hold everything. Many devices drop the name or move it to the scan response, and a passive scanner never receives the scan response.
+- **Treating a service UUID as an identity.** A matching service UUID finds devices of a type, not one specific or trusted device. Confirm which device it is after connecting.
+- **Recognizing a device by its address.** Many devices advertise with a private address that changes periodically. Identify devices by their advertising data or after connecting.
+- **Reading the company identifier in the wrong byte order.** It is little-endian on air, so `59 00` is company `0x0059`. SimpleBLE hands it to you as a number.

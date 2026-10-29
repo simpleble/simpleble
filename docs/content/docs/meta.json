@@ -14,6 +14,7 @@
     "fundamentals/index",
     "fundamentals/ble_basics",
     "fundamentals/uuids",
+    "fundamentals/advertising",
     "fundamentals/permissions",
     "fundamentals/concurrency",
     "fundamentals/error-handling",
