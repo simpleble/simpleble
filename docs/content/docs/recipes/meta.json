@@ -6,6 +6,7 @@
     "connect",
     "read-write-notify",
     "reconnect-loop",
-    "heart-rate-monitor"
+    "heart-rate-monitor",
+    "peripheral-testing"
   ]
 }

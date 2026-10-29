@@ -1,0 +1,154 @@
+---
+title: Peripheral Testing
+description: Test nRF52, ESP32 and other BLE peripheral firmware from a desktop with SimplePyBLE and pytest. Find the board, connect, check its advertising, reads and notifications, and run the suite after every build.
+---
+
+Firmware on a Nordic or ESP32 devkit needs a central to test against. SimpleBLE runs that central on Windows, macOS and Linux, so a test suite on a desktop can find the board, connect, and check every service after each firmware build. This recipe builds that suite in Python with SimplePyBLE and pytest.
+
+The examples test Zephyr's [Heart-rate Monitor sample](https://github.com/zephyrproject-rtos/zephyr/tree/main/samples/bluetooth/peripheral_hr), which runs on Nordic DKs and other Zephyr boards. It advertises the Heart Rate, Battery and Device Information services, and notifies a heart rate and a battery level every second. To test your own firmware, replace the name, UUIDs and expected values with yours. The tests work the same against an ESP32 running ESP-IDF or any other peripheral.
+
+## What you need
+
+- **The board**, running the firmware under test.
+- **An adapter.** A [Dongl](../dongl) gives the test bench its own radio, reports the board's real address on macOS as well as Windows, and behaves the same on every test computer. To evaluate, [flash an nRF52840 Dongle or DK](../dongl#update-the-firmware) with the Dongl firmware. The computer's built-in Bluetooth works too.
+- **SimplePyBLE 1.3.0 or later and pytest:** `pip install --upgrade simplepyble pytest`.
+
+## Find and connect to the board
+
+Fixtures in `conftest.py` open the adapter, find the board once per session, and give each test its own connection:
+
+```python
+import threading
+
+import pytest
+import simplepyble
+
+BOARD_NAME = "Zephyr Heartrate Sensor"
+SCAN_TIMEOUT_S = 10
+
+
+@pytest.fixture(scope="session")
+def adapter():
+    adapters = simplepyble.Backend.get_dongl().adapters()
+    if not adapters:
+        pytest.exit("No Dongl found.")
+    return adapters[0]
+
+
+@pytest.fixture(scope="session")
+def found_board(adapter):
+    found = threading.Event()
+    boards = []
+
+    def consider(peripheral):
+        if peripheral.identifier() == BOARD_NAME and not found.is_set():
+            boards.append(peripheral)
+            found.set()
+
+    adapter.set_callback_on_scan_found(consider)
+    adapter.set_callback_on_scan_updated(consider)
+    adapter.scan_start()
+    try:
+        found.wait(SCAN_TIMEOUT_S)
+    finally:
+        adapter.scan_stop()
+
+    if not boards:
+        pytest.exit(f"{BOARD_NAME} not found within {SCAN_TIMEOUT_S} s.")
+    return boards[0]
+
+
+@pytest.fixture
+def board(found_board):
+    found_board.connect()
+    yield found_board
+    if found_board.is_connected():
+        found_board.disconnect()
+```
+
+The scan stops as soon as the board appears. The sample sends its name in the scan response, so the check runs in both scan callbacks; see [BLE Advertising](../fundamentals/advertising#advertising-data-in-simpleble). The callbacks only record the board and signal the test thread, which stops the scan, as [Concurrency](../fundamentals/concurrency) recommends.
+
+To test through the computer's built-in Bluetooth, take the adapter from `simplepyble.Adapter.get_adapters()` instead. To pick one board among several, compare `peripheral.address()` instead of the name.
+
+## Write the tests
+
+Each test that takes `board` starts on a new connection and disconnects when it ends, so a failure in one test doesn't leave the next one with a half-open link. In `test_heart_rate_sensor.py`:
+
+```python
+import queue
+
+import pytest
+import simplepyble
+
+HEART_RATE = "0000180d-0000-1000-8000-00805f9b34fb"
+HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
+BATTERY = "0000180f-0000-1000-8000-00805f9b34fb"
+BATTERY_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb"
+DEVICE_INFORMATION = "0000180a-0000-1000-8000-00805f9b34fb"
+
+
+def test_advertises_its_services(found_board):
+    advertised = {service.uuid() for service in found_board.services()}
+    assert {HEART_RATE, BATTERY, DEVICE_INFORMATION} <= advertised
+    assert found_board.is_connectable()
+
+
+def test_battery_level_is_a_percentage(board):
+    value = board.read(BATTERY, BATTERY_LEVEL)
+    assert len(value) == 1
+    assert 0 <= value[0] <= 100
+
+
+def test_streams_heart_rate(board):
+    measurements = queue.Queue()
+    board.notify(HEART_RATE, HEART_RATE_MEASUREMENT, measurements.put)
+
+    for _ in range(5):
+        data = measurements.get(timeout=3)
+        assert (data[0] & 0x01) == 0  # Flags: the heart rate is one byte.
+        assert 30 <= data[1] <= 220
+
+
+def test_rejects_reading_the_measurement(board):
+    with pytest.raises(simplepyble.SimpleBLEError):
+        board.read(HEART_RATE, HEART_RATE_MEASUREMENT)
+
+
+def test_reconnects(board):
+    for _ in range(10):
+        board.disconnect()
+        board.connect()
+        assert len(board.read(BATTERY, BATTERY_LEVEL)) == 1
+```
+
+- **Advertising.** While the board isn't connected, `services()` lists the service UUIDs it advertises, so the first test checks the advertisement without connecting.
+- **Reads.** `read()` returns `bytes` and raises an exception on failure, which fails the test.
+- **Notifications.** The callback runs on a SimpleBLE thread and only puts each value on a queue. The test waits for it with a timeout, so a firmware that stops notifying fails the test instead of hanging it. The payload format is described in the [Heart Rate Monitor](./heart-rate-monitor#the-measurement-format) recipe.
+- **Errors.** The Heart Rate Measurement characteristic is notify-only. `pytest.raises` checks that the firmware rejects a read, and every SimpleBLE exception derives from `SimpleBLEError`.
+- **Reconnects.** Ten disconnect and connect cycles catch firmware that fails to advertise again after a link closes.
+
+## Run the suite
+
+```bash
+pytest -v
+```
+
+pytest prints each test as it runs. Add `-x` to stop at the first failure, or `-k reconnect` to run only matching tests.
+
+On a test computer or a self-hosted CI runner, flash each build before the suite runs: `west flash` for Zephyr and the nRF Connect SDK, or `idf.py flash` for ESP-IDF. Then run `pytest --junitxml=results.xml`, and the CI system reports each test from the XML. On Linux, give the runner's user access to the Dongl as described in [Dongl permissions](../simpleble/usage#dongl-permissions-on-linux).
+
+## Trigger events from the firmware
+
+The sample notifies on its own every second. Most firmware notifies only after an event, such as a button press or a sensor threshold. To test those paths without a person at the bench, give your test builds a control characteristic: a write sets a value, sends a notification or an indication, or schedules a disconnect, and the test checks what arrives.
+
+SimpleBLE's own [hardware tests](https://github.com/simpleble/simpleble/tree/main/hitl) drive an nRF52840 DK this way. Every case runs twice, with the firmware limiting the ATT MTU to 23 and to 247 bytes, so both the smallest and the largest packets are covered.
+
+## Test several boards and pairing
+
+To test several boards at once, plug in one Dongl per board and run each board in its own thread. [Use several Dongls](../dongl#use-several-dongls) has complete programs that check three devices in parallel. Tell the Dongls apart by `adapter.address()`, which stays the same across restarts and USB ports.
+
+If your firmware requires pairing, register the passkey or numeric-comparison callback on the board in the `found_board` fixture, before any test connects; [Pairing and bonding](../dongl#pairing-and-bonding) shows the callbacks. Bonds are stored on the Dongl. To test pairing itself, call `board.unpair()` in the teardown so the next test pairs again.
+
+## Other languages
+
+The same fixtures and tests work in every SimpleBLE binding. SimpleBLE's own hardware tests use C++ with GoogleTest. [Read, Write, Notify](./read-write-notify) shows the calls in each language, and [Select a Dongl](../dongl#select-a-dongl) shows how each one opens a Dongl.

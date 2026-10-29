@@ -26,6 +26,7 @@
     "recipes/read-write-notify",
     "recipes/reconnect-loop",
     "recipes/heart-rate-monitor",
+    "recipes/peripheral-testing",
     "---Migration Guides---",
     "migration/from-bleak",
     "migration/from-noble",
