@@ -30,6 +30,7 @@
     "migration/from-bleak",
     "migration/from-noble",
     "migration/from-pc-ble-driver",
+    "migration/from-bled112",
     "---SimpleBLE---",
     "simpleble/usage",
     "simpleble/platform_notes",
