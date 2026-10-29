@@ -28,7 +28,7 @@ struct DecodedServiceData {
 
 static constexpr uint32_t RECOMMENDED_FIRMWARE_VERSION = 1001;
 
-bool AdapterDongl::bluetooth_enabled() { return true; }
+bool AdapterDongl::bluetooth_enabled() { return _powered; }
 
 // Formats a USB serial number such as F994D61716DB as F9:94:D6:17:16:DB, or returns an empty string.
 static BluetoothAddress address_from_serial(const std::string& serial) {
@@ -80,11 +80,17 @@ BluetoothAddress AdapterDongl::address() { return _address; }
 void AdapterDongl::power_on() {
     _open();
     _serial_protocol->basic_power_on();
+    if (!_powered.exchange(true)) {
+        SAFE_CALLBACK_CALL(this->_callback_on_power_on);
+    }
 }
 
 void AdapterDongl::power_off() {
     _open();
     _serial_protocol->basic_power_off();
+    if (_powered.exchange(false)) {
+        SAFE_CALLBACK_CALL(this->_callback_on_power_off);
+    }
 }
 
 bool AdapterDongl::is_powered() {
@@ -149,7 +155,6 @@ SharedPtrVector<PeripheralBase> AdapterDongl::get_paired_peripherals() {
         auto peripheral = peripherals_.find(address);
         if (peripheral == peripherals_.end()) {
             Dongl::advertising_data_t data{};
-            data.identifier = address;
             data.address_type = static_cast<BluetoothAddressType>(response.address_type);
             data.mac_address = address;
             data.connectable = true;
@@ -210,8 +215,6 @@ void AdapterDongl::_open() {
         _serial_protocol.reset();
         throw;
     }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 void AdapterDongl::_scan_received_callback(Dongl::advertising_data_t data) {
@@ -292,6 +295,11 @@ void AdapterDongl::_on_simpleble_event(const simpleble_Event& event) {
                 ByteArray service_data(event.evt.adv_evt.service_data[i].data.bytes,
                                        event.evt.adv_evt.service_data[i].data.size);
                 data.service_data[Dongl::uuid_from_proto(event.evt.adv_evt.service_data[i].uuid)] = service_data;
+            }
+
+            // Listed service UUIDs are advertised services without data, and don't replace the data of the same UUID.
+            for (int i = 0; i < event.evt.adv_evt.service_uuids_count; i++) {
+                data.service_data.emplace(Dongl::uuid_from_proto(event.evt.adv_evt.service_uuids[i]), ByteArray());
             }
 
             _scan_received_callback(data);

@@ -261,10 +261,12 @@ typedef struct _simpleble_AdvEvt {
     pb_size_t manufacturer_data_count;
     simpleble_ManufacturerDataEntry manufacturer_data[4];
     pb_size_t service_data_count;
-    simpleble_ServiceDataEntry service_data[4];
+    simpleble_ServiceDataEntry service_data[7]; /* A legacy packet holds at most 7. */
     bool identifier_complete;
     bool scan_response; /* Fields came from a scan response rather than the advertisement. */
     bool scannable; /* The advertisement accepts scan requests, so a scan response may follow. */
+    pb_size_t service_uuids_count;
+    simpleble_UUID service_uuids[14]; /* A legacy packet lists at most 14 16-bit UUIDs. */
 } simpleble_AdvEvt;
 
 typedef struct _simpleble_ConnectionEvt {
@@ -529,7 +531,7 @@ extern "C" {
 #define simpleble_GetPairedPeripheralRsp_init_default {0, _simpleble_BluetoothAddressType_MIN, ""}
 #define simpleble_GetPairedPeripheralCountRsp_init_default {0}
 #define simpleble_SecureConnectionRsp_init_default {0}
-#define simpleble_AdvEvt_init_default            {"", _simpleble_BluetoothAddressType_MIN, "", 0, 0, 0, 0, {simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default}, 0, {simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default}, 0, 0, 0}
+#define simpleble_AdvEvt_init_default            {"", _simpleble_BluetoothAddressType_MIN, "", 0, 0, 0, 0, {simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default, simpleble_ManufacturerDataEntry_init_default}, 0, {simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default, simpleble_ServiceDataEntry_init_default}, 0, 0, 0, 0, {simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default, simpleble_UUID_init_default}}
 #define simpleble_ConnectionEvt_init_default     {"", 0}
 #define simpleble_DisconnectionEvt_init_default  {0}
 #define simpleble_ServiceDiscoveredEvt_init_default {0, 0, 0, false, simpleble_UUID_init_default}
@@ -582,7 +584,7 @@ extern "C" {
 #define simpleble_GetPairedPeripheralRsp_init_zero {0, _simpleble_BluetoothAddressType_MIN, ""}
 #define simpleble_GetPairedPeripheralCountRsp_init_zero {0}
 #define simpleble_SecureConnectionRsp_init_zero  {0}
-#define simpleble_AdvEvt_init_zero               {"", _simpleble_BluetoothAddressType_MIN, "", 0, 0, 0, 0, {simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero}, 0, {simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero}, 0, 0, 0}
+#define simpleble_AdvEvt_init_zero               {"", _simpleble_BluetoothAddressType_MIN, "", 0, 0, 0, 0, {simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero, simpleble_ManufacturerDataEntry_init_zero}, 0, {simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero, simpleble_ServiceDataEntry_init_zero}, 0, 0, 0, 0, {simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero, simpleble_UUID_init_zero}}
 #define simpleble_ConnectionEvt_init_zero        {"", 0}
 #define simpleble_DisconnectionEvt_init_zero     {0}
 #define simpleble_ServiceDiscoveredEvt_init_zero {0, 0, 0, false, simpleble_UUID_init_zero}
@@ -679,6 +681,7 @@ extern "C" {
 #define simpleble_AdvEvt_identifier_complete_tag 9
 #define simpleble_AdvEvt_scan_response_tag       10
 #define simpleble_AdvEvt_scannable_tag           11
+#define simpleble_AdvEvt_service_uuids_tag       12
 #define simpleble_ConnectionEvt_address_tag      1
 #define simpleble_ConnectionEvt_conn_handle_tag  2
 #define simpleble_DisconnectionEvt_conn_handle_tag 1
@@ -1011,11 +1014,13 @@ X(a, STATIC,   REPEATED, MESSAGE,  manufacturer_data,   7) \
 X(a, STATIC,   REPEATED, MESSAGE,  service_data,      8) \
 X(a, STATIC,   SINGULAR, BOOL,     identifier_complete,   9) \
 X(a, STATIC,   SINGULAR, BOOL,     scan_response,    10) \
-X(a, STATIC,   SINGULAR, BOOL,     scannable,        11)
+X(a, STATIC,   SINGULAR, BOOL,     scannable,        11) \
+X(a, STATIC,   REPEATED, MESSAGE,  service_uuids,    12)
 #define simpleble_AdvEvt_CALLBACK NULL
 #define simpleble_AdvEvt_DEFAULT NULL
 #define simpleble_AdvEvt_manufacturer_data_MSGTYPE simpleble_ManufacturerDataEntry
 #define simpleble_AdvEvt_service_data_MSGTYPE simpleble_ServiceDataEntry
+#define simpleble_AdvEvt_service_uuids_MSGTYPE simpleble_UUID
 
 #define simpleble_ConnectionEvt_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, STRING,   address,           1) \
@@ -1299,8 +1304,8 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_Event_fields &simpleble_Event_msg
 
 /* Maximum encoded size of messages (where known) */
-#define SIMPLEBLE_SIMPLEBLE_PB_H_MAX_SIZE        simpleble_Command_size
-#define simpleble_AdvEvt_size                    422
+#define SIMPLEBLE_SIMPLEBLE_PB_H_MAX_SIZE        simpleble_Event_size
+#define simpleble_AdvEvt_size                    889
 #define simpleble_Attribute_size                 48
 #define simpleble_AuthKeyReplyCmd_size           30
 #define simpleble_AuthKeyReplyRsp_size           6
@@ -1318,7 +1323,7 @@ extern const pb_msgdesc_t simpleble_Event_msg;
 #define simpleble_DisconnectCmd_size             4
 #define simpleble_DisconnectRsp_size             6
 #define simpleble_DisconnectionEvt_size          4
-#define simpleble_Event_size                     528
+#define simpleble_Event_size                     892
 #define simpleble_GetPairedPeripheralCmd_size    4
 #define simpleble_GetPairedPeripheralCountCmd_size 0
 #define simpleble_GetPairedPeripheralCountRsp_size 4

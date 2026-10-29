@@ -13,6 +13,7 @@
     "---Fundamentals---",
     "fundamentals/index",
     "fundamentals/ble_basics",
+    "fundamentals/uuids",
     "fundamentals/permissions",
     "fundamentals/concurrency",
     "fundamentals/error-handling",

@@ -45,7 +45,7 @@ public:
     /**
      * @brief Maximum payload size in bytes.
      */
-    static constexpr size_t MAX_PAYLOAD_SIZE = 571;
+    static constexpr size_t MAX_PAYLOAD_SIZE = 900;
 
     /**
      * @brief Sync byte value marking packet start.
