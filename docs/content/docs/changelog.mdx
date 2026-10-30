@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Repeated scan calls need Dongl firmware 0.1.1. Older firmware logs a warning.
 - (Dongl) Opening a Dongl no longer waits an extra 100 ms.
 - (Dongl) Bonded peripherals no longer report their address as `identifier()`.
+- (Dongl) Subscriptions end on disconnect.
 
 **Fixed**
 
@@ -36,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed scan results and peripheral lookups racing with events from the Dongl.
 - (Dongl) Fixed `power_off()` not showing in `bluetooth_enabled()` or the power callbacks.
 - (Dongl) Fixed service UUIDs and service data past the 4th entry being dropped.
+- (Android) Fixed subscriptions leaking across reconnects.
 
 **Removed**
 

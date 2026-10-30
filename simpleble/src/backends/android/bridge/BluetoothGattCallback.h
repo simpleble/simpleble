@@ -3,6 +3,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <kvn_safe_callback.hpp>
+#include <kvn_safe_callback_map.hpp>
 #include <kvn_safe_map.hpp>
 #include <map>
 #include <mutex>
@@ -87,7 +88,7 @@ class BluetoothGattCallback {
     kvn::safe_callback<void()> _callback_onServicesDiscovered;
     kvn::safe_callback<void(int)> _callback_onMtuChanged;
 
-    kvn::safe_map<SimpleJNI::Object<SimpleJNI::GlobalRef, jobject>, kvn::safe_callback<void(std::vector<uint8_t>)>, SimpleJNI::ObjectComparator<SimpleJNI::GlobalRef, jobject>>
+    kvn::safe_callback_map<SimpleJNI::Object<SimpleJNI::GlobalRef, jobject>, void(std::vector<uint8_t>), SimpleJNI::ObjectComparator<SimpleJNI::GlobalRef, jobject>>
         _callback_onCharacteristicChanged;
 
     kvn::safe_map<SimpleJNI::Object<SimpleJNI::GlobalRef, jobject>, FlagData, SimpleJNI::ObjectComparator<SimpleJNI::GlobalRef, jobject>> _flag_characteristicWritePending;

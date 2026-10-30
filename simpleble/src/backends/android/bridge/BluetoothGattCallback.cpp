@@ -79,15 +79,11 @@ void BluetoothGattCallback::set_callback_onMtuChanged(std::function<void(int)> c
 
 void BluetoothGattCallback::set_callback_onCharacteristicChanged(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic,
                                                                  std::function<void(std::vector<uint8_t>)> callback) {
-    if (callback) {
-        _callback_onCharacteristicChanged[characteristic].load(callback);
-    } else {
-        _callback_onCharacteristicChanged[characteristic].unload();
-    }
+    _callback_onCharacteristicChanged.load(characteristic, std::move(callback));
 }
 
 void BluetoothGattCallback::clear_callback_onCharacteristicChanged(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic) {
-    _callback_onCharacteristicChanged[characteristic].unload();
+    _callback_onCharacteristicChanged.unload(characteristic);
 }
 
 void BluetoothGattCallback::set_flag_characteristicWritePending(SimpleJNI::Object<SimpleJNI::GlobalRef, jobject> characteristic) {
@@ -247,6 +243,8 @@ void BluetoothGattCallback::jni_onConnectionStateChangeCallback(SimpleJNI::Objec
     if (!connected) {
         // Services need to be rediscovered on the next connection.
         obj->services_discovered = false;
+        // A disconnect ends every subscription. The next connection uses new characteristic objects anyway.
+        obj->_callback_onCharacteristicChanged.clear();
     }
     SAFE_CALLBACK_CALL(obj->_callback_onConnectionStateChange, connected);
 }
@@ -278,9 +276,12 @@ void BluetoothGattCallback::jni_onCharacteristicChangedCallback(SimpleJNI::Objec
     SIMPLEBLE_LOG_INFO(msg);
 
     BluetoothGattCallback* obj = GET_CALLBACK_OBJECT_OR_RETURN(thiz_obj);
-    auto& callback = obj->_callback_onCharacteristicChanged[characteristic_obj];
-    if (callback) {
-        SAFE_CALLBACK_CALL(callback, value.bytes());
+    try {
+        obj->_callback_onCharacteristicChanged.call(characteristic_obj, value.bytes());
+    } catch (const std::exception& ex) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Exception during callback: {}", ex.what()));
+    } catch (...) {
+        SIMPLEBLE_LOG_ERROR("Unknown exception during callback");
     }
 }
 

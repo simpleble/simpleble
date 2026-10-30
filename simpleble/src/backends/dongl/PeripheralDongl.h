@@ -7,7 +7,7 @@
 #include "PeripheralBase.h"
 
 #include <kvn_safe_callback.hpp>
-#include <kvn_safe_map.hpp>
+#include <kvn_safe_callback_map.hpp>
 #include <kvn_scheduler.hpp>
 
 #include <atomic>
@@ -179,7 +179,7 @@ class PeripheralDongl : public PeripheralBase {
 
     kvn::safe_callback<void()> _callback_on_connected;
     kvn::safe_callback<void()> _callback_on_disconnected;
-    kvn::safe_map<uint16_t, std::function<void(ByteArray payload)>> _callbacks_on_value_changed;
+    kvn::safe_callback_map<uint16_t, void(ByteArray payload)> _callbacks_on_value_changed;
 };
 
 }  // namespace SimpleBLE

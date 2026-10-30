@@ -267,6 +267,7 @@ This class is intended to be used by the user only. Library developers should us
 
 <ApiMethod
   signature="void disconnect()"
+  detailed="Disconnect from the peripheral. A disconnect ends every subscription made with `notify()` or `indicate()`, whether `disconnect()` was called or the link dropped."
 />
 
 <ApiMethod
@@ -315,11 +316,13 @@ This class is intended to be used by the user only. Library developers should us
 <ApiMethod
   signature="void notify(BluetoothUUID const &service, BluetoothUUID const &characteristic, std::function< void(ByteArray payload)> callback)"
   parameters={[{"name":"service","type":"BluetoothUUID const &"},{"name":"characteristic","type":"BluetoothUUID const &"},{"name":"callback","type":"std::function< void(ByteArray payload)>"}]}
+  detailed="Subscribe to notifications from the characteristic. The subscription lasts until `unsubscribe()` or a disconnect, so subscribe again after every reconnect."
 />
 
 <ApiMethod
   signature="void indicate(BluetoothUUID const &service, BluetoothUUID const &characteristic, std::function< void(ByteArray payload)> callback)"
   parameters={[{"name":"service","type":"BluetoothUUID const &"},{"name":"characteristic","type":"BluetoothUUID const &"},{"name":"callback","type":"std::function< void(ByteArray payload)>"}]}
+  detailed="Subscribe to indications from the characteristic. The subscription lasts until `unsubscribe()` or a disconnect, so subscribe again after every reconnect."
 />
 
 <ApiMethod
