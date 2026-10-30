@@ -156,11 +156,19 @@ void CharacteristicWindows::set_value(ByteArray value) {
         return;
     }
 
+    // NOTE: Only starting the notification runs on the MTA. Waiting for it would hold the MTA thread and the caller.
     try {
-        WinRT::MtaManager::get().execute_sync([native, value_snapshot]() {
-            if (native->is_active()) {
-                async_get(native->characteristic.NotifyValueAsync(bytearray_to_ibuffer(value_snapshot)));
-            }
+        WinRT::MtaManager::get().execute_sync([native, value_snapshot, uuid = _uuid]() {
+            if (!native->is_active()) return;
+
+            auto operation = native->characteristic.NotifyValueAsync(bytearray_to_ibuffer(value_snapshot));
+            operation.Completed([uuid](auto const& async, Foundation::AsyncStatus) {
+                try {
+                    async_get(async);
+                } catch (const std::exception& ex) {
+                    SIMPLEBLE_LOG_WARN(fmt::format("Failed to publish local characteristic {}: {}", uuid, ex.what()));
+                }
+            });
         });
     } catch (const std::exception& ex) {
         SIMPLEBLE_LOG_WARN(fmt::format("Failed to publish local characteristic {}: {}", _uuid, ex.what()));
