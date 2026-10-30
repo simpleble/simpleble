@@ -1,6 +1,6 @@
 ---
 title: Migrating from the BLED112
-description: Move from a Silicon Labs BLED112 and BGAPI, through pygatt or BGLib, to SimpleBLE with a Dongl, an nRF52840 USB dongle, with blocking calls that address characteristics by UUID.
+description: Move from a Silicon Labs BLED112 and BGAPI, through pygatt or BGLib, to SimpleBLE with a Dongl, an nRF52840 USB dongle.
 ---
 
 Silicon Labs discontinued the BLED112, and its last order date passed in May 2025. If your production tests or desktop tools depend on a BLED112, SimpleBLE with a [Dongl](../dongl) keeps a dedicated USB radio and replaces BGAPI's commands and events with blocking calls. A Dongl is an nRF52840 USB dongle whose firmware we maintain together with the library. For an overview, see [BLED112 replacement](https://www.simpleble.org/bled112-replacement).
