@@ -13,6 +13,8 @@ class BluezOrgBluez : public SimpleDBus::Proxy {
     virtual ~BluezOrgBluez() = default;
 
     void register_agent(std::shared_ptr<Agent> agent);
+    void unregister_agent(std::shared_ptr<Agent> agent);
+    void request_default_agent(std::shared_ptr<Agent> agent);
 
     std::vector<std::shared_ptr<Adapter>> get_adapters();
 

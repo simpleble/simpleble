@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <thread>
 #include <utility>
 
@@ -9,6 +10,7 @@
 #include "BuilderBase.h"
 #include "CommonUtils.h"
 #include "LocalPeripheralLinux.h"
+#include "LoggingInternal.h"
 #include "PeripheralLinux.h"
 
 using namespace SimpleBLE;
@@ -188,5 +190,81 @@ void AdapterLinux::_on_device_connected(std::shared_ptr<SimpleBluez::Device> dev
 
     for (const auto& peripheral : local_peripherals) {
         peripheral->handle_connected_changed(address, connected);
+    }
+}
+
+void AdapterLinux::set_passkey_request_callback(
+    std::function<std::optional<std::string>(BluetoothAddress peer)> callback) {
+    if (callback) {
+        passkey_request_callback_.load(std::move(callback));
+    } else {
+        passkey_request_callback_.unload();
+    }
+}
+
+void AdapterLinux::set_passkey_display_callback(
+    std::function<void(BluetoothAddress peer, const std::string& passkey)> callback) {
+    if (callback) {
+        passkey_display_callback_.load(std::move(callback));
+    } else {
+        passkey_display_callback_.unload();
+    }
+}
+
+void AdapterLinux::set_numeric_comparison_callback(
+    std::function<bool(BluetoothAddress peer, const std::string& passkey)> callback) {
+    if (callback) {
+        numeric_comparison_callback_.load(std::move(callback));
+    } else {
+        numeric_comparison_callback_.unload();
+    }
+}
+
+void AdapterLinux::set_pairing_authorization_callback(std::function<bool(BluetoothAddress peer)> callback) {
+    if (callback) {
+        pairing_authorization_callback_.load(std::move(callback));
+    } else {
+        pairing_authorization_callback_.unload();
+    }
+}
+
+std::optional<uint32_t> AdapterLinux::agent_request_passkey(const BluetoothAddress& peer) {
+    std::optional<std::string> passkey;
+    try {
+        passkey = passkey_request_callback_(peer);
+    } catch (const std::exception& e) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Passkey request callback failed: {}", e.what()));
+        return std::nullopt;
+    }
+
+    if (!passkey || passkey->size() != 6) return std::nullopt;
+    if (!std::all_of(passkey->begin(), passkey->end(), [](unsigned char c) { return std::isdigit(c); })) {
+        return std::nullopt;
+    }
+    return static_cast<uint32_t>(std::stoul(*passkey));
+}
+
+void AdapterLinux::agent_display_passkey(const BluetoothAddress& peer, uint32_t passkey) {
+    SAFE_CALLBACK_CALL(passkey_display_callback_, peer, fmt::format("{:06}", passkey));
+}
+
+bool AdapterLinux::agent_request_confirmation(const BluetoothAddress& peer, uint32_t passkey) {
+    try {
+        return numeric_comparison_callback_(peer, fmt::format("{:06}", passkey));
+    } catch (const std::exception& e) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Numeric comparison callback failed: {}", e.what()));
+        return false;
+    }
+}
+
+bool AdapterLinux::agent_request_authorization(const BluetoothAddress& peer) {
+    // NOTE: Just Works pairing is accepted unless the application decides otherwise.
+    if (!pairing_authorization_callback_) return true;
+
+    try {
+        return pairing_authorization_callback_(peer);
+    } catch (const std::exception& e) {
+        SIMPLEBLE_LOG_ERROR(fmt::format("Pairing authorization callback failed: {}", e.what()));
+        return false;
     }
 }

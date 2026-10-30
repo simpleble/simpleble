@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (SimpleDelphiBLE) Added a Lazarus runtime package.
 - (SimpleDelphiBLE) Added `Async` versions of the blocking calls.
 - (SimpleBLE) Added `SHA256SUMS` to releases.
+- (Linux) Added pairing callbacks to `Advanced::Linux` and `Config::SimpleBluez::interactive_pairing`.
 
 **Changed**
 
@@ -28,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Bonded peripherals no longer report their address as `identifier()`.
 - (Dongl) Subscriptions end on disconnect.
 - (MacOS/iOS) `read()` no longer waits for a notification.
+- (Linux) Pairing that needs a passkey or numeric comparison fails unless a pairing callback answers it.
 
 **Fixed**
 

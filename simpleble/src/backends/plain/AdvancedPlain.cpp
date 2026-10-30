@@ -43,6 +43,25 @@ void set_advertisement_local_name(Local::Peripheral& peripheral, std::optional<s
     throw Exception::OperationNotSupported();
 }
 
+void set_passkey_request_callback(Adapter& adapter,
+                                  const std::function<std::optional<std::string>(BluetoothAddress peer)>& callback) {
+    throw Exception::OperationNotSupported();
+}
+
+void set_passkey_display_callback(Adapter& adapter,
+                                  const std::function<void(BluetoothAddress peer, const std::string& passkey)>& callback) {
+    throw Exception::OperationNotSupported();
+}
+
+void set_numeric_comparison_callback(
+    Adapter& adapter, const std::function<bool(BluetoothAddress peer, const std::string& passkey)>& callback) {
+    throw Exception::OperationNotSupported();
+}
+
+void set_pairing_authorization_callback(Adapter& adapter, const std::function<bool(BluetoothAddress peer)>& callback) {
+    throw Exception::OperationNotSupported();
+}
+
 }  // namespace SimpleBLE::Advanced::Linux
 
 #endif

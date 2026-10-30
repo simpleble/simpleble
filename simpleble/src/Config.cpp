@@ -6,6 +6,7 @@ namespace Config {
         bool use_system_bus = true;
         std::chrono::steady_clock::duration connection_timeout = std::chrono::seconds(2);
         std::chrono::steady_clock::duration disconnection_timeout = std::chrono::seconds(1);
+        bool interactive_pairing = false;
     }  // namespace SimpleBluez
 
     namespace WinRT {

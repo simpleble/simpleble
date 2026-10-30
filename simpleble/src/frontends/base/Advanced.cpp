@@ -64,12 +64,32 @@ void set_context(jobject context) { SimpleBLE::BackendAndroid::set_application_c
 
 #if SIMPLEBLE_BACKEND_LINUX
 #include "BuilderBase.h"
+#include "backends/linux/AdapterLinux.h"
 #include "backends/linux/LocalPeripheralLinux.h"
 
 namespace SimpleBLE::Advanced::Linux {
 
 void set_advertisement_local_name(Local::Peripheral& peripheral, std::optional<std::string> local_name) {
     Factory::get_internal<Local::PeripheralLinux>(peripheral).set_advertisement_local_name(std::move(local_name));
+}
+
+void set_passkey_request_callback(Adapter& adapter,
+                                  const std::function<std::optional<std::string>(BluetoothAddress peer)>& callback) {
+    Factory::get_internal<AdapterLinux>(adapter).set_passkey_request_callback(callback);
+}
+
+void set_passkey_display_callback(Adapter& adapter,
+                                  const std::function<void(BluetoothAddress peer, const std::string& passkey)>& callback) {
+    Factory::get_internal<AdapterLinux>(adapter).set_passkey_display_callback(callback);
+}
+
+void set_numeric_comparison_callback(
+    Adapter& adapter, const std::function<bool(BluetoothAddress peer, const std::string& passkey)>& callback) {
+    Factory::get_internal<AdapterLinux>(adapter).set_numeric_comparison_callback(callback);
+}
+
+void set_pairing_authorization_callback(Adapter& adapter, const std::function<bool(BluetoothAddress peer)>& callback) {
+    Factory::get_internal<AdapterLinux>(adapter).set_pairing_authorization_callback(callback);
 }
 
 }  // namespace SimpleBLE::Advanced::Linux

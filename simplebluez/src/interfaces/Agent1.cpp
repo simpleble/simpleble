@@ -35,7 +35,8 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
             // std::cout << "Agent1::message_handle() RequestPinCode" << std::endl;
             SimpleDBus::Holder arg_device = msg.extract();
 
-            std::string pin_code = "abc123";
+            // NOTE: Without a callback there is no PIN code to give, so the request is rejected.
+            std::string pin_code;
             if (OnRequestPinCode) {
                 pin_code = OnRequestPinCode(arg_device.get<std::string>());
             }
@@ -50,7 +51,8 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
         } else if (msg.get_member() == "RequestPasskey") {
             // std::cout << "Agent1::message_handle() RequestPasskey" << std::endl;
             SimpleDBus::Holder arg_device = msg.extract();
-            int32_t passkey = 123456;
+            // NOTE: Without a callback there is no passkey to give, so the request is rejected.
+            int32_t passkey = -1;
             if (OnRequestPasskey) {
                 passkey = OnRequestPasskey(arg_device.get<std::string>());
             }
@@ -98,7 +100,8 @@ void Agent1::message_handle(SimpleDBus::Message& msg) {
             msg.extract_next();
             SimpleDBus::Holder arg_passkey = msg.extract();
 
-            bool success = true;
+            // NOTE: Without a callback nobody compared the passkey, so the request is rejected.
+            bool success = false;
             if (OnRequestConfirmation) {
                 success = OnRequestConfirmation(arg_device.get<std::string>(), arg_passkey.get<uint32_t>());
             }

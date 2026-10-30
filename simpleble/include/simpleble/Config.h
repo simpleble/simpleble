@@ -16,11 +16,13 @@ namespace SimpleBluez {
     extern SIMPLEBLE_EXPORT bool use_system_bus;
     extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration connection_timeout;
     extern SIMPLEBLE_EXPORT std::chrono::steady_clock::duration disconnection_timeout;
+    extern SIMPLEBLE_EXPORT bool interactive_pairing;
 
     static void reset() {
         use_system_bus = true;
         connection_timeout = std::chrono::seconds(2);
         disconnection_timeout = std::chrono::seconds(1);
+        interactive_pairing = false;
     }
 }  // namespace SimpleBluez
 

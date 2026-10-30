@@ -19,4 +19,10 @@ void BluezOrgBluez::register_agent(std::shared_ptr<Agent> agent) {
     agentmanager1()->RegisterAgent(agent->path(), agent->capabilities());
 }
 
+void BluezOrgBluez::unregister_agent(std::shared_ptr<Agent> agent) { agentmanager1()->UnregisterAgent(agent->path()); }
+
+void BluezOrgBluez::request_default_agent(std::shared_ptr<Agent> agent) {
+    agentmanager1()->RequestDefaultAgent(agent->path());
+}
+
 std::vector<std::shared_ptr<Adapter>> BluezOrgBluez::get_adapters() { return children_casted<Adapter>(); }

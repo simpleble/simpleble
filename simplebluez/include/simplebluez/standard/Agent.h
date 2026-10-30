@@ -55,7 +55,7 @@ class Agent : public SimpleDBus::Proxy {
 
   private:
     std::shared_ptr<Agent1> agent1();
-    Capabilities _capabilities;
+    Capabilities _capabilities = NoInputNoOutput;
 };
 
 }  // namespace SimpleBluez

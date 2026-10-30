@@ -4,6 +4,7 @@
 #include "../common/BackendUtils.h"
 #include "CommonUtils.h"
 
+#include <simpleble/Types.h>
 #include <simplebluez/Bluez.h>
 
 #include <atomic>
@@ -33,6 +34,7 @@ class BackendBluez : public BackendSingleton<BackendBluez> {
     std::atomic_bool async_thread_active = false;
     std::shared_ptr<SimpleBluez::Agent> agent;
     void async_thread_function();
+    std::shared_ptr<AdapterLinux> _adapter_for_device(const std::string& device_path, BluetoothAddress& peer);
 
     std::map<std::string, std::shared_ptr<AdapterLinux>> adapters_;
     std::mutex adapters_mutex_;

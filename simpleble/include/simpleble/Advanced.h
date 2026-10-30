@@ -190,6 +190,58 @@ namespace SimpleBLE::Advanced::Linux {
 void SIMPLEBLE_EXPORT set_advertisement_local_name(Local::Peripheral& peripheral,
                                                    std::optional<std::string> local_name);
 
+/**
+ * Register a callback for entering a passkey requested by a peer pairing through this adapter.
+ *
+ * The callback receives the peer's address and must return exactly six decimal
+ * digits, including leading zeroes. Return std::nullopt to reject the pairing
+ * request. An absent callback, an invalid passkey, or an exception from the
+ * callback also rejects the request.
+ *
+ * Pairing callbacks apply to peripherals this adapter connects to and to clients
+ * of its local peripherals. Passkey and numeric comparison requests reach them when
+ * Config::SimpleBluez::interactive_pairing is set; otherwise SimpleBLE's BlueZ agent
+ * is NoInputNoOutput and only Just Works pairing succeeds. Callbacks run on
+ * SimpleBLE's BlueZ event thread, which waits for them to return. Passing an empty
+ * callback unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_passkey_request_callback(
+    Adapter& adapter, const std::function<std::optional<std::string>(BluetoothAddress peer)>& callback);
+
+/**
+ * Register a callback for a passkey that a peer pairing through this adapter must enter.
+ *
+ * The callback receives the peer's address and the passkey as exactly six decimal
+ * digits, including leading zeroes. Display it to the user without modification.
+ * This event does not require a reply; an absent callback simply ignores the event.
+ * Passing an empty callback unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_passkey_display_callback(
+    Adapter& adapter, const std::function<void(BluetoothAddress peer, const std::string& passkey)>& callback);
+
+/**
+ * Register a callback for numeric comparison while a peer pairs through this adapter.
+ *
+ * The callback receives the peer's address and the number as exactly six decimal
+ * digits, including leading zeroes. Return true only after the user confirms that
+ * the peer shows the same number; return false to reject pairing. An absent
+ * callback or an exception from the callback rejects the request. Passing an
+ * empty callback unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_numeric_comparison_callback(
+    Adapter& adapter, const std::function<bool(BluetoothAddress peer, const std::string& passkey)>& callback);
+
+/**
+ * Register a callback that approves Just Works pairing with a peer through this adapter.
+ *
+ * The callback receives the peer's address. Return true to accept the pairing
+ * and false to reject it. Without this callback, Just Works pairing is accepted;
+ * an exception from the callback rejects it. Passing an empty callback
+ * unregisters it.
+ */
+void SIMPLEBLE_EXPORT set_pairing_authorization_callback(Adapter& adapter,
+                                                         const std::function<bool(BluetoothAddress peer)>& callback);
+
 }  // namespace SimpleBLE::Advanced::Linux
 
 #endif

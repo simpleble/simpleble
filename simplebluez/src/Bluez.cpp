@@ -33,3 +33,7 @@ std::shared_ptr<BluezRoot> Bluez::root_bluez() { return _bluez_root; }
 std::vector<std::shared_ptr<Adapter>> Bluez::get_adapters() { return _bluez_root->get_adapters(); }
 
 void Bluez::register_agent(std::shared_ptr<Agent> agent) { _bluez_root->register_agent(agent); }
+
+void Bluez::unregister_agent(std::shared_ptr<Agent> agent) { _bluez_root->unregister_agent(agent); }
+
+void Bluez::request_default_agent(std::shared_ptr<Agent> agent) { _bluez_root->request_default_agent(agent); }

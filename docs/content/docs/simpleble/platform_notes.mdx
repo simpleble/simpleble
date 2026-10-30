@@ -79,6 +79,26 @@ Applications that support adapter hot-plug or adapter removal should treat exist
 ### Advertising Data
 BlueZ keeps the last value of a field that a device stops advertising, including TX power, and only adds to its list of advertised service UUIDs. On Linux, such data stays reported until BlueZ removes the device. BlueZ also reports some advertisements without their scan response, so a field that differs between the two can alternate.
 
+### Pairing
+SimpleBLE registers a BlueZ pairing agent as NoInputNoOutput, so peers pair with Just Works, and pairing that needs a passkey or numeric comparison fails.
+
+Set `SimpleBLE::Config::SimpleBluez::interactive_pairing = true` before retrieving adapters to register the agent as KeyboardDisplay and as BlueZ's default agent instead. The agent then receives passkey and numeric comparison requests, including the ones a desktop agent would otherwise answer, and passes them to the adapter's pairing callbacks.
+
+`SimpleBLE::Advanced::Linux` sets pairing callbacks on an adapter: `set_passkey_request_callback()`, `set_passkey_display_callback()`, `set_numeric_comparison_callback()` and `set_pairing_authorization_callback()`. They cover the peripherals the adapter connects to and the clients of its local peripherals, and receive the peer's address. Passkeys are exactly six decimal digits. A request without a matching callback is rejected, and Just Works pairing is accepted unless the authorization callback rejects it. The callbacks run on SimpleBLE's BlueZ event thread, which waits for them to return.
+
+```cpp
+SimpleBLE::Config::SimpleBluez::interactive_pairing = true;
+
+auto adapter = SimpleBLE::Adapter::get_adapters()[0];
+SimpleBLE::Advanced::Linux::set_numeric_comparison_callback(
+    adapter, [](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+        std::cout << "Does " << peer << " show " << passkey << "? [y/n] ";
+        std::string answer;
+        std::getline(std::cin, answer);
+        return answer == "y";
+    });
+```
+
 ### Local Peripheral Mode
 On Linux, `Adapter::create_local_peripheral()` registers a BlueZ GATT application and an LE advertisement through D-Bus, so `bluetoothd` must be running and the process must have the same D-Bus access used for scanning.
 

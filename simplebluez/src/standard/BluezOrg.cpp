@@ -14,6 +14,14 @@ void BluezOrg::register_agent(std::shared_ptr<Agent> agent) {
     std::dynamic_pointer_cast<BluezOrgBluez>(path_get("/org/bluez"))->register_agent(agent);
 }
 
+void BluezOrg::unregister_agent(std::shared_ptr<Agent> agent) {
+    std::dynamic_pointer_cast<BluezOrgBluez>(path_get("/org/bluez"))->unregister_agent(agent);
+}
+
+void BluezOrg::request_default_agent(std::shared_ptr<Agent> agent) {
+    std::dynamic_pointer_cast<BluezOrgBluez>(path_get("/org/bluez"))->request_default_agent(agent);
+}
+
 std::shared_ptr<SimpleDBus::Proxy> BluezOrg::path_create(const std::string& path) {
     return Proxy::create<BluezOrgBluez>(_conn, _bus_name, path);
 }

@@ -13,6 +13,8 @@ class BluezOrg : public SimpleDBus::Proxy {
 
     std::vector<std::shared_ptr<Adapter>> get_adapters();
     void register_agent(std::shared_ptr<Agent> agent);
+    void unregister_agent(std::shared_ptr<Agent> agent);
+    void request_default_agent(std::shared_ptr<Agent> agent);
 
   private:
     std::shared_ptr<SimpleDBus::Proxy> path_create(const std::string& path) override;
