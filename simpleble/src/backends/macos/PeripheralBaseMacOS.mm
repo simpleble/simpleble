@@ -105,6 +105,7 @@ static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
 }
 @property(strong) BleTask* task;
 @property(strong) NSData* value;
+@property BOOL readPending;
 @property(strong) NSMutableDictionary<NSString*, DescriptorExtras*>* descriptorExtras;
 @end
 
@@ -335,32 +336,33 @@ static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
     BleTask* task = characteristicExtras.task;
 
     @synchronized(task) {
-        if (characteristic.isNotifying) {
-            // If the characteristic is already notifying, we'll just wait for the next notification.
-            @synchronized(self) {
-                characteristicExtras.value = nil;
-            }
-
-            WAIT_UNTIL_FALSE(self, (characteristicExtras.value == nil));
-
-            return SimpleBLE::ByteArray((const char*)characteristicExtras.value.bytes, characteristicExtras.value.length);
-
-        } else {
-            // Otherwise, we'll trigger a value read and wait for the response.
-            @synchronized(self) {
-                task.error = nil;
-                task.pending = YES;
-                [self.peripheral readValueForCharacteristic:characteristic];
-            }
-
-            WAIT_UNTIL_FALSE(self, task.pending);
-
-            if (task.error != nil) {
-                [self throwBasedOnError:task.error withFormat:@"Characteristic %@ Read", characteristic.UUID];
-            }
-
-            return SimpleBLE::ByteArray((const char*)characteristic.value.bytes, characteristic.value.length);
+        @synchronized(self) {
+            task.error = nil;
+            task.pending = YES;
+            characteristicExtras.readPending = YES;
+            characteristicExtras.value = nil;
+            [self.peripheral readValueForCharacteristic:characteristic];
         }
+
+        WAIT_UNTIL_FALSE(self, task.pending);
+
+        BOOL answered = NO;
+        @synchronized(self) {
+            answered = !characteristicExtras.readPending;
+            characteristicExtras.readPending = NO;
+        }
+
+        // NOTE: A disconnect, or a change to the peripheral's services, ends the wait without an answer.
+        if (!answered) {
+            NSError* reason = self.peripheral.state == CBPeripheralStateConnected ? nil : _disconnectionError;
+            [self throwBasedOnError:reason withFormat:@"Characteristic %@ Read", characteristic.UUID];
+        }
+
+        if (task.error != nil) {
+            [self throwBasedOnError:task.error withFormat:@"Characteristic %@ Read", characteristic.UUID];
+        }
+
+        return SimpleBLE::ByteArray((const char*)characteristicExtras.value.bytes, characteristicExtras.value.length);
     }
 }
 
@@ -674,26 +676,25 @@ static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
 - (void)peripheral:(CBPeripheral*)peripheral didUpdateValueForCharacteristic:(CBCharacteristic*)characteristic error:(NSError*)error {
     CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
 
-    if (characteristic.isNotifying) {
-        // If the characteristic is notifying, just save the value and trigger the callback.
-        std::function<void(SimpleBLE::ByteArray)> valueChangedCallback;
-        SimpleBLE::ByteArray payload;
-        @synchronized(self) {
+    // NOTE: CoreBluetooth reports read responses and notifications the same way, so while a read is pending
+    //       the next update completes it, and it also reaches the callback if the characteristic is notifying.
+    std::function<void(SimpleBLE::ByteArray)> valueChangedCallback;
+    SimpleBLE::ByteArray payload;
+    @synchronized(self) {
+        if (characteristicExtras.readPending) {
+            characteristicExtras.readPending = NO;
             characteristicExtras.value = characteristic.value;
+            characteristicExtras.task.error = error;
+            characteristicExtras.task.pending = NO;
+        }
+
+        if (characteristic.isNotifying && error == nil) {
             valueChangedCallback = characteristicExtras->valueChangedCallback;
             payload = SimpleBLE::ByteArray((const char*)characteristic.value.bytes, characteristic.value.length);
         }
-
-        SAFE_CALLBACK_CALL(valueChangedCallback, std::move(payload));
-
-    } else {
-        // If the characteristic is not notifying, then this is a response to a read request.
-        BleTask* task = characteristicExtras.task;
-        @synchronized(self) {
-            task.error = error;
-            task.pending = NO;
-        }
     }
+
+    SAFE_CALLBACK_CALL(valueChangedCallback, std::move(payload));
 }
 
 - (void)peripheral:(CBPeripheral*)peripheral didWriteValueForCharacteristic:(CBCharacteristic*)characteristic error:(NSError*)error {

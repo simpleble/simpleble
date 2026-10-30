@@ -293,7 +293,7 @@ When a device drops the connection while an operation is blocked waiting for its
 | --- | --- |
 | Linux | BlueZ fails the pending DBus call; the error escapes as an [unclassified error](#unclassified-errors). The `on_disconnected` callback fires after internal cleanup. |
 | Windows | The WinRT operation completes with a failure status and SimpleBLE throws `OperationFailed`. |
-| macOS / iOS | Pending operations are unblocked without an error being recorded: an in-flight `read()` can return empty or stale data without throwing, and an in-flight `write_request()` can return as if it succeeded. A `read()` on a characteristic that is actively notifying waits for the next notification — if the device disconnects instead, that call can hang indefinitely. |
+| macOS / iOS | An in-flight `read()` throws `OperationFailed`. Other pending operations are unblocked without an error being recorded: an in-flight `write_request()` can return as if it succeeded. |
 | Android | The completion callback never arrives, so the operation stalls for its full 5-second timeout and then throws. |
 
 <Callout type="info" title="Design guidance">

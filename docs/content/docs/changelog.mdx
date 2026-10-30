@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Opening a Dongl no longer waits an extra 100 ms.
 - (Dongl) Bonded peripherals no longer report their address as `identifier()`.
 - (Dongl) Subscriptions end on disconnect.
+- (MacOS/iOS) `read()` no longer waits for a notification.
 
 **Fixed**
 
@@ -38,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed `power_off()` not showing in `bluetooth_enabled()` or the power callbacks.
 - (Dongl) Fixed service UUIDs and service data past the 4th entry being dropped.
 - (Android) Fixed subscriptions leaking across reconnects.
+- (MacOS/iOS) Fixed `read()` not failing on disconnect.
 
 **Removed**
 
