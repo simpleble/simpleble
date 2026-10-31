@@ -153,13 +153,24 @@ begin
     Result := Result and (C >= '0') and (C <= '9');
 end;
 
+// Copies the six digits a passkey request handler answered into SimpleCBLE's buffer.
+procedure WritePasskey(const Value: string; Target: PAnsiChar);
+var
+  Digits: RawByteString;
+begin
+  if not IsPasskey(Value) then
+    raise EBleInvalidArgument.Create(ecInvalidArgument, 'A passkey has exactly six decimal digits: ' + Value);
+  Digits := UTF8Encode(Value);
+  Move(Digits[1], Target^, 6);
+  Target[6] := #0;
+end;
+
 function PasskeyRequestCallback(handle: simpleble_peripheral_t; passkey: PAnsiChar; userdata: Pointer): Boolean; cdecl;
 var
   Peripheral: TBlePeripheral;
   Handler: TBlePasskeyRequestEvent;
   Value: string;
   Accept: Boolean;
-  Digits: RawByteString;
 begin
   Result := False;
   if not EnterCallback then
@@ -177,11 +188,7 @@ begin
       Handler(Peripheral, Value, Accept);
       if not Accept then
         Exit;
-      if not IsPasskey(Value) then
-        raise EBleInvalidArgument.Create(ecInvalidArgument, 'A passkey has exactly six decimal digits: ' + Value);
-      Digits := UTF8Encode(Value);
-      Move(Digits[1], passkey^, 6);
-      passkey[6] := #0;
+      WritePasskey(Value, passkey);
       Result := True;
     except
       on E: Exception do
@@ -236,6 +243,120 @@ begin
     LeaveCallback;
   end;
 end;
+
+{$IFDEF SIMPLEDELPHIBLE_LINUX}
+function AdapterPasskeyRequestCallback(handle: simpleble_adapter_t; peer: PAnsiChar; passkey: PAnsiChar;
+  userdata: Pointer): Boolean; cdecl;
+var
+  Adapter: TBleAdapter;
+  Handler: TBleAdapterPasskeyRequestEvent;
+  Value: string;
+  Accept: Boolean;
+begin
+  Result := False;
+  if not EnterCallback then
+    Exit;
+  try
+    try
+      Adapter := TBleAdapter(FindTarget(userdata));
+      if Adapter = nil then
+        Exit;
+      Handler := Adapter.FOnPasskeyRequest;
+      if not Assigned(Handler) then
+        Exit;
+      Value := '';
+      Accept := False;
+      Handler(Adapter, FromUtf8(peer), Value, Accept);
+      if not Accept then
+        Exit;
+      WritePasskey(Value, passkey);
+      Result := True;
+    except
+      on E: Exception do
+        ReportHandlerException(E);
+    end;
+  finally
+    LeaveCallback;
+  end;
+end;
+
+procedure AdapterPasskeyDisplayCallback(handle: simpleble_adapter_t; peer: PAnsiChar; passkey: PAnsiChar;
+  userdata: Pointer); cdecl;
+var
+  Event: TBleEvent;
+begin
+  try
+    Event := Default(TBleEvent);
+    Event.Kind := ekAdapterPasskeyDisplay;
+    Event.Peer := FromUtf8(peer);
+    Event.Text := FromUtf8(passkey);
+  except
+    // NOTE: An exception can't cross into SimpleBLE's C++ code.
+    Exit;
+  end;
+  PostEvent(userdata, Event);
+end;
+
+function AdapterNumericComparisonCallback(handle: simpleble_adapter_t; peer: PAnsiChar; passkey: PAnsiChar;
+  userdata: Pointer): Boolean; cdecl;
+var
+  Adapter: TBleAdapter;
+  Handler: TBleAdapterNumericComparisonEvent;
+  Accept: Boolean;
+begin
+  Result := False;
+  if not EnterCallback then
+    Exit;
+  try
+    try
+      Adapter := TBleAdapter(FindTarget(userdata));
+      if Adapter = nil then
+        Exit;
+      Handler := Adapter.FOnNumericComparison;
+      if not Assigned(Handler) then
+        Exit;
+      Accept := False;
+      Handler(Adapter, FromUtf8(peer), FromUtf8(passkey), Accept);
+      Result := Accept;
+    except
+      on E: Exception do
+        ReportHandlerException(E);
+    end;
+  finally
+    LeaveCallback;
+  end;
+end;
+
+function AdapterPairingAuthorizationCallback(handle: simpleble_adapter_t; peer: PAnsiChar;
+  userdata: Pointer): Boolean; cdecl;
+var
+  Adapter: TBleAdapter;
+  Handler: TBleAdapterPairingAuthorizationEvent;
+  Accept: Boolean;
+begin
+  Result := False;
+  if not EnterCallback then
+    Exit;
+  try
+    try
+      Adapter := TBleAdapter(FindTarget(userdata));
+      if Adapter = nil then
+        Exit;
+      Handler := Adapter.FOnPairingAuthorization;
+      if not Assigned(Handler) then
+        Exit;
+      Accept := False;
+      Handler(Adapter, FromUtf8(peer), Accept);
+      Result := Accept;
+    except
+      on E: Exception do
+        ReportHandlerException(E);
+    end;
+  finally
+    LeaveCallback;
+  end;
+end;
+{$ENDIF}
 
 procedure ClientConnectedCallback(handle: simpleble_local_peripheral_t; client_address: PAnsiChar;
   userdata: Pointer); cdecl;

@@ -28,6 +28,12 @@ public object Config {
             get() = Native.configGetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT)
             set(value) = Native.configSetMilliseconds(ConfigKey.SIMPLEBLUEZ_DISCONNECTION_TIMEOUT, checkTimeout(value))
 
+        /** Pass BlueZ's passkey and numeric comparison requests to the adapters' pairing handlers. */
+        @JvmStatic
+        public var interactivePairing: Boolean
+            get() = Native.configGetBoolean(ConfigKey.SIMPLEBLUEZ_INTERACTIVE_PAIRING)
+            set(value) = Native.configSetBoolean(ConfigKey.SIMPLEBLUEZ_INTERACTIVE_PAIRING, value)
+
         @JvmStatic
         @Throws(SimpleKtBleException::class)
         public fun reset() {
@@ -130,6 +136,7 @@ internal object ConfigKey {
     const val DONGL_FORCE_UPDATE = 7
     const val ANDROID_CONNECTION_PRIORITY = 8
     const val ANDROID_NEGOTIATE_MTU = 9
+    const val SIMPLEBLUEZ_INTERACTIVE_PAIRING = 10
 }
 
 /** The groups Native resets. The native side uses the same numbers. */

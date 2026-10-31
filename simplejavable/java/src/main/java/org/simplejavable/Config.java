@@ -79,6 +79,25 @@ public final class Config {
         public static void setDisconnectionTimeout(Duration timeout) {
             nativeSimpleBluezSetDisconnectionTimeout(toNanos(timeout));
         }
+
+        /**
+         * Checks whether passkey and numeric comparison requests reach the {@link Advanced.Linux} pairing callbacks.
+         * Defaults to false, which allows only Just Works pairing.
+         * @return True if pairing is interactive.
+         */
+        public static boolean getInteractivePairing() {
+            return nativeSimpleBluezGetInteractivePairing();
+        }
+
+        /**
+         * Registers SimpleBLE's BlueZ pairing agent as KeyboardDisplay and as the default agent (true), so passkey
+         * and numeric comparison requests reach the {@link Advanced.Linux} pairing callbacks, or as NoInputNoOutput
+         * (false).
+         * @param value True to make pairing interactive.
+         */
+        public static void setInteractivePairing(boolean value) {
+            nativeSimpleBluezSetInteractivePairing(value);
+        }
     }
 
     /**
@@ -263,6 +282,8 @@ public final class Config {
     private static native void nativeSimpleBluezSetConnectionTimeout(long nanos);
     private static native long nativeSimpleBluezGetDisconnectionTimeout();
     private static native void nativeSimpleBluezSetDisconnectionTimeout(long nanos);
+    private static native boolean nativeSimpleBluezGetInteractivePairing();
+    private static native void nativeSimpleBluezSetInteractivePairing(boolean value);
     private static native void nativeWinRTReset();
     private static native boolean nativeWinRTGetExperimentalUseOwnMtaApartment();
     private static native void nativeWinRTSetExperimentalUseOwnMtaApartment(boolean value);

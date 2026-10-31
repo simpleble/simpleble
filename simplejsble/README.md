@@ -141,7 +141,9 @@ Dongl for other programs. Adapters also support `await using`.
 first call that reaches a backend. Pairing through a Dongl happens without the
 operating system: set `setPasskeyRequestHandler`, `setPasskeyDisplayHandler`, or
 `setNumericComparisonHandler` on the peripheral, and await the promise it
-returns, before `connect()`.
+returns, before `connect()`. On Linux, the same handlers on an adapter, plus
+`setPairingAuthorizationHandler`, answer BlueZ's pairing requests; set
+`Config.simpleBluez.interactivePairing` for passkeys and numeric comparison.
 
 ## Electron
 

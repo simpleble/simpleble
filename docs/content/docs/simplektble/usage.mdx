@@ -243,6 +243,32 @@ The handlers run while `connect()` waits, so they can take as long as the user n
 
 For devices that wait for the central to start pairing, call `peripheral.secureConnection(mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
 
+## Pair on Linux
+
+On Linux, an adapter answers BlueZ's pairing requests for the peripherals it connects to and for the clients of its local peripherals. Just Works pairing needs no setup. For pairing with a passkey or numeric comparison, set `Config.SimpleBluez.interactivePairing = true` before the first call that reaches a backend, then set the handlers your devices need on the adapter:
+
+- `setPasskeyRequestHandler`: return the six digits the peer shows, as typed by the user, or `null` to reject.
+- `setPasskeyDisplayHandler`: show the passkey so the user can type it on the peer.
+- `setNumericComparisonHandler`: return `true` only if the peer shows the same six digits.
+- `setPairingAuthorizationHandler`: return `true` to accept Just Works pairing.
+
+Each handler gets the peer's `BluetoothAddress` first.
+
+```kotlin
+import org.simplektble.Adapter
+import org.simplektble.Config
+
+Config.SimpleBluez.interactivePairing = true
+
+val adapter = Adapter.getAdapters().first()
+adapter.setNumericComparisonHandler { peer, passkey ->
+    print("Does $peer show $passkey? [y/N] ")
+    readln().trim() == "y"
+}
+```
+
+The handlers run on SimpleBLE's BlueZ event thread, which waits for each answer. Passing `null` removes a handler, and `close()` removes them all. A passkey or comparison request without a handler is rejected, as is one whose handler throws, and Just Works pairing is accepted unless the authorization handler rejects it. With `interactivePairing`, SimpleBLE's pairing agent is BlueZ's default agent, so it also answers the requests a desktop pairing agent would otherwise get; see [Pairing](../simpleble/platform_notes#pairing). On other platforms, and for adapters of other backends such as a Dongl, the setters throw `SimpleKtBleException` with `OPERATION_NOT_SUPPORTED`.
+
 ## Moving from SimpleDroidBLE
 
 An Android app built on [SimpleDroidBLE](../simpledroidble/usage) moves to SimpleKtBLE with these changes:

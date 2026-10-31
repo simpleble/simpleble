@@ -1,19 +1,19 @@
 // Handlers answer questions a native thread asks and waits for, such as a local
-// characteristic read or a Dongl pairing request. The addon passes only the
-// handler's id with each question.
+// characteristic read or a pairing request. The addon passes only the handler's
+// id with each question, and the question's arguments.
 
-type Handler = (argument?: string) => unknown;
+type Handler = (...args: string[]) => unknown;
 
 const handlers = new Map<number, Handler>();
 let nextId = 1;
 
 /** @internal */
-export function answer(id: number, argument: string | undefined, respond?: (value: unknown) => void): void {
+export function answer(id: number, args: string[], respond?: (value: unknown) => void): void {
   const handler = handlers.get(id);
   // NOTE: An error in a handler is unhandled, as one in a listener is uncaught,
   // and the native side then gets no answer.
   Promise.resolve()
-    .then(() => handler?.(argument))
+    .then(() => handler?.(...args))
     .then(respond, error => {
       respond?.(undefined);
       throw error;
@@ -44,6 +44,11 @@ export class HandlerSlot<H extends (...args: never[]) => unknown> {
       throw error;
     }
     if (previous !== undefined) handlers.delete(previous);
+  }
+
+  /** Whether a handler is installed or being installed. */
+  get isSet(): boolean {
+    return this.#current !== undefined;
   }
 
   /** Forgets the handler of a native object that is gone. */

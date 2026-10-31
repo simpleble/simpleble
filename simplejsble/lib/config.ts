@@ -23,6 +23,8 @@ export interface SimpleBluezConfig {
   connectionTimeout: number;
   /** How long disconnect() waits for BlueZ, in milliseconds. Fractions round up. */
   disconnectionTimeout: number;
+  /** Pass BlueZ's passkey and numeric comparison requests to the adapters' pairing handlers. */
+  interactivePairing: boolean;
 }
 
 export interface WinRTConfig {
@@ -52,6 +54,7 @@ export const Config = Object.freeze({
     useSystemBus: setting<boolean>('simpleBluez.useSystemBus'),
     connectionTimeout: setting<number>('simpleBluez.connectionTimeout'),
     disconnectionTimeout: setting<number>('simpleBluez.disconnectionTimeout'),
+    interactivePairing: setting<boolean>('simpleBluez.interactivePairing'),
   }),
   winRT: group<WinRTConfig>('winRT', {
     experimentalUseOwnMtaApartment: setting<boolean>('winRT.experimentalUseOwnMtaApartment'),

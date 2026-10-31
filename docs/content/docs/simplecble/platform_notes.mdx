@@ -1,6 +1,6 @@
 ---
 title: Platform Notes
-description: SimpleCBLE notes on native backends, the advanced platform functions available from C, local peripheral hosting on Android and Dongl pairing.
+description: SimpleCBLE notes on native backends, the advanced platform functions available from C, local peripheral hosting on Android, and Dongl and Linux pairing.
 ---
 
 The [SimpleBLE platform notes](../simpleble/platform_notes) also apply to the C API, including permission requirements, address formats, and connection behavior. Backend enumeration lets you select an implementation explicitly; it does not bypass OS permissions.
@@ -14,12 +14,18 @@ Include `<simplecble/advanced.h>` or the umbrella header. Native advanced functi
 | Dongl | Passkey-entry, passkey-display, and numeric-comparison callback setters |
 | macOS | `simpleble_advanced_macos_set_advertisement_local_name()` and `simpleble_advanced_macos_retrieve_cached_peripheral()` |
 | iOS | `simpleble_advanced_ios_set_advertisement_local_name()` and `simpleble_advanced_ios_retrieve_cached_peripheral()` |
-| Linux | `simpleble_advanced_linux_set_advertisement_local_name()` |
+| Linux | `simpleble_advanced_linux_set_advertisement_local_name()` and the passkey-request, passkey-display, numeric-comparison, and pairing-authorization callback setters |
 | Android | `simpleble_advanced_android_get_jvm()`, `simpleble_advanced_android_set_jvm()`, and `simpleble_advanced_android_set_context()` |
 
 Apple cached-peripheral lookup accepts one CoreBluetooth identifier. It requires a powered-on adapter, does not scan, and does not guarantee reachability. An invalid or unknown identifier returns NULL without an error. Release a returned peripheral handle normally.
 
 The advertised-name setters take a local peripheral handle. Configure the name before starting the host; NULL removes the override. They change the advertisement, not the system Bluetooth name.
+
+## Linux pairing
+
+How SimpleBLE takes part in BlueZ pairing is described in [Pairing](../simpleble/platform_notes#pairing). Call `simpleble_config_simplebluez_set_interactive_pairing(true)` before retrieving adapters so that passkey and numeric comparison requests reach the callbacks.
+
+The Linux callback setters take an adapter handle and cover the peripherals it connects to and the clients of its local peripherals. Each callback receives the peer's address as a borrowed string. Passkey entry writes six decimal digits plus a NUL terminator into the supplied seven-byte buffer and returns true; return false to reject pairing. Display and comparison callbacks receive a borrowed six-digit string, and the authorization callback returns true to accept Just Works pairing. A missing entry or comparison callback rejects that request. The callbacks run on SimpleBLE's BlueZ event thread, which waits for them to return.
 
 ## Android local hosting
 

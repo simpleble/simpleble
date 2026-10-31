@@ -6,6 +6,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Represents a physical Bluetooth adapter on the host system.
@@ -17,6 +21,12 @@ public class Adapter {
     private volatile EventListener eventListener;
     private final long instanceId;
     private final Map<Long, Peripheral> peripheralCache = new ConcurrentHashMap<>();
+
+    // Linux pairing callbacks, set through Advanced.Linux.
+    volatile Function<BluetoothAddress, String> passkeyRequestCallback;
+    volatile BiConsumer<BluetoothAddress, String> passkeyDisplayCallback;
+    volatile BiPredicate<BluetoothAddress, String> numericComparisonCallback;
+    volatile Predicate<BluetoothAddress> pairingAuthorizationCallback;
 
     private final Callback callbacks = new Callback() {
         @Override
@@ -59,6 +69,33 @@ public class Adapter {
             if (eventListener != null) {
                 eventListener.onScanFound(getPeripheral(peripheralId));
             }
+        }
+
+        @Override
+        public String onPasskeyRequest(String peer) {
+            Function<BluetoothAddress, String> callback = passkeyRequestCallback;
+            return callback != null ? callback.apply(new BluetoothAddress(peer)) : null;
+        }
+
+        @Override
+        public void onPasskeyDisplay(String peer, String passkey) {
+            BiConsumer<BluetoothAddress, String> callback = passkeyDisplayCallback;
+            if (callback != null) {
+                callback.accept(new BluetoothAddress(peer), passkey);
+            }
+        }
+
+        @Override
+        public boolean onNumericComparison(String peer, String passkey) {
+            BiPredicate<BluetoothAddress, String> callback = numericComparisonCallback;
+            return callback != null && callback.test(new BluetoothAddress(peer), passkey);
+        }
+
+        @Override
+        public boolean onPairingAuthorization(String peer) {
+            // NOTE: Like SimpleBLE without an authorization callback, accept Just Works pairing.
+            Predicate<BluetoothAddress> callback = pairingAuthorizationCallback;
+            return callback == null || callback.test(new BluetoothAddress(peer));
         }
     };
 
@@ -273,6 +310,10 @@ public class Adapter {
         void onScanStop();
         void onScanUpdated(long peripheralId);
         void onScanFound(long peripheralId);
+        String onPasskeyRequest(String peer);
+        void onPasskeyDisplay(String peer, String passkey);
+        boolean onNumericComparison(String peer, String passkey);
+        boolean onPairingAuthorization(String peer);
     }
 
     public interface EventListener {

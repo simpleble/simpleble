@@ -132,7 +132,9 @@ them before the first call that reaches a backend. Pairing through a Dongl
 happens without the operating system: register a callback with
 `set_passkey_request_callback()`, `set_passkey_display_callback()`, or
 `set_numeric_comparison_callback()` from `simplepyble.advanced.dongl` before
-`connect()`.
+`connect()`. On Linux, set `config.simplebluez.interactive_pairing` and
+register the same callbacks for an adapter in `simplepyble.advanced.linux`;
+they also receive the peer's address.
 
 ## Asyncio
 

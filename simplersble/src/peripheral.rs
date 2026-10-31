@@ -59,7 +59,7 @@ fn replace_pairing_callback<T>(
     Ok(())
 }
 
-fn current_callback<T: Clone>(slot: &Mutex<Option<T>>) -> Option<T> {
+pub(crate) fn current_callback<T: Clone>(slot: &Mutex<Option<T>>) -> Option<T> {
     slot.lock().unwrap_or_else(PoisonError::into_inner).clone()
 }
 

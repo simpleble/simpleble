@@ -97,6 +97,7 @@ namespace Config = SimpleBLE::Config;
 
 bool* bool_setting(const std::string& name) {
     if (name == "simpleBluez.useSystemBus") return &Config::SimpleBluez::use_system_bus;
+    if (name == "simpleBluez.interactivePairing") return &Config::SimpleBluez::interactive_pairing;
     if (name == "winRT.experimentalUseOwnMtaApartment") return &Config::WinRT::experimental_use_own_mta_apartment;
     if (name == "winRT.experimentalReinitializeWinrtApartmentOnMainThread") {
         return &Config::WinRT::experimental_reinitialize_winrt_apartment_on_main_thread;

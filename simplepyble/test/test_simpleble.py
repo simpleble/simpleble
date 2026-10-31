@@ -58,10 +58,12 @@ def test_configuration_parity():
         assert simplepyble.config.dongl.use_dongl_backend is True
         assert simplepyble.config.dongl.auto_update is False
         assert simplepyble.config.dongl.force_update is False
+        interactive_pairing = simplepyble.config.simplebluez.interactive_pairing
 
         simplepyble.config.simplebluez.use_system_bus = False
         simplepyble.config.simplebluez.connection_timeout_ms = 1234
         simplepyble.config.simplebluez.disconnection_timeout_ms = 5678
+        simplepyble.config.simplebluez.interactive_pairing = not interactive_pairing
         simplepyble.config.android.connection_priority_request = simplepyble.AndroidConnectionPriority.HIGH
         simplepyble.config.dongl.use_dongl_backend = False
         simplepyble.config.dongl.auto_update = True
@@ -70,6 +72,7 @@ def test_configuration_parity():
         assert simplepyble.config.simplebluez.use_system_bus is False
         assert simplepyble.config.simplebluez.connection_timeout_ms == 1234
         assert simplepyble.config.simplebluez.disconnection_timeout_ms == 5678
+        assert simplepyble.config.simplebluez.interactive_pairing is (not interactive_pairing)
         assert simplepyble.config.android.connection_priority_request == simplepyble.AndroidConnectionPriority.HIGH
         assert simplepyble.config.dongl.use_dongl_backend is False
         assert simplepyble.config.dongl.auto_update is True

@@ -238,12 +238,10 @@ final class Peripheral {
     return _passkeyRequest.set(
       handler == null
           ? null
-          : (value) => (value! as Question).answerWith(handler, (String? passkey) {
-              if (passkey != null && !RegExp(r'^[0-9]{6}$').hasMatch(passkey)) {
-                throw ArgumentError.value(passkey, 'passkey', 'A passkey has six digits');
-              }
-              (value as Question).answerText(passkey);
-            }),
+          : (value) {
+              final question = value! as Question;
+              question.answerWith(handler, question.answerPasskey);
+            },
       (token) => _strand.call(_setPasskeyRequest, (peripheral, token.address)),
     );
   }
@@ -267,7 +265,7 @@ final class Peripheral {
           ? null
           : (value) {
               final question = value! as Question;
-              question.answerWith(() => handler(question.argument!), question.answerFlag);
+              question.answerWith(() => handler(question.arguments.single), question.answerFlag);
             },
       (token) => _strand.call(_setNumericComparison, (peripheral, token.address)),
     );

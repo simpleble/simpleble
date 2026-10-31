@@ -31,6 +31,14 @@ final class SimpleBluezConfig {
   set disconnectionTimeout(Duration value) =>
       simpleble_config_simplebluez_set_disconnection_timeout_ms(value.inMilliseconds);
 
+  /// Register SimpleBLE's BlueZ pairing agent as KeyboardDisplay and as
+  /// BlueZ's default agent, so that passkey and numeric comparison requests
+  /// reach the adapters' pairing handlers, such as
+  /// `Adapter.setNumericComparisonHandler`. Off by default, which allows only
+  /// Just Works pairing. Read once, when the backend starts.
+  bool get interactivePairing => simpleble_config_simplebluez_get_interactive_pairing();
+  set interactivePairing(bool value) => simpleble_config_simplebluez_set_interactive_pairing(value);
+
   void reset() => simpleble_config_simplebluez_reset();
 }
 

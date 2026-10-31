@@ -50,6 +50,18 @@ begin
   simpleble_config_simplebluez_set_disconnection_timeout_ms(Value);
 end;
 
+class function TBleConfig.SimpleBluez.GetInteractivePairing: Boolean;
+begin
+  RequireLibrary;
+  Result := simpleble_config_simplebluez_get_interactive_pairing;
+end;
+
+class procedure TBleConfig.SimpleBluez.SetInteractivePairing(Value: Boolean);
+begin
+  RequireLibrary;
+  simpleble_config_simplebluez_set_interactive_pairing(Value);
+end;
+
 class procedure TBleConfig.WinRT.Reset;
 begin
   RequireLibrary;

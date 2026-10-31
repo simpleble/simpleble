@@ -26,6 +26,7 @@ const (
 	passkeyRequest
 	passkeyDisplay
 	numericComparison
+	pairingAuthorization
 )
 
 type callbackKey struct {
@@ -35,11 +36,12 @@ type callbackKey struct {
 
 // CallbackPayload has Go-owned data; Peripheral transfers an owned C handle.
 // Signal callbacks leave all fields empty, and pairing handlers write their answer
-// to reply.
+// to reply. Linux pairing callbacks receive the peer's address in Peer.
 type CallbackPayload struct {
 	Peripheral uintptr
 	Data       []byte
 	Text       string
+	Peer       string
 	reply      *pairingReply
 }
 

@@ -251,7 +251,7 @@ def test_local_peripheral_release_releases_the_gil():
     subprocess.run([sys.executable, "-c", code], check=True, timeout=20)
 
 
-def test_dongl_pairing_requires_a_dongl_peripheral():
+def test_pairing_requires_a_supporting_backend():
     adapter = simplepyble.Adapter.get_adapters()[0]
     peripheral = scan_for(adapter, "Plain Peripheral")
     dongl = simplepyble.advanced.dongl
@@ -264,6 +264,17 @@ def test_dongl_pairing_requires_a_dongl_peripheral():
         dongl.set_numeric_comparison_callback(peripheral, lambda passkey: True)
     with pytest.raises(RuntimeError, match="not supported"):
         dongl.secure_connection(peripheral, mitm=True)
+
+    if sys.platform.startswith("linux"):
+        linux = simplepyble.advanced.linux
+        with pytest.raises(RuntimeError, match="not supported"):
+            linux.set_passkey_request_callback(adapter, lambda peer: "123456")
+        with pytest.raises(RuntimeError, match="not supported"):
+            linux.set_passkey_display_callback(adapter, print)
+        with pytest.raises(RuntimeError, match="not supported"):
+            linux.set_numeric_comparison_callback(adapter, lambda peer, passkey: True)
+        with pytest.raises(RuntimeError, match="not supported"):
+            linux.set_pairing_authorization_callback(adapter, lambda peer: True)
 
 
 def test_async_local_peripheral_loopback():

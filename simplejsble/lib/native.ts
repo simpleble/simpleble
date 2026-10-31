@@ -30,6 +30,10 @@ export interface AdapterHandle {
   getPairedPeripherals(): Promise<PeripheralHandle[]>;
   getConnectedPeripherals(): Promise<PeripheralHandle[]>;
   retrieveCachedPeripherals(identifiers: readonly string[]): Promise<PeripheralHandle[]>;
+  setPasskeyRequestHandler(id: number | undefined): Promise<void>;
+  setPasskeyDisplayHandler(id: number | undefined): Promise<void>;
+  setNumericComparisonHandler(id: number | undefined): Promise<void>;
+  setPairingAuthorizationHandler(id: number | undefined): Promise<void>;
   subscribe(): void;
   createLocalPeripheral(): LocalPeripheralHandle;
   connections(): PeripheralHandle[];
@@ -127,7 +131,7 @@ export interface NativeModule {
     makeError(code: string, message: string, nativeCode?: number): Error;
     dispatch(key: string, event: string, argument?: unknown, peripheral?: object): void;
     deliver(id: number, value: Buffer): void;
-    answer(id: number, argument: string | undefined, respond?: (value: unknown) => void): void;
+    answer(id: number, args: string[], respond?: (value: unknown) => void): void;
   }): void;
   getBackends(): Promise<BackendHandle[]>;
   getNativeBackend(): Promise<BackendHandle>;

@@ -56,6 +56,18 @@ public static class Config
                 NativeMethods.simpleble_config_simplebluez_set_disconnection_timeout_ms(checked((long)Math.Ceiling(value.TotalMilliseconds)));
             }
         }
+        /// <summary>
+        /// Registers SimpleBLE's pairing agent as KeyboardDisplay and as BlueZ's default agent, so passkey and numeric
+        /// comparison requests reach the pairing callbacks in Advanced.Linux. Read when the backend starts. Defaults to false.
+        /// </summary>
+        public static bool InteractivePairing
+        {
+            get => NativeMethods.simpleble_config_simplebluez_get_interactive_pairing();
+            set
+            {
+                NativeMethods.simpleble_config_simplebluez_set_interactive_pairing(value);
+            }
+        }
     }
     /// <summary>Windows backend options.</summary>
     public static class WinRT

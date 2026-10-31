@@ -140,6 +140,10 @@ mod ffi {
         pub fn on_callback_scan_found(self: &InnerAdapter, peripheral: &mut RustyPeripheralWrapper);
         pub fn on_callback_power_on(self: &InnerAdapter);
         pub fn on_callback_power_off(self: &InnerAdapter);
+        pub fn on_callback_passkey_request(self: &InnerAdapter, peer: &[u8], passkey: &mut String) -> bool;
+        pub fn on_callback_passkey_display(self: &InnerAdapter, peer: &[u8], passkey: &[u8]);
+        pub fn on_callback_numeric_comparison(self: &InnerAdapter, peer: &[u8], passkey: &[u8]) -> bool;
+        pub fn on_callback_pairing_authorization(self: &InnerAdapter, peer: &[u8]) -> bool;
 
         type InnerPeripheral;
 
@@ -243,6 +247,10 @@ mod ffi {
         fn RustyConfig_simplebluez_disconnection_timeout_ns() -> u64;
         #[namespace = "Bindings"]
         fn RustyConfig_simplebluez_set_disconnection_timeout_ns(timeout_ns: u64);
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_interactive_pairing() -> bool;
+        #[namespace = "Bindings"]
+        fn RustyConfig_simplebluez_set_interactive_pairing(enabled: bool);
 
         #[namespace = "Bindings"]
         fn RustyConfig_winrt_reset();
@@ -322,6 +330,15 @@ mod ffi {
             identifiers: &Vec<String>,
             error: &mut RustyError,
         ) -> Vec<RustyPeripheralWrapper>;
+
+        #[cfg(any(target_os = "linux", doc))]
+        fn linux_set_passkey_request_callback(self: &RustyAdapter, enabled: bool, error: &mut RustyError);
+        #[cfg(any(target_os = "linux", doc))]
+        fn linux_set_passkey_display_callback(self: &RustyAdapter, enabled: bool, error: &mut RustyError);
+        #[cfg(any(target_os = "linux", doc))]
+        fn linux_set_numeric_comparison_callback(self: &RustyAdapter, enabled: bool, error: &mut RustyError);
+        #[cfg(any(target_os = "linux", doc))]
+        fn linux_set_pairing_authorization_callback(self: &RustyAdapter, enabled: bool, error: &mut RustyError);
 
         // RustyPeripheral functions
 

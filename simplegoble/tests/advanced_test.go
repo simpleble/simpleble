@@ -84,4 +84,16 @@ func TestPlainPlatformExtensionsAreUnsupported(t *testing.T) {
 	if _, err := a.RetrieveCachedPeripherals([]string{"11:22:33:44:55:66"}); !errors.Is(err, ble.OperationNotSupported) {
 		t.Fatal(err)
 	}
+	if err := a.SetCallbackOnPasskeyRequest(func(string) (string, bool) { return "123456", true }); !errors.Is(err, ble.OperationNotSupported) {
+		t.Fatal(err)
+	}
+	if err := a.SetCallbackOnPasskeyDisplay(func(string, string) {}); !errors.Is(err, ble.OperationNotSupported) {
+		t.Fatal(err)
+	}
+	if err := a.SetCallbackOnNumericComparison(func(string, string) bool { return true }); !errors.Is(err, ble.OperationNotSupported) {
+		t.Fatal(err)
+	}
+	if err := a.SetCallbackOnPairingAuthorization(func(string) bool { return true }); !errors.Is(err, ble.OperationNotSupported) {
+		t.Fatal(err)
+	}
 }

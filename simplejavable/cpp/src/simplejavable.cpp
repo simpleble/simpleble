@@ -691,6 +691,16 @@ Java_org_simplejavable_Config_nativeSimpleBluezSetDisconnectionTimeout(JNIEnv* e
     SimpleBLE::Config::SimpleBluez::disconnection_timeout = nanos_to_duration(nanos);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_org_simplejavable_Config_nativeSimpleBluezGetInteractivePairing(JNIEnv* env, jclass clazz) {
+    return SimpleBLE::Config::SimpleBluez::interactive_pairing;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_simplejavable_Config_nativeSimpleBluezSetInteractivePairing(JNIEnv* env, jclass clazz, jboolean value) {
+    SimpleBLE::Config::SimpleBluez::interactive_pairing = value;
+}
+
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Config_nativeWinRTReset(JNIEnv* env, jclass clazz) {
     SimpleBLE::Config::WinRT::reset();
 }
@@ -1063,16 +1073,62 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplejavable_Advanced_nativeMa
     });
 }
 
+// NOTE: PLAIN provides the Linux advanced functions, which throw OperationNotSupported, so these are built for every
+// Linux backend.
 extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeLinuxSetAdvertisementLocalName(
     JNIEnv* env, jclass clazz, jlong local_peripheral_id, jstring j_local_name) {
     return safe_jni_call(env, [&]() {
-#if SIMPLEBLE_BACKEND_LINUX
+#if defined(__linux__) && !defined(__ANDROID__)
         auto peripheral = Cache::get().getLocalPeripheral(local_peripheral_id);
         std::optional<std::string> local_name;
         if (j_local_name != nullptr) {
             local_name = String<LocalRef>(j_local_name).str();
         }
         SimpleBLE::Advanced::Linux::set_advertisement_local_name(peripheral, local_name);
+#else
+        throw UnsupportedOperation("Advanced.Linux requires the Linux backend.");
+#endif
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeLinuxSetPasskeyRequestCallback(
+    JNIEnv* env, jclass clazz, jlong adapter_id, jboolean enabled) {
+    return safe_jni_call(env, [&]() {
+#if defined(__linux__) && !defined(__ANDROID__)
+        Cache::get().getAdapter(adapter_id)->setPasskeyRequestCallback(enabled);
+#else
+        throw UnsupportedOperation("Advanced.Linux requires the Linux backend.");
+#endif
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeLinuxSetPasskeyDisplayCallback(
+    JNIEnv* env, jclass clazz, jlong adapter_id, jboolean enabled) {
+    return safe_jni_call(env, [&]() {
+#if defined(__linux__) && !defined(__ANDROID__)
+        Cache::get().getAdapter(adapter_id)->setPasskeyDisplayCallback(enabled);
+#else
+        throw UnsupportedOperation("Advanced.Linux requires the Linux backend.");
+#endif
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeLinuxSetNumericComparisonCallback(
+    JNIEnv* env, jclass clazz, jlong adapter_id, jboolean enabled) {
+    return safe_jni_call(env, [&]() {
+#if defined(__linux__) && !defined(__ANDROID__)
+        Cache::get().getAdapter(adapter_id)->setNumericComparisonCallback(enabled);
+#else
+        throw UnsupportedOperation("Advanced.Linux requires the Linux backend.");
+#endif
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplejavable_Advanced_nativeLinuxSetPairingAuthorizationCallback(
+    JNIEnv* env, jclass clazz, jlong adapter_id, jboolean enabled) {
+    return safe_jni_call(env, [&]() {
+#if defined(__linux__) && !defined(__ANDROID__)
+        Cache::get().getAdapter(adapter_id)->setPairingAuthorizationCallback(enabled);
 #else
         throw UnsupportedOperation("Advanced.Linux requires the Linux backend.");
 #endif

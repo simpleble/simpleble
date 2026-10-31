@@ -153,6 +153,125 @@ void simpleble_advanced_linux_set_advertisement_local_name(simpleble_local_perip
     }
 }
 
+void simpleble_advanced_linux_set_passkey_request_callback(
+    simpleble_adapter_t handle,
+    bool (*callback)(simpleble_adapter_t handle, const char* peer, char passkey[7], void* userdata), void* userdata,
+    simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+
+    try {
+        auto* adapter = (SimpleBLE::Adapter*)handle;
+        if (callback == nullptr) {
+            SimpleBLE::Advanced::Linux::set_passkey_request_callback(*adapter, nullptr);
+        } else {
+            SimpleBLE::Advanced::Linux::set_passkey_request_callback(
+                *adapter, [=](SimpleBLE::BluetoothAddress peer) -> std::optional<std::string> {
+                    char passkey[7] = {};
+                    if (!callback(handle, peer.c_str(), passkey, userdata)) return std::nullopt;
+                    return std::string(passkey, 6);
+                });
+        }
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}
+
+void simpleble_advanced_linux_set_passkey_display_callback(
+    simpleble_adapter_t handle,
+    void (*callback)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata),
+    void* userdata, simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+
+    try {
+        auto* adapter = (SimpleBLE::Adapter*)handle;
+        if (callback == nullptr) {
+            SimpleBLE::Advanced::Linux::set_passkey_display_callback(*adapter, nullptr);
+        } else {
+            SimpleBLE::Advanced::Linux::set_passkey_display_callback(
+                *adapter, [=](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                    callback(handle, peer.c_str(), passkey.c_str(), userdata);
+                });
+        }
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}
+
+void simpleble_advanced_linux_set_numeric_comparison_callback(
+    simpleble_adapter_t handle,
+    bool (*callback)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata),
+    void* userdata, simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+
+    try {
+        auto* adapter = (SimpleBLE::Adapter*)handle;
+        if (callback == nullptr) {
+            SimpleBLE::Advanced::Linux::set_numeric_comparison_callback(*adapter, nullptr);
+        } else {
+            SimpleBLE::Advanced::Linux::set_numeric_comparison_callback(
+                *adapter, [=](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                    return callback(handle, peer.c_str(), passkey.c_str(), userdata);
+                });
+        }
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}
+
+void simpleble_advanced_linux_set_pairing_authorization_callback(
+    simpleble_adapter_t handle, bool (*callback)(simpleble_adapter_t handle, const char* peer, void* userdata),
+    void* userdata, simpleble_error_t** out_error) {
+    simpleble_error_release(out_error);
+
+    if (handle == nullptr) {
+        *out_error = new Error(ErrorCode::INVALID_ARGUMENT, "handle is NULL");
+        return;
+    }
+
+    try {
+        auto* adapter = (SimpleBLE::Adapter*)handle;
+        if (callback == nullptr) {
+            SimpleBLE::Advanced::Linux::set_pairing_authorization_callback(*adapter, nullptr);
+        } else {
+            SimpleBLE::Advanced::Linux::set_pairing_authorization_callback(
+                *adapter, [=](SimpleBLE::BluetoothAddress peer) { return callback(handle, peer.c_str(), userdata); });
+        }
+    } catch (const SimpleBLE::Exception::BaseException& e) {
+        *out_error = e.make_error().release();
+    } catch (const std::exception& e) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, e.what());
+    } catch (...) {
+        *out_error = new Error(ErrorCode::UNCLASSIFIED_EXCEPTION, "Unknown exception");
+    }
+}
+
 #endif
 
 #if SIMPLEBLE_BACKEND_ANDROID

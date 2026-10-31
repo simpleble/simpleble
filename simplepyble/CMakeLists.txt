@@ -39,8 +39,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT SIMPLEBLE_PLAIN)
     set(SIMPLEPYBLE_HAS_MACOS_ADVANCED 1)
 endif()
 
+# NOTE: PLAIN provides the Linux advanced functions, which raise OperationNotSupportedError, so tests reach them.
 set(SIMPLEPYBLE_HAS_LINUX_ADVANCED 0)
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT SIMPLEBLE_PLAIN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIMPLEPYBLE_HAS_LINUX_ADVANCED 1)
 endif()
 

@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -132,8 +133,8 @@ void answer(int64_t id, Fill fill) {
     question->condition.notify_all();
 }
 
-// Posts [token, question, argument] and waits until Dart answers, or until nothing can anymore.
-std::shared_ptr<Question> ask(void* userdata, const char* argument) {
+// Posts [token, question, arguments] and waits until Dart answers, or until nothing can anymore.
+std::shared_ptr<Question> ask(void* userdata, std::initializer_list<const char*> arguments = {}) {
     auto question = std::make_shared<Question>();
     const int64_t id = next_question++;
     {
@@ -142,10 +143,19 @@ std::shared_ptr<Question> ask(void* userdata, const char* argument) {
         questions[id] = question;
     }
 
+    std::vector<Dart_CObject> strings;
+    for (const char* argument : arguments) {
+        strings.push_back(text(argument != nullptr ? argument : ""));
+    }
+    std::vector<Dart_CObject*> string_values;
+    for (auto& string : strings) {
+        string_values.push_back(&string);
+    }
+
     Dart_CObject token = integer(token_of(userdata));
     Dart_CObject number = integer(id);
-    Dart_CObject value = text(argument);
-    Dart_CObject* values[] = {&token, &number, &value};
+    Dart_CObject list = array(string_values.data(), static_cast<intptr_t>(string_values.size()));
+    Dart_CObject* values[] = {&token, &number, &list};
     Dart_CObject message = array(values, 3);
     bool posted = false;
     {
@@ -238,21 +248,52 @@ void simpledartble_on_text(void*, const char* value, void* userdata) {
 const uint8_t* simpledartble_on_read(simpleble_local_characteristic_t, size_t* data_length, void* userdata) {
     // NOTE: SimpleCBLE copies the value on this thread right after the callback returns.
     thread_local std::vector<uint8_t> value;
-    auto question = ask(userdata, nullptr);
+    auto question = ask(userdata);
     value = question->has_answer ? question->bytes : std::vector<uint8_t>{};
     *data_length = value.size();
     return value.empty() ? nullptr : value.data();
 }
 
-bool simpledartble_on_passkey_request(simpleble_peripheral_t, char passkey[7], void* userdata) {
-    auto question = ask(userdata, nullptr);
-    if (!question->has_answer || question->text.size() != 6) return false;
-    std::memcpy(passkey, question->text.c_str(), 7);
+namespace {
+
+// Writes a question's six-digit answer into passkey, or returns false without one.
+bool take_passkey(const Question& question, char passkey[7]) {
+    if (!question.has_answer || question.text.size() != 6) return false;
+    std::memcpy(passkey, question.text.c_str(), 7);
     return true;
 }
 
+}  // namespace
+
+bool simpledartble_on_passkey_request(simpleble_peripheral_t, char passkey[7], void* userdata) {
+    return take_passkey(*ask(userdata), passkey);
+}
+
 bool simpledartble_on_numeric_comparison(simpleble_peripheral_t, const char* passkey, void* userdata) {
-    auto question = ask(userdata, passkey);
+    auto question = ask(userdata, {passkey});
+    return question->has_answer && question->flag;
+}
+
+bool simpledartble_on_linux_passkey_request(simpleble_adapter_t, const char* peer, char passkey[7], void* userdata) {
+    return take_passkey(*ask(userdata, {peer}), passkey);
+}
+
+void simpledartble_on_linux_passkey_display(simpleble_adapter_t, const char* peer, const char* passkey,
+                                            void* userdata) {
+    Dart_CObject fields[] = {text(peer), text(passkey)};
+    Dart_CObject* values[] = {&fields[0], &fields[1]};
+    Dart_CObject pair = array(values, 2);
+    post_event(userdata, &pair);
+}
+
+bool simpledartble_on_linux_numeric_comparison(simpleble_adapter_t, const char* peer, const char* passkey,
+                                               void* userdata) {
+    auto question = ask(userdata, {peer, passkey});
+    return question->has_answer && question->flag;
+}
+
+bool simpledartble_on_linux_pairing_authorization(simpleble_adapter_t, const char* peer, void* userdata) {
+    auto question = ask(userdata, {peer});
     return question->has_answer && question->flag;
 }
 

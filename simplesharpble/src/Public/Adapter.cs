@@ -7,7 +7,7 @@ namespace SimpleSharpBLE;
 public sealed class Adapter : IDisposable
 {
     internal readonly NativeHandle handle;
-    private readonly CallbackOwner callbacks;
+    internal readonly CallbackOwner callbacks;
     internal Adapter(nint value)
     {
         handle = new(value, HandleKind.Adapter);

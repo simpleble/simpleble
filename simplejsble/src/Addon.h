@@ -15,6 +15,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "Dispatcher.h"
 #include "Executor.h"
@@ -190,6 +191,7 @@ void emit(Napi::Env env, const std::string& key, const char* event, SimpleBLE::P
 
 Napi::Buffer<uint8_t> to_buffer(Napi::Env env, const SimpleBLE::ByteArray& bytes);
 SimpleBLE::ByteArray to_bytes(const Napi::Value& value);
+Napi::Array to_array(Napi::Env env, const std::vector<std::string>& values);
 
 // The answer to a question a native thread asks a TypeScript handler, such as a
 // read handler's value. If nothing can answer anymore, e.g. because the
@@ -216,18 +218,18 @@ class Reply {
 };
 
 // Calls the handler registered under `id` on the JavaScript thread with
-// `argument`, and waits for its answer, which `convert` turns into a T. The
+// `arguments`, and waits for its answer, which `convert` turns into a T. The
 // handler may return a promise; it answers undefined when it fails.
 // NOTE: The core lets these callbacks block.
 template <typename T, typename Convert>
-T ask(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::optional<std::string> argument, T fallback,
+T ask(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::vector<std::string> arguments, T fallback,
       Convert convert) {
     auto target = dispatcher.lock();
     if (!target) return fallback;
 
     auto reply = std::make_shared<Reply<T>>(std::move(fallback));
     auto answer = reply->future();
-    target->post([reply, id, argument = std::move(argument), convert](Napi::Env env) {
+    target->post([reply, id, arguments = std::move(arguments), convert](Napi::Env env) {
         auto respond = Napi::Function::New(env, [reply, convert](const Napi::CallbackInfo& info) {
             if (info[0].IsUndefined()) {
                 reply->set(reply->fallback());
@@ -240,8 +242,7 @@ T ask(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::optional<std:
                 throw;
             }
         });
-        Napi::Value value = argument ? Napi::String::New(env, *argument) : env.Undefined();
-        addon(env).answer.Call({Napi::Number::New(env, id), value, respond});
+        addon(env).answer.Call({Napi::Number::New(env, id), to_array(env, arguments), respond});
     });
 
     // Only the job and its function hold the reply now, so the fallback
@@ -252,6 +253,6 @@ T ask(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::optional<std:
 }
 
 // Like ask(), for a handler that doesn't answer.
-void tell(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::string argument);
+void tell(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::vector<std::string> arguments);
 
 }  // namespace SimpleJSBLE

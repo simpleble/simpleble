@@ -177,11 +177,11 @@ void emit(Napi::Env env, const std::string& key, const char* event, Napi::Value 
     addon(env).dispatch.Call({Napi::String::New(env, key), Napi::String::New(env, event), argument});
 }
 
-void tell(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::string argument) {
+void tell(const std::weak_ptr<Dispatcher>& dispatcher, double id, std::vector<std::string> arguments) {
     auto target = dispatcher.lock();
     if (!target) return;
-    target->post([id, argument = std::move(argument)](Napi::Env env) {
-        addon(env).answer.Call({Napi::Number::New(env, id), Napi::String::New(env, argument)});
+    target->post([id, arguments = std::move(arguments)](Napi::Env env) {
+        addon(env).answer.Call({Napi::Number::New(env, id), to_array(env, arguments)});
     });
 }
 
@@ -218,6 +218,14 @@ SimpleBLE::ByteArray to_bytes(const Napi::Value& value) {
     }
     auto bytes = array.As<Napi::Uint8Array>();
     return SimpleBLE::ByteArray(bytes.Data(), bytes.ElementLength());
+}
+
+Napi::Array to_array(Napi::Env env, const std::vector<std::string>& values) {
+    auto array = Napi::Array::New(env, values.size());
+    for (uint32_t i = 0; i < values.size(); i++) {
+        array.Set(i, Napi::String::New(env, values[i]));
+    }
+    return array;
 }
 
 }  // namespace SimpleJSBLE

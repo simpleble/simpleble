@@ -68,7 +68,15 @@ final class NativeLibrary {
       '-DDART_SDK_INCLUDE_DIR=${File(Platform.resolvedExecutable).parent.parent.uri.resolve('include/').toFilePath()}',
       ..._configuration(),
     ]);
-    await _run('cmake', ['--build', buildDirectory.toFilePath(), '--config', 'Release', '--parallel']);
+    // NOTE: Without a count, Make runs every compile at once, which can exhaust a machine's memory.
+    await _run('cmake', [
+      '--build',
+      buildDirectory.toFilePath(),
+      '--config',
+      'Release',
+      '--parallel',
+      '${Platform.numberOfProcessors}',
+    ]);
     return buildDirectory.resolve(os == OS.windows ? 'bin/Release/$fileName' : 'lib/$fileName');
   }
 

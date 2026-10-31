@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.Volatile
 import kotlin.jvm.JvmStatic
 
 public class Adapter private constructor(private val instanceId: Long) {
@@ -26,6 +27,18 @@ public class Adapter private constructor(private val instanceId: Long) {
     private val closeLock = SynchronizedObject()
     private var closing = false
     private val closed = CompletableDeferred<Unit>()
+
+    @Volatile
+    private var passkeyRequestHandler: ((BluetoothAddress) -> String?)? = null
+
+    @Volatile
+    private var passkeyDisplayHandler: ((BluetoothAddress, String) -> Unit)? = null
+
+    @Volatile
+    private var numericComparisonHandler: ((BluetoothAddress, String) -> Boolean)? = null
+
+    @Volatile
+    private var pairingAuthorizationHandler: ((BluetoothAddress) -> Boolean)? = null
 
     private fun peripheral(peripheralId: Long): Peripheral {
         return synchronized(peripheralsLock) {
@@ -58,6 +71,21 @@ public class Adapter private constructor(private val instanceId: Long) {
 
         override fun onScanFound(peripheralId: Long) {
             _onScanFound.tryEmit(peripheral(peripheralId))
+        }
+
+        override fun onPasskeyRequest(peer: String): String? = passkeyRequestHandler?.invoke(BluetoothAddress(peer))
+
+        override fun onPasskeyDisplay(peer: String, passkey: String) {
+            passkeyDisplayHandler?.invoke(BluetoothAddress(peer), passkey)
+        }
+
+        override fun onNumericComparison(peer: String, passkey: String): Boolean {
+            return numericComparisonHandler?.invoke(BluetoothAddress(peer), passkey) ?: false
+        }
+
+        // NOTE: Without a handler, Just Works pairing is accepted, as SimpleBLE does without a callback.
+        override fun onPairingAuthorization(peer: String): Boolean {
+            return pairingAuthorizationHandler?.invoke(BluetoothAddress(peer)) ?: true
         }
     }
 
@@ -161,6 +189,46 @@ public class Adapter private constructor(private val instanceId: Long) {
     }
 
     /**
+     * Answers a request for the passkey a peer displays while it pairs through this adapter on Linux: six decimal
+     * digits, or null to reject pairing. Peers are the peripherals this adapter connects to and the clients of its
+     * local peripherals, and each handler receives the peer's address. Requests reach it once
+     * [Config.SimpleBluez.interactivePairing] is set. Pass null to remove it. The handler runs on a SimpleBLE thread,
+     * which waits for it. Other platforms and adapters throw [ErrorCode.OPERATION_NOT_SUPPORTED].
+     */
+    @Throws(SimpleKtBleException::class)
+    public fun setPasskeyRequestHandler(handler: ((BluetoothAddress) -> String?)?) {
+        passkeyRequestHandler = handler
+        Native.adapterSetPasskeyRequestHandler(instanceId, handler != null)
+    }
+
+    /** Receives the six-digit passkey a peer pairing through this adapter on Linux asks the user to enter on it. */
+    @Throws(SimpleKtBleException::class)
+    public fun setPasskeyDisplayHandler(handler: ((BluetoothAddress, String) -> Unit)?) {
+        passkeyDisplayHandler = handler
+        Native.adapterSetPasskeyDisplayHandler(instanceId, handler != null)
+    }
+
+    /**
+     * Confirms whether a peer pairing through this adapter on Linux shows the same six-digit passkey. Return true to
+     * accept pairing. The handler runs on a SimpleBLE thread, which waits for it.
+     */
+    @Throws(SimpleKtBleException::class)
+    public fun setNumericComparisonHandler(handler: ((BluetoothAddress, String) -> Boolean)?) {
+        numericComparisonHandler = handler
+        Native.adapterSetNumericComparisonHandler(instanceId, handler != null)
+    }
+
+    /**
+     * Accepts or rejects Just Works pairing with a peer through this adapter on Linux. Without a handler, Just Works
+     * pairing is accepted. The handler runs on a SimpleBLE thread, which waits for it.
+     */
+    @Throws(SimpleKtBleException::class)
+    public fun setPairingAuthorizationHandler(handler: ((BluetoothAddress) -> Boolean)?) {
+        pairingAuthorizationHandler = handler
+        Native.adapterSetPairingAuthorizationHandler(instanceId, handler != null)
+    }
+
+    /**
      * Creates a GATT server hosted by this application. Configure its services and advertising data before starting
      * it.
      */
@@ -172,11 +240,11 @@ public class Adapter private constructor(private val instanceId: Long) {
     }
 
     /**
-     * Stops this adapter's scan and local peripherals, disconnects the peripherals connected through it, and releases
-     * the adapter and every object that came from it, which frees a Dongl for other programs right away. Calls on the
-     * closed objects then throw [ErrorCode.OBJECT_NOT_INITIALIZED], they emit no more events, and [getAdapters] returns
-     * a new Adapter for the device. Calling it again waits for the first call. It finishes even when the calling
-     * coroutine is cancelled.
+     * Stops this adapter's scan and local peripherals, disconnects the peripherals connected through it, removes its
+     * pairing handlers, and releases the adapter and every object that came from it, which frees a Dongl for other
+     * programs right away. Calls on the closed objects then throw [ErrorCode.OBJECT_NOT_INITIALIZED], they emit no more
+     * events, and [getAdapters] returns a new Adapter for the device. Calling it again waits for the first call. It
+     * finishes even when the calling coroutine is cancelled.
      */
     @Throws(SimpleKtBleException::class, CancellationException::class)
     public suspend fun close() {

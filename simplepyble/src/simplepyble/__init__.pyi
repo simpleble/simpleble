@@ -964,6 +964,14 @@ class _SimpleBluezConfig:
 
     disconnection_timeout_ms: int
     """Disconnection timeout in milliseconds."""
+
+    interactive_pairing: bool
+    """
+    Register the BlueZ pairing agent as KeyboardDisplay and default agent, so
+    passkey and numeric comparison requests reach the advanced.linux pairing
+    callbacks. Defaults to False, which allows only Just Works pairing. Set it
+    before retrieving any adapter.
+    """
     
     @staticmethod
     def reset() -> None:
@@ -1062,7 +1070,18 @@ class _AdvancedMacOS:
         ...
 
 class _AdvancedLinux:
-    """Advanced BlueZ APIs."""
+    """
+    Advanced BlueZ APIs.
+
+    The pairing callbacks apply to peripherals the adapter connects to and to
+    clients of its local peripherals, and receive the peer's address. Passkey
+    and numeric comparison requests reach them when
+    config.simplebluez.interactive_pairing is set. Callbacks run on SimpleBLE's
+    BlueZ event thread, which waits for them to return. Passing None
+    unregisters a callback. A request with no callback, or whose callback
+    raises, is rejected. Adapters from other backends raise
+    OperationNotSupportedError.
+    """
 
     def set_advertisement_local_name(self, peripheral: LocalPeripheral, local_name: Optional[str]) -> None:
         """
@@ -1074,6 +1093,63 @@ class _AdvancedLinux:
         Args:
             peripheral: The local peripheral
             local_name: The advertised name, or None to remove the override
+        """
+        ...
+
+    def set_passkey_request_callback(
+        self, adapter: Adapter, callback: Optional[Callable[[str], Optional[str]]]
+    ) -> None:
+        """
+        Register a callback for entering a passkey requested by a peer.
+
+        Args:
+            adapter: The adapter the peer pairs through
+            callback: Callback function receiving the peer's address and
+                returning the passkey as a str of exactly six decimal digits,
+                including leading zeroes, or None to reject pairing. Any other
+                result rejects pairing.
+        """
+        ...
+
+    def set_passkey_display_callback(
+        self, adapter: Adapter, callback: Optional[Callable[[str, str], None]]
+    ) -> None:
+        """
+        Register a callback for a passkey that a peer must enter.
+
+        Args:
+            adapter: The adapter the peer pairs through
+            callback: Callback function receiving the peer's address and the
+                six-digit passkey to show
+        """
+        ...
+
+    def set_numeric_comparison_callback(
+        self, adapter: Adapter, callback: Optional[Callable[[str, str], bool]]
+    ) -> None:
+        """
+        Register a callback for numeric comparison while a peer pairs.
+
+        Args:
+            adapter: The adapter the peer pairs through
+            callback: Callback function receiving the peer's address and the
+                six-digit number, and returning True only if the peer shows
+                the same number. Any other result rejects pairing.
+        """
+        ...
+
+    def set_pairing_authorization_callback(
+        self, adapter: Adapter, callback: Optional[Callable[[str], bool]]
+    ) -> None:
+        """
+        Register a callback that approves Just Works pairing with a peer.
+
+        Without this callback, Just Works pairing is accepted.
+
+        Args:
+            adapter: The adapter the peer pairs through
+            callback: Callback function receiving the peer's address and
+                returning True to accept pairing. Any other result rejects it.
         """
         ...
 

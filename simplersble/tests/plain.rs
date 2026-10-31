@@ -106,8 +106,12 @@ async fn config_round_trip() {
     config::dongl::set_use_dongl_backend(false);
     config::dongl::set_auto_update(true);
     config::dongl::set_force_update(true);
+    // SimpleBLE decides this default, so compare with the value read before changing it.
+    let interactive_pairing = config::simplebluez::interactive_pairing();
+    config::simplebluez::set_interactive_pairing(!interactive_pairing);
 
     assert!(!config::simplebluez::use_system_bus());
+    assert_eq!(config::simplebluez::interactive_pairing(), !interactive_pairing);
     assert_eq!(config::simplebluez::connection_timeout(), Duration::from_millis(1500));
     assert_eq!(config::simplebluez::disconnection_timeout(), Duration::from_millis(500));
     #[allow(deprecated)]
@@ -121,6 +125,7 @@ async fn config_round_trip() {
 
     config::reset_all();
     assert!(config::simplebluez::use_system_bus());
+    assert_eq!(config::simplebluez::interactive_pairing(), interactive_pairing);
     assert_eq!(config::simplebluez::connection_timeout(), Duration::from_secs(2));
     assert!(config::winrt::use_deferred_disconnect());
     assert!(config::dongl::use_dongl_backend());
@@ -372,13 +377,25 @@ async fn local_configuration_is_frozen_while_started() {
 }
 
 #[tokio::test]
-async fn dongl_pairing_requires_a_dongl() {
+async fn pairing_requires_a_dongl_or_bluez() {
     let _serial = SERIAL.lock().await;
     const BATTERY_SERVICE: &str = "0000180f-0000-1000-8000-00805f9b34fb";
 
-    let peer = find_peripheral(&plain_adapter(), BATTERY_SERVICE).await;
+    let adapter = plain_adapter();
+    let peer = find_peripheral(&adapter, BATTERY_SERVICE).await;
     assert!(advanced::dongl::set_passkey_request_callback(&peer, || Some("123456".to_string())).is_err());
     assert!(advanced::dongl::set_passkey_display_callback(&peer, |_| {}).is_err());
     assert!(advanced::dongl::set_numeric_comparison_callback(&peer, |_| true).is_err());
     assert!(advanced::dongl::secure_connection(&peer, true).is_err());
+
+    #[cfg(target_os = "linux")]
+    {
+        use advanced::linux;
+        const UNSUPPORTED: ErrorCode = ErrorCode::OperationNotSupported;
+        let request = linux::set_passkey_request_callback(&adapter, |_| Some("123456".to_string()));
+        assert_eq!(request.unwrap_err().code(), UNSUPPORTED);
+        assert_eq!(linux::set_passkey_display_callback(&adapter, |_, _| {}).unwrap_err().code(), UNSUPPORTED);
+        assert_eq!(linux::set_numeric_comparison_callback(&adapter, |_, _| true).unwrap_err().code(), UNSUPPORTED);
+        assert_eq!(linux::set_pairing_authorization_callback(&adapter, |_| true).unwrap_err().code(), UNSUPPORTED);
+    }
 }

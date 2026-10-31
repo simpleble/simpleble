@@ -727,6 +727,9 @@ external int simpleble_config_simplebluez_get_connection_timeout_ms();
 external int simpleble_config_simplebluez_get_disconnection_timeout_ms();
 
 @ffi.Native<ffi.Bool Function()>()
+external bool simpleble_config_simplebluez_get_interactive_pairing();
+
+@ffi.Native<ffi.Bool Function()>()
 external bool simpleble_config_simplebluez_get_use_system_bus();
 
 @ffi.Native<ffi.Void Function()>()
@@ -737,6 +740,9 @@ external void simpleble_config_simplebluez_set_connection_timeout_ms(int timeout
 
 @ffi.Native<ffi.Void Function(ffi.Int64)>()
 external void simpleble_config_simplebluez_set_disconnection_timeout_ms(int timeout_ms);
+
+@ffi.Native<ffi.Void Function(ffi.Bool)>()
+external void simpleble_config_simplebluez_set_interactive_pairing(bool enabled);
 
 @ffi.Native<ffi.Void Function(ffi.Bool)>()
 external void simpleble_config_simplebluez_set_use_system_bus(bool enabled);
@@ -2144,6 +2150,54 @@ external void simpledartble_on_bytes(
   ffi.Pointer<ffi.Void> userdata,
 );
 
+/// @brief Asks whether the passkey of a Linux pairing matches with [token, question, [peer, passkey]] and waits for the
+/// answer.
+///
+/// Without an answer, pairing is rejected.
+@ffi.Native<
+  ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)
+>()
+external bool simpledartble_on_linux_numeric_comparison(
+  ffi.Pointer<ffi.Void> adapter,
+  ffi.Pointer<ffi.Char> peer,
+  ffi.Pointer<ffi.Char> passkey,
+  ffi.Pointer<ffi.Void> userdata,
+);
+
+/// @brief Asks whether to accept a Linux Just Works pairing with [token, question, [peer]] and waits for the answer.
+///
+/// Without an answer, pairing is rejected.
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)>()
+external bool simpledartble_on_linux_pairing_authorization(
+  ffi.Pointer<ffi.Void> adapter,
+  ffi.Pointer<ffi.Char> peer,
+  ffi.Pointer<ffi.Void> userdata,
+);
+
+/// @brief Posts [token, [peer, passkey]] for a Linux passkey display callback.
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)
+>()
+external void simpledartble_on_linux_passkey_display(
+  ffi.Pointer<ffi.Void> adapter,
+  ffi.Pointer<ffi.Char> peer,
+  ffi.Pointer<ffi.Char> passkey,
+  ffi.Pointer<ffi.Void> userdata,
+);
+
+/// @brief Asks for the passkey of a Linux pairing with [token, question, [peer]] and waits for the answer.
+///
+/// Without an answer, pairing is rejected.
+@ffi.Native<
+  ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)
+>()
+external bool simpledartble_on_linux_passkey_request(
+  ffi.Pointer<ffi.Void> adapter,
+  ffi.Pointer<ffi.Char> peer,
+  ffi.Pointer<ffi.Char> passkey,
+  ffi.Pointer<ffi.Void> userdata,
+);
+
 /// @brief Posts a log entry for the token of simpledartble_log_to().
 ///
 /// Takes the level as an int, the size of simpleble_log_level_t, so Dart can pass its address.
@@ -2166,7 +2220,7 @@ external void simpledartble_on_log(
   ffi.Pointer<ffi.Char> message,
 );
 
-/// @brief Asks whether a Dongl pairing passkey matches with [token, question, passkey] and waits for the answer.
+/// @brief Asks whether a Dongl pairing passkey matches with [token, question, [passkey]] and waits for the answer.
 ///
 /// Without an answer, pairing is rejected.
 @ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)>()
@@ -2176,7 +2230,7 @@ external bool simpledartble_on_numeric_comparison(
   ffi.Pointer<ffi.Void> userdata,
 );
 
-/// @brief Asks for a Dongl pairing passkey with [token, question, null] and waits for the answer.
+/// @brief Asks for a Dongl pairing passkey with [token, question, []] and waits for the answer.
 ///
 /// Without an answer, pairing is rejected.
 @ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)>()
@@ -2194,7 +2248,7 @@ external void simpledartble_on_peripheral(
   ffi.Pointer<ffi.Void> userdata,
 );
 
-/// @brief Asks for a local characteristic's value with [token, question, null] and waits for the answer.
+/// @brief Asks for a local characteristic's value with [token, question, []] and waits for the answer.
 ///
 /// Without an answer, the read gets an empty value.
 @ffi.Native<ffi.Pointer<ffi.Uint8> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Size>, ffi.Pointer<ffi.Void>)>()
@@ -2259,8 +2313,9 @@ external void simpledartble_release(ffi.Pointer<ffi.Void> claim);
 /// Integers are only ever peripheral handles.
 /// - [token, bytes] with a copy of the data, as a Uint8List.
 /// - [token, text] with a copy of the string.
-/// - [token, question, argument] for a callback that waits for an answer, with argument null or a string. Answer
-/// with simpledartble_answer_*.
+/// - [token, [peer, passkey]] with copies of both strings.
+/// - [token, question, arguments] for a callback that waits for an answer, with a list of copies of the strings it
+/// passed. Answer with simpledartble_answer_*.
 ///
 /// The logging callback posts [token, [level, module, file, line, function, message]] for the token given to
 /// simpledartble_log_to().

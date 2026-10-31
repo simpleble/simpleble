@@ -41,6 +41,13 @@ final _settings = [
     Config.simpleBluez.reset,
   ),
   _Setting(
+    'simpleBluez',
+    'interactivePairing',
+    () => Config.simpleBluez.interactivePairing,
+    (_) => Config.simpleBluez.interactivePairing = !Config.simpleBluez.interactivePairing,
+    Config.simpleBluez.reset,
+  ),
+  _Setting(
     'winRT',
     'experimentalUseOwnMtaApartment',
     // ignore: deprecated_member_use_from_same_package

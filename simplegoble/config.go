@@ -95,6 +95,21 @@ func (SimpleBluezConfig) SetUseSystemBus(enabled bool) error {
 	return configure(func(native *bindings.NativeAPI) { native.ConfigBluezSetSystemBus(enabled) })
 }
 
+// InteractivePairing reports whether SimpleBLE's BlueZ agent passes passkey and
+// numeric comparison requests to the adapter pairing callbacks, such as
+// Adapter.SetCallbackOnPasskeyRequest. Defaults to false, which allows only
+// Just Works pairing.
+func (SimpleBluezConfig) InteractivePairing() (bool, error) {
+	return configValue(func(native *bindings.NativeAPI) bool { return native.ConfigBluezInteractivePairing() })
+}
+
+// SetInteractivePairing sets whether passkey and numeric comparison requests
+// reach the adapter pairing callbacks. SimpleBLE reads it once when the BlueZ
+// backend starts, so set it before the first adapter call.
+func (SimpleBluezConfig) SetInteractivePairing(enabled bool) error {
+	return configure(func(native *bindings.NativeAPI) { native.ConfigBluezSetInteractivePairing(enabled) })
+}
+
 // ConnectionTimeout returns how long Connect waits for BlueZ. Defaults to 2 seconds.
 func (SimpleBluezConfig) ConnectionTimeout() (time.Duration, error) {
 	return configValue(func(native *bindings.NativeAPI) time.Duration {

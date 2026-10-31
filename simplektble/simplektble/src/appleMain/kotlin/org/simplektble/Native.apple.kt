@@ -229,6 +229,27 @@ internal actual object Native {
         }
     }
 
+    // NOTE: Only BlueZ has these Linux pairing calls, so every Apple adapter reports them as unsupported.
+    actual fun adapterSetPasskeyRequestHandler(adapterId: Long, enabled: Boolean) {
+        adapter(adapterId)
+        throw unsupported()
+    }
+
+    actual fun adapterSetPasskeyDisplayHandler(adapterId: Long, enabled: Boolean) {
+        adapter(adapterId)
+        throw unsupported()
+    }
+
+    actual fun adapterSetNumericComparisonHandler(adapterId: Long, enabled: Boolean) {
+        adapter(adapterId)
+        throw unsupported()
+    }
+
+    actual fun adapterSetPairingAuthorizationHandler(adapterId: Long, enabled: Boolean) {
+        adapter(adapterId)
+        throw unsupported()
+    }
+
     actual fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback) {
         val handle = peripheral(peripheralId)
         synchronized(lock) { peripheralCallbacks[peripheralId] = callback }
@@ -721,6 +742,7 @@ internal actual object Native {
 
     actual fun configGetBoolean(key: Int): Boolean = when (key) {
         ConfigKey.SIMPLEBLUEZ_USE_SYSTEM_BUS -> simpleble_config_simplebluez_get_use_system_bus()
+        ConfigKey.SIMPLEBLUEZ_INTERACTIVE_PAIRING -> simpleble_config_simplebluez_get_interactive_pairing()
         ConfigKey.WINRT_REINITIALIZE_APARTMENT_ON_MAIN_THREAD ->
             simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread()
         ConfigKey.WINRT_USE_DEFERRED_DISCONNECT -> simpleble_config_winrt_get_use_deferred_disconnect()
@@ -734,6 +756,7 @@ internal actual object Native {
     actual fun configSetBoolean(key: Int, value: Boolean) {
         when (key) {
             ConfigKey.SIMPLEBLUEZ_USE_SYSTEM_BUS -> simpleble_config_simplebluez_set_use_system_bus(value)
+            ConfigKey.SIMPLEBLUEZ_INTERACTIVE_PAIRING -> simpleble_config_simplebluez_set_interactive_pairing(value)
             ConfigKey.WINRT_REINITIALIZE_APARTMENT_ON_MAIN_THREAD ->
                 simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread(value)
             ConfigKey.WINRT_USE_DEFERRED_DISCONNECT -> simpleble_config_winrt_set_use_deferred_disconnect(value)
@@ -1140,6 +1163,10 @@ private fun unclassified(message: String) = SimpleKtBleException(ErrorCode.UNCLA
 
 /** A call on an object that was released, which the JNI side raises as SimpleBLE's NotInitialized. */
 private fun released() = SimpleKtBleException(ErrorCode.OBJECT_NOT_INITIALIZED, "Object has not been initialized.")
+
+/** A call no Apple backend has, which the JNI side raises as SimpleBLE's OperationNotSupported. */
+private fun unsupported() =
+    SimpleKtBleException(ErrorCode.OPERATION_NOT_SUPPORTED, "The requested operation is not supported.")
 
 private fun uuid(value: String): CValue<simpleble_uuid_t> {
     val bytes = value.encodeToByteArray()

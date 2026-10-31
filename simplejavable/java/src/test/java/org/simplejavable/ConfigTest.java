@@ -17,9 +17,12 @@ class ConfigTest {
 
     @Test
     void valuesRoundTripAndReset() {
+        boolean interactivePairing = Config.SimpleBluez.getInteractivePairing();
+
         Config.SimpleBluez.setUseSystemBus(false);
         Config.SimpleBluez.setConnectionTimeout(Duration.ofMillis(1500));
         Config.SimpleBluez.setDisconnectionTimeout(Duration.ofMillis(500));
+        Config.SimpleBluez.setInteractivePairing(!interactivePairing);
         Config.WinRT.setExperimentalUseOwnMtaApartment(false);
         Config.WinRT.setExperimentalReinitializeWinrtApartmentOnMainThread(true);
         Config.WinRT.setUseDeferredDisconnect(false);
@@ -30,6 +33,7 @@ class ConfigTest {
         assertFalse(Config.SimpleBluez.getUseSystemBus());
         assertEquals(Duration.ofMillis(1500), Config.SimpleBluez.getConnectionTimeout());
         assertEquals(Duration.ofMillis(500), Config.SimpleBluez.getDisconnectionTimeout());
+        assertEquals(!interactivePairing, Config.SimpleBluez.getInteractivePairing());
         assertFalse(Config.WinRT.getExperimentalUseOwnMtaApartment());
         assertTrue(Config.WinRT.getExperimentalReinitializeWinrtApartmentOnMainThread());
         assertFalse(Config.WinRT.getUseDeferredDisconnect());
@@ -39,6 +43,7 @@ class ConfigTest {
 
         Config.resetAll();
         assertTrue(Config.SimpleBluez.getUseSystemBus());
+        assertEquals(interactivePairing, Config.SimpleBluez.getInteractivePairing());
         assertEquals(Duration.ofSeconds(2), Config.SimpleBluez.getConnectionTimeout());
         assertTrue(Config.WinRT.getUseDeferredDisconnect());
         assertTrue(Config.Dongl.getUseDonglBackend());

@@ -170,7 +170,10 @@ adapters, err := dongl.Adapters()
 before the first call that reaches a backend. Pairing through a Dongl happens
 without the operating system: register `SetCallbackOnPasskeyRequest`,
 `SetCallbackOnPasskeyDisplay`, or `SetCallbackOnNumericComparison` on the
-peripheral before `Connect`.
+peripheral before `Connect`. On Linux, the adapter takes the same callbacks,
+which also receive the peer's address, and `SetCallbackOnPairingAuthorization`
+to answer BlueZ pairing; `ble.Config.SimpleBluez.SetInteractivePairing(true)`
+lets passkey and numeric comparison requests reach them.
 
 ## Platforms
 

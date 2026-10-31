@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 
+import { HandlerSlot } from './handlers';
 import { LocalPeripheral } from './local';
 import { native, type AdapterHandle } from './native';
 import { Peripheral } from './peripheral';
@@ -33,6 +34,10 @@ const construct = Symbol('construct');
 export class Adapter extends EventEmitter<AdapterEvents> {
   readonly #handle: AdapterHandle;
   readonly #rehook: () => void;
+  readonly #passkeyRequest = new HandlerSlot<(peer: string) => string | undefined | Promise<string | undefined>>();
+  readonly #passkeyDisplay = new HandlerSlot<(peer: string, passkey: string) => void>();
+  readonly #numericComparison = new HandlerSlot<(peer: string, passkey: string) => boolean | Promise<boolean>>();
+  readonly #pairingAuthorization = new HandlerSlot<(peer: string) => boolean | Promise<boolean>>();
   #closing?: Promise<void>;
 
   private constructor(token: typeof construct, handle: AdapterHandle) {
@@ -118,6 +123,44 @@ export class Adapter extends EventEmitter<AdapterEvents> {
     return (await this.#handle.retrieveCachedPeripherals(identifiers)).map(Peripheral.wrap);
   }
 
+  /**
+   * Answers a request for the passkey a peer shows while it pairs through this
+   * adapter on Linux, with six digits, or undefined to reject pairing. Peers are
+   * the peripherals this adapter connects to and the clients of its local
+   * peripherals, and each handler receives the peer's address. A handler can
+   * return a promise, e.g. of the user's input, and BlueZ waits for it.
+   * Requests reach it once Config.simpleBluez.interactivePairing is set. Other
+   * platforms and adapters reject with OPERATION_NOT_SUPPORTED.
+   */
+  setPasskeyRequestHandler(
+    handler: ((peer: string) => string | undefined | Promise<string | undefined>) | null,
+  ): Promise<void> {
+    return this.#passkeyRequest.set(handler, id => this.#handle.setPasskeyRequestHandler(id));
+  }
+
+  /** Shows the six-digit passkey a peer pairing through this adapter on Linux asks the user to enter on it. */
+  setPasskeyDisplayHandler(handler: ((peer: string, passkey: string) => void) | null): Promise<void> {
+    return this.#passkeyDisplay.set(handler, id => this.#handle.setPasskeyDisplayHandler(id));
+  }
+
+  /**
+   * Answers whether a peer pairing through this adapter on Linux shows the same
+   * six-digit number, accepting or rejecting pairing.
+   */
+  setNumericComparisonHandler(
+    handler: ((peer: string, passkey: string) => boolean | Promise<boolean>) | null,
+  ): Promise<void> {
+    return this.#numericComparison.set(handler, id => this.#handle.setNumericComparisonHandler(id));
+  }
+
+  /**
+   * Accepts or rejects Just Works pairing with a peer through this adapter on
+   * Linux. Without a handler, Just Works pairing is accepted.
+   */
+  setPairingAuthorizationHandler(handler: ((peer: string) => boolean | Promise<boolean>) | null): Promise<void> {
+    return this.#pairingAuthorization.set(handler, id => this.#handle.setPairingAuthorizationHandler(id));
+  }
+
   /** A host for GATT services of this process, advertised by this adapter. */
   createLocalPeripheral(): LocalPeripheral {
     return LocalPeripheral.wrap(this.#handle.createLocalPeripheral());
@@ -125,11 +168,11 @@ export class Adapter extends EventEmitter<AdapterEvents> {
 
   /**
    * Stops this adapter's scan and local peripherals, disconnects the
-   * peripherals connected through it, and releases the adapter and every object
-   * that came from it. Once the promise resolves, a Dongl is free for other
-   * programs. Calls on the closed objects then fail with OBJECT_NOT_INITIALIZED,
-   * they emit no more events, and getAdapters() returns a new Adapter for the
-   * device.
+   * peripherals connected through it, removes its pairing handlers, and
+   * releases the adapter and every object that came from it. Once the promise
+   * resolves, a Dongl is free for other programs. Calls on the closed objects
+   * then fail with OBJECT_NOT_INITIALIZED, they emit no more events, and
+   * getAdapters() returns a new Adapter for the device.
    */
   close(): Promise<void> {
     this.#closing ??= this.#close();
@@ -158,6 +201,15 @@ export class Adapter extends EventEmitter<AdapterEvents> {
     const connections = this.#handle.connections().map(Peripheral.wrap);
     const hosts = this.#handle.hosts().map(LocalPeripheral.wrap);
     await Promise.allSettled([...connections.map(peripheral => peripheral.disconnect()), ...hosts.map(host => host.stop())]);
+
+    // NOTE: BlueZ keeps its adapters after close(), so the pairing handlers are
+    // removed from it rather than left rejecting its pairing requests.
+    const pairing: Promise<void>[] = [];
+    if (this.#passkeyRequest.isSet) pairing.push(this.setPasskeyRequestHandler(null));
+    if (this.#passkeyDisplay.isSet) pairing.push(this.setPasskeyDisplayHandler(null));
+    if (this.#numericComparison.isSet) pairing.push(this.setNumericComparisonHandler(null));
+    if (this.#pairingAuthorization.isSet) pairing.push(this.setPairingAuthorizationHandler(null));
+    await Promise.allSettled(pairing);
 
     for (const object of registered()) {
       (object as Partial<Releasable>)[releaseFrom]?.(key);

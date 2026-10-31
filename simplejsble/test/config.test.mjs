@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { Config } from '../dist/index.js';
 
 const groups = {
-  simpleBluez: ['useSystemBus', 'connectionTimeout', 'disconnectionTimeout'],
+  simpleBluez: ['useSystemBus', 'connectionTimeout', 'disconnectionTimeout', 'interactivePairing'],
   winRT: ['experimentalUseOwnMtaApartment', 'experimentalReinitializeWinrtApartmentOnMainThread', 'useDeferredDisconnect'],
   dongl: ['useDonglBackend', 'autoUpdate', 'forceUpdate'],
 };

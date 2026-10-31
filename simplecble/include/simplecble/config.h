@@ -32,6 +32,8 @@ SIMPLECBLE_EXPORT int64_t simpleble_config_simplebluez_get_connection_timeout_ms
 SIMPLECBLE_EXPORT void simpleble_config_simplebluez_set_connection_timeout_ms(int64_t timeout_ms);
 SIMPLECBLE_EXPORT int64_t simpleble_config_simplebluez_get_disconnection_timeout_ms(void);
 SIMPLECBLE_EXPORT void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_ms);
+SIMPLECBLE_EXPORT bool simpleble_config_simplebluez_get_interactive_pairing(void);
+SIMPLECBLE_EXPORT void simpleble_config_simplebluez_set_interactive_pairing(bool enabled);
 
 SIMPLECBLE_EXPORT void simpleble_config_winrt_reset(void);
 

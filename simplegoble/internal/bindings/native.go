@@ -121,6 +121,8 @@ type NativeAPI struct {
 	ConfigBluezSetConnectTimeout      func(int64)
 	ConfigBluezDisconnectTimeout      func() int64
 	ConfigBluezSetDisconnectTimeout   func(int64)
+	ConfigBluezInteractivePairing     func() bool
+	ConfigBluezSetInteractivePairing  func(bool)
 	ConfigWinRTReset                  func()
 	ConfigWinRTOwnMTA                 func() bool
 	ConfigWinRTSetOwnMTA              func(bool)
@@ -145,6 +147,10 @@ type NativeAPI struct {
 	DonglSecureConnection             func(uintptr, bool, *uintptr)
 	SetAdvertisementLocalName         func(uintptr, *byte, *uintptr) // Optional; see Load.
 	RetrieveCachedPeripheral          func(uintptr, *byte, *uintptr) uintptr
+	AdapterPasskeyRequest             func(uintptr, uintptr, uintptr, *uintptr)
+	AdapterPasskeyDisplay             func(uintptr, uintptr, uintptr, *uintptr)
+	AdapterNumericComparison          func(uintptr, uintptr, uintptr, *uintptr)
+	AdapterPairingAuthorization       func(uintptr, uintptr, uintptr, *uintptr)
 }
 
 var loadedLibrary struct {
@@ -299,6 +305,8 @@ func Load(path string) error {
 		{"simpleble_config_simplebluez_set_connection_timeout_ms", &native.ConfigBluezSetConnectTimeout},
 		{"simpleble_config_simplebluez_get_disconnection_timeout_ms", &native.ConfigBluezDisconnectTimeout},
 		{"simpleble_config_simplebluez_set_disconnection_timeout_ms", &native.ConfigBluezSetDisconnectTimeout},
+		{"simpleble_config_simplebluez_get_interactive_pairing", &native.ConfigBluezInteractivePairing},
+		{"simpleble_config_simplebluez_set_interactive_pairing", &native.ConfigBluezSetInteractivePairing},
 		{"simpleble_config_winrt_reset", &native.ConfigWinRTReset},
 		{"simpleble_config_winrt_get_experimental_use_own_mta_apartment", &native.ConfigWinRTOwnMTA},
 		{"simpleble_config_winrt_set_experimental_use_own_mta_apartment", &native.ConfigWinRTSetOwnMTA},
@@ -339,6 +347,10 @@ func Load(path string) error {
 		}{
 			{"simpleble_advanced_" + platform + "_set_advertisement_local_name", &native.SetAdvertisementLocalName},
 			{"simpleble_advanced_" + platform + "_retrieve_cached_peripheral", &native.RetrieveCachedPeripheral},
+			{"simpleble_advanced_" + platform + "_set_passkey_request_callback", &native.AdapterPasskeyRequest},
+			{"simpleble_advanced_" + platform + "_set_passkey_display_callback", &native.AdapterPasskeyDisplay},
+			{"simpleble_advanced_" + platform + "_set_numeric_comparison_callback", &native.AdapterNumericComparison},
+			{"simpleble_advanced_" + platform + "_set_pairing_authorization_callback", &native.AdapterPairingAuthorization},
 		} {
 			if symbol, err := findSymbol(libraryHandle, binding.name); err == nil {
 				purego.RegisterFunc(binding.target, symbol)

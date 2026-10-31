@@ -63,6 +63,10 @@ class AdapterHandle : public Napi::ObjectWrap<AdapterHandle> {
     Napi::Value get_paired_peripherals(const Napi::CallbackInfo& info);
     Napi::Value get_connected_peripherals(const Napi::CallbackInfo& info);
     Napi::Value retrieve_cached_peripherals(const Napi::CallbackInfo& info);
+    Napi::Value set_passkey_request_handler(const Napi::CallbackInfo& info);
+    Napi::Value set_passkey_display_handler(const Napi::CallbackInfo& info);
+    Napi::Value set_numeric_comparison_handler(const Napi::CallbackInfo& info);
+    Napi::Value set_pairing_authorization_handler(const Napi::CallbackInfo& info);
     Napi::Value subscribe(const Napi::CallbackInfo& info);
     Napi::Value create_local_peripheral(const Napi::CallbackInfo& info);
     Napi::Value connections(const Napi::CallbackInfo& info);

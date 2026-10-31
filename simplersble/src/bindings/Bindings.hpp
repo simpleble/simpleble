@@ -56,6 +56,8 @@ uint64_t RustyConfig_simplebluez_connection_timeout_ns();
 void RustyConfig_simplebluez_set_connection_timeout_ns(uint64_t timeout_ns);
 uint64_t RustyConfig_simplebluez_disconnection_timeout_ns();
 void RustyConfig_simplebluez_set_disconnection_timeout_ns(uint64_t timeout_ns);
+bool RustyConfig_simplebluez_interactive_pairing();
+void RustyConfig_simplebluez_set_interactive_pairing(bool enabled);
 
 void RustyConfig_winrt_reset();
 bool RustyConfig_winrt_experimental_use_own_mta_apartment();
@@ -127,6 +129,11 @@ class RustyAdapter {
 
     rust::Vec<Bindings::RustyPeripheralWrapper> macos_retrieve_cached_peripherals(
         rust::Vec<rust::String> const& identifiers, RustyError& error) const;
+
+    void linux_set_passkey_request_callback(bool enabled, RustyError& error) const;
+    void linux_set_passkey_display_callback(bool enabled, RustyError& error) const;
+    void linux_set_numeric_comparison_callback(bool enabled, RustyError& error) const;
+    void linux_set_pairing_authorization_callback(bool enabled, RustyError& error) const;
 
   private:
     // NOTE: All internal properties need to be handled as pointers,

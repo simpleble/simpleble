@@ -53,5 +53,13 @@ class AdapterTest {
         assertEquals(ErrorCode.OPERATION_NOT_SUPPORTED, localName.code)
         val noLocalName = assertFailsWith<SimpleKtBleException> { local.setAdvertisementLocalName(null) }
         assertEquals(ErrorCode.OPERATION_NOT_SUPPORTED, noLocalName.code)
+
+        val pairing = listOf(
+            assertFailsWith<SimpleKtBleException> { adapter.setPasskeyRequestHandler { "123456" } },
+            assertFailsWith<SimpleKtBleException> { adapter.setPasskeyDisplayHandler { _, _ -> } },
+            assertFailsWith<SimpleKtBleException> { adapter.setNumericComparisonHandler { _, _ -> true } },
+            assertFailsWith<SimpleKtBleException> { adapter.setPairingAuthorizationHandler { true } }
+        )
+        pairing.forEach { assertEquals(ErrorCode.OPERATION_NOT_SUPPORTED, it.code) }
     }
 }

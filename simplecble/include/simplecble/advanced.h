@@ -153,6 +153,74 @@ SIMPLECBLE_EXPORT void simpleble_advanced_linux_set_advertisement_local_name(sim
                                                                              const char* local_name,
                                                                              simpleble_error_t** out_error);
 
+/**
+ * @brief Sets or clears the Linux passkey-request callback.
+ *
+ * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[in] callback Callback to register, or NULL to clear it.
+ * @param[in] userdata User data passed unchanged to the callback; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note The callback receives the peer's address as a borrowed, NUL-terminated string, valid during the callback.
+ *     It writes six decimal digits plus a NUL terminator into passkey and returns true. Return false to reject
+ *     pairing. Leading zeroes must be preserved.
+ * @note Pairing callbacks cover the peripherals this adapter connects to and the clients of its local peripherals.
+ *     Passkey and numeric comparison requests reach them when simpleble_config_simplebluez_set_interactive_pairing()
+ *     enabled interactive pairing before the first adapter call. Callbacks run on SimpleBLE's BlueZ event thread,
+ *     which waits for them. A missing callback rejects the request. Other backends, such as Dongl, report
+ *     OPERATION_NOT_SUPPORTED.
+ */
+SIMPLECBLE_EXPORT void simpleble_advanced_linux_set_passkey_request_callback(
+    simpleble_adapter_t handle,
+    bool (*callback)(simpleble_adapter_t handle, const char* peer, char passkey[7], void* userdata), void* userdata,
+    simpleble_error_t** out_error);
+
+/**
+ * @brief Sets or clears the Linux passkey-display callback.
+ *
+ * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[in] callback Callback to register, or NULL to clear it.
+ * @param[in] userdata User data passed unchanged to the callback; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note The peer's address and the passkey are borrowed, NUL-terminated strings, valid during the callback. The
+ *     passkey is six decimal digits for the user to enter on the peer. Display it without removing leading zeroes.
+ * @note Pairing callbacks run as described for simpleble_advanced_linux_set_passkey_request_callback().
+ */
+SIMPLECBLE_EXPORT void simpleble_advanced_linux_set_passkey_display_callback(
+    simpleble_adapter_t handle,
+    void (*callback)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata),
+    void* userdata, simpleble_error_t** out_error);
+
+/**
+ * @brief Sets or clears the Linux numeric-comparison callback.
+ *
+ * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[in] callback Callback to register, or NULL to clear it.
+ * @param[in] userdata User data passed unchanged to the callback; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note The peer's address and the passkey are borrowed, NUL-terminated strings, valid during the callback. Return
+ *     true only after the user confirms that the peer shows the same six digits.
+ * @note Pairing callbacks run as described for simpleble_advanced_linux_set_passkey_request_callback().
+ */
+SIMPLECBLE_EXPORT void simpleble_advanced_linux_set_numeric_comparison_callback(
+    simpleble_adapter_t handle,
+    bool (*callback)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata),
+    void* userdata, simpleble_error_t** out_error);
+
+/**
+ * @brief Sets or clears the Linux callback that approves Just Works pairing.
+ *
+ * @param[in] handle Valid, non-NULL adapter handle.
+ * @param[in] callback Callback to register, or NULL to clear it.
+ * @param[in] userdata User data passed unchanged to the callback; may be NULL.
+ * @param[in,out] out_error Required, non-NULL pointer to NULL or an owned error.
+ * @note The peer's address is a borrowed, NUL-terminated string, valid during the callback. Return true to accept
+ *     the pairing. Without this callback, Just Works pairing is accepted.
+ * @note Pairing callbacks run as described for simpleble_advanced_linux_set_passkey_request_callback().
+ */
+SIMPLECBLE_EXPORT void simpleble_advanced_linux_set_pairing_authorization_callback(
+    simpleble_adapter_t handle, bool (*callback)(simpleble_adapter_t handle, const char* peer, void* userdata),
+    void* userdata, simpleble_error_t** out_error);
+
 #endif
 
 #if defined(__ANDROID__)

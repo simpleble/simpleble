@@ -50,8 +50,9 @@ SIMPLEDARTBLE_EXPORT void simpledartble_release(void* claim);
  *   Integers are only ever peripheral handles.
  * - [token, bytes] with a copy of the data, as a Uint8List.
  * - [token, text] with a copy of the string.
- * - [token, question, argument] for a callback that waits for an answer, with argument null or a string. Answer
- *   with simpledartble_answer_*.
+ * - [token, [peer, passkey]] with copies of both strings.
+ * - [token, question, arguments] for a callback that waits for an answer, with a list of copies of the strings it
+ *   passed. Answer with simpledartble_answer_*.
  *
  * The logging callback posts [token, [level, module, file, line, function, message]] for the token given to
  * simpledartble_log_to().
@@ -78,7 +79,7 @@ SIMPLEDARTBLE_EXPORT void simpledartble_on_bytes(void* handle, const uint8_t* da
 SIMPLEDARTBLE_EXPORT void simpledartble_on_text(void* handle, const char* text, void* userdata);
 
 /**
- * @brief Asks for a local characteristic's value with [token, question, null] and waits for the answer.
+ * @brief Asks for a local characteristic's value with [token, question, []] and waits for the answer.
  *
  * Without an answer, the read gets an empty value.
  */
@@ -86,7 +87,7 @@ SIMPLEDARTBLE_EXPORT const uint8_t* simpledartble_on_read(simpleble_local_charac
                                                           size_t* data_length, void* userdata);
 
 /**
- * @brief Asks for a Dongl pairing passkey with [token, question, null] and waits for the answer.
+ * @brief Asks for a Dongl pairing passkey with [token, question, []] and waits for the answer.
  *
  * Without an answer, pairing is rejected.
  */
@@ -94,12 +95,41 @@ SIMPLEDARTBLE_EXPORT bool simpledartble_on_passkey_request(simpleble_peripheral_
                                                            void* userdata);
 
 /**
- * @brief Asks whether a Dongl pairing passkey matches with [token, question, passkey] and waits for the answer.
+ * @brief Asks whether a Dongl pairing passkey matches with [token, question, [passkey]] and waits for the answer.
  *
  * Without an answer, pairing is rejected.
  */
 SIMPLEDARTBLE_EXPORT bool simpledartble_on_numeric_comparison(simpleble_peripheral_t peripheral, const char* passkey,
                                                               void* userdata);
+
+/**
+ * @brief Asks for the passkey of a Linux pairing with [token, question, [peer]] and waits for the answer.
+ *
+ * Without an answer, pairing is rejected.
+ */
+SIMPLEDARTBLE_EXPORT bool simpledartble_on_linux_passkey_request(simpleble_adapter_t adapter, const char* peer,
+                                                                 char passkey[7], void* userdata);
+
+/** @brief Posts [token, [peer, passkey]] for a Linux passkey display callback. */
+SIMPLEDARTBLE_EXPORT void simpledartble_on_linux_passkey_display(simpleble_adapter_t adapter, const char* peer,
+                                                                 const char* passkey, void* userdata);
+
+/**
+ * @brief Asks whether the passkey of a Linux pairing matches with [token, question, [peer, passkey]] and waits for the
+ * answer.
+ *
+ * Without an answer, pairing is rejected.
+ */
+SIMPLEDARTBLE_EXPORT bool simpledartble_on_linux_numeric_comparison(simpleble_adapter_t adapter, const char* peer,
+                                                                    const char* passkey, void* userdata);
+
+/**
+ * @brief Asks whether to accept a Linux Just Works pairing with [token, question, [peer]] and waits for the answer.
+ *
+ * Without an answer, pairing is rejected.
+ */
+SIMPLEDARTBLE_EXPORT bool simpledartble_on_linux_pairing_authorization(simpleble_adapter_t adapter, const char* peer,
+                                                                       void* userdata);
 
 /** @brief Answers a question with bytes. */
 SIMPLEDARTBLE_EXPORT void simpledartble_answer_bytes(int64_t question, const uint8_t* data, size_t data_length);

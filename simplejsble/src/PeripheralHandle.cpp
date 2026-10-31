@@ -395,7 +395,7 @@ Napi::Value PeripheralHandle::set_passkey_request_handler(const Napi::CallbackIn
         std::function<std::optional<std::string>()> on_request;
         if (id) {
             on_request = [dispatcher, id = *id]() {
-                return ask(dispatcher, id, std::nullopt, std::optional<std::string>(),
+                return ask(dispatcher, id, {}, std::optional<std::string>(),
                            [](const Napi::Value& value) -> std::optional<std::string> {
                                if (!value.IsString()) throw Napi::TypeError::New(value.Env(), "A passkey is a string");
                                return value.As<Napi::String>().Utf8Value();
@@ -413,7 +413,7 @@ Napi::Value PeripheralHandle::set_passkey_display_handler(const Napi::CallbackIn
     auto peripheral = peripheral_;
     return run(info.Env(), strand(), [peripheral, id, dispatcher]() mutable {
         std::function<void(const std::string&)> on_display;
-        if (id) on_display = [dispatcher, id = *id](const std::string& passkey) { tell(dispatcher, id, passkey); };
+        if (id) on_display = [dispatcher, id = *id](const std::string& passkey) { tell(dispatcher, id, {passkey}); };
         SimpleBLE::Advanced::Dongl::set_passkey_display_callback(peripheral, on_display);
         return finish_undefined();
     });
@@ -427,7 +427,7 @@ Napi::Value PeripheralHandle::set_numeric_comparison_handler(const Napi::Callbac
         std::function<bool(const std::string&)> on_compare;
         if (id) {
             on_compare = [dispatcher, id = *id](const std::string& passkey) {
-                return ask(dispatcher, id, passkey, false, [](const Napi::Value& value) {
+                return ask(dispatcher, id, {passkey}, false, [](const Napi::Value& value) {
                     if (!value.IsBoolean()) throw Napi::TypeError::New(value.Env(), "Expected a boolean");
                     return value.As<Napi::Boolean>().Value();
                 });

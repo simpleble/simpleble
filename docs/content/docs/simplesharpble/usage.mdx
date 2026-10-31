@@ -84,7 +84,8 @@ subscription or Dongl pairing callback set through one wrapper replaces the one
 set through another, and `Unsubscribe` through any wrapper ends a subscription.
 Disposing a wrapper doesn't affect the others. A wrapper raises events until it
 is disposed or garbage collected, so keep a reference to the one you registered
-through.
+through. Adapter wrappers work the same way for adapter events and the
+`Advanced.Linux` pairing callbacks.
 
 ## Choose an adapter
 
@@ -218,8 +219,8 @@ handlers. In UI apps, marshal updates to the UI thread, for example with
 `MainThread.BeginInvokeOnMainThread` in MAUI.
 
 The exceptions to this model are `Local.Characteristic.ReadHandler` and the Dongl
-pairing callbacks, which run synchronously on a native thread and must return
-promptly.
+and Linux pairing callbacks, which run synchronously on a native thread and must
+return promptly.
 
 ## Async methods
 
@@ -354,6 +355,33 @@ sudo apt-get install bluez libdbus-1-3
 The user needs access to the system Bluetooth service, which most desktop
 distributions grant by default. `Config.SimpleBluez.ConnectionTimeout` and
 `DisconnectionTimeout` adjust how long BlueZ operations wait.
+
+SimpleBLE's BlueZ pairing agent pairs with Just Works, so pairing that needs a
+passkey or numeric comparison fails. Set `Config.SimpleBluez.InteractivePairing`
+to `true` before the first enumeration to register the agent with keyboard and
+display as BlueZ's default agent, and answer its requests with the callbacks in
+`Advanced.Linux`: `SetPasskeyRequestCallback`, `SetPasskeyDisplayCallback`,
+`SetNumericComparisonCallback`, and `SetPairingAuthorizationCallback`. They're
+set on an adapter, cover the peripherals it connects to and the clients of its
+local peripherals, and receive the peer's address:
+
+```csharp
+Config.SimpleBluez.InteractivePairing = true;
+
+var adapter = Adapter.GetAdapters()[0];
+Advanced.Linux.SetNumericComparisonCallback(adapter, (peer, passkey) =>
+{
+    Console.Write($"Does {peer} show {passkey}? [y/n] ");
+    return Console.ReadLine() == "y";
+});
+```
+
+A passkey request callback returns the six digits the peer shows, or `null` to
+reject. A request without a matching callback is rejected, and Just Works
+pairing is accepted unless the authorization callback returns `false`. The
+request, comparison, and authorization callbacks run on SimpleBLE's BlueZ event
+thread, which waits for their answer. Adapters of other backends, such as Dongl,
+throw `BleException` with `OperationNotSupported`.
 
 ### macOS
 

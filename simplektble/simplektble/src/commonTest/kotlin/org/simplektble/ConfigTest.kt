@@ -28,6 +28,7 @@ class ConfigTest {
         boolean("SimpleBluez", Config.SimpleBluez::useSystemBus),
         milliseconds("SimpleBluez", Config.SimpleBluez::connectionTimeoutMs, 1234),
         milliseconds("SimpleBluez", Config.SimpleBluez::disconnectionTimeoutMs, 4321),
+        boolean("SimpleBluez", Config.SimpleBluez::interactivePairing),
         boolean("WinRT", Config.WinRT::experimentalReinitializeWinrtApartmentOnMainThread),
         boolean("WinRT", Config.WinRT::useDeferredDisconnect),
         choice("Android", Config.Android::connectionPriorityRequest, ConnectionPriorityRequest.entries),

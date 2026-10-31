@@ -94,6 +94,16 @@ type
     userdata: Pointer); cdecl;
   simpleble_dongl_numeric_comparison_callback_t = function(handle: simpleble_peripheral_t; passkey: PAnsiChar;
     userdata: Pointer): Boolean; cdecl;
+{$IFDEF SIMPLEDELPHIBLE_LINUX}
+  simpleble_linux_passkey_request_callback_t = function(handle: simpleble_adapter_t; peer: PAnsiChar;
+    passkey: PAnsiChar; userdata: Pointer): Boolean; cdecl;
+  simpleble_linux_passkey_display_callback_t = procedure(handle: simpleble_adapter_t; peer: PAnsiChar;
+    passkey: PAnsiChar; userdata: Pointer); cdecl;
+  simpleble_linux_numeric_comparison_callback_t = function(handle: simpleble_adapter_t; peer: PAnsiChar;
+    passkey: PAnsiChar; userdata: Pointer): Boolean; cdecl;
+  simpleble_linux_pairing_authorization_callback_t = function(handle: simpleble_adapter_t; peer: PAnsiChar;
+    userdata: Pointer): Boolean; cdecl;
+{$ENDIF}
   simpleble_local_peripheral_client_callback_t = procedure(handle: simpleble_local_peripheral_t;
     client_address: PAnsiChar; userdata: Pointer); cdecl;
   simpleble_local_characteristic_read_callback_t = function(handle: simpleble_local_characteristic_t;
@@ -244,6 +254,16 @@ var
   // advanced.h, Linux builds
   simpleble_advanced_linux_set_advertisement_local_name: procedure(handle: simpleble_local_peripheral_t;
     local_name: PAnsiChar; var out_error: psimpleble_error_t); cdecl;
+  simpleble_advanced_linux_set_passkey_request_callback: procedure(handle: simpleble_adapter_t;
+    callback: simpleble_linux_passkey_request_callback_t; userdata: Pointer; var out_error: psimpleble_error_t); cdecl;
+  simpleble_advanced_linux_set_passkey_display_callback: procedure(handle: simpleble_adapter_t;
+    callback: simpleble_linux_passkey_display_callback_t; userdata: Pointer; var out_error: psimpleble_error_t); cdecl;
+  simpleble_advanced_linux_set_numeric_comparison_callback: procedure(handle: simpleble_adapter_t;
+    callback: simpleble_linux_numeric_comparison_callback_t; userdata: Pointer; var out_error: psimpleble_error_t);
+    cdecl;
+  simpleble_advanced_linux_set_pairing_authorization_callback: procedure(handle: simpleble_adapter_t;
+    callback: simpleble_linux_pairing_authorization_callback_t; userdata: Pointer;
+    var out_error: psimpleble_error_t); cdecl;
 {$ENDIF}
 
   // backend.h
@@ -339,6 +359,8 @@ var
   simpleble_config_simplebluez_set_connection_timeout_ms: procedure(timeout_ms: Int64); cdecl;
   simpleble_config_simplebluez_get_disconnection_timeout_ms: function: Int64; cdecl;
   simpleble_config_simplebluez_set_disconnection_timeout_ms: procedure(timeout_ms: Int64); cdecl;
+  simpleble_config_simplebluez_get_interactive_pairing: function: Boolean; cdecl;
+  simpleble_config_simplebluez_set_interactive_pairing: procedure(enabled: Boolean); cdecl;
   simpleble_config_winrt_reset: procedure; cdecl;
   simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread: function: Boolean; cdecl;
   simpleble_config_winrt_set_experimental_reinitialize_winrt_apartment_on_main_thread: procedure(enabled: Boolean);
@@ -495,6 +517,12 @@ begin
 {$ENDIF}
 {$IFDEF SIMPLEDELPHIBLE_LINUX}
   Bind(simpleble_advanced_linux_set_advertisement_local_name, 'simpleble_advanced_linux_set_advertisement_local_name');
+  Bind(simpleble_advanced_linux_set_passkey_request_callback, 'simpleble_advanced_linux_set_passkey_request_callback');
+  Bind(simpleble_advanced_linux_set_passkey_display_callback, 'simpleble_advanced_linux_set_passkey_display_callback');
+  Bind(simpleble_advanced_linux_set_numeric_comparison_callback,
+    'simpleble_advanced_linux_set_numeric_comparison_callback');
+  Bind(simpleble_advanced_linux_set_pairing_authorization_callback,
+    'simpleble_advanced_linux_set_pairing_authorization_callback');
 {$ENDIF}
   Bind(simpleble_backend_get_backends, 'simpleble_backend_get_backends');
   Bind(simpleble_backend_list_get, 'simpleble_backend_list_get');
@@ -556,6 +584,8 @@ begin
     'simpleble_config_simplebluez_get_disconnection_timeout_ms');
   Bind(simpleble_config_simplebluez_set_disconnection_timeout_ms,
     'simpleble_config_simplebluez_set_disconnection_timeout_ms');
+  Bind(simpleble_config_simplebluez_get_interactive_pairing, 'simpleble_config_simplebluez_get_interactive_pairing');
+  Bind(simpleble_config_simplebluez_set_interactive_pairing, 'simpleble_config_simplebluez_set_interactive_pairing');
   Bind(simpleble_config_winrt_reset, 'simpleble_config_winrt_reset');
   Bind(simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread,
     'simpleble_config_winrt_get_experimental_reinitialize_winrt_apartment_on_main_thread');

@@ -62,6 +62,10 @@ final class Adapter {
   late final List<Pointer<Void>> _tokens;
   Future<void>? _closing;
   bool _scanning = false;
+  final _passkeyRequest = HandlerSlot();
+  final _passkeyDisplay = HandlerSlot();
+  final _numericComparison = HandlerSlot();
+  final _pairingAuthorization = HandlerSlot();
 
   late final _onScanStart = EventStream<void>(this);
   late final _onScanStop = EventStream<void>(this);
@@ -154,6 +158,79 @@ final class Adapter {
     _identity,
   );
 
+  /// Answers a request for the passkey a peer pairing through this adapter
+  /// shows, with six digits, or null to reject pairing. The handler gets the
+  /// peer's address and can return a future, such as of the user's input, and
+  /// BlueZ waits for it.
+  ///
+  /// Pairing handlers work on Linux and cover the peripherals this adapter
+  /// connects to and the clients of its local peripherals. Passkey and numeric
+  /// comparison requests reach them when `Config.simpleBluez.interactivePairing`
+  /// was set before the first call that reaches the backend. A request without
+  /// a handler is rejected. Other platforms, and adapters of other backends such
+  /// as a Dongl, throw [OperationNotSupportedException].
+  Future<void> setPasskeyRequestHandler(FutureOr<String?> Function(String peer)? handler) async {
+    final adapter = _live;
+    return _passkeyRequest.set(
+      handler == null
+          ? null
+          : (value) {
+              final question = value! as Question;
+              question.answerWith(() => handler(question.arguments[0]), question.answerPasskey);
+            },
+      (token) => _strand.call(setLinuxPasskeyRequest, (adapter, token.address)),
+    );
+  }
+
+  /// Shows the six-digit passkey that the user enters on a peer pairing
+  /// through this adapter, with the peer's address. Linux only, like
+  /// [setPasskeyRequestHandler].
+  Future<void> setPasskeyDisplayHandler(void Function(String peer, String passkey)? handler) async {
+    final adapter = _live;
+    return _passkeyDisplay.set(
+      handler == null
+          ? null
+          : (value) {
+              if (value case [String peer, String passkey]) handler(peer, passkey);
+            },
+      (token) => _strand.call(setLinuxPasskeyDisplay, (adapter, token.address)),
+    );
+  }
+
+  /// Answers whether a peer pairing through this adapter shows the same
+  /// six-digit number, accepting or rejecting pairing. The handler gets the
+  /// peer's address and the number, and can return a future. Linux only, like
+  /// [setPasskeyRequestHandler].
+  Future<void> setNumericComparisonHandler(FutureOr<bool> Function(String peer, String passkey)? handler) async {
+    final adapter = _live;
+    return _numericComparison.set(
+      handler == null
+          ? null
+          : (value) {
+              final question = value! as Question;
+              question.answerWith(() => handler(question.arguments[0], question.arguments[1]), question.answerFlag);
+            },
+      (token) => _strand.call(setLinuxNumericComparison, (adapter, token.address)),
+    );
+  }
+
+  /// Answers whether to accept Just Works pairing with a peer through this
+  /// adapter, which is accepted without a handler. The handler gets the peer's
+  /// address and can return a future. Linux only, like
+  /// [setPasskeyRequestHandler].
+  Future<void> setPairingAuthorizationHandler(FutureOr<bool> Function(String peer)? handler) async {
+    final adapter = _live;
+    return _pairingAuthorization.set(
+      handler == null
+          ? null
+          : (value) {
+              final question = value! as Question;
+              question.answerWith(() => handler(question.arguments[0]), question.answerFlag);
+            },
+      (token) => _strand.call(setLinuxPairingAuthorization, (adapter, token.address)),
+    );
+  }
+
   /// Stops this adapter's scan and local peripherals, disconnects the
   /// peripherals connected through it, and releases the adapter and every
   /// object that came from it. Once the future completes, a Dongl is free for
@@ -176,6 +253,22 @@ final class Adapter {
         if (peripheral.isConnectedThrough(_identity)) peripheral.disconnect().catchError((_) {}),
       for (final host in local.whereType<LocalPeripheral>()) host.stopFrom(_identity).catchError((_) {}),
     ]);
+
+    // NOTE: A BlueZ adapter outlives its handles, so its pairing callbacks are
+    // cleared: one whose handler is gone would reject Just Works pairing,
+    // which is accepted without a callback.
+    for (final (slot, install) in [
+      (_passkeyRequest, setLinuxPasskeyRequest),
+      (_passkeyDisplay, setLinuxPasskeyDisplay),
+      (_numericComparison, setLinuxNumericComparison),
+      (_pairingAuthorization, setLinuxPairingAuthorization),
+    ]) {
+      if (!slot.isSet) continue;
+      try {
+        await slot.set(null, (token) => _strand.call(install, (_handle, token.address)));
+      } catch (_) {}
+      slot.drop();
+    }
 
     _clearCallbacks(Pointer.fromAddress(_handle));
     for (final token in _tokens) {

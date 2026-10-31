@@ -70,6 +70,14 @@ await peripheral.setPasskeyDisplayHandler(null);
 // @ts-expect-error A passkey is a string.
 await peripheral.setPasskeyRequestHandler(() => 123456);
 
+Config.simpleBluez.interactivePairing = true;
+await adapter.setPasskeyRequestHandler(async (peer: string) => '123456');
+await adapter.setPasskeyDisplayHandler((peer: string, passkey: string) => {});
+await adapter.setNumericComparisonHandler(async (peer, passkey) => passkey === '123456');
+await adapter.setPairingAuthorizationHandler(null);
+// @ts-expect-error Authorization answers with a boolean.
+await adapter.setPairingAuthorizationHandler((peer: string) => 'yes');
+
 const host: LocalPeripheral = adapter.createLocalPeripheral();
 const localService: LocalService = host.addService('service');
 const localValue: LocalCharacteristic = localService.addCharacteristic('characteristic', ['read', 'notify']);

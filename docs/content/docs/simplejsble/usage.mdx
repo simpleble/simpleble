@@ -100,7 +100,7 @@ To compute values on demand, `setReadHandler()` takes a function that answers ea
 
 ## Handlers
 
-Read handlers and the Dongl pairing handlers below answer questions SimpleBLE waits on. A handler can return a promise and take as long as it needs, for example to ask the user; the operation waits for the answer.
+Read handlers and the pairing handlers below answer questions SimpleBLE waits on. A handler can return a promise and take as long as it needs, for example to ask the user; the operation waits for the answer.
 
 If a handler throws or rejects, the error is an unhandled rejection in Node.js, and SimpleBLE gets a default answer: an empty value for a read, and a rejection for pairing.
 
@@ -152,6 +152,32 @@ Passing `null` removes a handler. A request without a handler is rejected, and p
 
 For devices that wait for the central to start pairing, call `await peripheral.secureConnection(mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
 
+## Pair on Linux
+
+On Linux, an adapter answers BlueZ's pairing requests for the peripherals it connects to and for the clients of its local peripherals. Just Works pairing needs no setup. For pairing with a passkey or numeric comparison, set `Config.simpleBluez.interactivePairing = true` before the first call that reaches a backend, then set the handlers your devices need on the adapter:
+
+- `setPasskeyRequestHandler(handler)`: return the six digits the peer shows, or `undefined` to reject.
+- `setPasskeyDisplayHandler(handler)`: show the passkey so the user can type it on the peer.
+- `setNumericComparisonHandler(handler)`: return `true` only if the peer shows the same six digits.
+- `setPairingAuthorizationHandler(handler)`: return `true` to accept Just Works pairing.
+
+Each handler gets the peer's address first.
+
+```js
+import { createInterface } from 'node:readline/promises';
+import { Adapter, Config } from 'simplejsble';
+
+Config.simpleBluez.interactivePairing = true;
+
+const input = createInterface({ input: process.stdin, output: process.stdout });
+const [adapter] = await Adapter.getAdapters();
+await adapter.setNumericComparisonHandler(async (peer, passkey) => {
+  return (await input.question(`Does ${peer} show ${passkey}? [y/N] `)) === 'y';
+});
+```
+
+Passing `null` removes a handler, and `close()` removes them all. A passkey or comparison request without a handler is rejected, and Just Works pairing is accepted unless the authorization handler rejects it. With `interactivePairing`, SimpleBLE's pairing agent is BlueZ's default agent, so it also answers the requests a desktop pairing agent would otherwise get; see [Pairing](../simpleble/platform_notes#pairing). SimpleBLE's BlueZ event thread waits for each answer. On other platforms, and for adapters of other backends such as a Dongl, the setters reject with `OPERATION_NOT_SUPPORTED`.
+
 ## Logging
 
 SimpleBLE writes its log to standard output, up to the `info` level. `Logging` changes that for the whole process:
@@ -167,6 +193,7 @@ Logging.setCallback(entry => console.error(`[${entry.level}] ${entry.module}: ${
 
 ## Platform-specific features
 
+- On Linux, an adapter's pairing handlers answer BlueZ's pairing requests, as described in [Pair on Linux](#pair-on-linux).
 - On macOS and Linux, `host.setAdvertisementLocalName('Name')` sets the local name in a local peripheral's advertisement before `start()`, and `null` removes it. This changes only the advertisement, not the system Bluetooth name.
 - On macOS, `await adapter.retrieveCachedPeripherals(identifiers)` returns the peripherals CoreBluetooth already knows, by the identifiers `address()` returned earlier, without scanning. Unknown identifiers are skipped, and each peripheral is the same object a scan returns. `connect()` then reaches it if it is in range.
 

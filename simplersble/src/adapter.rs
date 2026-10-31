@@ -1,6 +1,7 @@
 use std::pin::Pin;
 use std::mem;
-use std::sync::Arc;
+use std::panic::{self, AssertUnwindSafe};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures::Stream;
@@ -9,7 +10,7 @@ use super::ffi;
 use crate::events::EventSender;
 use crate::local_peripheral::InnerLocalPeripheral;
 use crate::local_peripheral::LocalPeripheral;
-use crate::peripheral::InnerPeripheral;
+use crate::peripheral::{current_callback, InnerPeripheral};
 use crate::peripheral::Peripheral;
 use crate::types::{call, Error, ErrorCode};
 
@@ -27,10 +28,54 @@ pub enum PowerEvent {
     Off,
 }
 
+pub(crate) type PasskeyRequestCallback = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
+pub(crate) type PasskeyDisplayCallback = Arc<dyn Fn(&str, &str) + Send + Sync>;
+pub(crate) type NumericComparisonCallback = Arc<dyn Fn(&str, &str) -> bool + Send + Sync>;
+pub(crate) type PairingAuthorizationCallback = Arc<dyn Fn(&str) -> bool + Send + Sync>;
+
 pub struct InnerAdapter {
     internal: cxx::UniquePtr<ffi::RustyAdapter>,
     on_scan_event: EventSender<ScanEvent>,
     on_power_event: EventSender<PowerEvent>,
+
+    // NOTE: Linux pairing callbacks run on SimpleBLE's BlueZ event thread, which waits for their answer, so each
+    // one has a lock of its own. Changing one also takes `pairing_registration`, which keeps the stored callback
+    // and the native one in step when clones change it at once.
+    passkey_request_callback: Mutex<Option<PasskeyRequestCallback>>,
+    passkey_display_callback: Mutex<Option<PasskeyDisplayCallback>>,
+    numeric_comparison_callback: Mutex<Option<NumericComparisonCallback>>,
+    pairing_authorization_callback: Mutex<Option<PairingAuthorizationCallback>>,
+    #[cfg(any(target_os = "linux", doc))]
+    pairing_registration: Mutex<()>,
+}
+
+// Registers or clears the native callback to match `callback`, storing it so that the native callback finds it.
+// Clearing reaches SimpleBLE, which then answers as if no callback had been registered, so Just Works pairing is
+// accepted again without an authorization callback. If the native call fails, the stored callback is unchanged.
+#[cfg(any(target_os = "linux", doc))]
+fn replace_pairing_callback<T>(
+    registration: &Mutex<()>,
+    slot: &Mutex<Option<T>>,
+    callback: Option<T>,
+    register: impl FnOnce(bool) -> Result<(), Error>,
+) -> Result<(), Error> {
+    use std::sync::PoisonError;
+
+    let _registration = registration.lock().unwrap_or_else(PoisonError::into_inner);
+
+    if callback.is_none() {
+        register(false)?;
+        *slot.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        return Ok(());
+    }
+
+    let previous = mem::replace(&mut *slot.lock().unwrap_or_else(PoisonError::into_inner), callback);
+    if let Err(e) = register(true) {
+        *slot.lock().unwrap_or_else(PoisonError::into_inner) = previous;
+        return Err(e);
+    }
+
+    Ok(())
 }
 
 impl InnerAdapter {
@@ -53,6 +98,12 @@ impl InnerAdapter {
             internal: cxx::UniquePtr::<ffi::RustyAdapter>::null(),
             on_scan_event: EventSender::new(),
             on_power_event: EventSender::new(),
+            passkey_request_callback: Mutex::new(None),
+            passkey_display_callback: Mutex::new(None),
+            numeric_comparison_callback: Mutex::new(None),
+            pairing_authorization_callback: Mutex::new(None),
+            #[cfg(any(target_os = "linux", doc))]
+            pairing_registration: Mutex::new(()),
         };
 
         let mut this_boxed = Box::pin(this);
@@ -158,6 +209,85 @@ impl InnerAdapter {
         }
 
         Ok(peripherals)
+    }
+
+    #[cfg(any(target_os = "linux", doc))]
+    pub(crate) fn linux_set_passkey_request_callback(&self, callback: Option<PasskeyRequestCallback>) -> Result<(), Error> {
+        replace_pairing_callback(&self.pairing_registration, &self.passkey_request_callback, callback, |enabled| {
+            call(|error| self.internal.linux_set_passkey_request_callback(enabled, error))
+        })
+    }
+
+    #[cfg(any(target_os = "linux", doc))]
+    pub(crate) fn linux_set_passkey_display_callback(&self, callback: Option<PasskeyDisplayCallback>) -> Result<(), Error> {
+        replace_pairing_callback(&self.pairing_registration, &self.passkey_display_callback, callback, |enabled| {
+            call(|error| self.internal.linux_set_passkey_display_callback(enabled, error))
+        })
+    }
+
+    #[cfg(any(target_os = "linux", doc))]
+    pub(crate) fn linux_set_numeric_comparison_callback(
+        &self,
+        callback: Option<NumericComparisonCallback>,
+    ) -> Result<(), Error> {
+        replace_pairing_callback(&self.pairing_registration, &self.numeric_comparison_callback, callback, |enabled| {
+            call(|error| self.internal.linux_set_numeric_comparison_callback(enabled, error))
+        })
+    }
+
+    #[cfg(any(target_os = "linux", doc))]
+    pub(crate) fn linux_set_pairing_authorization_callback(
+        &self,
+        callback: Option<PairingAuthorizationCallback>,
+    ) -> Result<(), Error> {
+        replace_pairing_callback(&self.pairing_registration, &self.pairing_authorization_callback, callback, |enabled| {
+            call(|error| self.internal.linux_set_pairing_authorization_callback(enabled, error))
+        })
+    }
+
+    // The pairing request is rejected if there's no callback or the callback panics.
+    // NOTE: A panic must never unwind into C++.
+
+    pub(crate) fn on_callback_passkey_request(&self, peer: &[u8], passkey: &mut String) -> bool {
+        let Some(callback) = current_callback(&self.passkey_request_callback) else {
+            return false;
+        };
+
+        let peer = String::from_utf8_lossy(peer);
+        match panic::catch_unwind(AssertUnwindSafe(|| callback(&peer))) {
+            Ok(Some(value)) => {
+                *passkey = value;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn on_callback_passkey_display(&self, peer: &[u8], passkey: &[u8]) {
+        let Some(callback) = current_callback(&self.passkey_display_callback) else {
+            return;
+        };
+
+        let (peer, passkey) = (String::from_utf8_lossy(peer), String::from_utf8_lossy(passkey));
+        let _ = panic::catch_unwind(AssertUnwindSafe(|| callback(&peer, &passkey)));
+    }
+
+    pub(crate) fn on_callback_numeric_comparison(&self, peer: &[u8], passkey: &[u8]) -> bool {
+        let Some(callback) = current_callback(&self.numeric_comparison_callback) else {
+            return false;
+        };
+
+        let (peer, passkey) = (String::from_utf8_lossy(peer), String::from_utf8_lossy(passkey));
+        panic::catch_unwind(AssertUnwindSafe(|| callback(&peer, &passkey))).unwrap_or(false)
+    }
+
+    pub(crate) fn on_callback_pairing_authorization(&self, peer: &[u8]) -> bool {
+        let Some(callback) = current_callback(&self.pairing_authorization_callback) else {
+            return false;
+        };
+
+        let peer = String::from_utf8_lossy(peer);
+        panic::catch_unwind(AssertUnwindSafe(|| callback(&peer))).unwrap_or(false)
     }
 
     pub fn on_callback_scan_start(&self) {
@@ -284,6 +414,11 @@ impl Adapter {
     #[cfg(any(target_os = "macos", doc))]
     pub(crate) fn macos_retrieve_cached_peripherals(&self, identifiers: &Vec<String>) -> Result<Vec<Peripheral>, Error> {
         self.inner.macos_retrieve_cached_peripherals(identifiers)
+    }
+
+    #[cfg(any(target_os = "linux", doc))]
+    pub(crate) fn inner(&self) -> &InnerAdapter {
+        &self.inner
     }
 
     pub fn on_scan_event(&self) -> impl Stream<Item = ScanEvent> {

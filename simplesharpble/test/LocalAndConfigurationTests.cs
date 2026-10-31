@@ -297,6 +297,8 @@ public sealed class LocalAndConfigurationTests
         Config.ResetAll();
         try
         {
+            bool interactivePairing = Config.SimpleBluez.InteractivePairing;
+            Config.SimpleBluez.InteractivePairing = !interactivePairing;
             Config.SimpleBluez.UseSystemBus = false;
             Config.SimpleBluez.ConnectionTimeout = TimeSpan.FromMilliseconds(1234);
             Config.SimpleBluez.DisconnectionTimeout = TimeSpan.FromMilliseconds(4321);
@@ -304,6 +306,7 @@ public sealed class LocalAndConfigurationTests
             Config.Android.ConnectionPriority = AndroidConnectionPriority.High;
             Config.Dongl.AutoUpdate = false; Config.Dongl.ForceUpdate = true;
             Assert.False(Config.SimpleBluez.UseSystemBus);
+            Assert.Equal(!interactivePairing, Config.SimpleBluez.InteractivePairing);
             Assert.Equal(TimeSpan.FromMilliseconds(1234), Config.SimpleBluez.ConnectionTimeout);
             Assert.Equal(TimeSpan.FromMilliseconds(4321), Config.SimpleBluez.DisconnectionTimeout);
             Assert.False(Config.WinRT.UseDeferredDisconnect);
@@ -336,11 +339,30 @@ public sealed class LocalAndConfigurationTests
     }
 
     [Fact]
-    public void DonglPairingRejectsNonDonglPeripheralWithoutLeakingRegistration()
+    public void PairingCallbacksRejectUnsupportedBackendsWithoutLeakingRegistration()
     {
         using var peripheral = new SimpleSharpBLE.Peripheral(NativeFixture.test_remote());
         Assert.Equal(BleErrorCode.OperationNotSupported,
             Assert.Throws<BleException>(() => Advanced.Dongl.SetPasskeyRequestCallback(peripheral, () => "001234")).Code);
+
+        // PLAIN has no BlueZ adapter, and other platforms lack the Linux functions.
+        var adapters = Adapter.GetAdapters();
+        try
+        {
+            var adapter = adapters[0];
+            void Unsupported(Action register)
+            {
+                if (Utils.OperatingSystem == NativeOperatingSystem.Linux)
+                    Assert.Equal(BleErrorCode.OperationNotSupported, Assert.Throws<BleException>(register).Code);
+                else
+                    Assert.Throws<PlatformNotSupportedException>(register);
+            }
+            Unsupported(() => Advanced.Linux.SetPasskeyRequestCallback(adapter, _ => "001234"));
+            Unsupported(() => Advanced.Linux.SetPasskeyDisplayCallback(adapter, (_, _) => { }));
+            Unsupported(() => Advanced.Linux.SetNumericComparisonCallback(adapter, (_, _) => true));
+            Unsupported(() => Advanced.Linux.SetPairingAuthorizationCallback(adapter, _ => true));
+        }
+        finally { foreach (var adapter in adapters) adapter.Dispose(); }
     }
 
 }

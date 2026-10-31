@@ -57,11 +57,13 @@ does what Dart can't:
   claimed the events, with `Dart_PostCObject`. Posting to the port of an isolate that has shut down fails instead of
   crashing, which matters after a Flutter hot restart, when SimpleBLE keeps calling back. A peripheral handle that
   nothing receives is released. Tokens are unique in the process, so a stale registration never reaches a new object.
-- **Questions.** Read handlers and the Dongl passkey request and numeric comparison callbacks wait for an answer.
-  Their `simpledartble_on_*` functions post `[token, question, argument]` and block the SimpleBLE thread until Dart
-  calls `simpledartble_answer_*`, like SimpleJSBLE's `ask()`. Without an answer, because the handler failed or the
-  isolate is gone, they get a fallback: an empty value for a read, a rejection for pairing. Handlers are installed
-  from workers, because the core holds a callback's lock while it runs, and they run in the zone they were set in.
+- **Questions.** Read handlers, the Dongl passkey request and numeric comparison callbacks, and the Linux pairing
+  callbacks other than passkey display wait for an answer. Their `simpledartble_on_*` functions post
+  `[token, question, arguments]`, with the strings the callback passed, such as the peer's address, and block the
+  SimpleBLE thread until Dart calls `simpledartble_answer_*`, like SimpleJSBLE's `ask()`. Without an answer, because the
+  handler failed or the isolate is gone, they get a fallback: an empty value for a read, a rejection for pairing.
+  Handlers are installed from workers, because the core holds a callback's lock while it runs, and they run in the zone
+  they were set in.
 - **One isolate at a time** claims the events, like SimpleJSBLE's one Node environment, as callbacks belong to the
   native objects every isolate shares. A claim succeeds once the previous owner's port is closed, so a hot-restarted
   isolate takes over, and test files run one at a time (`dart_test.yaml`).

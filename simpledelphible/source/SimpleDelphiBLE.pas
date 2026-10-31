@@ -110,6 +110,13 @@ type
   TBlePasskeyDisplayEvent = procedure(Sender: TBlePeripheral; const Passkey: string) of object;
   TBleNumericComparisonEvent = procedure(Sender: TBlePeripheral; const Passkey: string;
     var Accept: Boolean) of object;
+  TBleAdapterPasskeyRequestEvent = procedure(Sender: TBleAdapter; const Peer: string; var Passkey: string;
+    var Accept: Boolean) of object;
+  TBleAdapterPasskeyDisplayEvent = procedure(Sender: TBleAdapter; const Peer, Passkey: string) of object;
+  TBleAdapterNumericComparisonEvent = procedure(Sender: TBleAdapter; const Peer, Passkey: string;
+    var Accept: Boolean) of object;
+  TBleAdapterPairingAuthorizationEvent = procedure(Sender: TBleAdapter; const Peer: string;
+    var Accept: Boolean) of object;
   TBleClientEvent = procedure(Sender: TBleLocalPeripheral; const Address: string) of object;
   TBleLocalCharacteristicEvent = procedure(Sender: TBleLocalCharacteristic) of object;
   TBleLocalWriteEvent = procedure(Sender: TBleLocalCharacteristic; const Data: TBytes) of object;
@@ -167,12 +174,20 @@ type
     FOnScanStop: TBleAdapterEvent;
     FOnScanFound: TBleScanEvent;
     FOnScanUpdated: TBleScanEvent;
+    FOnPasskeyRequest: TBleAdapterPasskeyRequestEvent;
+    FOnPasskeyDisplay: TBleAdapterPasskeyDisplayEvent;
+    FOnNumericComparison: TBleAdapterNumericComparisonEvent;
+    FOnPairingAuthorization: TBleAdapterPairingAuthorizationEvent;
     constructor CreateFromHandle(Handle: Pointer);
     procedure SetCallbacks(Enabled: Boolean);
     function Intern(Handle: Pointer): TBlePeripheral;
     function TakePeripherals(List: Pointer; Count: NativeUInt): TArray<TBlePeripheral>;
     function GetIdentifier: string;
     function GetAddress: string;
+    procedure SetOnPasskeyRequest(const Value: TBleAdapterPasskeyRequestEvent);
+    procedure SetOnPasskeyDisplay(const Value: TBleAdapterPasskeyDisplayEvent);
+    procedure SetOnNumericComparison(const Value: TBleAdapterNumericComparisonEvent);
+    procedure SetOnPairingAuthorization(const Value: TBleAdapterPairingAuthorizationEvent);
   protected
     procedure ClearCallbacks; override;
   public
@@ -205,6 +220,18 @@ type
     property OnScanStop: TBleAdapterEvent read FOnScanStop write FOnScanStop;
     property OnScanFound: TBleScanEvent read FOnScanFound write FOnScanFound;
     property OnScanUpdated: TBleScanEvent read FOnScanUpdated write FOnScanUpdated;
+    // Pairing handlers for a BlueZ adapter on Linux, for the peripherals it connects to and the clients of its local
+    // peripherals. Each receives the peer's address. Passkey and numeric comparison requests reach them when
+    // TBleConfig.SimpleBluez.InteractivePairing is set. OnPasskeyRequest, OnNumericComparison and
+    // OnPairingAuthorization run on SimpleBLE's BlueZ event thread, which waits for their answer. Without
+    // OnPairingAuthorization, Just Works pairing is accepted. Other adapters and platforms raise
+    // EBleOperationNotSupported.
+    property OnPasskeyRequest: TBleAdapterPasskeyRequestEvent read FOnPasskeyRequest write SetOnPasskeyRequest;
+    property OnPasskeyDisplay: TBleAdapterPasskeyDisplayEvent read FOnPasskeyDisplay write SetOnPasskeyDisplay;
+    property OnNumericComparison: TBleAdapterNumericComparisonEvent read FOnNumericComparison
+      write SetOnNumericComparison;
+    property OnPairingAuthorization: TBleAdapterPairingAuthorizationEvent read FOnPairingAuthorization
+      write SetOnPairingAuthorization;
   end;
 
   // A remote peripheral. Its adapter owns it and keeps one object per device, so don't free it.
@@ -394,11 +421,16 @@ type
         class procedure SetConnectionTimeoutMs(Value: Int64); static;
         class function GetDisconnectionTimeoutMs: Int64; static;
         class procedure SetDisconnectionTimeoutMs(Value: Int64); static;
+        class function GetInteractivePairing: Boolean; static;
+        class procedure SetInteractivePairing(Value: Boolean); static;
       public
         class procedure Reset; static;
         class property UseSystemBus: Boolean read GetUseSystemBus write SetUseSystemBus;
         class property ConnectionTimeoutMs: Int64 read GetConnectionTimeoutMs write SetConnectionTimeoutMs;
         class property DisconnectionTimeoutMs: Int64 read GetDisconnectionTimeoutMs write SetDisconnectionTimeoutMs;
+        // Registers SimpleBLE's pairing agent as KeyboardDisplay and as BlueZ's default agent, so passkey and numeric
+        // comparison requests reach the adapter's pairing handlers.
+        class property InteractivePairing: Boolean read GetInteractivePairing write SetInteractivePairing;
       end;
 
       WinRT = class
@@ -514,9 +546,9 @@ type
     procedure Leave;
   end;
 
-  TBleEventKind = (ekPowerOn, ekPowerOff, ekScanStart, ekScanStop, ekScanFound, ekScanUpdated, ekConnected,
-    ekDisconnected, ekValue, ekPasskeyDisplay, ekClientConnected, ekClientDisconnected, ekLocalWrite,
-    ekLocalSubscribed, ekLocalUnsubscribed, ekLog, ekDone);
+  TBleEventKind = (ekPowerOn, ekPowerOff, ekScanStart, ekScanStop, ekScanFound, ekScanUpdated,
+    ekAdapterPasskeyDisplay, ekConnected, ekDisconnected, ekValue, ekPasskeyDisplay, ekClientConnected,
+    ekClientDisconnected, ekLocalWrite, ekLocalSubscribed, ekLocalUnsubscribed, ekLog, ekDone);
 
   TBleEvent = record
     Kind: TBleEventKind;
@@ -524,6 +556,8 @@ type
     // The local peripheral a local event belongs to, so freeing it can drop its queued events.
     Owner: TBleLocalPeripheral;
     Peripheral: TBlePeripheral;
+    // The address of the peer an adapter's pairing event is about.
+    Peer: string;
     Service: string;
     Characteristic: string;
     Text: string;

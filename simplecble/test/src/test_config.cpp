@@ -23,10 +23,12 @@ TEST(ConfigTest, SimpleBluezConfigCanBeSetFromC) {
     simpleble_config_simplebluez_set_use_system_bus(false);
     simpleble_config_simplebluez_set_connection_timeout_ms(1234);
     simpleble_config_simplebluez_set_disconnection_timeout_ms(5678);
+    simpleble_config_simplebluez_set_interactive_pairing(true);
 
     EXPECT_FALSE(simpleble_config_simplebluez_get_use_system_bus());
     EXPECT_EQ(simpleble_config_simplebluez_get_connection_timeout_ms(), 1234);
     EXPECT_EQ(simpleble_config_simplebluez_get_disconnection_timeout_ms(), 5678);
+    EXPECT_TRUE(simpleble_config_simplebluez_get_interactive_pairing());
 
     simpleble_config_simplebluez_reset();
 }

@@ -40,6 +40,12 @@ Napi::Function AdapterHandle::define(Napi::Env env) {
                            InstanceMethod<&AdapterHandle::get_paired_peripherals>("getPairedPeripherals"),
                            InstanceMethod<&AdapterHandle::get_connected_peripherals>("getConnectedPeripherals"),
                            InstanceMethod<&AdapterHandle::retrieve_cached_peripherals>("retrieveCachedPeripherals"),
+                           InstanceMethod<&AdapterHandle::set_passkey_request_handler>("setPasskeyRequestHandler"),
+                           InstanceMethod<&AdapterHandle::set_passkey_display_handler>("setPasskeyDisplayHandler"),
+                           InstanceMethod<&AdapterHandle::set_numeric_comparison_handler>(
+                               "setNumericComparisonHandler"),
+                           InstanceMethod<&AdapterHandle::set_pairing_authorization_handler>(
+                               "setPairingAuthorizationHandler"),
                            InstanceMethod<&AdapterHandle::subscribe>("subscribe"),
                            InstanceMethod<&AdapterHandle::create_local_peripheral>("createLocalPeripheral"),
                            InstanceMethod<&AdapterHandle::connections>("connections"),
@@ -208,6 +214,121 @@ Napi::Value AdapterHandle::retrieve_cached_peripherals(const Napi::CallbackInfo&
     return run(info.Env(), strand(), []() -> Finisher { throw SimpleBLE::Exception::OperationNotSupported(); });
 #endif
 }
+
+// Linux pairing. The core holds a callback's lock while it runs, and a pairing
+// question waits for the JavaScript thread, so handlers are replaced on the
+// adapter's strand rather than the JavaScript thread, as Dongl pairing handlers
+// are. Adapters of other backends reject them with OPERATION_NOT_SUPPORTED.
+// NOTE: Advanced.h declares these on every Linux build, PLAIN included, so the
+// core decides which adapters take them.
+#if defined(__linux__) && !defined(__ANDROID__)
+
+namespace {
+
+bool to_bool(const Napi::Value& value) {
+    if (!value.IsBoolean()) throw Napi::TypeError::New(value.Env(), "Expected a boolean");
+    return value.As<Napi::Boolean>().Value();
+}
+
+}  // namespace
+
+Napi::Value AdapterHandle::set_passkey_request_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto adapter = adapter_;
+    return run(info.Env(), strand(), [adapter, id, dispatcher]() mutable {
+        std::function<std::optional<std::string>(SimpleBLE::BluetoothAddress)> on_request;
+        if (id) {
+            on_request = [dispatcher, id = *id](SimpleBLE::BluetoothAddress peer) {
+                return ask(dispatcher, id, {peer}, std::optional<std::string>(),
+                           [](const Napi::Value& value) -> std::optional<std::string> {
+                               if (!value.IsString()) throw Napi::TypeError::New(value.Env(), "A passkey is a string");
+                               return value.As<Napi::String>().Utf8Value();
+                           });
+            };
+        }
+        SimpleBLE::Advanced::Linux::set_passkey_request_callback(adapter, on_request);
+        return finish_undefined();
+    });
+}
+
+Napi::Value AdapterHandle::set_passkey_display_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto adapter = adapter_;
+    return run(info.Env(), strand(), [adapter, id, dispatcher]() mutable {
+        std::function<void(SimpleBLE::BluetoothAddress, const std::string&)> on_display;
+        if (id) {
+            on_display = [dispatcher, id = *id](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                tell(dispatcher, id, {peer, passkey});
+            };
+        }
+        SimpleBLE::Advanced::Linux::set_passkey_display_callback(adapter, on_display);
+        return finish_undefined();
+    });
+}
+
+Napi::Value AdapterHandle::set_numeric_comparison_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto adapter = adapter_;
+    return run(info.Env(), strand(), [adapter, id, dispatcher]() mutable {
+        std::function<bool(SimpleBLE::BluetoothAddress, const std::string&)> on_compare;
+        if (id) {
+            on_compare = [dispatcher, id = *id](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                return ask(dispatcher, id, {peer, passkey}, false, to_bool);
+            };
+        }
+        SimpleBLE::Advanced::Linux::set_numeric_comparison_callback(adapter, on_compare);
+        return finish_undefined();
+    });
+}
+
+Napi::Value AdapterHandle::set_pairing_authorization_handler(const Napi::CallbackInfo& info) {
+    auto id = handler_id(info, 0);
+    std::weak_ptr dispatcher = addon(info.Env()).dispatcher;
+    auto adapter = adapter_;
+    return run(info.Env(), strand(), [adapter, id, dispatcher]() mutable {
+        std::function<bool(SimpleBLE::BluetoothAddress)> on_authorize;
+        if (id) {
+            on_authorize = [dispatcher, id = *id](SimpleBLE::BluetoothAddress peer) {
+                return ask(dispatcher, id, {peer}, false, to_bool);
+            };
+        }
+        SimpleBLE::Advanced::Linux::set_pairing_authorization_callback(adapter, on_authorize);
+        return finish_undefined();
+    });
+}
+
+#else
+
+namespace {
+
+Napi::Value unsupported(const Napi::CallbackInfo& info, std::shared_ptr<Executor::Strand> strand) {
+    handler_id(info, 0);
+    return run(info.Env(), std::move(strand),
+               []() -> Finisher { throw SimpleBLE::Exception::OperationNotSupported(); });
+}
+
+}  // namespace
+
+Napi::Value AdapterHandle::set_passkey_request_handler(const Napi::CallbackInfo& info) {
+    return unsupported(info, strand());
+}
+
+Napi::Value AdapterHandle::set_passkey_display_handler(const Napi::CallbackInfo& info) {
+    return unsupported(info, strand());
+}
+
+Napi::Value AdapterHandle::set_numeric_comparison_handler(const Napi::CallbackInfo& info) {
+    return unsupported(info, strand());
+}
+
+Napi::Value AdapterHandle::set_pairing_authorization_handler(const Napi::CallbackInfo& info) {
+    return unsupported(info, strand());
+}
+
+#endif
 
 // Called once, when the TypeScript Adapter is created. Events are queued even
 // without listeners, so a listener added right after a call still sees the

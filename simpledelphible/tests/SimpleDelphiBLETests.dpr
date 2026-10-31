@@ -73,6 +73,11 @@ type
     procedure PasskeyRequest(Sender: TBlePeripheral; var Passkey: string; var Accept: Boolean);
     procedure PasskeyDisplay(Sender: TBlePeripheral; const Passkey: string);
     procedure NumericComparison(Sender: TBlePeripheral; const Passkey: string; var Accept: Boolean);
+    procedure AdapterPasskeyRequest(Sender: TBleAdapter; const Peer: string; var Passkey: string;
+      var Accept: Boolean);
+    procedure AdapterPasskeyDisplay(Sender: TBleAdapter; const Peer, Passkey: string);
+    procedure AdapterNumericComparison(Sender: TBleAdapter; const Peer, Passkey: string; var Accept: Boolean);
+    procedure PairingAuthorization(Sender: TBleAdapter; const Peer: string; var Accept: Boolean);
     procedure ClientConnect(Sender: TBleLocalPeripheral; const Address: string);
     procedure ClientDisconnect(Sender: TBleLocalPeripheral; const Address: string);
     procedure LocalWrite(Sender: TBleLocalCharacteristic; const Data: TBytes);
@@ -183,6 +188,24 @@ begin
 end;
 
 procedure TRecorder.NumericComparison(Sender: TBlePeripheral; const Passkey: string; var Accept: Boolean);
+begin
+end;
+
+procedure TRecorder.AdapterPasskeyRequest(Sender: TBleAdapter; const Peer: string; var Passkey: string;
+  var Accept: Boolean);
+begin
+end;
+
+procedure TRecorder.AdapterPasskeyDisplay(Sender: TBleAdapter; const Peer, Passkey: string);
+begin
+end;
+
+procedure TRecorder.AdapterNumericComparison(Sender: TBleAdapter; const Peer, Passkey: string;
+  var Accept: Boolean);
+begin
+end;
+
+procedure TRecorder.PairingAuthorization(Sender: TBleAdapter; const Peer: string; var Accept: Boolean);
 begin
 end;
 
@@ -931,6 +954,7 @@ var
   UseSystemBus: Boolean;
   ConnectionTimeout: Int64;
   DisconnectionTimeout: Int64;
+  InteractivePairing: Boolean;
   Reinitialize: Boolean;
   DeferredDisconnect: Boolean;
   NegotiateMtu: Boolean;
@@ -945,6 +969,7 @@ var
     TBleConfig.SimpleBluez.UseSystemBus := not UseSystemBus;
     TBleConfig.SimpleBluez.ConnectionTimeoutMs := ConnectionTimeout + 1234;
     TBleConfig.SimpleBluez.DisconnectionTimeoutMs := DisconnectionTimeout + 4321;
+    TBleConfig.SimpleBluez.InteractivePairing := not InteractivePairing;
     TBleConfig.WinRT.ExperimentalReinitializeWinrtApartmentOnMainThread := not Reinitialize;
     TBleConfig.WinRT.UseDeferredDisconnect := not DeferredDisconnect;
     TBleConfig.Android.NegotiateMtu := not NegotiateMtu;
@@ -961,6 +986,8 @@ var
       Description + ': ConnectionTimeoutMs');
     CheckEquals(DisconnectionTimeout + Ord(Changed) * 4321, TBleConfig.SimpleBluez.DisconnectionTimeoutMs,
       Description + ': DisconnectionTimeoutMs');
+    Check(TBleConfig.SimpleBluez.InteractivePairing = (InteractivePairing xor Changed),
+      Description + ': InteractivePairing');
   end;
 
   procedure CheckWinRT(Changed: Boolean; const Description: string);
@@ -992,6 +1019,7 @@ begin
   UseSystemBus := TBleConfig.SimpleBluez.UseSystemBus;
   ConnectionTimeout := TBleConfig.SimpleBluez.ConnectionTimeoutMs;
   DisconnectionTimeout := TBleConfig.SimpleBluez.DisconnectionTimeoutMs;
+  InteractivePairing := TBleConfig.SimpleBluez.InteractivePairing;
   Reinitialize := TBleConfig.WinRT.ExperimentalReinitializeWinrtApartmentOnMainThread;
   DeferredDisconnect := TBleConfig.WinRT.UseDeferredDisconnect;
   NegotiateMtu := TBleConfig.Android.NegotiateMtu;
@@ -1070,6 +1098,7 @@ end;
 procedure TestPairingHandlers;
 var
   Peripheral: TBlePeripheral;
+  Adapter: TBleAdapter;
 begin
   // NOTE: Only a Dongl peripheral takes pairing handlers, so PLAIN's reports OPERATION_NOT_SUPPORTED.
   Peripheral := PlainPeripheral;
@@ -1104,6 +1133,40 @@ begin
     on EBleOperationNotSupported do
       ;
   end;
+  // NOTE: Only a BlueZ adapter takes pairing handlers, so PLAIN's raises, like every adapter off Linux.
+  Adapter := PlainAdapter;
+  try
+    Adapter.OnPasskeyRequest := Recorder.AdapterPasskeyRequest;
+    Fail('adapter OnPasskeyRequest raised nothing');
+  except
+    on E: EBleOperationNotSupported do
+      CheckEquals(Ord(ecOperationNotSupported), Ord(E.Code), 'adapter passkey request code');
+  end;
+  Check(not Assigned(Adapter.OnPasskeyRequest), 'adapter OnPasskeyRequest kept a rejected handler');
+  try
+    Adapter.OnPasskeyDisplay := Recorder.AdapterPasskeyDisplay;
+    Fail('adapter OnPasskeyDisplay raised nothing');
+  except
+    on EBleOperationNotSupported do
+      ;
+  end;
+  Check(not Assigned(Adapter.OnPasskeyDisplay), 'adapter OnPasskeyDisplay kept a rejected handler');
+  try
+    Adapter.OnNumericComparison := Recorder.AdapterNumericComparison;
+    Fail('adapter OnNumericComparison raised nothing');
+  except
+    on EBleOperationNotSupported do
+      ;
+  end;
+  Check(not Assigned(Adapter.OnNumericComparison), 'adapter OnNumericComparison kept a rejected handler');
+  try
+    Adapter.OnPairingAuthorization := Recorder.PairingAuthorization;
+    Fail('OnPairingAuthorization raised nothing');
+  except
+    on EBleOperationNotSupported do
+      ;
+  end;
+  Check(not Assigned(Adapter.OnPairingAuthorization), 'OnPairingAuthorization kept a rejected handler');
 end;
 
 procedure TestPlatformCalls;

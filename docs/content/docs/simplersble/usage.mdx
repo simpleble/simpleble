@@ -126,6 +126,37 @@ The callbacks run synchronously on a SimpleBLE worker thread, possibly while `co
 
 For devices that wait for the central to start pairing, call `simplersble::advanced::dongl::secure_connection(&peripheral, mitm)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
 
+## Pair on Linux
+
+On Linux, SimpleBLE answers BlueZ pairing requests for the peripherals an adapter connects to and the clients of its local peripherals. Peers pair with Just Works unless you turn on interactive pairing before the first `Backend::get_backends()` or `Adapter::get_adapters()` call, so that passkey and numeric comparison requests reach the adapter's callbacks. [Pairing](../simpleble/platform_notes#pairing) describes how SimpleBLE takes part in BlueZ pairing.
+
+```rust
+simplersble::config::simplebluez::set_interactive_pairing(true);
+```
+
+Register the callbacks on the adapter with `simplersble::advanced::linux`. Each one receives the peer's address:
+
+- `set_passkey_request_callback` takes an `Fn(&str) -> Option<String>`: return the six digits the user typed, or `None` to reject.
+- `set_passkey_display_callback` takes an `Fn(&str, &str)`: show the passkey so the user can type it on the peer.
+- `set_numeric_comparison_callback` takes an `Fn(&str, &str) -> bool`: return `true` only if the peer shows the same six digits.
+- `set_pairing_authorization_callback` takes an `Fn(&str) -> bool`: return `true` to accept Just Works pairing. Without it, Just Works pairing is accepted.
+
+```rust
+use std::io::Write;
+
+let adapter = simplersble::Adapter::get_adapters().unwrap().remove(0);
+simplersble::advanced::linux::set_numeric_comparison_callback(&adapter, |peer, passkey| {
+    print!("Does {} show {}? [y/N] ", peer, passkey);
+    std::io::stdout().flush().unwrap();
+    let mut answer = String::new();
+    std::io::stdin().read_line(&mut answer).unwrap();
+    answer.trim() == "y"
+})
+.unwrap();
+```
+
+The callbacks run synchronously on SimpleBLE's BlueZ event thread, which waits for them, and can block while the user answers. A passkey or comparison request without a callback, or whose callback panics, is rejected. A callback stays registered until you clear it with the matching `clear_*_callback()` or drop the last clone of the `Adapter`; clear the authorization callback, rather than dropping the `Adapter`, to accept Just Works pairing again. Adapters of other backends, such as a Dongl, return an error.
+
 ## Host a local peripheral
 
 `adapter.create_local_peripheral()` returns a `LocalPeripheral` that hosts GATT services on that adapter. Add advertised service UUIDs, services, and characteristics, then call `start()`; the layout cannot change while started.
@@ -173,4 +204,5 @@ Clones of a `LocalPeripheral`, `LocalService`, or `LocalCharacteristic` refer to
 `simplersble::advanced` exposes features of a single platform:
 
 - On macOS and Linux, `advanced::macos::set_advertisement_local_name(&peripheral, Some("Name"))` and `advanced::linux::set_advertisement_local_name(...)` set the local name in a local peripheral's advertisement before `start()`. `None` removes it. This changes only the advertisement, not the system Bluetooth name.
+- On Linux, `advanced::linux` sets an adapter's pairing callbacks. See [Pair on Linux](#pair-on-linux).
 - On macOS, `advanced::macos::retrieve_cached_peripherals(&adapter, &identifiers)` returns peripherals that CoreBluetooth already knows, by the identifiers `address()` returned earlier, without scanning. Unknown identifiers are skipped, and a returned peripheral may be out of range.

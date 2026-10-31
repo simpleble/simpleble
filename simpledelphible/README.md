@@ -160,7 +160,10 @@ Adapter := TBleBackend.GetDongl.GetAdapters[0];
 `TBleConfig` holds the Dongl, BlueZ, and WinRT backend settings; set them
 before the first call that reaches a backend. Pairing through a Dongl happens
 without the operating system: assign `OnPasskeyRequest`, `OnPasskeyDisplay`, or
-`OnNumericComparison` on the peripheral before `Connect`.
+`OnNumericComparison` on the peripheral before `Connect`. On Linux, a BlueZ
+adapter has the same handlers plus `OnPairingAuthorization`, each with the
+peer's address, and `TBleConfig.SimpleBluez.InteractivePairing` sends passkey
+and numeric comparison requests to them.
 
 ## Free Pascal and Lazarus
 

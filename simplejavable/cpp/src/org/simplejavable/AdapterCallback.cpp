@@ -11,6 +11,10 @@ jmethodID AdapterCallback::_method_on_scan_start = nullptr;
 jmethodID AdapterCallback::_method_on_scan_stop = nullptr;
 jmethodID AdapterCallback::_method_on_scan_updated = nullptr;
 jmethodID AdapterCallback::_method_on_scan_found = nullptr;
+jmethodID AdapterCallback::_method_on_passkey_request = nullptr;
+jmethodID AdapterCallback::_method_on_passkey_display = nullptr;
+jmethodID AdapterCallback::_method_on_numeric_comparison = nullptr;
+jmethodID AdapterCallback::_method_on_pairing_authorization = nullptr;
 
 // Define the JNI descriptor
 const SimpleJNI::JNIDescriptor AdapterCallback::descriptor{
@@ -22,7 +26,11 @@ const SimpleJNI::JNIDescriptor AdapterCallback::descriptor{
      {"onScanStart", "()V", &_method_on_scan_start},
      {"onScanStop", "()V", &_method_on_scan_stop},
      {"onScanUpdated", "(J)V", &_method_on_scan_updated},
-     {"onScanFound", "(J)V", &_method_on_scan_found}}};
+     {"onScanFound", "(J)V", &_method_on_scan_found},
+     {"onPasskeyRequest", "(Ljava/lang/String;)Ljava/lang/String;", &_method_on_passkey_request},
+     {"onPasskeyDisplay", "(Ljava/lang/String;Ljava/lang/String;)V", &_method_on_passkey_display},
+     {"onNumericComparison", "(Ljava/lang/String;Ljava/lang/String;)Z", &_method_on_numeric_comparison},
+     {"onPairingAuthorization", "(Ljava/lang/String;)Z", &_method_on_pairing_authorization}}};
 
 // Define the AutoRegister instance
 const SimpleJNI::AutoRegister<AdapterCallback> AdapterCallback::registrar{&descriptor};
@@ -110,6 +118,39 @@ void AdapterCallback::on_scan_found(int64_t peripheral_id) {
     if (_obj.is_valid()) {
         _obj.to_local().call_void_method(_method_on_scan_found, static_cast<jlong>(peripheral_id));
     }
+}
+
+std::optional<std::string> AdapterCallback::on_passkey_request(const std::string& peer) {
+    // Returning nothing rejects the request, and SimpleBLE validates the six digits.
+    if (!_obj.is_valid()) return std::nullopt;
+
+    SimpleJNI::String<SimpleJNI::LocalRef> address(peer);
+    auto result = _obj.to_local().call_object_method(_method_on_passkey_request, address.get());
+    if (!result) return std::nullopt;
+    return SimpleJNI::String<SimpleJNI::LocalRef>(static_cast<jstring>(result.get())).str();
+}
+
+void AdapterCallback::on_passkey_display(const std::string& peer, const std::string& passkey) {
+    if (_obj.is_valid()) {
+        SimpleJNI::String<SimpleJNI::LocalRef> address(peer);
+        SimpleJNI::String<SimpleJNI::LocalRef> value(passkey);
+        _obj.to_local().call_void_method(_method_on_passkey_display, address.get(), value.get());
+    }
+}
+
+bool AdapterCallback::on_numeric_comparison(const std::string& peer, const std::string& passkey) {
+    if (!_obj.is_valid()) return false;
+
+    SimpleJNI::String<SimpleJNI::LocalRef> address(peer);
+    SimpleJNI::String<SimpleJNI::LocalRef> value(passkey);
+    return _obj.to_local().call_boolean_method(_method_on_numeric_comparison, address.get(), value.get());
+}
+
+bool AdapterCallback::on_pairing_authorization(const std::string& peer) {
+    if (!_obj.is_valid()) return false;
+
+    SimpleJNI::String<SimpleJNI::LocalRef> address(peer);
+    return _obj.to_local().call_boolean_method(_method_on_pairing_authorization, address.get());
 }
 
 }  // namespace SimpleJavaBLE

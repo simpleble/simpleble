@@ -23,9 +23,11 @@ procedure DeliverAdapterEvent(Adapter: TBleAdapter; const Event: TBleEvent);
 var
   Handler: TBleAdapterEvent;
   ScanHandler: TBleScanEvent;
+  DisplayHandler: TBleAdapterPasskeyDisplayEvent;
 begin
   Handler := nil;
   ScanHandler := nil;
+  DisplayHandler := nil;
   case Event.Kind of
     ekPowerOn: Handler := Adapter.FOnPowerOn;
     ekPowerOff: Handler := Adapter.FOnPowerOff;
@@ -33,11 +35,14 @@ begin
     ekScanStop: Handler := Adapter.FOnScanStop;
     ekScanFound: ScanHandler := Adapter.FOnScanFound;
     ekScanUpdated: ScanHandler := Adapter.FOnScanUpdated;
+    ekAdapterPasskeyDisplay: DisplayHandler := Adapter.FOnPasskeyDisplay;
   end;
   if Assigned(Handler) then
     Handler(Adapter);
   if Assigned(ScanHandler) then
     ScanHandler(Adapter, Event.Peripheral);
+  if Assigned(DisplayHandler) then
+    DisplayHandler(Adapter, Event.Peer, Event.Text);
 end;
 
 procedure DeliverPeripheralEvent(Peripheral: TBlePeripheral; const Event: TBleEvent);
@@ -120,7 +125,7 @@ var
 begin
   try
     case Event.Kind of
-      ekPowerOn..ekScanUpdated:
+      ekPowerOn..ekAdapterPasskeyDisplay:
         DeliverAdapterEvent(TBleAdapter(Event.Target), Event);
       ekConnected..ekPasskeyDisplay:
         DeliverPeripheralEvent(TBlePeripheral(Event.Target), Event);

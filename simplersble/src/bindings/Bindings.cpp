@@ -154,6 +154,14 @@ void Bindings::RustyConfig_simplebluez_set_disconnection_timeout_ns(uint64_t tim
     SimpleBLE::Config::SimpleBluez::disconnection_timeout = duration_from_ns(timeout_ns);
 }
 
+bool Bindings::RustyConfig_simplebluez_interactive_pairing() {
+    return SimpleBLE::Config::SimpleBluez::interactive_pairing;
+}
+
+void Bindings::RustyConfig_simplebluez_set_interactive_pairing(bool enabled) {
+    SimpleBLE::Config::SimpleBluez::interactive_pairing = enabled;
+}
+
 void Bindings::RustyConfig_winrt_reset() { SimpleBLE::Config::WinRT::reset(); }
 
 bool Bindings::RustyConfig_winrt_experimental_use_own_mta_apartment() {
@@ -1216,9 +1224,137 @@ void Bindings::RustyLocalPeripheral::linux_set_advertisement_local_name(bool has
     }
 }
 
+// NOTE: The pairing callbacks run on SimpleBLE's BlueZ event thread, which waits for their answer. They hold the
+// target lock while waiting for the user, so unlink() waits for them. Unlike the Dongl ones, they're cleared when
+// the InnerAdapter(Rust) clears its callback, as SimpleBLE accepts Just Works pairing without an authorization
+// callback.
+
+namespace {
+
+rust::Slice<const uint8_t> as_bytes(const std::string& value) {
+    return rust::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(value.data()), value.size());
+}
+
+}  // namespace
+
+void Bindings::RustyAdapter::linux_set_passkey_request_callback(bool enabled, RustyError& error) const {
+    try {
+        if (!enabled) {
+            SimpleBLE::Advanced::Linux::set_passkey_request_callback(*_internal, nullptr);
+            return;
+        }
+
+        auto target = _callback_target;
+        SimpleBLE::Advanced::Linux::set_passkey_request_callback(
+            *_internal, [target](SimpleBLE::BluetoothAddress peer) -> std::optional<std::string> {
+                std::shared_lock<std::shared_mutex> lock(target->mutex);
+                if (target->adapter == nullptr) return std::nullopt;
+
+                rust::String passkey;
+                if (!target->adapter->on_callback_passkey_request(as_bytes(peer), passkey)) return std::nullopt;
+
+                return std::string(passkey);
+            });
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_passkey_display_callback(bool enabled, RustyError& error) const {
+    try {
+        if (!enabled) {
+            SimpleBLE::Advanced::Linux::set_passkey_display_callback(*_internal, nullptr);
+            return;
+        }
+
+        auto target = _callback_target;
+        SimpleBLE::Advanced::Linux::set_passkey_display_callback(
+            *_internal, [target](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                std::shared_lock<std::shared_mutex> lock(target->mutex);
+                if (target->adapter == nullptr) return;
+
+                target->adapter->on_callback_passkey_display(as_bytes(peer), as_bytes(passkey));
+            });
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_numeric_comparison_callback(bool enabled, RustyError& error) const {
+    try {
+        if (!enabled) {
+            SimpleBLE::Advanced::Linux::set_numeric_comparison_callback(*_internal, nullptr);
+            return;
+        }
+
+        auto target = _callback_target;
+        SimpleBLE::Advanced::Linux::set_numeric_comparison_callback(
+            *_internal, [target](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                std::shared_lock<std::shared_mutex> lock(target->mutex);
+                if (target->adapter == nullptr) return false;
+
+                return target->adapter->on_callback_numeric_comparison(as_bytes(peer), as_bytes(passkey));
+            });
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_pairing_authorization_callback(bool enabled, RustyError& error) const {
+    try {
+        if (!enabled) {
+            SimpleBLE::Advanced::Linux::set_pairing_authorization_callback(*_internal, nullptr);
+            return;
+        }
+
+        auto target = _callback_target;
+        SimpleBLE::Advanced::Linux::set_pairing_authorization_callback(
+            *_internal, [target](SimpleBLE::BluetoothAddress peer) {
+                std::shared_lock<std::shared_mutex> lock(target->mutex);
+                if (target->adapter == nullptr) return false;
+
+                return target->adapter->on_callback_pairing_authorization(as_bytes(peer));
+            });
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
 #else
 
 void Bindings::RustyLocalPeripheral::linux_set_advertisement_local_name(bool, rust::Str, RustyError& error) const {
+    try {
+        throw SimpleBLE::Exception::OperationNotSupported();
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_passkey_request_callback(bool, RustyError& error) const {
+    try {
+        throw SimpleBLE::Exception::OperationNotSupported();
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_passkey_display_callback(bool, RustyError& error) const {
+    try {
+        throw SimpleBLE::Exception::OperationNotSupported();
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_numeric_comparison_callback(bool, RustyError& error) const {
+    try {
+        throw SimpleBLE::Exception::OperationNotSupported();
+    } catch (...) {
+        report_exception(error);
+    }
+}
+
+void Bindings::RustyAdapter::linux_set_pairing_authorization_callback(bool, RustyError& error) const {
     try {
         throw SimpleBLE::Exception::OperationNotSupported();
     } catch (...) {

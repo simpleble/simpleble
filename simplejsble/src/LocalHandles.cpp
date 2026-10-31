@@ -417,7 +417,7 @@ Napi::Value LocalCharacteristicHandle::set_read_handler(const Napi::CallbackInfo
         std::function<SimpleBLE::ByteArray()> on_read;
         if (id) {
             on_read = [dispatcher, id = *id]() {
-                return ask(dispatcher, id, std::nullopt, SimpleBLE::ByteArray(), to_bytes);
+                return ask(dispatcher, id, {}, SimpleBLE::ByteArray(), to_bytes);
             };
         }
         characteristic.set_callback_on_read(on_read);

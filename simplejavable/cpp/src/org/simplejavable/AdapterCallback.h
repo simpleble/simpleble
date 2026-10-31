@@ -1,4 +1,7 @@
 #pragma once
+#include <optional>
+#include <string>
+
 #include "simplejni/Common.hpp"
 #include "simplejni/Registry.hpp"
 
@@ -10,8 +13,9 @@ namespace SimpleJavaBLE {
  *
  * This class encapsulates a jobject representing an instance of the Callback interface
  * from the org.simplejavable.Adapter class. It provides methods to invoke the interface's
- * Java methods (onPowerOn, onPowerOff, onScanStart, onScanStop, onScanUpdated, onScanFound)
- * via JNI. JNI resources are preloaded during JNI_OnLoad using the AutoRegister mechanism.
+ * Java methods (onPowerOn, onPowerOff, onScanStart, onScanStop, onScanUpdated, onScanFound and
+ * the Linux pairing callbacks) via JNI. JNI resources are preloaded during JNI_OnLoad using the
+ * AutoRegister mechanism.
  */
 class AdapterCallback {
   public:
@@ -71,6 +75,11 @@ class AdapterCallback {
      */
     void on_scan_found(int64_t peripheral_id);
 
+    std::optional<std::string> on_passkey_request(const std::string& peer);
+    void on_passkey_display(const std::string& peer, const std::string& passkey);
+    bool on_numeric_comparison(const std::string& peer, const std::string& passkey);
+    bool on_pairing_authorization(const std::string& peer);
+
   private:
     // Static JNI resources, populated by Registrar during JNI_OnLoad
     static SimpleJNI::GlobalRef<jclass> _cls;  ///< Preloaded jclass for org.simplejavable.Adapter$Callback.
@@ -80,6 +89,10 @@ class AdapterCallback {
     static jmethodID _method_on_scan_stop;     ///< Preloaded jmethodID for onScanStop.
     static jmethodID _method_on_scan_updated;  ///< Preloaded jmethodID for onScanUpdated.
     static jmethodID _method_on_scan_found;    ///< Preloaded jmethodID for onScanFound.
+    static jmethodID _method_on_passkey_request;
+    static jmethodID _method_on_passkey_display;
+    static jmethodID _method_on_numeric_comparison;
+    static jmethodID _method_on_pairing_authorization;
 
     /**
      * @brief JNI descriptor defining the Callback interface and its methods.

@@ -47,6 +47,14 @@ internal actual object Native {
 
     actual external fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray
 
+    actual external fun adapterSetPasskeyRequestHandler(adapterId: Long, enabled: Boolean)
+
+    actual external fun adapterSetPasskeyDisplayHandler(adapterId: Long, enabled: Boolean)
+
+    actual external fun adapterSetNumericComparisonHandler(adapterId: Long, enabled: Boolean)
+
+    actual external fun adapterSetPairingAuthorizationHandler(adapterId: Long, enabled: Boolean)
+
     actual external fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback)
 
     actual external fun peripheralIdentifier(adapterId: Long, peripheralId: Long): String

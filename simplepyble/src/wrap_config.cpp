@@ -56,6 +56,12 @@ namespace PyWrappers {
         static void set_disconnection_timeout_ms(int64_t value) {
             SimpleBLE::Config::SimpleBluez::disconnection_timeout = std::chrono::milliseconds(value);
         }
+        static bool get_interactive_pairing() {
+            return SimpleBLE::Config::SimpleBluez::interactive_pairing;
+        }
+        static void set_interactive_pairing(bool value) {
+            SimpleBLE::Config::SimpleBluez::interactive_pairing = value;
+        }
 
         static void reset() {
             SimpleBLE::Config::SimpleBluez::reset();
@@ -181,6 +187,10 @@ constexpr auto kDocsConfigSimpleBluezDisconnectionTimeout = R"pbdoc(
     Disconnection timeout in milliseconds
 )pbdoc";
 
+constexpr auto kDocsConfigSimpleBluezInteractivePairing = R"pbdoc(
+    Register the BlueZ pairing agent as KeyboardDisplay and default agent, so passkey and numeric comparison requests reach the Linux pairing callbacks
+)pbdoc";
+
 constexpr auto kDocsConfigCoreBluetoothReset = R"pbdoc(
     Reset CoreBluetooth configuration options to their default values
 )pbdoc";
@@ -254,6 +264,10 @@ void wrap_config(py::module& m) {
             [](py::object) { return PyWrappers::SimpleBluez::get_disconnection_timeout_ms(); },
             [](py::object, int64_t value) { PyWrappers::SimpleBluez::set_disconnection_timeout_ms(value); },
             kDocsConfigSimpleBluezDisconnectionTimeout)
+        .def_property_static("interactive_pairing",
+            [](py::object) { return PyWrappers::SimpleBluez::get_interactive_pairing(); },
+            [](py::object, bool value) { PyWrappers::SimpleBluez::set_interactive_pairing(value); },
+            kDocsConfigSimpleBluezInteractivePairing)
         .def_static("reset", &PyWrappers::SimpleBluez::reset, kDocsConfigSimpleBluezReset);
 
     py::class_<PyWrappers::CoreBluetooth> corebluetooth_config(config, "corebluetooth", kDocsConfigCoreBluetoothClass);

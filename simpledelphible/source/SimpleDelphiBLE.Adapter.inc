@@ -106,8 +106,25 @@ begin
 end;
 
 procedure TBleAdapter.ClearCallbacks;
+{$IFDEF SIMPLEDELPHIBLE_LINUX}
+var
+  Error: psimpleble_error_t;
+{$ENDIF}
 begin
   SetCallbacks(False);
+{$IFDEF SIMPLEDELPHIBLE_LINUX}
+  // NOTE: Only a BlueZ adapter accepts pairing callbacks, so only one with a handler has some to clear.
+  Error := nil;
+  if Assigned(FOnPasskeyRequest) then
+    simpleble_advanced_linux_set_passkey_request_callback(FHandle, nil, nil, Error);
+  if Assigned(FOnPasskeyDisplay) then
+    simpleble_advanced_linux_set_passkey_display_callback(FHandle, nil, nil, Error);
+  if Assigned(FOnNumericComparison) then
+    simpleble_advanced_linux_set_numeric_comparison_callback(FHandle, nil, nil, Error);
+  if Assigned(FOnPairingAuthorization) then
+    simpleble_advanced_linux_set_pairing_authorization_callback(FHandle, nil, nil, Error);
+  simpleble_error_release(Error);
+{$ENDIF}
 end;
 
 // Returns the one peripheral object for a handle, taking ownership of the handle.
@@ -325,6 +342,89 @@ end;
 begin
   Result := nil;
   raise EBleOperationNotSupported.Create(ecOperationNotSupported, 'Retrieving cached peripherals requires macOS');
+end;
+{$ENDIF}
+
+{$IFDEF SIMPLEDELPHIBLE_LINUX}
+procedure TBleAdapter.SetOnPasskeyRequest(const Value: TBleAdapterPasskeyRequestEvent);
+var
+  Call: TNativeCall;
+begin
+  Call.Enter;
+  if Assigned(Value) then
+    simpleble_advanced_linux_set_passkey_request_callback(FHandle, AdapterPasskeyRequestCallback, Pointer(FToken),
+      Call.Error)
+  else
+    simpleble_advanced_linux_set_passkey_request_callback(FHandle, nil, nil, Call.Error);
+  Call.Leave;
+  FOnPasskeyRequest := Value;
+end;
+
+procedure TBleAdapter.SetOnPasskeyDisplay(const Value: TBleAdapterPasskeyDisplayEvent);
+var
+  Call: TNativeCall;
+begin
+  Call.Enter;
+  if Assigned(Value) then
+    simpleble_advanced_linux_set_passkey_display_callback(FHandle, AdapterPasskeyDisplayCallback, Pointer(FToken),
+      Call.Error)
+  else
+    simpleble_advanced_linux_set_passkey_display_callback(FHandle, nil, nil, Call.Error);
+  Call.Leave;
+  FOnPasskeyDisplay := Value;
+end;
+
+procedure TBleAdapter.SetOnNumericComparison(const Value: TBleAdapterNumericComparisonEvent);
+var
+  Call: TNativeCall;
+begin
+  Call.Enter;
+  if Assigned(Value) then
+    simpleble_advanced_linux_set_numeric_comparison_callback(FHandle, AdapterNumericComparisonCallback,
+      Pointer(FToken), Call.Error)
+  else
+    simpleble_advanced_linux_set_numeric_comparison_callback(FHandle, nil, nil, Call.Error);
+  Call.Leave;
+  FOnNumericComparison := Value;
+end;
+
+procedure TBleAdapter.SetOnPairingAuthorization(const Value: TBleAdapterPairingAuthorizationEvent);
+var
+  Call: TNativeCall;
+begin
+  Call.Enter;
+  if Assigned(Value) then
+    simpleble_advanced_linux_set_pairing_authorization_callback(FHandle, AdapterPairingAuthorizationCallback,
+      Pointer(FToken), Call.Error)
+  else
+    simpleble_advanced_linux_set_pairing_authorization_callback(FHandle, nil, nil, Call.Error);
+  Call.Leave;
+  FOnPairingAuthorization := Value;
+end;
+{$ELSE}
+procedure RaisePairingNotSupported;
+begin
+  raise EBleOperationNotSupported.Create(ecOperationNotSupported, 'Adapter pairing handlers require Linux');
+end;
+
+procedure TBleAdapter.SetOnPasskeyRequest(const Value: TBleAdapterPasskeyRequestEvent);
+begin
+  RaisePairingNotSupported;
+end;
+
+procedure TBleAdapter.SetOnPasskeyDisplay(const Value: TBleAdapterPasskeyDisplayEvent);
+begin
+  RaisePairingNotSupported;
+end;
+
+procedure TBleAdapter.SetOnNumericComparison(const Value: TBleAdapterNumericComparisonEvent);
+begin
+  RaisePairingNotSupported;
+end;
+
+procedure TBleAdapter.SetOnPairingAuthorization(const Value: TBleAdapterPairingAuthorizationEvent);
+begin
+  RaisePairingNotSupported;
 end;
 {$ENDIF}
 

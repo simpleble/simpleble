@@ -156,7 +156,9 @@ Adapter adapter = Backend.getDongl().getAdapters().get(0);
 first call that reaches a backend. Pairing through a Dongl happens without the
 operating system: set `Advanced.Dongl.setPasskeyRequestCallback`,
 `setPasskeyDisplayCallback`, or `setNumericComparisonCallback` for the
-peripheral before `connect()`.
+peripheral before `connect()`. On Linux, call
+`Config.SimpleBluez.setInteractivePairing(true)` and register the same callbacks
+for an adapter in `Advanced.Linux`; they also receive the peer's address.
 
 ## Platforms
 

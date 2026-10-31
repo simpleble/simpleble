@@ -153,7 +153,11 @@ var adapter = Backend.GetDongl().Adapters[0];
 before the first call that reaches a backend. Pairing through a Dongl happens
 without the operating system: register a callback with
 `SetPasskeyRequestCallback()`, `SetPasskeyDisplayCallback()`, or
-`SetNumericComparisonCallback()` from `Advanced.Dongl` before `Connect()`.
+`SetNumericComparisonCallback()` from `Advanced.Dongl` before `Connect()`. On
+Linux, `Advanced.Linux` sets the same callbacks plus
+`SetPairingAuthorizationCallback()` on a BlueZ adapter, each with the peer's
+address, and `Config.SimpleBluez.InteractivePairing` sends passkey and numeric
+comparison requests to them.
 
 ## MAUI and mobile
 

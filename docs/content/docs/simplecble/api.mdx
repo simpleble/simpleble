@@ -1019,6 +1019,34 @@ Dongl functions require a Dongl peripheral. The macOS, iOS, and Linux functions 
 />
 
 <ApiMethod
+  signature={"void simpleble_advanced_linux_set_passkey_request_callback( simpleble_adapter_t handle, bool (*callback)(simpleble_adapter_t handle, const char* peer, char passkey[7], void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Linux passkey-request callback."}
+  notes={[{"content": "The callback receives the peer's address as a borrowed, NUL-terminated string, valid during the callback. It writes six decimal digits plus a NUL terminator into passkey and returns true. Return false to reject pairing. Leading zeroes must be preserved.", "type": "info"}, {"content": "Pairing callbacks cover the peripherals this adapter connects to and the clients of its local peripherals. Passkey and numeric comparison requests reach them when simpleble_config_simplebluez_set_interactive_pairing() enabled interactive pairing before the first adapter call. Callbacks run on SimpleBLE's BlueZ event thread, which waits for them. A missing callback rejects the request. Other backends, such as Dongl, report OPERATION_NOT_SUPPORTED.", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "bool (*)(simpleble_adapter_t handle, const char* peer, char passkey[7], void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_linux_set_passkey_display_callback( simpleble_adapter_t handle, void (*callback)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Linux passkey-display callback."}
+  notes={[{"content": "The peer's address and the passkey are borrowed, NUL-terminated strings, valid during the callback. The passkey is six decimal digits for the user to enter on the peer. Display it without removing leading zeroes.", "type": "info"}, {"content": "Pairing callbacks run as described for simpleble_advanced_linux_set_passkey_request_callback().", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "void (*)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_linux_set_numeric_comparison_callback( simpleble_adapter_t handle, bool (*callback)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Linux numeric-comparison callback."}
+  notes={[{"content": "The peer's address and the passkey are borrowed, NUL-terminated strings, valid during the callback. Return true only after the user confirms that the peer shows the same six digits.", "type": "info"}, {"content": "Pairing callbacks run as described for simpleble_advanced_linux_set_passkey_request_callback().", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "bool (*)(simpleble_adapter_t handle, const char* peer, const char* passkey, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
+  signature={"void simpleble_advanced_linux_set_pairing_authorization_callback( simpleble_adapter_t handle, bool (*callback)(simpleble_adapter_t handle, const char* peer, void* userdata), void* userdata, simpleble_error_t** out_error)"}
+  brief={"Sets or clears the Linux callback that approves Just Works pairing."}
+  notes={[{"content": "The peer's address is a borrowed, NUL-terminated string, valid during the callback. Return true to accept the pairing. Without this callback, Just Works pairing is accepted.", "type": "info"}, {"content": "Pairing callbacks run as described for simpleble_advanced_linux_set_passkey_request_callback().", "type": "info"}]}
+  parameters={[{"name": "handle", "type": "simpleble_adapter_t", "description": "Valid, non-NULL adapter handle."}, {"name": "callback", "type": "bool (*)(simpleble_adapter_t handle, const char* peer, void* userdata)", "description": "Callback to register, or NULL to clear it."}, {"name": "userdata", "type": "void*", "description": "User data passed unchanged to the callback; may be NULL."}, {"name": "out_error", "type": "simpleble_error_t**", "description": "Required, non-NULL pointer to NULL or an owned error."}]}
+/>
+
+<ApiMethod
   signature={"JavaVM* simpleble_advanced_android_get_jvm(simpleble_error_t** out_error)"}
   brief={"Retrieves the configured Android Java VM."}
   detailed={"Returns: The borrowed Java VM pointer, or NULL on failure, including when no VM is configured."}
@@ -1086,6 +1114,15 @@ Set configuration before the first backend or adapter enumeration. These setting
 <ApiMethod
   signature={"void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_ms)"}
   parameters={[{"name": "timeout_ms", "type": "int64_t", "description": ""}]}
+/>
+
+<ApiMethod
+  signature={"bool simpleble_config_simplebluez_get_interactive_pairing(void)"}
+/>
+
+<ApiMethod
+  signature={"void simpleble_config_simplebluez_set_interactive_pairing(bool enabled)"}
+  parameters={[{"name": "enabled", "type": "bool", "description": ""}]}
 />
 
 <ApiMethod

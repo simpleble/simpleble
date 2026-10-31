@@ -180,7 +180,11 @@ them before the first call that reaches a backend. Pairing through a Dongl
 happens without the operating system: register a callback with
 `set_passkey_request_callback()`, `set_passkey_display_callback()`, or
 `set_numeric_comparison_callback()` from `simplersble::advanced::dongl` before
-`connect()`.
+`connect()`. On Linux, `simplersble::advanced::linux` has the same callbacks for
+an adapter, which also receive the peer's address, and
+`set_pairing_authorization_callback()` to answer BlueZ pairing;
+`config::simplebluez::set_interactive_pairing(true)` lets passkey and numeric
+comparison requests reach them.
 
 ## Platforms
 

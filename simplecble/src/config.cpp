@@ -36,6 +36,14 @@ void simpleble_config_simplebluez_set_disconnection_timeout_ms(int64_t timeout_m
     SimpleBLE::Config::SimpleBluez::disconnection_timeout = std::chrono::milliseconds(timeout_ms);
 }
 
+bool simpleble_config_simplebluez_get_interactive_pairing(void) {
+    return SimpleBLE::Config::SimpleBluez::interactive_pairing;
+}
+
+void simpleble_config_simplebluez_set_interactive_pairing(bool enabled) {
+    SimpleBLE::Config::SimpleBluez::interactive_pairing = enabled;
+}
+
 void simpleble_config_winrt_reset(void) { SimpleBLE::Config::WinRT::reset(); }
 
 bool simpleble_config_winrt_get_experimental_use_own_mta_apartment(void) {

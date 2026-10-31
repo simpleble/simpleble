@@ -1,6 +1,6 @@
 ---
 title: Usage
-description: Install SimplePyBLE from PyPI or build it locally, and use SimpleBLE from Python with callbacks, error handling, GATT hosting, Dongl pairing and asyncio.
+description: Install SimplePyBLE from PyPI or build it locally, and use SimpleBLE from Python with callbacks, error handling, GATT hosting, Dongl and Linux pairing, and asyncio.
 ---
 
 SimpleBLE works on Windows, Linux and MacOS. Please follow the instructions below to build and run SimplePyBLE in your specific environment.
@@ -102,6 +102,26 @@ peripheral.connect()
 
 For devices that wait for the central to start pairing, call `simplepyble.advanced.dongl.secure_connection(peripheral, mitm=False)` after `connect()`. See [Secure the connection from your application](../dongl#secure-the-connection-from-your-application).
 
+## Linux pairing
+
+On Linux, SimpleBLE's BlueZ agent accepts Just Works pairing. To answer passkey and numeric comparison requests, set `simplepyble.config.simplebluez.interactive_pairing = True` before retrieving adapters, and register the callbacks your devices need on the adapter in `simplepyble.advanced.linux`:
+
+```python
+import simplepyble
+
+simplepyble.config.simplebluez.interactive_pairing = True
+
+def confirm(peer, passkey):
+    return input(f"Does {peer} show {passkey}? [y/N] ") == "y"
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+simplepyble.advanced.linux.set_numeric_comparison_callback(adapter, confirm)
+```
+
+The callbacks cover the peripherals the adapter connects to and the clients of its local peripherals, and receive the peer's address first. `set_passkey_request_callback()` returns the six digits as a `str`, including leading zeroes, or `None` to reject. `set_passkey_display_callback()` receives the passkey to show to the user. `set_numeric_comparison_callback()` returns `True` only if the peer shows the same number. `set_pairing_authorization_callback()` returns `True` to accept Just Works pairing, which is accepted when no callback is set. A passkey or numeric comparison request without a callback, with an invalid answer, or whose callback raises is rejected. Pass `None` to unregister a callback. Adapters from other backends, such as the Dongl's, raise `OperationNotSupportedError`.
+
+With `interactive_pairing`, SimpleBLE's agent is BlueZ's default agent, so it also answers requests that a desktop pairing dialog would otherwise show. The callbacks run on SimpleBLE's BlueZ event thread, which waits for their answer. See the [Linux platform notes](../simpleble/platform_notes#pairing).
+
 ## Asynchronous API
 
 SimplePyBLE provides an asynchronous API via the `simplepyble.aio` module. This module is designed to work with `asyncio` and provides a more idiomatic way to handle asynchronous operations in Python.
@@ -130,7 +150,7 @@ if __name__ == "__main__":
 
 In the `aio` module, connecting, unpairing, GATT operations, scanning, power changes and starting or stopping a local peripheral are coroutines. Listing adapters, scan results and paired or connected peripherals, and reading their properties, are regular calls. To keep the event loop responsive while one of them waits on the system, such as `get_paired_peripherals()` on Windows, run it with `asyncio.to_thread()`. Callbacks can be either regular functions or coroutines, and exceptions raised by callbacks go to the event loop's exception handler. For more examples, check out the [Examples](./examples) section.
 
-Local hosting and Dongl pairing work the same way: `LocalPeripheral.start()`, `stop()`, and `LocalCharacteristic.set_value()` are coroutines, and callbacks run on the event loop that registered them. Read and pairing callbacks return their result to the Bluetooth stack, which waits for the event loop to run them, so keep the loop responsive. Leaving `async with` on a local peripheral clears its callbacks and stops it.
+Local hosting and pairing work the same way: `LocalPeripheral.start()`, `stop()`, and `LocalCharacteristic.set_value()` are coroutines, and callbacks run on the event loop that registered them. Read and pairing callbacks return their result to the Bluetooth stack, which waits for the event loop to run them, so keep the loop responsive. Leaving `async with` on a local peripheral clears its callbacks and stops it.
 
 ```python
 from simplepyble import aio

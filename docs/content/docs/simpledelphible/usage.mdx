@@ -143,9 +143,11 @@ events. An exception that a handler raises goes to
 exception handler receives exceptions raised on the main thread, and
 `ShowException` the others.
 
-Three handlers answer SimpleBLE instead, so they run on a SimpleBLE thread,
-which waits for them: a local characteristic's `OnReadRequest`, and a Dongl
-peripheral's `OnPasskeyRequest` and `OnNumericComparison`.
+Some handlers answer SimpleBLE instead, so they run on a SimpleBLE thread,
+which waits for them: a local characteristic's `OnReadRequest`, a Dongl
+peripheral's `OnPasskeyRequest` and `OnNumericComparison`, and a Linux
+adapter's `OnPasskeyRequest`, `OnNumericComparison`, and
+`OnPairingAuthorization`.
 
 Calls that wait for the Bluetooth stack, such as `Connect`, `Read`, or
 `ScanFor`, return when the operation finishes. They're safe from any thread and
@@ -242,6 +244,50 @@ secures a Dongl connection with LE Secure Connections.
 
 The [dongl example](./examples) scans with a Dongl and answers pairing requests
 from the terminal.
+
+## Pair on Linux
+
+SimpleBLE's BlueZ pairing agent pairs with Just Works, so pairing that needs a
+passkey or numeric comparison fails. Set
+`TBleConfig.SimpleBluez.InteractivePairing` to `True` at startup, before the
+first call that gets a backend or an adapter, to register the agent with
+keyboard and display as BlueZ's default agent. The adapter's handlers then
+answer its requests. They cover the peripherals the adapter connects to and the
+clients of its local peripherals, and receive the peer's address:
+
+- `OnPasskeyRequest(Sender; const Peer: string; var Passkey: string; var Accept: Boolean)`:
+  set `Passkey` to the six digits the user typed and `Accept` to `True`, or
+  leave `Accept` as `False` to reject.
+- `OnPasskeyDisplay(Sender; const Peer, Passkey: string)`: show the passkey so
+  the user can type it on the peer.
+- `OnNumericComparison(Sender; const Peer, Passkey: string; var Accept: Boolean)`:
+  set `Accept` to `True` only if the peer shows the same six digits.
+- `OnPairingAuthorization(Sender; const Peer: string; var Accept: Boolean)`:
+  set `Accept` to `True` to accept Just Works pairing with the peer.
+
+```pascal
+procedure TPairing.NumericComparison(Sender: TBleAdapter; const Peer, Passkey: string; var Accept: Boolean);
+var
+  Answer: string;
+begin
+  Write('Does ', Peer, ' show ', Passkey, '? [y/N] ');
+  ReadLn(Answer);
+  Accept := Answer = 'y';
+end;
+
+TBleConfig.SimpleBluez.InteractivePairing := True;
+Adapter := TBleAdapter.GetAdapters[0];
+Adapter.OnNumericComparison := Pairing.NumericComparison;
+```
+
+A request without its handler is rejected, and Just Works pairing is accepted
+unless `OnPairingAuthorization` rejects it. `OnPasskeyRequest`,
+`OnNumericComparison`, and `OnPairingAuthorization` run on SimpleBLE's BlueZ
+event thread, which waits for their answer, like the Dongl handlers. An
+exception, or a passkey other than six digits, rejects pairing.
+`OnPasskeyDisplay` is an ordinary event. Assigning these handlers on an adapter
+of another backend, such as a Dongl, or on another platform raises
+`EBleOperationNotSupported`.
 
 ## Power and scan control
 

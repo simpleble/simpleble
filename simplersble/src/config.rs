@@ -50,6 +50,18 @@ pub mod simplebluez {
         locked(|| ffi::RustyConfig_simplebluez_set_use_system_bus(enabled))
     }
 
+    /// Whether SimpleBLE's BlueZ agent passes passkey and numeric comparison requests to the pairing callbacks of
+    /// [`advanced::linux`](crate::advanced::linux). Defaults to `false`, which allows only Just Works pairing.
+    ///
+    /// SimpleBLE reads it once when the BlueZ backend starts, so set it before the first adapter call.
+    pub fn interactive_pairing() -> bool {
+        locked(ffi::RustyConfig_simplebluez_interactive_pairing)
+    }
+
+    pub fn set_interactive_pairing(enabled: bool) {
+        locked(|| ffi::RustyConfig_simplebluez_set_interactive_pairing(enabled))
+    }
+
     /// How long to wait for a connection to complete. Defaults to 2 seconds.
     pub fn connection_timeout() -> Duration {
         Duration::from_nanos(locked(ffi::RustyConfig_simplebluez_connection_timeout_ns))

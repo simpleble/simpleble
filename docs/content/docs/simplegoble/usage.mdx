@@ -151,6 +151,53 @@ other adapters return `OperationNotSupported`.
 The [dongl example](./examples) scans with a Dongl and answers pairing requests
 from the terminal.
 
+## Pair on Linux
+
+On Linux, SimpleBLE answers BlueZ pairing requests for the peripherals an
+adapter connects to and the clients of its local peripherals. Peers pair with
+Just Works unless you turn on interactive pairing before the first
+`GetBackends`, `GetAdapters`, or `BluetoothEnabled` call, so that passkey and
+numeric comparison requests reach the adapter's callbacks.
+[Pairing](../simpleble/platform_notes#pairing) describes how SimpleBLE takes
+part in BlueZ pairing.
+
+```go
+if err := ble.Config.SimpleBluez.SetInteractivePairing(true); err != nil {
+    return err
+}
+```
+
+Register the callbacks on the adapter. Each one receives the peer's address:
+
+- `SetCallbackOnPasskeyRequest(func(peer string) (string, bool))`: return the
+  six digits the user typed and `true`, or `false` to reject.
+- `SetCallbackOnPasskeyDisplay(func(peer, passkey string))`: show the passkey
+  so the user can type it on the peer.
+- `SetCallbackOnNumericComparison(func(peer, passkey string) bool)`: return
+  `true` only if the peer shows the same six digits.
+- `SetCallbackOnPairingAuthorization(func(peer string) bool)`: return `true` to
+  accept Just Works pairing. Without it, Just Works pairing is accepted.
+
+```go
+if err := adapter.SetCallbackOnNumericComparison(func(peer, passkey string) bool {
+    fmt.Printf("Does %s show %s? [y/N] ", peer, passkey)
+    answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+    return strings.TrimSpace(answer) == "y"
+}); err != nil {
+    return err
+}
+```
+
+Passkey request, numeric comparison, and authorization handlers run
+synchronously on SimpleBLE's BlueZ event thread, which waits for the answer, and
+can block while the user answers. Do not call BLE methods, including `Close`,
+from them. A missing passkey or comparison handler, a panic, or a passkey other
+than six ASCII digits rejects pairing. The display handler follows the usual
+serial dispatch rules. Pass `nil` to clear a callback; clear the authorization
+callback, rather than closing the adapter, to accept Just Works pairing again.
+Adapters of other backends, such as a Dongl, and other platforms return
+`OperationNotSupported`.
+
 ## Power and scan control
 
 Adapters provide `IsPowered`, `PowerOn`, `PowerOff`, `ScanStart`, `ScanStop`,

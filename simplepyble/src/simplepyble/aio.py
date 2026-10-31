@@ -452,6 +452,7 @@ class LocalPeripheral:
 class Adapter:
     def __init__(self, internal_adapter: simplepyble.Adapter):
         self._internal = internal_adapter
+        self._pairing_setters: set[Callable[..., None]] = set()
         _active_adapters.add(self)
 
     @classmethod
@@ -560,6 +561,12 @@ class Adapter:
             self._internal.set_callback_on_scan_updated(None)
             self._internal.set_callback_on_power_on(None)
             self._internal.set_callback_on_power_off(None)
+            for setter in list(self._pairing_setters):
+                try:
+                    setter(self._internal, None)
+                except:
+                    pass
+            self._pairing_setters.clear()
             if self._internal.scan_is_active():
                 self._internal.scan_stop()
         except:
@@ -569,7 +576,9 @@ class Adapter:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self._clear_all_callbacks_sync()
+        # Pairing callbacks wait for this loop, so unregister them from another thread.
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._clear_all_callbacks_sync)
 
 class Backend:
     def __init__(self, internal_backend: simplepyble.Backend):
@@ -620,6 +629,62 @@ class _MacOSAdvanced:
 class _LinuxAdvanced:
     def set_advertisement_local_name(self, peripheral: LocalPeripheral, local_name: str | None):
         simplepyble.advanced.linux.set_advertisement_local_name(peripheral._internal, local_name)
+
+    def set_passkey_request_callback(
+        self,
+        adapter: Adapter,
+        callback: Callable[[str], Awaitable[str | None] | str | None] | None,
+    ):
+        setter = simplepyble.advanced.linux.set_passkey_request_callback
+        if callback is None:
+            setter(adapter._internal, None)
+            adapter._pairing_setters.discard(setter)
+            return
+        loop = asyncio.get_running_loop()
+        setter(adapter._internal, lambda peer: _wait_on_loop(loop, callback, peer))
+        adapter._pairing_setters.add(setter)
+
+    def set_passkey_display_callback(
+        self,
+        adapter: Adapter,
+        callback: Callable[[str, str], Awaitable[None] | None] | None,
+    ):
+        setter = simplepyble.advanced.linux.set_passkey_display_callback
+        if callback is None:
+            setter(adapter._internal, None)
+            adapter._pairing_setters.discard(setter)
+            return
+        loop = asyncio.get_running_loop()
+        setter(adapter._internal, lambda peer, passkey: _post(loop, callback, peer, passkey))
+        adapter._pairing_setters.add(setter)
+
+    def set_numeric_comparison_callback(
+        self,
+        adapter: Adapter,
+        callback: Callable[[str, str], Awaitable[bool] | bool] | None,
+    ):
+        setter = simplepyble.advanced.linux.set_numeric_comparison_callback
+        if callback is None:
+            setter(adapter._internal, None)
+            adapter._pairing_setters.discard(setter)
+            return
+        loop = asyncio.get_running_loop()
+        setter(adapter._internal, lambda peer, passkey: _wait_on_loop(loop, callback, peer, passkey))
+        adapter._pairing_setters.add(setter)
+
+    def set_pairing_authorization_callback(
+        self,
+        adapter: Adapter,
+        callback: Callable[[str], Awaitable[bool] | bool] | None,
+    ):
+        setter = simplepyble.advanced.linux.set_pairing_authorization_callback
+        if callback is None:
+            setter(adapter._internal, None)
+            adapter._pairing_setters.discard(setter)
+            return
+        loop = asyncio.get_running_loop()
+        setter(adapter._internal, lambda peer: _wait_on_loop(loop, callback, peer))
+        adapter._pairing_setters.add(setter)
 
 class _DonglAdvanced:
     def set_passkey_request_callback(

@@ -7,6 +7,12 @@ internal interface AdapterCallback {
     fun onScanStop()
     fun onScanUpdated(peripheralId: Long)
     fun onScanFound(peripheralId: Long)
+
+    /** The Linux pairing callbacks run on SimpleBLE's BlueZ thread, which waits for the answer. */
+    fun onPasskeyRequest(peer: String): String?
+    fun onPasskeyDisplay(peer: String, passkey: String)
+    fun onNumericComparison(peer: String, passkey: String): Boolean
+    fun onPairingAuthorization(peer: String): Boolean
 }
 
 internal interface PeripheralCallback {
@@ -82,6 +88,14 @@ internal expect object Native {
     fun adapterGetConnectedPeripherals(adapterId: Long): LongArray
 
     fun adapterRetrieveCachedPeripherals(adapterId: Long, identifiers: Array<String>): LongArray
+
+    fun adapterSetPasskeyRequestHandler(adapterId: Long, enabled: Boolean)
+
+    fun adapterSetPasskeyDisplayHandler(adapterId: Long, enabled: Boolean)
+
+    fun adapterSetNumericComparisonHandler(adapterId: Long, enabled: Boolean)
+
+    fun adapterSetPairingAuthorizationHandler(adapterId: Long, enabled: Boolean)
 
     fun peripheralRegister(adapterId: Long, peripheralId: Long, callback: PeripheralCallback)
 

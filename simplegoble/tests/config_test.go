@@ -41,6 +41,17 @@ func TestPlainConfiguration(t *testing.T) {
 			t.Fatalf("%s = %v, %v after changing it", flag.name, value, err)
 		}
 	}
+	// SimpleBLE decides this default, so compare with the value read before changing it.
+	interactivePairing, err := config.SimpleBluez.InteractivePairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.SimpleBluez.SetInteractivePairing(!interactivePairing); err != nil {
+		t.Fatal(err)
+	}
+	if value, err := config.SimpleBluez.InteractivePairing(); err != nil || value == interactivePairing {
+		t.Fatalf("InteractivePairing = %v, %v after changing it", value, err)
+	}
 	if err := config.SimpleBluez.SetConnectionTimeout(7 * time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -64,6 +75,9 @@ func TestPlainConfiguration(t *testing.T) {
 		if value, err := flag.get(); err != nil || value != flag.defaultValue {
 			t.Fatalf("%s = %v, %v after reset", flag.name, value, err)
 		}
+	}
+	if value, err := config.SimpleBluez.InteractivePairing(); err != nil || value != interactivePairing {
+		t.Fatalf("InteractivePairing = %v, %v after reset", value, err)
 	}
 	if timeout, err := config.SimpleBluez.ConnectionTimeout(); err != nil || timeout != 2*time.Second {
 		t.Fatalf("ConnectionTimeout = %v, %v after reset", timeout, err)

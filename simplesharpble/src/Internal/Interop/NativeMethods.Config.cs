@@ -30,6 +30,13 @@ internal static partial class NativeMethods
     internal static extern void simpleble_config_simplebluez_set_disconnection_timeout_ms(long value);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    internal static extern bool simpleble_config_simplebluez_get_interactive_pairing();
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern void simpleble_config_simplebluez_set_interactive_pairing([MarshalAs(UnmanagedType.I1)] bool value);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     internal static extern void simpleble_config_winrt_reset();
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]

@@ -156,6 +156,26 @@ without the operating system: set `setPasskeyRequestHandler`,
 `setPasskeyDisplayHandler`, or `setNumericComparisonHandler` on the peripheral
 before `connect()`.
 
+## Pair on Linux
+
+On Linux, an adapter answers BlueZ's pairing requests for the peripherals it
+connects to and the clients of its local peripherals. For pairing with a
+passkey or numeric comparison, set `Config.simpleBluez.interactivePairing = true`
+before the first call that reaches the backend, then set
+`setPasskeyRequestHandler`, `setPasskeyDisplayHandler`,
+`setNumericComparisonHandler`, or `setPairingAuthorizationHandler` on the
+adapter. Each handler gets the peer's address:
+
+```dart
+Config.simpleBluez.interactivePairing = true;
+
+final adapter = (await Adapter.getAdapters()).first;
+await adapter.setNumericComparisonHandler((peer, passkey) async {
+  stdout.write('Does $peer show $passkey? [y/N] ');
+  return stdin.readLineSync() == 'y';
+});
+```
+
 ## Platforms
 
 | Platform | Architectures | Requirements |

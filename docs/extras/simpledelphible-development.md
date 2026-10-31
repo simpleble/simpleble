@@ -51,9 +51,9 @@ value too.
 SimpleCBLE defines the platform-specific advanced functions (`simpleble_advanced_{macos,ios,linux}_*`) in every build
 for their platform, PLAIN included, where they report `OPERATION_NOT_SUPPORTED`. Loading the library fails when it
 lacks a declared function, so `SimpleDelphiBLE.inc` defines `SIMPLEDELPHIBLE_MACOS` and `SIMPLEDELPHIBLE_LINUX`, and
-the units declare and call each platform's functions only under its symbol. Elsewhere, `RetrieveCachedPeripherals`
-and `SetAdvertisementLocalName` raise `EBleOperationNotSupported` without calling SimpleCBLE. The iOS and Android
-functions wait for mobile support.
+the units declare and call each platform's functions only under its symbol. Elsewhere, `RetrieveCachedPeripherals`,
+`SetAdvertisementLocalName` and the adapter pairing handlers raise `EBleOperationNotSupported` without calling
+SimpleCBLE. The iOS and Android functions wait for mobile support.
 
 ## Objects and identity
 
@@ -80,7 +80,8 @@ the main thread's drains, so a drain never runs inside a callback: `TThread.Queu
 on the main thread. `edAuto` uses the main thread when `Classes.WakeMainThread` is set: VCL, FMX and the LCL's win32,
 gtk2, gtk3, qt5 and cocoa widgetsets set it.
 
-`OnReadRequest`, `OnPasskeyRequest` and `OnNumericComparison` must answer, so they run on the SimpleBLE thread.
+`OnReadRequest`, `OnPasskeyRequest` and `OnNumericComparison` must answer, so they run on the SimpleBLE thread. So do
+the adapter's `OnPasskeyRequest`, `OnNumericComparison` and `OnPairingAuthorization`.
 
 Freeing a local peripheral unregisters its tokens and purges its queued events under the unit's lock, and callbacks
 look up their object and queue their event under the same lock. So an event is either purged or never queued.

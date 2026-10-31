@@ -225,10 +225,50 @@ can rebuild it.
   advertisement. Call them before `start()`, and pass `null` to remove the name.
 - `Advanced.MacOS.retrieveCachedPeripherals()` returns peripherals that CoreBluetooth
   already knows, by identifier, without scanning.
+- `Advanced.Linux.setPasskeyRequestCallback()`, `setPasskeyDisplayCallback()`,
+  `setNumericComparisonCallback()` and `setPairingAuthorizationCallback()` answer
+  BlueZ pairing requests for an adapter. See [Linux pairing](#linux-pairing).
+
+### Linux pairing
+
+On Linux, SimpleBLE's BlueZ agent accepts Just Works pairing. To answer passkey and
+numeric comparison requests, call `Config.SimpleBluez.setInteractivePairing(true)`
+before the first enumeration, and register the callbacks your devices need on the
+adapter:
+
+```java
+Config.SimpleBluez.setInteractivePairing(true);
+
+Adapter adapter = Adapter.getAdapters().get(0);
+Advanced.Linux.setNumericComparisonCallback(adapter, (peer, passkey) -> {
+    System.out.print("Does " + peer + " show " + passkey + "? [y/N] ");
+    return new Scanner(System.in).nextLine().trim().equals("y");
+});
+```
+
+The callbacks cover the peripherals the adapter connects to and the clients of its
+local peripherals, and receive the peer's `BluetoothAddress` first.
+`setPasskeyRequestCallback` takes a `Function<BluetoothAddress, String>` that returns
+the six digits, including leading zeroes, or `null` to reject.
+`setPasskeyDisplayCallback` takes a `BiConsumer<BluetoothAddress, String>` that shows
+a passkey for the user to type on the peer. `setNumericComparisonCallback` takes a
+`BiPredicate<BluetoothAddress, String>` that returns `true` only if the peer shows the
+same number. `setPairingAuthorizationCallback` takes a `Predicate<BluetoothAddress>`
+that returns `true` to accept Just Works pairing, which is accepted when no callback
+is set. A passkey or numeric comparison request without a callback, or whose
+callback throws, is rejected. Pass `null` to unregister a callback. Adapters from
+other backends, such as the Dongl's, throw `OperationNotSupportedException`.
+
+With interactive pairing, SimpleBLE's agent is BlueZ's default agent, so it also
+answers requests that a desktop pairing dialog would otherwise show. The callbacks run
+on SimpleBLE's BlueZ event thread, which waits for their answer. See the
+[Linux platform notes](../simpleble/platform_notes#pairing).
 
 ## Configuration
 
 `Config` holds process-wide backend options. Set them before the first enumeration.
 For example, `Config.SimpleBluez.setConnectionTimeout(Duration.ofSeconds(5))`
-changes how long a Linux connection attempt waits, and `Config.resetAll()` restores
-the defaults.
+changes how long a Linux connection attempt waits,
+`Config.SimpleBluez.setInteractivePairing(true)` passes Linux pairing requests to the
+[Linux pairing](#linux-pairing) callbacks, and `Config.resetAll()` restores the
+defaults.

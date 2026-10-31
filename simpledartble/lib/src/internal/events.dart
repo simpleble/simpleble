@@ -11,21 +11,21 @@ import 'registry.dart';
 /// An object that receives SimpleBLE's callbacks.
 abstract interface class EventTarget {
   /// Handles the callback registered as [kind]. [value] is what the callback
-  /// passed: null, an owned peripheral handle's address, bytes, text, a log
-  /// entry or a [Question].
+  /// passed: null, an owned peripheral handle's address, bytes, text, a list,
+  /// such as a log entry or a peer's address and passkey, or a [Question].
   void onEvent(int kind, Object? value);
 }
 
 /// A native callback that waits for an answer, such as a read of a local
 /// characteristic. It gets its fallback unless it's answered once.
 final class Question {
-  Question._(this._id, this.argument);
+  Question._(this._id, this.arguments);
 
   final int _id;
   bool _answered = false;
 
-  /// What the callback passed, if anything.
-  final String? argument;
+  /// The strings the callback passed, such as a peer's address or a passkey.
+  final List<String> arguments;
 
   void answerBytes(Uint8List value) => _answer(() {
     using((arena) {
@@ -43,6 +43,14 @@ final class Question {
     }
     using((arena) => simpledartble_answer_text(_id, value.toNativeUtf8(allocator: arena).cast()));
   });
+
+  /// Answers with a passkey of six digits, or with the fallback for null.
+  void answerPasskey(String? passkey) {
+    if (passkey != null && !RegExp(r'^[0-9]{6}$').hasMatch(passkey)) {
+      throw ArgumentError.value(passkey, 'passkey', 'A passkey has six digits');
+    }
+    answerText(passkey);
+  }
 
   void answerFlag(bool value) => _answer(() => simpledartble_answer_flag(_id, value));
 
@@ -135,7 +143,7 @@ final class Events implements Finalizable {
 
     final token = message[0] as int;
     final Object? value = switch (message.length) {
-      3 => Question._(message[1] as int, message[2] as String?),
+      3 => Question._(message[1] as int, (message[2] as List).cast<String>()),
       2 => message[1],
       _ => null,
     };
@@ -187,6 +195,9 @@ final class HandlerSlot {
     }
     if (previous != null) _forget(previous);
   }
+
+  /// Whether a handler is installed, or being installed.
+  bool get isSet => _current != null;
 
   /// Forgets the handler of a native object that is gone.
   void drop() {

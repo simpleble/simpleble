@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <new>
 #include <optional>
@@ -158,6 +159,51 @@ void set_advertisement_local_name(SimpleBLE::Local::Peripheral& peripheral, std:
 #endif
 }
 
+// NOTE: Advanced.h declares the Linux pairing functions on every Linux build, PLAIN included, so SimpleBLE decides
+// which adapters take them. Without BlueZ, no adapter does.
+#if defined(__linux__) && !defined(__ANDROID__)
+using SimpleBLE::Advanced::Linux::set_numeric_comparison_callback;
+using SimpleBLE::Advanced::Linux::set_pairing_authorization_callback;
+using SimpleBLE::Advanced::Linux::set_passkey_display_callback;
+using SimpleBLE::Advanced::Linux::set_passkey_request_callback;
+#else
+template <typename Callback>
+void set_passkey_request_callback(SimpleBLE::Adapter&, const Callback&) {
+    throw SimpleBLE::Exception::OperationNotSupported();
+}
+
+template <typename Callback>
+void set_passkey_display_callback(SimpleBLE::Adapter&, const Callback&) {
+    throw SimpleBLE::Exception::OperationNotSupported();
+}
+
+template <typename Callback>
+void set_numeric_comparison_callback(SimpleBLE::Adapter&, const Callback&) {
+    throw SimpleBLE::Exception::OperationNotSupported();
+}
+
+template <typename Callback>
+void set_pairing_authorization_callback(SimpleBLE::Adapter&, const Callback&) {
+    throw SimpleBLE::Exception::OperationNotSupported();
+}
+#endif
+
+// NOTE: BlueZ keeps its adapters, and their pairing callbacks, after SimpleKtBLE releases them.
+void clear_pairing_callbacks(SimpleBLE::Adapter& adapter) {
+#if defined(__linux__) && !defined(__ANDROID__)
+    try {
+        set_passkey_request_callback(adapter, nullptr);
+        set_passkey_display_callback(adapter, nullptr);
+        set_numeric_comparison_callback(adapter, nullptr);
+        set_pairing_authorization_callback(adapter, nullptr);
+    } catch (const SimpleBLE::Exception::OperationNotSupported&) {
+        // NOTE: Other adapters, such as a Dongl's, have no pairing callbacks.
+    }
+#else
+    (void)adapter;
+#endif
+}
+
 #if defined(__ANDROID__)
 void configure_logging() {
     SimpleBLE::Logging::Logger::get()->set_callback([](SimpleBLE::Logging::Level level, const std::string& module,
@@ -276,6 +322,7 @@ extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterRelease(JNI
         adapter.set_callback_on_scan_stop({});
         adapter.set_callback_on_scan_found({});
         adapter.set_callback_on_scan_updated({});
+        clear_pairing_callbacks(adapter);
 
         // NOTE: The subscriptions end after the values queued before them, as on a disconnection.
         auto ended = NativeCache::get().remove_adapter(adapter_id);
@@ -391,6 +438,69 @@ extern "C" JNIEXPORT jlongArray JNICALL Java_org_simplektble_Native_adapterRetri
             peripheral_ids.push_back(NativeCache::get().add_peripheral(adapter_id, std::move(peripheral)));
         }
         return SimpleJNI::LongArray<SimpleJNI::ReleasableLocalRef>(peripheral_ids).release();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterSetPasskeyRequestHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jboolean enabled) {
+    call(env, [adapter_id, enabled] {
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        std::function<std::optional<std::string>(SimpleBLE::BluetoothAddress)> on_request;
+        if (enabled) {
+            on_request = [adapter_id](SimpleBLE::BluetoothAddress peer) -> std::optional<std::string> {
+                auto callback = NativeCache::get().adapter_callback(adapter_id);
+                if (!callback) return std::nullopt;
+                return callback->on_passkey_request(peer);
+            };
+        }
+        set_passkey_request_callback(adapter, on_request);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterSetPasskeyDisplayHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jboolean enabled) {
+    call(env, [adapter_id, enabled] {
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        std::function<void(SimpleBLE::BluetoothAddress, const std::string&)> on_display;
+        if (enabled) {
+            on_display = [adapter_id](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                if (auto callback = NativeCache::get().adapter_callback(adapter_id)) {
+                    callback->on_passkey_display(peer, passkey);
+                }
+            };
+        }
+        set_passkey_display_callback(adapter, on_display);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterSetNumericComparisonHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jboolean enabled) {
+    call(env, [adapter_id, enabled] {
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        std::function<bool(SimpleBLE::BluetoothAddress, const std::string&)> on_compare;
+        if (enabled) {
+            on_compare = [adapter_id](SimpleBLE::BluetoothAddress peer, const std::string& passkey) {
+                auto callback = NativeCache::get().adapter_callback(adapter_id);
+                return callback && callback->on_numeric_comparison(peer, passkey);
+            };
+        }
+        set_numeric_comparison_callback(adapter, on_compare);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL Java_org_simplektble_Native_adapterSetPairingAuthorizationHandler(
+    JNIEnv* env, jobject, jlong adapter_id, jboolean enabled) {
+    call(env, [adapter_id, enabled] {
+        auto adapter = NativeCache::get().adapter(adapter_id);
+        std::function<bool(SimpleBLE::BluetoothAddress)> on_authorize;
+        if (enabled) {
+            on_authorize = [adapter_id](SimpleBLE::BluetoothAddress peer) {
+                // NOTE: Without a handler, Just Works pairing is accepted, as SimpleBLE does without a callback.
+                auto callback = NativeCache::get().adapter_callback(adapter_id);
+                return !callback || callback->on_pairing_authorization(peer);
+            };
+        }
+        set_pairing_authorization_callback(adapter, on_authorize);
     });
 }
 
@@ -1054,6 +1164,8 @@ bool& config_boolean(jint key) {
             return SimpleBLE::Config::Dongl::force_update;
         case 9:
             return SimpleBLE::Config::Android::negotiate_mtu;
+        case 10:
+            return SimpleBLE::Config::SimpleBluez::interactive_pairing;
     }
     throw std::invalid_argument("Unknown boolean setting");
 }

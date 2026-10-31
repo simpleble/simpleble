@@ -112,4 +112,11 @@ test('platform-specific calls check their arguments and report other platforms a
   assert.throws(() => host.setAdvertisementLocalName(5), TypeError);
   await assert.rejects(adapter.retrieveCachedPeripherals([peer.address()]), unsupported);
   await assert.rejects(adapter.retrieveCachedPeripherals([5]), TypeError);
+  const pairing = [
+    'setPasskeyRequestHandler',
+    'setPasskeyDisplayHandler',
+    'setNumericComparisonHandler',
+    'setPairingAuthorizationHandler',
+  ];
+  for (const set of pairing) await assert.rejects(adapter[set](() => {}), unsupported, set);
 });
