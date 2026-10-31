@@ -5,16 +5,16 @@
 
 using namespace SimpleBluez;
 
-Bluez::Bluez()
-    : _conn(std::make_shared<SimpleDBus::Connection>(Config::use_system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION)) {}
+Bluez::Bluez() {}
 
 Bluez::~Bluez() {
-    if (_conn->is_initialized()) {
+    if (_conn && _conn->is_initialized()) {
         _conn->remove_match("type='signal',sender='org.bluez'");
     }
 }
 
 void Bluez::init() {
+    _conn = std::make_shared<SimpleDBus::Connection>(Config::use_system_bus ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION);
     _conn->init();
     _conn->add_match("type='signal',sender='org.bluez'");
 
