@@ -1,6 +1,6 @@
 ---
 title: Peripheral Testing
-description: Test nRF52, ESP32 and other BLE peripheral firmware from a desktop with SimplePyBLE and pytest. Find the board, connect, check its advertising, reads and notifications, and run the suite after every build.
+description: Test nRF52, ESP32 and other BLE peripheral firmware from a desktop with SimplePyBLE and pytest, checking advertising, reads and notifications after every build.
 ---
 
 Firmware on a Nordic or ESP32 devkit needs a central to test against. SimpleBLE runs that central on Windows, macOS and Linux, so a test suite on a desktop can find the board, connect, and check every service after each firmware build. This recipe builds that suite in Python with SimplePyBLE and pytest.
@@ -123,7 +123,7 @@ def test_reconnects(board):
 
 - **Advertising.** While the board isn't connected, `services()` lists the service UUIDs it advertises, so the first test checks the advertisement without connecting.
 - **Reads.** `read()` returns `bytes` and raises an exception on failure, which fails the test.
-- **Notifications.** The callback runs on a SimpleBLE thread and only puts each value on a queue. The test waits for it with a timeout, so a firmware that stops notifying fails the test instead of hanging it. The payload format is described in the [Heart Rate Monitor](./heart-rate-monitor#the-measurement-format) recipe.
+- **Notifications.** The callback runs on a SimpleBLE thread and only puts each value on a queue. The test waits for it with a timeout, so a firmware that stops notifying fails the test instead of hanging it. The payload format is described in the [heart rate monitor recipe](./heart-rate-monitor#the-measurement-format).
 - **Errors.** The Heart Rate Measurement characteristic is notify-only. `pytest.raises` checks that the firmware rejects a read, and every SimpleBLE exception derives from `SimpleBLEError`.
 - **Reconnects.** Ten disconnect and connect cycles catch firmware that fails to advertise again after a link closes.
 

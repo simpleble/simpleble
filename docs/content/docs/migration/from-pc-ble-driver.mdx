@@ -1,6 +1,6 @@
 ---
 title: Migrating from pc-ble-driver
-description: Move from pc-ble-driver and pc-ble-driver-py to SimpleBLE with a Dongl, an nRF52840 USB dongle, keeping a dedicated USB radio and replacing the event dispatcher with blocking calls.
+description: Move from pc-ble-driver and pc-ble-driver-py to SimpleBLE with a Dongl, an nRF52840 USB dongle, keeping a dedicated USB radio.
 ---
 
 Nordic archived [pc-ble-driver](https://github.com/NordicSemiconductor/pc-ble-driver) and [pc-ble-driver-py](https://github.com/NordicSemiconductor/pc-ble-driver-py) in 2024, with no successor planned. If your production tests or desktop tools depend on them, SimpleBLE with a [Dongl](../dongl) keeps the dedicated USB radio and replaces the event dispatcher with blocking calls. A Dongl is an nRF52840 USB dongle whose firmware we maintain together with the library. For an overview, see [pc-ble-driver replacement](https://www.simpleble.org/pc-ble-driver-replacement).

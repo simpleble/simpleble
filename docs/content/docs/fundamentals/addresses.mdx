@@ -1,6 +1,6 @@
 ---
 title: Bluetooth Addresses
-description: What a Bluetooth address is, why BLE devices change it, why macOS and iOS report a UUID instead of the MAC address, and how to recognize a device again with SimpleBLE.
+description: What a Bluetooth address is, why BLE devices change it, why macOS and iOS report a UUID instead of the MAC address, and how to recognize a device again.
 ---
 
 Every Bluetooth Low Energy device has a 48-bit address, written as six hexadecimal bytes such as `C4:2B:91:0E:5A:17`. It is often called the MAC address. It looks like a permanent identity, but a device can change it for privacy, and macOS and iOS never show it to applications. Code that saves an address to find a device later works on the bench and fails in the field.
