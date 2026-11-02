@@ -230,8 +230,11 @@ bool Proxy::path_remove(const std::string& path, SimpleDBus::Holder options) {
     // `options` contains an array of strings of the interfaces that need to be removed.
 
     if (path == _path) {
-        invalidate();
         interfaces_unload(options);
+        // NOTE: An object that keeps an interface is still on the bus, so only a full removal invalidates it.
+        if (!interfaces_loaded()) {
+            invalidate();
+        }
         return path_prune();
     }
 
