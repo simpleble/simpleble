@@ -92,6 +92,7 @@ The unbounded waits poll every 10 ms until the corresponding CoreBluetooth deleg
 | Operation | Timeout | Configurable |
 | --- | --- | --- |
 | Disconnect (blocking mode) | 10 s | Only reached when `Config::WinRT::use_deferred_disconnect = false` |
+| Connect: wait for a pending deferred disconnect | 10 s | Only when `use_deferred_disconnect = true` (default) |
 | Scan start: wait for pending deferred disconnects | 5 s (100 ms poll) | Only when `use_deferred_disconnect = true` (default) |
 | Scan stop acknowledgment | 1 s (silent on timeout) | Hardcoded |
 | GATT operations | Unbounded (WinRT async completion) | — |

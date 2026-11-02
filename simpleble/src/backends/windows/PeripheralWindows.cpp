@@ -112,7 +112,10 @@ void PeripheralWindows::connect() {
     }
 
     if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
-        if (connection_state_ == ConnectionState::Disconnecting) {
+        // NOTE: Windows drops the link a few seconds after disconnect() returns, so wait for that first.
+        std::unique_lock<std::mutex> lock(disconnection_mutex_);
+        if (!disconnection_cv_.wait_for(lock, 10s,
+                                        [this] { return connection_state_ != ConnectionState::Disconnecting; })) {
             throw SimpleBLE::Exception::OperationFailed("Device is still disconnecting");
         }
         connection_state_ = ConnectionState::Connecting;
@@ -144,6 +147,8 @@ void PeripheralWindows::connect() {
                 [this](const BluetoothLEDevice device, const auto args) {
                     if (device.ConnectionStatus() == BluetoothConnectionStatus::Disconnected) {
                         if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
+                            // NOTE: A waiting connect() must not replace device_ before it is cleared here.
+                            std::lock_guard<std::mutex> lock(disconnection_mutex_);
                             connection_state_ = ConnectionState::Disconnected;
                             
                             // Explicitly clean up WinRT service objects and clear the map
