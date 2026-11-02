@@ -317,7 +317,8 @@ Use `SetCallbackOnRead(func() []byte)` for a dynamic read value. It runs
 synchronously on the native calling thread, so return promptly and use only
 application data: do not call BLE methods from a read callback. Replacing a
 read handler or closing a characteristic from one returns
-`OperationNotSupported`. Go copies the returned bytes. Pass `nil`
+`OperationNotSupported`. If the callback panics, the client reads an empty
+value. Go copies the returned bytes. Pass `nil`
 to restore the stored value; `Value()` always reads stored bytes without calling
 the dynamic handler.
 

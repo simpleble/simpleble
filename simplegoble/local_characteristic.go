@@ -68,8 +68,8 @@ func (c *LocalCharacteristic) SetValue(data []byte) error {
 // Unlike event handlers, it runs synchronously on the native calling thread.
 // Return promptly and do not call BLE methods from this callback. Replacing a read
 // handler or closing a characteristic from it returns OperationNotSupported, and
-// a nested dynamic read returns no data. The returned bytes are copied by Go and
-// can contain zeros.
+// a nested dynamic read returns no data. A panic answers the read with no data.
+// The returned bytes are copied by Go and can contain zeros.
 func (c *LocalCharacteristic) SetCallbackOnRead(fn func() []byte) error {
 	return bindings.SetLocalReadCallback(c.handle, c.reader, fn)
 }

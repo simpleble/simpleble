@@ -101,7 +101,7 @@ var localReadTrampoline = purego.NewCallback(func(_ uintptr, length *uintptr, to
 	// The native read slot serializes reads and includes the subsequent copy.
 	// Its borrowed buffer must stay pinned until the next read or slot removal.
 	entry.pin.Unpin()
-	entry.data = append([]byte(nil), entry.fn()...)
+	entry.data = readValue(entry.fn)
 	*length = uintptr(len(entry.data))
 	if len(entry.data) == 0 {
 		return 0
@@ -109,6 +109,16 @@ var localReadTrampoline = purego.NewCallback(func(_ uintptr, length *uintptr, to
 	entry.pin.Pin(&entry.data[0])
 	return uintptr(unsafe.Pointer(&entry.data[0]))
 })
+
+// NOTE: A panic must not unwind into the native read thread, so it answers with an empty value.
+func readValue(fn func() []byte) (data []byte) {
+	defer func() {
+		if recover() != nil {
+			data = nil
+		}
+	}()
+	return append([]byte(nil), fn()...)
+}
 
 // ReadCallback is shared by independent wrappers of one local characteristic.
 // Installation waits for the native slot before releasing the previous buffer.

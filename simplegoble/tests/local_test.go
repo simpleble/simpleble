@@ -348,6 +348,26 @@ func TestPlainLocalReadHandlerCannotReplaceOrCloseItself(t *testing.T) {
 	}
 }
 
+func TestPlainLocalReadHandlerPanicReadsEmpty(t *testing.T) {
+	a, host, _, c := plainHost(t)
+	if err := c.SetValue([]byte{1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetCallbackOnRead(func() []byte { panic("read handler") }); err != nil {
+		t.Fatal(err)
+	}
+	p := connectHost(t, a, host)
+	if data, err := p.Read(hostService, hostValue); err != nil || len(data) != 0 {
+		t.Fatalf("panicking read = %v, %v", data, err)
+	}
+	if err := c.SetCallbackOnRead(func() []byte { return []byte{2} }); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := p.Read(hostService, hostValue); err != nil || !bytes.Equal(data, []byte{2}) {
+		t.Fatalf("read after panic = %v, %v", data, err)
+	}
+}
+
 func TestPlainLocalWritesSubscriptionsAndClientEvents(t *testing.T) {
 	a, host, _, c := plainHost(t)
 	connections := make(chan string, 2)
