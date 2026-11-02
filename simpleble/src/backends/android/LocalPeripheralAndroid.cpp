@@ -91,9 +91,12 @@ PeripheralAndroid::PeripheralAndroid(Android::BluetoothAdapter adapter) : _adapt
     _server_callback.set_callback_onExecuteWrite([this](Android::BluetoothDevice device, int request_id, bool) {
         _respond(device, request_id, GATT_REQUEST_NOT_SUPPORTED, 0);
     });
-    _server_callback.set_callback_onNotificationSent([this](Android::BluetoothDevice, int) {
+    _server_callback.set_callback_onNotificationSent([this](Android::BluetoothDevice device, int) {
+        const BluetoothAddress address(device.getAddress());
         std::scoped_lock lock(_notification_mutex);
-        if (!_notifications.empty()) _notifications.pop_front();
+        // NOTE: A late report from a client that has disconnected is not for the notification in flight.
+        if (_notifications.empty() || _notifications.front().address != address) return;
+        _notifications.pop_front();
         _send_next_notification_locked();
     });
 
@@ -311,8 +314,9 @@ void PeripheralAndroid::publish(const std::shared_ptr<CharacteristicAndroid>& ch
     std::scoped_lock lock(_notification_mutex);
     const bool idle = _notifications.empty();
     for (const auto& subscriber : subscribers) {
-        _notifications.push_back(
-            PendingNotification{subscriber.device, characteristic->native_characteristic(), value, subscriber.confirm});
+        _notifications.push_back(PendingNotification{subscriber.device, subscriber.device.getAddress(),
+                                                     characteristic->native_characteristic(), value,
+                                                     subscriber.confirm});
     }
     if (idle) _send_next_notification_locked();
 }
@@ -393,7 +397,13 @@ void PeripheralAndroid::_handle_connection(Android::BluetoothDevice device, int 
         }
         for (const auto& characteristic : characteristics) characteristic->remove_subscriber(address);
         std::scoped_lock lock(_notification_mutex);
-        _notifications.clear();
+        const bool in_flight = !_notifications.empty() && _notifications.front().address == address;
+        _notifications.erase(std::remove_if(_notifications.begin(), _notifications.end(),
+                                            [&address](const PendingNotification& notification) {
+                                                return notification.address == address;
+                                            }),
+                             _notifications.end());
+        if (in_flight) _send_next_notification_locked();
     }
     if (notify_connected) SAFE_CALLBACK_CALL(_callback_on_client_connected, address);
     if (notify_disconnected) SAFE_CALLBACK_CALL(_callback_on_client_disconnected, address);

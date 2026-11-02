@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed `power_off()` not showing in `bluetooth_enabled()` or the power callbacks.
 - (Dongl) Fixed service UUIDs and service data past the 4th entry being dropped.
 - (Android) Fixed subscriptions leaking across reconnects.
+- (Android) Fixed a local peripheral client's disconnect dropping notifications queued for other clients.
 - (MacOS/iOS) Fixed `read()` not failing on disconnect.
 - (Windows) Fixed local peripheral `set_value()` blocking for up to 10 s.
 - (Windows) Fixed `connect()` failing for several seconds after `disconnect()`.

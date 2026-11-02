@@ -56,6 +56,7 @@ class PeripheralAndroid : public PeripheralBase, public std::enable_shared_from_
 
     struct PendingNotification {
         Android::BluetoothDevice device;
+        BluetoothAddress address;
         Android::BluetoothGattCharacteristic characteristic;
         ByteArray value;
         bool confirm;
