@@ -48,6 +48,8 @@ GATT operations block the calling thread in a poll loop until the corresponding 
 
 SimpleBLE marshals its own WinRT calls onto a dedicated internal MTA thread, which is separate from the threadpool threads that deliver your callbacks. Calling SimpleBLE methods from inside a callback therefore does not self-deadlock, but it blocks a threadpool event thread and can delay other events; short calls are tolerable, long blocking calls (like `connect()` or a blocking `disconnect()`) should still be moved to your own thread.
 
+`is_connected()`, `services()`, `mtu()`, `address()` and `is_powered()` answer from state SimpleBLE keeps up to date from WinRT events, so they return at once, even while another call is running.
+
 ### Android
 
 Operation completions are delivered through the same single runner thread that executes your callbacks. Calling a blocking operation from inside a callback stalls until its timeout expires and then throws: 5 seconds for GATT reads/writes, 8 seconds for `connect()`/`disconnect()`.

@@ -118,17 +118,15 @@ void PeripheralWindows::connect() {
                                         [this] { return connection_state_ != ConnectionState::Disconnecting; })) {
             throw SimpleBLE::Exception::OperationFailed("Device is still disconnecting");
         }
-        connection_state_ = ConnectionState::Connecting;
     }
+    connection_state_ = ConnectionState::Connecting;
 
     MtaManager::get().execute_sync([this]() {
         device_ = async_get(BluetoothLEDevice::FromBluetoothAddressAsync(_str_to_mac_address(address_)));
     });
 
     if (device_ == nullptr) {
-        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
-            connection_state_ = ConnectionState::Disconnected;
-        }
+        connection_state_ = ConnectionState::Disconnected;
         throw SimpleBLE::Exception::OperationFailed("Failed to retrieve Bluetooth device.");
     }
 
@@ -139,8 +137,14 @@ void PeripheralWindows::connect() {
         }
     }
 
-    if (is_connected()) {
+    bool connected = MtaManager::get().execute_sync<bool>([this]() {
+        return device_.ConnectionStatus() == BluetoothConnectionStatus::Connected;
+    });
+
+    if (connected) {
         callback_on_disconnected_pending_.store(true);
+        // NOTE: Set before the handler goes in, so a disconnection it reports can't be overwritten.
+        connection_state_ = ConnectionState::Connected;
 
         MtaManager::get().execute_sync([this]() {
             connection_status_changed_token_ = device_.ConnectionStatusChanged(
@@ -159,6 +163,9 @@ void PeripheralWindows::connect() {
                             gatt_map_.clear();
                             
                             device_ = nullptr;
+                        } else {
+                            std::lock_guard<std::mutex> lock(disconnection_mutex_);
+                            connection_state_ = ConnectionState::Disconnected;
                         }
                         this->disconnection_cv_.notify_all();
 
@@ -169,23 +176,16 @@ void PeripheralWindows::connect() {
                 });
         });
 
-        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
-            connection_state_ = ConnectionState::Connected;
-        }
         SAFE_CALLBACK_CALL(this->callback_on_connected_);
     } else {
-        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
-            connection_state_ = ConnectionState::Disconnected;
-        }
+        connection_state_ = ConnectionState::Disconnected;
         throw SimpleBLE::Exception::OperationFailed("Failed to connect to device.");
     }
 }
 
 void PeripheralWindows::disconnect() {
     if (device_ == nullptr) {
-        if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
-            connection_state_ = ConnectionState::Disconnected;
-        }
+        connection_state_ = ConnectionState::Disconnected;
         return;
     }
 
@@ -231,20 +231,8 @@ void PeripheralWindows::disconnect() {
 }
 
 bool PeripheralWindows::is_connected() {
-    if (device_ == nullptr) {
-        return false;
-    }
-
-    if (SimpleBLE::Config::WinRT::use_deferred_disconnect) {
-        if (connection_state_ == ConnectionState::Disconnecting ||
-            connection_state_ == ConnectionState::Disconnected) {
-            return false;
-        }
-    }
-
-    return MtaManager::get().execute_sync<bool>([this]() {
-        return device_.ConnectionStatus() == BluetoothConnectionStatus::Connected;
-    });
+    // NOTE: Answered from the tracked state, so it never waits behind a call running on the MTA thread.
+    return connection_state_ == ConnectionState::Connected;
 }
 
 bool PeripheralWindows::is_connectable() { return connectable_; }
@@ -280,9 +268,7 @@ SharedPtrVector<ServiceBase> PeripheralWindows::available_services() {
                 descriptor_list.push_back(std::make_shared<DescriptorBase>(descriptor_uuid));
             }
 
-            uint32_t properties = MtaManager::get().execute_sync<uint32_t>([&characteristic]() {
-                return (uint32_t)characteristic.obj.CharacteristicProperties();
-            });
+            uint32_t properties = (uint32_t)characteristic.properties;
 
             bool can_read = (properties & (uint32_t)GattCharacteristicProperties::Read) != 0;
             bool can_write_request = (properties & (uint32_t)GattCharacteristicProperties::Write) != 0;
@@ -557,6 +543,7 @@ bool PeripheralWindows::_attempt_connect() {
                 // For each characteristic...
                 gatt_characteristic_t gatt_characteristic;
                 gatt_characteristic.obj = characteristic;
+                gatt_characteristic.properties = characteristic.CharacteristicProperties();
 
                 // Fetch the characteristic UUID
                 std::string characteristic_uuid = guid_to_uuid(characteristic.Uuid());

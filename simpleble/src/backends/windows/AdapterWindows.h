@@ -62,6 +62,7 @@ class AdapterWindows : public AdapterBase {
   private:
     BluetoothAdapter adapter_;
     std::string identifier_;
+    BluetoothAddress address_;
 
     struct Advertisement::BluetoothLEAdvertisementWatcher scanner_;
     winrt::event_token scanner_received_token_;
@@ -69,6 +70,7 @@ class AdapterWindows : public AdapterBase {
 
     Radio radio_;
     winrt::event_token radio_state_changed_token_;
+    std::atomic_bool powered_{false};
 
     std::atomic_bool scan_is_active_{false};
     std::condition_variable scan_stop_cv_;

@@ -41,6 +41,7 @@ AdapterWindows::AdapterWindows(std::string device_id)
     auto device_information = async_get(
         Devices::Enumeration::DeviceInformation::CreateFromIdAsync(winrt::to_hstring(device_id)));
     identifier_ = winrt::to_string(device_information.Name());
+    address_ = _mac_address_to_str(adapter_.BluetoothAddress());
 
     // Configure the scanner object
     scanner_ = Advertisement::BluetoothLEAdvertisementWatcher();
@@ -53,6 +54,7 @@ AdapterWindows::AdapterWindows(std::string device_id)
     // Register member functions directly as callback handlers
     if (radio_) {
         radio_state_changed_token_ = radio_.StateChanged({this, &AdapterWindows::on_power_state_changed});
+        powered_ = radio_.State() == RadioState::On;
     }
     scanner_stopped_token_ = scanner_.Stopped({this, &AdapterWindows::_on_scanner_stopped});
     scanner_received_token_ = scanner_.Received({this, &AdapterWindows::_on_scanner_received});
@@ -85,25 +87,28 @@ void* AdapterWindows::underlying() const { return reinterpret_cast<void*>(const_
 
 std::string AdapterWindows::identifier() { return identifier_; }
 
-BluetoothAddress AdapterWindows::address() {
-    return MtaManager::get().execute_sync<BluetoothAddress>([this]() {
-        return _mac_address_to_str(adapter_.BluetoothAddress());
-    });
-}
+BluetoothAddress AdapterWindows::address() { return address_; }
 
 void AdapterWindows::power_on() {
     if (!radio_) throw Exception::OperationNotSupported();
-    MtaManager::get().execute_sync([this]() { async_get(radio_.SetStateAsync(RadioState::On)); });
+    MtaManager::get().execute_sync([this]() {
+        async_get(radio_.SetStateAsync(RadioState::On));
+        powered_ = radio_.State() == RadioState::On;
+    });
 }
 
 void AdapterWindows::power_off() {
     if (!radio_) throw Exception::OperationNotSupported();
-    MtaManager::get().execute_sync([this]() { async_get(radio_.SetStateAsync(RadioState::Off)); });
+    MtaManager::get().execute_sync([this]() {
+        async_get(radio_.SetStateAsync(RadioState::Off));
+        powered_ = radio_.State() == RadioState::On;
+    });
 }
 
 bool AdapterWindows::is_powered() {
     if (!radio_) throw Exception::OperationNotSupported();
-    return MtaManager::get().execute_sync<bool>([this]() { return radio_.State() == RadioState::On; });
+    // NOTE: The radio's StateChanged handler keeps this up to date, so it never waits for the MTA thread.
+    return powered_;
 }
 
 void AdapterWindows::scan_start() {
@@ -256,6 +261,7 @@ void AdapterWindows::_scan_received_callback(advertising_data_t data) {
 
 void AdapterWindows::on_power_state_changed(Radio const& sender, Foundation::IInspectable const&) {
     auto state = sender.State();
+    powered_ = state == RadioState::On;
     if (state == RadioState::On) {
         SAFE_CALLBACK_CALL(this->_callback_on_power_on);
     } else if (state == RadioState::Off) {

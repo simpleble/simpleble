@@ -29,6 +29,7 @@ struct gatt_descriptor_t {
 
 struct gatt_characteristic_t {
     GattCharacteristic obj = nullptr;
+    GattCharacteristicProperties properties = GattCharacteristicProperties::None;
     winrt::event_token value_changed_token;
     std::function<void(const GattCharacteristic& sender, const GattValueChangedEventArgs& args)> value_changed_callback;
     std::map<BluetoothUUID, gatt_descriptor_t> descriptors;
@@ -103,8 +104,8 @@ class PeripheralWindows : public PeripheralBase {
     bool connectable_ = false;
     winrt::event_token connection_status_changed_token_;
 
-    // Internal state for deferred (non-blocking) disconnect mode
-    // Only active when Config::WinRT::use_deferred_disconnect == true
+    // Connection state in both disconnect modes. Disconnecting is only used when
+    // Config::WinRT::use_deferred_disconnect == true
     enum class ConnectionState { Disconnected, Connecting, Connected, Disconnecting };
     std::atomic<ConnectionState> connection_state_{ConnectionState::Disconnected};
 
