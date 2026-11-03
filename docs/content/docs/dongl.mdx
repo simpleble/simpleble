@@ -19,7 +19,7 @@ The [Dongl QuickStart](https://simpleble.org/dongl/quickstart) installs SimplePy
 - Windows and macOS give an application one built-in radio. Each Dongl is another adapter, and you can [plug in several](#use-several-dongls).
 - On macOS, CoreBluetooth hides the device's MAC address behind an identifier that only that Mac recognizes (see [Platform Notes](./simpleble/platform_notes#peripheral-identifiers-uuids)). A Dongl reports the real address and address type on macOS and Windows alike, and a Mac test station can match devices by the address printed on their label.
 - Test stations running the same firmware release behave the same, regardless of the computer or OS version.
-- A Dongl needs only a USB port. It works on computers without Bluetooth hardware and with the built-in Bluetooth turned off.
+- A Dongl needs only a USB port. It works on computers without Bluetooth hardware, with the built-in Bluetooth turned off, and on Linux without BlueZ running, such as inside a Docker container.
 - Pairing happens without the operating system, and no system dialog appears; your application answers passkey and numeric-comparison requests itself. Bonds live on the Dongl. They survive power cycles, travel with it to another computer, and can be removed from code. See [Pairing and bonding](#pairing-and-bonding).
 
 ## What you need

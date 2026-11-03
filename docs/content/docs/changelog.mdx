@@ -54,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Linux) Fixed GATT calls failing after reconnecting to a peripheral with a Battery Service.
 - (Linux) Fixed BlueZ failures and D-Bus timeouts being reported as unclassified errors.
 - (Linux) Fixed a descriptor `write()` to the CCCD not throwing `OperationNotSupported`.
+- (Linux) Fixed `get_adapters()` throwing instead of listing Dongls when BlueZ is unavailable.
 - (SimpleGoBLE) Fixed a panic in a local read handler crashing the program.
 - (SimpleDroidBLE) Fixed event flows dropping events when collected slowly.
 

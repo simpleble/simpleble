@@ -6,6 +6,7 @@
 #include "BackendBase.h"
 #include "BuildVec.h"
 #include "CommonUtils.h"
+#include "LoggingInternal.h"
 
 #include <simpleble/Backend.h>
 
@@ -64,7 +65,12 @@ static SharedPtrVector<BackendBase> _get_backends() {
         }
     };
 
-    add_backend(_native_backend());
+    try {
+        add_backend(_native_backend());
+    } catch (const std::exception& e) {
+        SIMPLEBLE_LOG_WARN(fmt::format("The native backend is unavailable: {}", e.what()));
+    }
+
     if constexpr (!SIMPLEBLE_BACKEND_PLAIN) {
         add_backend(_dongl_backend());
         add_backend(_simulator_backend());
