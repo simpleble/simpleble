@@ -29,9 +29,14 @@ AdapterAndroid::AdapterAndroid() {
         Peripheral peripheral = Factory::build(base_peripheral);
 
         // Check if the device has been seen before, to forward the correct call to the user.
-        if (this->seen_peripherals_.count(address) == 0) {
+        bool is_new_peripheral;
+        {
+            std::scoped_lock lock(peripherals_mutex_);
             // Store it in our table of seen peripherals
-            this->seen_peripherals_.insert(std::make_pair(address, base_peripheral));
+            is_new_peripheral = this->seen_peripherals_.insert(std::make_pair(address, base_peripheral)).second;
+        }
+
+        if (is_new_peripheral) {
             SAFE_CALLBACK_CALL(this->_callback_on_scan_found, peripheral);
         } else {
             SAFE_CALLBACK_CALL(this->_callback_on_scan_updated, peripheral);
@@ -62,7 +67,10 @@ void AdapterAndroid::power_off() {
 bool AdapterAndroid::is_powered() { return _btAdapter.isEnabled(); }
 
 void AdapterAndroid::scan_start() {
-    seen_peripherals_.clear();
+    {
+        std::scoped_lock lock(peripherals_mutex_);
+        seen_peripherals_.clear();
+    }
 
     Android::ScanSettings::Builder settings_builder;
     auto settings = settings_builder.setLegacy(false)
@@ -88,7 +96,10 @@ void AdapterAndroid::scan_for(int timeout_ms) {
 
 bool AdapterAndroid::scan_is_active() { return scanning_; }
 
-SharedPtrVector<PeripheralBase> AdapterAndroid::scan_get_results() { return Util::values(seen_peripherals_); }
+SharedPtrVector<PeripheralBase> AdapterAndroid::scan_get_results() {
+    std::scoped_lock lock(peripherals_mutex_);
+    return Util::values(seen_peripherals_);
+}
 
 SharedPtrVector<PeripheralBase> AdapterAndroid::get_paired_peripherals() {
     SharedPtrVector<PeripheralBase> peripherals;
