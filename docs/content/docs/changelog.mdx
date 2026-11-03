@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Windows) Fixed local peripheral `set_value()` blocking for up to 10 s.
 - (Windows) Fixed `connect()` failing for several seconds after `disconnect()`.
 - (Windows) Fixed `is_connected()` and other getters waiting for running calls to finish.
+- (Windows) Fixed scan results and peripheral lookups racing with scan events.
 - (Linux) Fixed `Config::SimpleBluez::use_system_bus` being ignored.
 - (Linux) Fixed GATT calls failing after reconnecting to a peripheral with a Battery Service.
 - (SimpleGoBLE) Fixed a panic in a local read handler crashing the program.

@@ -76,6 +76,8 @@ class AdapterWindows : public AdapterBase {
     std::condition_variable scan_stop_cv_;
     std::mutex scan_stop_mutex_;
     std::mutex scan_update_mutex_;
+
+    std::mutex peripherals_mutex_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralWindows>> peripherals_;
     std::map<BluetoothAddress, std::shared_ptr<PeripheralBase>> seen_peripherals_;
 
