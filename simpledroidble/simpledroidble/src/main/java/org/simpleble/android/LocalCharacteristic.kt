@@ -1,16 +1,12 @@
 package org.simpleble.android
 
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
 class LocalCharacteristic internal constructor(private val instanceId: Long) {
-    private val _onWrite = MutableSharedFlow<ByteArray>(
-        extraBufferCapacity = 16,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    private val _onSubscribed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val _onUnsubscribed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _onWrite = MutableSharedFlow<ByteArray>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onSubscribed = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onUnsubscribed = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
     @Volatile
     private var readHandler: (() -> ByteArray)? = null
     @Volatile

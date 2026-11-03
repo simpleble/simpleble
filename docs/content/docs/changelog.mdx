@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Subscriptions end on disconnect.
 - (MacOS/iOS) `read()` no longer waits for a notification.
 - (Linux) Pairing that needs a passkey or numeric comparison fails unless a pairing callback answers it.
+- (SimpleDroidBLE) `notify()` and `indicate()` no longer fail when a collector falls behind.
 
 **Fixed**
 
@@ -49,6 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Linux) Fixed `Config::SimpleBluez::use_system_bus` being ignored.
 - (Linux) Fixed GATT calls failing after reconnecting to a peripheral with a Battery Service.
 - (SimpleGoBLE) Fixed a panic in a local read handler crashing the program.
+- (SimpleDroidBLE) Fixed event flows dropping events when collected slowly.
 
 **Removed**
 

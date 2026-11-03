@@ -1,7 +1,6 @@
 package org.simpleble.android
 
 import android.content.Context
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import java.util.concurrent.ConcurrentHashMap
@@ -9,11 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class Adapter private constructor(private val instanceId: Long) {
-    private val _onScanStart = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanStop = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanUpdated = MutableSharedFlow<Peripheral>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val _onScanFound = MutableSharedFlow<Peripheral>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val _onScanStart = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onScanStop = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onScanActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = Int.MAX_VALUE)
+    private val _onScanUpdated = MutableSharedFlow<Peripheral>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onScanFound = MutableSharedFlow<Peripheral>(extraBufferCapacity = Int.MAX_VALUE)
 
     private val peripherals = ConcurrentHashMap<Long, Peripheral>()
 

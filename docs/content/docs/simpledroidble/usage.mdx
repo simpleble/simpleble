@@ -178,7 +178,7 @@ lifecycleScope.launch {
 }
 ```
 
-`setWriteHandler` receives every accepted write on SimpleDroidBLE's callback thread and is the reliable place for application behavior. Keep it short. `onWrite` is a bounded hot flow intended for UI and telemetry-style observation. `setReadHandler` provides a dynamic value; without it, reads return `value` directly.
+`setWriteHandler` receives every accepted write on SimpleDroidBLE's callback thread and is the reliable place for application behavior. Keep it short. `onWrite` is a hot flow that emits each accepted write, for UI and telemetry-style observation. `setReadHandler` provides a dynamic value; without it, reads return `value` directly.
 
 Assigning `value` publishes the new bytes to subscribed clients when the characteristic supports notify or indicate. `onSubscribed` and `onUnsubscribed` expose subscription transitions, while `onClientConnected` and `onClientDisconnected` expose Android's GATT server connection events.
 
@@ -197,7 +197,7 @@ Peripheral mode uses legacy advertising, with its 31-byte payload limit, and rej
 - Keep notification collection in a lifecycle-aware coroutine. Cancelling the `notify` or `indicate` flow waits for native unsubscribe before collection finishes.
 - Stop a local peripheral when its owning lifecycle ends. `start()` and `stop()` dispatch blocking Bluetooth setup and teardown to `Dispatchers.IO`.
 - Only one `notify` or `indicate` collector may be active for a characteristic. Cancel and join the old collector before starting another.
-- Notification and indication flows use bounded buffers and fail with `SimpleDroidBleException` if a collector cannot keep up. Place `buffer(256)` directly after `notify` or `indicate` to increase capacity, or explicitly opt into dropping with `buffer(256, onBufferOverflow = BufferOverflow.DROP_OLDEST)` or `BufferOverflow.DROP_LATEST`.
+- Every event, notification, and indication reaches each active collector, in the order it happened. A collector that falls behind receives what arrived meanwhile once it catches up. To drop values instead, place `buffer(256, onBufferOverflow = BufferOverflow.DROP_OLDEST)` or `conflate()` directly after `notify` or `indicate`.
 - Flow collectors resume in their own coroutine context. Keep payload parsing short; blocking GATT operations dispatch to `Dispatchers.IO` internally.
 - Android has one Bluetooth adapter. `Adapter.getAdapters()` returns it in a list, as on other platforms.
 

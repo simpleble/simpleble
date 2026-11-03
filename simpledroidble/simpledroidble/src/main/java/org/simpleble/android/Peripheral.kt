@@ -2,10 +2,12 @@ package org.simpleble.android
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 
@@ -14,9 +16,9 @@ class Peripheral internal constructor(
     private val instanceId: Long
 ) {
 
-    private val _onConnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val _onConnectionActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 1)
-    private val _onDisconnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _onConnected = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onConnectionActive = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = Int.MAX_VALUE)
+    private val _onDisconnected = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
 
     private val callbacks = object : Callback {
         override fun onConnected() {
@@ -112,10 +114,7 @@ class Peripheral internal constructor(
     ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                val result = trySend(data)
-                if (result.isFailure && !result.isClosed) {
-                    close(SimpleDroidBleException("Notification buffer overflow for $service/$characteristic"))
-                }
+                trySend(data)
             }
         }
 
@@ -133,7 +132,7 @@ class Peripheral internal constructor(
                 }
             }
         }
-    }
+    }.buffer(Channel.UNLIMITED)
 
     fun indicate(
         service: BluetoothUUID,
@@ -141,10 +140,7 @@ class Peripheral internal constructor(
     ): Flow<ByteArray> = callbackFlow {
         val dataCallback = object : DataCallback {
             override fun onDataReceived(data: ByteArray) {
-                val result = trySend(data)
-                if (result.isFailure && !result.isClosed) {
-                    close(SimpleDroidBleException("Indication buffer overflow for $service/$characteristic"))
-                }
+                trySend(data)
             }
         }
 
@@ -162,7 +158,7 @@ class Peripheral internal constructor(
                 }
             }
         }
-    }
+    }.buffer(Channel.UNLIMITED)
 
     suspend fun unsubscribe(service: BluetoothUUID, characteristic: BluetoothUUID) {
         withContext(Dispatchers.IO) {

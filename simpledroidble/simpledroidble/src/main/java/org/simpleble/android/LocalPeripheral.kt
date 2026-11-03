@@ -1,21 +1,14 @@
 package org.simpleble.android
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.withContext
 
 class LocalPeripheral internal constructor(private val instanceId: Long) {
     private val configuredServices = mutableListOf<LocalService>()
-    private val _onClientConnected = MutableSharedFlow<BluetoothAddress>(
-        extraBufferCapacity = 16,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    private val _onClientDisconnected = MutableSharedFlow<BluetoothAddress>(
-        extraBufferCapacity = 16,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
+    private val _onClientConnected = MutableSharedFlow<BluetoothAddress>(extraBufferCapacity = Int.MAX_VALUE)
+    private val _onClientDisconnected = MutableSharedFlow<BluetoothAddress>(extraBufferCapacity = Int.MAX_VALUE)
 
     private val callbacks = object : Callback {
         override fun onClientConnected(address: String) {

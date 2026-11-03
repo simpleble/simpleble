@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -17,6 +18,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 @RunWith(AndroidJUnit4::class)
 class PlainBackendIntegrationTest {
@@ -109,24 +112,18 @@ class PlainBackendIntegrationTest {
         }
         assertArrayEquals(byteArrayOf(100), firstPayload)
 
-        var payloadCount = 0
-        val overflow = runCatching {
-            withTimeout(5_000) {
-                activePeripheral.notify(
-                    service.uuid,
-                    characteristic.uuid
-                ).buffer(0).collect {
-                    payloadCount++
-                    delay(2_000)
-                }
+        // A collector that falls behind gets every value sent meanwhile, at once, instead of losing them.
+        // NOTE: buffer(0) adds no room of its own, so the values wait in the flow's buffer.
+        val arrivals = mutableListOf<TimeSource.Monotonic.ValueTimeMark>()
+        withTimeout(10_000) {
+            activePeripheral.notify(service.uuid, characteristic.uuid).buffer(0).take(4).collect {
+                arrivals += TimeSource.Monotonic.markNow()
+                // PLAIN notifies once a second, so this falls about three values behind.
+                if (arrivals.size == 1) delay(3_500)
             }
-        }.exceptionOrNull()
-        assertEquals(1, payloadCount)
-        assertTrue(overflow is SimpleDroidBleException)
-        assertEquals(
-            "Notification buffer overflow for ${service.uuid}/${characteristic.uuid}",
-            overflow?.message
-        )
+        }
+        val catchUp = arrivals[3] - arrivals[1]
+        assertTrue("The values sent during the delay took $catchUp to arrive", catchUp < 500.milliseconds)
 
         val secondPayload = withTimeout(3_000) {
             activePeripheral.notify(
