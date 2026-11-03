@@ -57,6 +57,8 @@ std::unique_ptr<Error> DescriptorNotFound::make_error() const {
 
 OperationNotSupported::OperationNotSupported() : BaseException("The requested operation is not supported.") {}
 
+OperationNotSupported::OperationNotSupported(const std::string& err_msg) : BaseException(err_msg) {}
+
 OperationNotSupported::OperationNotSupported(const std::string& operation, const BluetoothUUID& characteristic_uuid)
     : BaseException(
           fmt::format("Operation '{}' is not supported on characteristic '{}'", operation, characteristic_uuid)) {}

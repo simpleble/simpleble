@@ -12,6 +12,7 @@
 #include "LocalPeripheralLinux.h"
 #include "LoggingInternal.h"
 #include "PeripheralLinux.h"
+#include "Utils.h"
 
 using namespace SimpleBLE;
 
@@ -88,9 +89,13 @@ std::string AdapterLinux::identifier() { return adapter_->identifier(); }
 
 BluetoothAddress AdapterLinux::address() { return adapter_->address(); }
 
-void AdapterLinux::power_on() { adapter_->powered(true); }
+void AdapterLinux::power_on() {
+    bluez_call([this]() { adapter_->powered(true); });
+}
 
-void AdapterLinux::power_off() { adapter_->powered(false); }
+void AdapterLinux::power_off() {
+    bluez_call([this]() { adapter_->powered(false); });
+}
 
 bool AdapterLinux::is_powered() { return adapter_->powered(); }
 
@@ -105,17 +110,17 @@ void AdapterLinux::scan_start() {
     // each report instead of accumulating it. The transport is left alone, as BlueZ shares it with other scanners.
     SimpleBluez::Adapter::DiscoveryFilter filter;
     filter.DuplicateData = true;
-    adapter_->discovery_filter(filter);
+    bluez_call([&]() { adapter_->discovery_filter(filter); });
 
     // Start scanning and notify the user.
-    adapter_->discovery_start();
+    bluez_call([this]() { adapter_->discovery_start(); });
 
     SAFE_CALLBACK_CALL(this->_callback_on_scan_start);
     is_scanning_ = true;
 }
 
 void AdapterLinux::scan_stop() {
-    adapter_->discovery_stop();
+    bluez_call([this]() { adapter_->discovery_stop(); });
     is_scanning_ = false;
     SAFE_CALLBACK_CALL(this->_callback_on_scan_stop);
 

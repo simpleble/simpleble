@@ -16,9 +16,11 @@
 #include <thread>
 #include "CommonUtils.h"
 #include "LoggingInternal.h"
+#include "Utils.h"
 
 const SimpleBLE::BluetoothUUID BATTERY_SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
 const SimpleBLE::BluetoothUUID BATTERY_CHARACTERISTIC_UUID = "00002a19-0000-1000-8000-00805f9b34fb";
+const SimpleBLE::BluetoothUUID CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb";
 
 using namespace SimpleBLE;
 using namespace std::chrono_literals;
@@ -147,7 +149,7 @@ bool PeripheralLinux::is_paired() { return device_->paired(); }
 
 void PeripheralLinux::unpair() {
     if (device_->paired()) {
-        adapter_->device_remove(device_->path());
+        bluez_call([this]() { adapter_->device_remove(device_->path()); });
     }
 }
 
@@ -233,7 +235,7 @@ ByteArray PeripheralLinux::read(BluetoothUUID const& service, BluetoothUUID cons
     if (std::find(flags.begin(), flags.end(), "read") == flags.end()) {
         throw Exception::OperationNotSupported("read", characteristic);
     }
-    return char_obj->read();
+    return bluez_call([&]() { return char_obj->read(); });
 }
 
 void PeripheralLinux::write_request(BluetoothUUID const& service, BluetoothUUID const& characteristic,
@@ -245,7 +247,7 @@ void PeripheralLinux::write_request(BluetoothUUID const& service, BluetoothUUID 
     if (std::find(flags.begin(), flags.end(), "write") == flags.end()) {
         throw Exception::OperationNotSupported("write_request", characteristic);
     }
-    char_obj->write_request(data);
+    bluez_call([&]() { char_obj->write_request(data); });
 }
 
 void PeripheralLinux::write_command(BluetoothUUID const& service, BluetoothUUID const& characteristic,
@@ -257,7 +259,7 @@ void PeripheralLinux::write_command(BluetoothUUID const& service, BluetoothUUID 
     if (std::find(flags.begin(), flags.end(), "write-without-response") == flags.end()) {
         throw Exception::OperationNotSupported("write_command", characteristic);
     }
-    char_obj->write_command(data);
+    bluez_call([&]() { char_obj->write_command(data); });
 }
 
 void PeripheralLinux::notify(BluetoothUUID const& service, BluetoothUUID const& characteristic,
@@ -281,7 +283,7 @@ void PeripheralLinux::notify(BluetoothUUID const& service, BluetoothUUID const& 
         throw Exception::OperationNotSupported("notify", characteristic);
     }
     characteristic_object->set_on_value_changed([callback](SimpleBluez::ByteArray new_value) { callback(new_value); });
-    characteristic_object->start_notify();
+    bluez_call([&]() { characteristic_object->start_notify(); });
 }
 
 void PeripheralLinux::indicate(BluetoothUUID const& service, BluetoothUUID const& characteristic,
@@ -301,7 +303,7 @@ void PeripheralLinux::unsubscribe(BluetoothUUID const& service, BluetoothUUID co
 
     // TODO: What to do if the characteristic is not being notified?
     auto characteristic_object = _get_characteristic(service, characteristic);
-    characteristic_object->stop_notify();
+    bluez_call([&]() { characteristic_object->stop_notify(); });
 
     // Wait for the characteristic to stop notifying.
     // TODO: Upgrade SimpleDBus to provide a way to wait for this signal.
@@ -314,12 +316,19 @@ void PeripheralLinux::unsubscribe(BluetoothUUID const& service, BluetoothUUID co
 
 ByteArray PeripheralLinux::read(BluetoothUUID const& service, BluetoothUUID const& characteristic,
                                 BluetoothUUID const& descriptor) {
-    return _get_descriptor(service, characteristic, descriptor)->read();
+    auto descriptor_object = _get_descriptor(service, characteristic, descriptor);
+    return bluez_call([&]() { return descriptor_object->read(); });
 }
 
 void PeripheralLinux::write(BluetoothUUID const& service, BluetoothUUID const& characteristic,
                             BluetoothUUID const& descriptor, ByteArray const& data) {
-    _get_descriptor(service, characteristic, descriptor)->write(data);
+    auto descriptor_object = _get_descriptor(service, characteristic, descriptor);
+    if (descriptor == CCCD_UUID) {
+        throw Exception::OperationNotSupported(
+            "The Client Characteristic Configuration descriptor cannot be written directly. Use notify(), "
+            "indicate() or unsubscribe() instead.");
+    }
+    bluez_call([&]() { descriptor_object->write(data); });
 }
 
 void PeripheralLinux::set_callback_on_connected(std::function<void()> on_connected) {
@@ -392,6 +401,8 @@ bool PeripheralLinux::_attempt_connect() {
         device_->connect();
     } catch (SimpleDBus::Exception::SendFailed const& e) {
         return false;
+    } catch (std::exception const& e) {
+        throw Exception::OperationFailed(e.what());
     }
 
     // Wait for the connection to be confirmed.
@@ -401,7 +412,7 @@ bool PeripheralLinux::_attempt_connect() {
 }
 
 bool PeripheralLinux::_attempt_disconnect() {
-    device_->disconnect();
+    bluez_call([this]() { device_->disconnect(); });
 
     // Wait for the disconnection to be confirmed.
     // The condition variable will return false if the connection is still active.

@@ -517,6 +517,13 @@ static SimpleBLE::ByteArray descriptorValueToByteArray(id value) {
     CBCharacteristic* characteristic = serviceAndCharacteristic.second;
     CBDescriptor* descriptor = [self findDescriptor:descriptor_uuid characteristic:characteristic];
 
+    // NOTE: CoreBluetooth raises an Objective-C exception when the CCCD is written directly.
+    if ([descriptor.UUID isEqual:[CBUUID UUIDWithString:CBUUIDClientCharacteristicConfigurationString]]) {
+        throw SimpleBLE::Exception::OperationNotSupported(
+            "The Client Characteristic Configuration descriptor cannot be written directly. Use notify(), "
+            "indicate() or unsubscribe() instead.");
+    }
+
     CharacteristicExtras* characteristicExtras = [self.characteristicExtras objectForKey:uuidToString(characteristic.UUID)];
     DescriptorExtras* descriptorExtras = [characteristicExtras.descriptorExtras objectForKey:uuidToString(descriptor.UUID)];
     BleTask* task = descriptorExtras.task;

@@ -28,8 +28,12 @@ class SendFailed : public BaseException {
   public:
     SendFailed(const std::string& err_name, const std::string& err_message, const std::string& msg_str);
     const char* what() const noexcept override;
+    const std::string& name() const noexcept;
+    const std::string& message() const noexcept;
 
   private:
+    std::string _name;
+    std::string _error_message;
     std::string _message;
 };
 

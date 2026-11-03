@@ -39,7 +39,7 @@ As a rule of thumb:
 ## Unclassified errors
 
 <Callout type="warn" title="Platform-layer exceptions">
-On some platforms, lower-layer errors surface through the public API without being translated into `SimpleBLE::Exception` types. On Linux, a failed DBus call inside a GATT operation can surface as a `SimpleDBus::Exception::SendFailed` (which derives from `std::exception` but **not** from `BaseException`), and the internal 30-second DBus reply timeout throws a plain `std::runtime_error`. On Android, GATT operation timeouts throw plain `std::runtime_error` as well.
+On Android, GATT operation timeouts surface through the public API as a plain `std::runtime_error`, without being translated into a `SimpleBLE::Exception` type.
 </Callout>
 
 These errors carry the lower layer's message and no classification. C++ code sees them as a `std::exception` that isn't a `BaseException`, and every binding reports them as unclassified, as shown below for each language.
@@ -283,7 +283,7 @@ Every blocking SimpleBLE call eventually gives up; the complete per-platform tim
 
 *   **A timeout is not a rollback.** When `connect()` or a GATT operation throws after its timeout, the underlying OS operation may still be in flight and may even complete afterwards. SimpleBLE does not attempt to cancel it on every platform.
 *   **State is uncertain after a timeout.** The only reliable move is to re-check observable state: call `is_connected()`, and if you were mid-transaction with the device, verify the device-side effect before repeating a non-idempotent write.
-*   **Timeouts usually surface as `OperationFailed`** (connect/disconnect on most platforms), except for the Linux and Android timeouts described in [Unclassified errors](#unclassified-errors).
+*   **Timeouts usually surface as `OperationFailed`** (connect/disconnect on most platforms), except for the Android timeouts described in [Unclassified errors](#unclassified-errors).
 
 ## What happens to in-flight operations on disconnect
 
@@ -291,7 +291,7 @@ When a device drops the connection while an operation is blocked waiting for its
 
 | Platform | In-flight operation outcome on disconnect |
 | --- | --- |
-| Linux | BlueZ fails the pending DBus call; the error escapes as an [unclassified error](#unclassified-errors). The `on_disconnected` callback fires after internal cleanup. |
+| Linux | BlueZ fails the pending DBus call and SimpleBLE throws `OperationFailed`. The `on_disconnected` callback fires after internal cleanup. |
 | Windows | The WinRT operation completes with a failure status and SimpleBLE throws `OperationFailed`. |
 | macOS / iOS | An in-flight `read()` throws `OperationFailed`. Other pending operations are unblocked without an error being recorded: an in-flight `write_request()` can return as if it succeeded. |
 | Android | The completion callback never arrives, so the operation stalls for its full 5-second timeout and then throws. |

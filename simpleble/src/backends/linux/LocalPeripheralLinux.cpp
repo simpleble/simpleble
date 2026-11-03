@@ -6,6 +6,7 @@
 #include "BackendBluez.h"
 #include "CommonUtils.h"
 #include "LocalServiceLinux.h"
+#include "Utils.h"
 
 namespace SimpleBLE::Local {
 
@@ -138,10 +139,10 @@ void PeripheralLinux::start() {
     try {
         // NOTE: Without services there is no GATT application to publish.
         if (!_services.empty()) {
-            _adapter->register_application(_service_manager->path());
+            bluez_call([this]() { _adapter->register_application(_service_manager->path()); });
             application_registered = true;
         }
-        _adapter->register_advertisement(_bluez_advertisement);
+        bluez_call([this]() { _adapter->register_advertisement(_bluez_advertisement); });
         _started.store(true);
     } catch (...) {
         if (application_registered) {
@@ -167,7 +168,7 @@ void PeripheralLinux::stop() {
 
     std::exception_ptr first_error;
     try {
-        _adapter->unregister_advertisement(_bluez_advertisement);
+        bluez_call([this]() { _adapter->unregister_advertisement(_bluez_advertisement); });
     } catch (...) {
         first_error = std::current_exception();
     }
@@ -175,7 +176,7 @@ void PeripheralLinux::stop() {
     // Services can't change while started, so this matches what start() registered.
     if (!_services.empty()) {
         try {
-            _adapter->unregister_application(_service_manager->path());
+            bluez_call([this]() { _adapter->unregister_application(_service_manager->path()); });
         } catch (...) {
             if (!first_error) {
                 first_error = std::current_exception();
