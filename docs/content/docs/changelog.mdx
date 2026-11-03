@@ -7,11 +7,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1] - 2026-XX-XX
+## [1.4.0] - 2026-11-03
 
 **Notes**
 
--
+- (Dongl) Dongl firmware 0.2.0 needs SimpleBLE 1.4.0 or later.
 
 **Added**
 
@@ -23,8 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 **Changed**
 
 - (SimpleCBLE) The shared library includes SimpleBLE.
+- (SimpleSharpBLE) Android apps load `simplecble` instead of `simpleble`.
 - (SimpleDelphiBLE) The native library loads on first use.
-- (Dongl) Repeated scan calls need Dongl firmware 0.1.1. Older firmware logs a warning.
+- (Dongl) Repeated scan calls need Dongl firmware 0.2.0. Older firmware logs a warning.
 - (Dongl) Opening a Dongl no longer waits an extra 100 ms.
 - (Dongl) Bonded peripherals no longer report their address as `identifier()`.
 - (Dongl) Subscriptions end on disconnect.
@@ -40,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Dongl) Fixed `disconnect()` throwing when the disconnection takes more than half a second.
 - (Dongl) Fixed scan results and peripheral lookups racing with events from the Dongl.
 - (Dongl) Fixed `power_off()` not showing in `bluetooth_enabled()` or the power callbacks.
-- (Dongl) Fixed service UUIDs and service data past the 4th entry being dropped.
+- (Dongl) Fixed service UUIDs and service data past the 4th entry being dropped, with firmware 0.2.0.
 - (Android) Fixed subscriptions leaking across reconnects.
 - (Android) Fixed a local peripheral client's disconnect dropping notifications queued for other clients.
 - (Android) Fixed scan results racing with scan events.
@@ -57,10 +58,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - (Linux) Fixed `get_adapters()` throwing instead of listing Dongls when BlueZ is unavailable.
 - (SimpleGoBLE) Fixed a panic in a local read handler crashing the program.
 - (SimpleDroidBLE) Fixed event flows dropping events when collected slowly.
-
-**Removed**
-
--
 
 
 ## [1.3.0] - 2026-10-27

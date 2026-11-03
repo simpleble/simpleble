@@ -26,7 +26,7 @@ struct DecodedServiceData {
     std::map<BluetoothUUID, ByteArray> data;
 };
 
-static constexpr uint32_t RECOMMENDED_FIRMWARE_VERSION = 1001;
+static constexpr uint32_t RECOMMENDED_FIRMWARE_VERSION = 2000;
 
 bool AdapterDongl::bluetooth_enabled() { return _powered; }
 
@@ -199,7 +199,7 @@ void AdapterDongl::_open() {
         // Print warning to notify users that an update is available.
         if (response_whoami.version < RECOMMENDED_FIRMWARE_VERSION) {
             const uint32_t version = response_whoami.version;
-            SIMPLEBLE_LOG_WARN(fmt::format("Dongl {} runs firmware {}.{}.{}, please update it to 0.1.1 or newer",
+            SIMPLEBLE_LOG_WARN(fmt::format("Dongl {} runs firmware {}.{}.{}, please update it to 0.2.0 or newer",
                                            response_whoami.mac_address, version / 1000000, version / 1000 % 1000,
                                            version % 1000));
         }
