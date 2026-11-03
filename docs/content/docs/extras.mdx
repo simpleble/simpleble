@@ -116,7 +116,7 @@ Perform the following steps in order.
 
 ### Publish the release
 
-6. Write the release notes in a file outside the repository, starting from the version's changelog section. 1.3.0's opened with a summary, followed by sections for the new bindings with their install commands, highlights, breaking changes, and the license. Then create and publish a stable GitHub release whose new tag `vX.Y.Z` points at that commit:
+6. Copy the version's changelog section, from its `## [X.Y.Z]` heading up to the previous version's, into a file outside the repository. The release notes are that copy and nothing else. Then create and publish a stable GitHub release whose new tag `vX.Y.Z` points at that commit:
 
    ```bash
    gh release create vX.Y.Z -R simpleble/simpleble --target <commit> --title "SimpleBLE vX.Y.Z" --notes-file <notes>
