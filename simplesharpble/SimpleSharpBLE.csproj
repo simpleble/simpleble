@@ -14,17 +14,19 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
     <_NativeLibraryMajorVersion>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^[0-9]+').Value)</_NativeLibraryMajorVersion>
-    <Description>C# and .NET bindings for the cross-platform SimpleBLE Bluetooth Low Energy library, for Windows, macOS, Linux, Android, iOS, and Mac Catalyst. Free for non-commercial use; commercial use requires a license.</Description>
+    <Description>Cross-platform Bluetooth Low Energy (BLE, Bluetooth LE) library for .NET. Scan, connect, read, write and subscribe as a GATT client (central), or host a GATT server and advertise as a peripheral, on Windows, macOS, Linux, Android, iOS and Mac Catalyst. One API over WinRT, CoreBluetooth, BlueZ and Android; native libraries bundled; NativeAOT compatible; works with .NET MAUI. Free for non-commercial and non-production use under BUSL-1.1; commercial production use requires a license.</Description>
     <IsPackable>true</IsPackable>
     <PackageId Condition="'$(PackageId)' == ''">SimpleSharpBLE</PackageId>
     <Authors>The California Open Source Company</Authors>
     <!-- nuget.org rejects BUSL-1.1 as a license expression, so the license ships as a file. -->
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://docs.simpleble.org/simplesharpble/usage</PackageProjectUrl>
+    <PackageReleaseNotes>See https://docs.simpleble.org/changelog for the changes in each release.</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/simpleble/simpleble</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>bluetooth;ble;bluetooth-low-energy;gatt;simpleble;windows;macos;linux;android;ios;maui</PackageTags>
+    <PackageTags>bluetooth;ble;bluetooth-le;bluetoothle;bluetooth-low-energy;gatt;gatt-server;gatt-client;peripheral;central;advertising;bluez;corebluetooth;winrt;maui;windows;macos;linux;android;ios;maccatalyst;nativeaot;simpleble</PackageTags>
     <_NativeRuntimeIdentifier>$(RuntimeIdentifier)</_NativeRuntimeIdentifier>
     <_NativeRuntimeIdentifier Condition="'$(_NativeRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</_NativeRuntimeIdentifier>
   </PropertyGroup>
@@ -34,6 +36,7 @@
     <InternalsVisibleTo Include="SimpleSharpBLE.Tests" />
     <None Include="../LICENSE.md" Pack="true" PackagePath="/LICENSE.md" />
     <None Update="README.md" Pack="true" PackagePath="/README.md" />
+    <None Update="icon.png" Pack="true" PackagePath="/icon.png" />
     <None Update="buildTransitive/SimpleSharpBLE.targets" Pack="true" PackagePath="buildTransitive/$(PackageId).targets" />
     <None Update="buildTransitive/android/proguard.cfg" Pack="true" PackagePath="buildTransitive/android/proguard.cfg" />
     <None Include="../simpledroidbridge/src/main/java/org/simpleble/android/bridge/*.java" Pack="true" PackagePath="buildTransitive/android/bridge/" />
