@@ -1,0 +1,460 @@
+---
+title: Scan for BLE Devices From Your Computer
+description: Find nearby Bluetooth Low Energy devices from your own computer in a few lines of Python, C++, Rust, Node.js or any of 12 languages.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+A scan is how a central finds the devices around it. Your adapter listens for advertisements, and every device it hears ends up in the scan results.
+
+## How a scan works
+
+A peripheral doesn't advertise once. It repeats the same advertisement every few milliseconds to every few seconds, its advertising interval. The scanner listens in scan windows, and it hears an advertisement whenever one arrives while it is listening. The operating system chooses the scan timing.
+
+<ScanTimelineDiagram />
+
+SimpleBLE turns what the adapter hears into two events:
+
+- **Found.** The first advertisement from a device during a scan. Use it to show devices as they appear.
+- **Updated.** Every advertisement after that. Use it to follow values that change, such as signal strength or sensor readings in the advertisement.
+
+When the scan ends, the scan results hold every device that was found, with the latest data from each.
+
+SimpleBLE scans actively. After an advertisement, the adapter asks the device for its scan response, a second packet that often carries the device name. That is why a device's name can arrive in an update after the device was first found.
+
+## How long to scan
+
+A device that advertises once a second is usually found within a few seconds. A device with a long interval, or one that is far away and loses packets, takes longer. Five seconds finds most devices in a room. Scanning costs power on a laptop or phone, so scan for a bounded time with `scan_for`, or call `scan_start` and `scan_stop` when your application decides when to stop.
+
+## Scan and find the closest device
+
+This program prints each device as it is found, then picks the one with the strongest signal. The strongest signal usually comes from the closest device.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+
+    adapter.set_callback_on_scan_found([](SimpleBLE::Peripheral device) {
+        std::cout << "Found " << device.identifier() << " [" << device.address() << "] " << device.rssi() << " dBm"
+                  << std::endl;
+    });
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    std::cout << results.size() << " devices found." << std::endl;
+    if (!results.empty()) {
+        auto closest = *std::max_element(results.begin(), results.end(),
+                                         [](auto& a, auto& b) { return a.rssi() < b.rssi(); });
+        std::cout << "Strongest signal: " << closest.identifier() << " [" << closest.address() << "] "
+                  << closest.rssi() << " dBm" << std::endl;
+    }
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <simplecble/simplecble.h>
+
+static void print_device(const char* label, simpleble_peripheral_t device) {
+    simpleble_error_t* error = NULL;
+    char* identifier = simpleble_peripheral_identifier(device, &error);
+    char* address = error ? NULL : simpleble_peripheral_address(device, &error);
+    int16_t rssi = error ? 0 : simpleble_peripheral_rssi(device, &error);
+    if (!error) printf("%s %s [%s] %d dBm\n", label, identifier, address, rssi);
+    simpleble_free(identifier);
+    simpleble_free(address);
+    simpleble_error_release(&error);
+}
+
+static void on_scan_found(simpleble_adapter_t adapter, simpleble_peripheral_t device, void* userdata) {
+    print_device("Found", device);
+    simpleble_peripheral_release_handle(device);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    if (!error) {
+        simpleble_adapter_set_callback_on_scan_found(adapter, on_scan_found, NULL);
+        simpleble_adapter_scan_for(adapter, 5000, &error);
+    }
+    if (!error) count = simpleble_adapter_scan_get_results(adapter, &results, &error);
+
+    simpleble_peripheral_t closest = NULL;
+    int16_t closest_rssi = INT16_MIN;
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, &error);
+        int16_t rssi = error ? 0 : simpleble_peripheral_rssi(device, &error);
+        if (!error && rssi > closest_rssi) {
+            simpleble_peripheral_release_handle(closest);
+            closest = device;
+            closest_rssi = rssi;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+
+    if (!error) printf("%zu devices found.\n", count);
+    if (!error && closest) print_device("Strongest signal:", closest);
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(closest);
+    simpleble_peripheral_list_release(results);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+
+adapter.set_callback_on_scan_found(
+    lambda device: print(f"Found {device.identifier()} [{device.address()}] {device.rssi()} dBm")
+)
+adapter.scan_for(5000)
+
+results = adapter.scan_get_results()
+print(f"{len(results)} devices found.")
+if results:
+    closest = max(results, key=lambda device: device.rssi())
+    print(f"Strongest signal: {closest.identifier()} [{closest.address()}] {closest.rssi()} dBm")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.util.Comparator;
+import java.util.List;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+
+public class Scan {
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+
+        adapter.setEventListener(new Adapter.EventListener() {
+            @Override
+            public void onScanFound(Peripheral device) {
+                System.out.println("Found " + device.getIdentifier() + " [" + device.getAddress() + "] "
+                        + device.getRssi() + " dBm");
+            }
+        });
+        adapter.scanFor(5000);
+
+        List<Peripheral> results = adapter.scanGetResults();
+        System.out.println(results.size() + " devices found.");
+        results.stream().max(Comparator.comparingInt(Peripheral::getRssi)).ifPresent(closest ->
+                System.out.println("Strongest signal: " + closest.getIdentifier() + " [" + closest.getAddress() + "] "
+                        + closest.getRssi() + " dBm"));
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use futures::StreamExt;
+use simplersble::{Adapter, ScanEvent};
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+
+    let mut events = adapter.on_scan_event();
+    tokio::spawn(async move {
+        while let Some(event) = events.next().await {
+            if let ScanEvent::Found(device) = event {
+                println!(
+                    "Found {} [{}] {} dBm",
+                    device.identifier().unwrap(),
+                    device.address().unwrap(),
+                    device.rssi().unwrap()
+                );
+            }
+        }
+    });
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    println!("{} devices found.", results.len());
+    if let Some(closest) = results.iter().max_by_key(|device| device.rssi().unwrap()) {
+        println!(
+            "Strongest signal: {} [{}] {} dBm",
+            closest.identifier().unwrap(),
+            closest.address().unwrap(),
+            closest.rssi().unwrap()
+        );
+    }
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const [adapter] = await Adapter.getAdapters();
+
+adapter.on('scanFound', device => {
+  console.log(`Found ${device.identifier()} [${device.address()}] ${device.rssi()} dBm`);
+});
+await adapter.scanFor(5000);
+
+const results = adapter.scanGetResults();
+console.log(`${results.length} devices found.`);
+if (results.length > 0) {
+  const closest = results.reduce((best, device) => ((device.rssi() ?? -127) > (best.rssi() ?? -127) ? device : best));
+  console.log(`Strongest signal: ${closest.identifier()} [${closest.address()}] ${closest.rssi()} dBm`);
+}
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+export async function scan() {
+  const [adapter] = await Adapter.getAdapters();
+
+  adapter.on('scanFound', device => {
+    console.log(`Found ${device.identifier()} [${device.address()}] ${device.rssi()} dBm`);
+  });
+  await adapter.scanFor(5000);
+
+  const results = adapter.scanGetResults();
+  console.log(`${results.length} devices found.`);
+  if (results.length > 0) {
+    const closest = results.reduce((best, device) => ((device.rssi() ?? -127) > (best.rssi() ?? -127) ? device : best));
+    console.log(`Strongest signal: ${closest.identifier()} [${closest.address()}] ${closest.rssi()} dBm`);
+  }
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+
+    val found = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { device ->
+            println("Found ${device.identifier} [${device.address}] ${device.rssi} dBm")
+        }
+    }
+    adapter.scanFor(5000)
+    found.cancel()
+
+    val results = adapter.scanGetResults()
+    println("${results.size} devices found.")
+    results.maxByOrNull { it.rssi }?.let { closest ->
+        println("Strongest signal: ${closest.identifier} [${closest.address}] ${closest.rssi} dBm")
+    }
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+let adapter = try Adapter.getAdapters().first!
+
+let found = adapter.onScanFound
+let printer = Task {
+    for await device in found {
+        print("Found \(device.identifier) [\(device.address)] \(device.rssi) dBm")
+    }
+}
+try await adapter.scanFor(timeoutMs: 5000)
+printer.cancel()
+
+let results = try adapter.scanGetResults()
+print("\(results.count) devices found.")
+if let closest = results.max(by: { $0.rssi < $1.rssi }) {
+    print("Strongest signal: \(closest.identifier) [\(closest.address)] \(closest.rssi) dBm")
+}
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+
+  final found = adapter.onScanFound.listen((device) {
+    print('Found ${device.identifier} [${device.address}] ${device.rssi} dBm');
+  });
+  await adapter.scanFor(const Duration(seconds: 5));
+  await found.cancel();
+
+  final results = adapter.scanGetResults();
+  print('${results.length} devices found.');
+  if (results.isNotEmpty) {
+    final closest = results.reduce((best, device) => (device.rssi ?? -127) > (best.rssi ?? -127) ? device : best);
+    print('Strongest signal: ${closest.identifier} [${closest.address}] ${closest.rssi} dBm');
+  }
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Scan;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SimpleDelphiBLE;
+
+type
+  TScanPrinter = class
+    procedure ScanFound(Sender: TBleAdapter; Device: TBlePeripheral);
+  end;
+
+procedure TScanPrinter.ScanFound(Sender: TBleAdapter; Device: TBlePeripheral);
+begin
+  WriteLn('Found ', Device.Identifier, ' [', Device.Address, '] ', Device.Rssi, ' dBm');
+end;
+
+var
+  Printer: TScanPrinter;
+  Adapter: TBleAdapter;
+  Results: TArray<TBlePeripheral>;
+  Device, Closest: TBlePeripheral;
+
+begin
+  Printer := TScanPrinter.Create;
+  Adapter := TBleAdapter.GetAdapters[0];
+
+  Adapter.OnScanFound := Printer.ScanFound;
+  Adapter.ScanFor(5000);
+
+  Results := Adapter.ScanGetResults;
+  WriteLn(Length(Results), ' devices found.');
+  if Length(Results) > 0 then
+  begin
+    Closest := Results[0];
+    for Device in Results do
+      if Device.Rssi > Closest.Rssi then
+        Closest := Device;
+    WriteLn('Strongest signal: ', Closest.Identifier, ' [', Closest.Address, '] ', Closest.Rssi, ' dBm');
+  end;
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.simpleble.android.Adapter
+
+suspend fun scan() = coroutineScope {
+    val adapter = Adapter.getAdapters().first()
+
+    val found = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { device ->
+            Log.d("SimpleBLE", "Found ${device.identifier} [${device.address}] ${device.rssi} dBm")
+        }
+    }
+    adapter.scanFor(5000)
+    found.cancel()
+
+    val results = adapter.scanGetResults()
+    Log.d("SimpleBLE", "${results.size} devices found.")
+    results.maxByOrNull { it.rssi }?.let { closest ->
+        Log.d("SimpleBLE", "Strongest signal: ${closest.identifier} [${closest.address}] ${closest.rssi} dBm")
+    }
+}
+```
+
+</Tab>
+</Tabs>
+
+## What you should see
+
+A line for each device as it is found, then the summary:
+
+```
+Found Kitchen Sensor [E4:7F:12:A0:6B:C2] -71 dBm
+Found  [47:3C:ED:B7:9A:26] -92 dBm
+Found My Phone [5A:21:7C:90:3E:11] -48 dBm
+Found  [C5:4E:28:D7:95:22] -62 dBm
+...
+23 devices found.
+Strongest signal: My Phone [5A:21:7C:90:3E:11] -48 dBm
+```
+
+Signal strength is in dBm, a negative number: the closer to zero, the stronger. Devices without a name show only their address. The [Bluetooth Address Lookup](https://simpleble.org/tools/bluetooth-address-lookup) tells you whether an address is public or random, and for a public address, which company registered it.
+
+## Exercise
+
+Change the scan time to 1 second, run the program, then change it to 15 seconds and run it again. Compare the device counts. Devices with long advertising intervals, or far from your computer, only show up in the longer scan.
+
+## Troubleshooting
+
+- **The same device shows up under several addresses.** Phones and many wearables change their address every few minutes for privacy, and each new address looks like a new device. [Bluetooth Addresses](/fundamentals/addresses#why-the-address-changes) explains why.
+- **The strongest signal is not the device next to you.** Signal strength depends on the transmitter's power and antenna, not only on distance. A powerful device across the room can beat a weak one beside you. The [RSSI lesson](/learn/rssi-signal-strength) covers this.
+- **A device you expect is missing.** It may advertise slowly or only for a short time after a button press. Scan longer, and wake the device right before the scan.
+- **Found lines stop appearing before the scan ends.** Every nearby device has been found. Later advertisements arrive as updates, which this program doesn't print.
+
+For production scanning patterns, see the [Scan recipe](/recipes/scan).
+
+## Next lesson
+
+[Read BLE advertisements](/learn/read-ble-advertisements): what is inside an advertisement, and how to read each part.

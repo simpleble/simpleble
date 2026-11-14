@@ -1,0 +1,445 @@
+---
+title: "BLE RSSI: Signal Strength and Distance"
+description: What RSSI tells you about a Bluetooth Low Energy device, why it fluctuates, and how far you can trust it as a distance estimate.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Every advertisement your adapter receives comes with a signal strength reading, the RSSI. It is the easiest way to tell whether a device is close, moving away or coming back.
+
+## What RSSI measures
+
+RSSI, the received signal strength indicator, is the power of a packet as your adapter received it, in dBm. It is a negative number, and the closer to zero, the stronger the signal. Typical readings run from about -30 dBm with the device touching the computer to about -100 dBm at the edge of range.
+
+The scale is logarithmic. Every 3 dB is half or double the power, and in open space, doubling the distance lowers the RSSI by about 6 dB. That is why RSSI changes fast near the computer and slowly far from it.
+
+## Why readings jump
+
+<RssiTraceDiagram />
+
+Two readings a second apart can differ by 10 dB with nothing moving. The signal reaches your adapter along several paths at once, bouncing off walls, furniture and people, and the copies add up or cancel out. Each advertisement is also sent on three channels at different frequencies, and each frequency fades differently. A hand around a phone or a body between the devices takes off several dB more.
+
+So treat a single reading as noise and an average as the signal. Average the last few readings, and compare the average with a threshold rather than reacting to every value.
+
+## RSSI and distance
+
+Distance estimates need the transmit power. A device that advertises its TX power lets you compute the path loss, the TX power minus the RSSI, and beacons advertise their expected RSSI at one meter for the same purpose. You can see the TX Power Level field in any advertisement with the [BLE Advertisement Decoder](https://simpleble.org/tools/ble-advertisement-decoder).
+
+Even then, the result is a rough range, not a measurement. RSSI answers "near, far or in between" and "getting closer or moving away" well. It does not tell a meter from two meters.
+
+## Watch the signal live
+
+Set `TARGET` to the name of a device you can carry, such as your phone advertising from nRF Connect for Mobile. The program follows that device for fifteen seconds and prints a bar for each reading: the longer the bar, the stronger the signal.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <simpleble/SimpleBLE.h>
+
+const std::string TARGET = "My Phone";
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+
+    auto report = [](SimpleBLE::Peripheral device) {
+        if (device.identifier() != TARGET) return;
+        int rssi = device.rssi();
+        std::cout << rssi << " dBm " << std::string(std::max(0, rssi + 100), '#') << std::endl;
+    };
+    adapter.set_callback_on_scan_found(report);
+    adapter.set_callback_on_scan_updated(report);
+
+    adapter.scan_for(15000);
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const char* TARGET = "My Phone";
+
+static void report(simpleble_adapter_t adapter, simpleble_peripheral_t device, void* userdata) {
+    simpleble_error_t* error = NULL;
+    char* identifier = simpleble_peripheral_identifier(device, &error);
+    if (!error && strcmp(identifier, TARGET) == 0) {
+        int rssi = simpleble_peripheral_rssi(device, &error);
+        printf("%d dBm ", rssi);
+        for (int i = 0; i < rssi + 100; i++) putchar('#');
+        putchar('\n');
+    }
+    simpleble_free(identifier);
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(device);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    if (!error) {
+        simpleble_adapter_set_callback_on_scan_found(adapter, report, NULL);
+        simpleble_adapter_set_callback_on_scan_updated(adapter, report, NULL);
+        simpleble_adapter_scan_for(adapter, 15000, &error);
+    }
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+TARGET = "My Phone"
+
+
+def report(device):
+    if device.identifier() == TARGET:
+        rssi = device.rssi()
+        print(f"{rssi} dBm {'#' * max(0, rssi + 100)}")
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.set_callback_on_scan_found(report)
+adapter.set_callback_on_scan_updated(report)
+
+adapter.scan_for(15000)
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+
+public class SignalStrength {
+    static final String TARGET = "My Phone";
+
+    static void report(Peripheral device) {
+        if (!device.getIdentifier().equals(TARGET)) return;
+        int rssi = device.getRssi();
+        System.out.println(rssi + " dBm " + "#".repeat(Math.max(0, rssi + 100)));
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+
+        adapter.setEventListener(new Adapter.EventListener() {
+            @Override
+            public void onScanFound(Peripheral device) {
+                report(device);
+            }
+
+            @Override
+            public void onScanUpdated(Peripheral device) {
+                report(device);
+            }
+        });
+
+        adapter.scanFor(15000);
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use futures::StreamExt;
+use simplersble::{Adapter, Peripheral, ScanEvent};
+
+const TARGET: &str = "My Phone";
+
+fn report(device: &Peripheral) {
+    if device.identifier().unwrap() != TARGET {
+        return;
+    }
+    let rssi = device.rssi().unwrap();
+    println!("{} dBm {}", rssi, "#".repeat((rssi + 100).max(0) as usize));
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+
+    let mut events = adapter.on_scan_event();
+    tokio::spawn(async move {
+        while let Some(event) = events.next().await {
+            match event {
+                ScanEvent::Found(device) | ScanEvent::Updated(device) => report(&device),
+                _ => {}
+            }
+        }
+    });
+
+    adapter.scan_for(Duration::from_secs(15)).unwrap();
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const TARGET = 'My Phone';
+
+function report(device) {
+  if (device.identifier() !== TARGET) return;
+  const rssi = device.rssi();
+  console.log(`${rssi} dBm ${'#'.repeat(Math.max(0, rssi + 100))}`);
+}
+
+const [adapter] = await Adapter.getAdapters();
+adapter.on('scanFound', report);
+adapter.on('scanUpdated', report);
+
+await adapter.scanFor(15000);
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const TARGET = 'My Phone';
+
+function report(device: Peripheral) {
+  if (device.identifier() !== TARGET) return;
+  const rssi = device.rssi() ?? -127;
+  console.log(`${rssi} dBm ${'#'.repeat(Math.max(0, rssi + 100))}`);
+}
+
+export async function watchSignal() {
+  const [adapter] = await Adapter.getAdapters();
+  adapter.on('scanFound', report);
+  adapter.on('scanUpdated', report);
+
+  await adapter.scanFor(15000);
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.Peripheral
+
+const val TARGET = "My Phone"
+
+fun report(device: Peripheral) {
+    if (device.identifier != TARGET) return
+    val rssi = device.rssi
+    println("$rssi dBm ${"#".repeat(maxOf(0, rssi + 100))}")
+}
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+
+    val found = launch(start = CoroutineStart.UNDISPATCHED) { adapter.onScanFound.collect { report(it) } }
+    val updated = launch(start = CoroutineStart.UNDISPATCHED) { adapter.onScanUpdated.collect { report(it) } }
+
+    adapter.scanFor(15000)
+    found.cancel()
+    updated.cancel()
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+let target = "My Phone"
+
+func report(_ device: Peripheral) {
+    guard device.identifier == target else { return }
+    let rssi = device.rssi
+    print("\(rssi) dBm \(String(repeating: "#", count: max(0, rssi + 100)))")
+}
+
+let adapter = try Adapter.getAdapters().first!
+
+let found = adapter.onScanFound
+let updated = adapter.onScanUpdated
+let foundTask = Task { for await device in found { report(device) } }
+let updatedTask = Task { for await device in updated { report(device) } }
+
+try await adapter.scanFor(timeoutMs: 15000)
+foundTask.cancel()
+updatedTask.cancel()
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:math';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const target = 'My Phone';
+
+void report(Peripheral device) {
+  if (device.identifier != target) return;
+  final rssi = device.rssi ?? -127;
+  print('$rssi dBm ${'#' * max(0, rssi + 100)}');
+}
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+
+  final found = adapter.onScanFound.listen(report);
+  final updated = adapter.onScanUpdated.listen(report);
+
+  await adapter.scanFor(const Duration(seconds: 15));
+  await found.cancel();
+  await updated.cancel();
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program SignalStrength;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SimpleDelphiBLE;
+
+const
+  Target = 'My Phone';
+
+type
+  TSignalPrinter = class
+    procedure Report(Sender: TBleAdapter; Device: TBlePeripheral);
+  end;
+
+procedure TSignalPrinter.Report(Sender: TBleAdapter; Device: TBlePeripheral);
+var
+  Bars: Integer;
+begin
+  if Device.Identifier <> Target then
+    Exit;
+  Bars := Device.Rssi + 100;
+  if Bars < 0 then
+    Bars := 0;
+  WriteLn(Device.Rssi, ' dBm ', StringOfChar('#', Bars));
+end;
+
+var
+  Printer: TSignalPrinter;
+  Adapter: TBleAdapter;
+
+begin
+  Printer := TSignalPrinter.Create;
+  Adapter := TBleAdapter.GetAdapters[0];
+
+  Adapter.OnScanFound := Printer.Report;
+  Adapter.OnScanUpdated := Printer.Report;
+
+  Adapter.ScanFor(15000);
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.simpleble.android.Adapter
+import org.simpleble.android.Peripheral
+
+const val TARGET = "My Phone"
+
+fun report(device: Peripheral) {
+    if (device.identifier != TARGET) return
+    val rssi = device.rssi
+    Log.d("SimpleBLE", "$rssi dBm ${"#".repeat(maxOf(0, rssi + 100))}")
+}
+
+suspend fun watchSignal() = coroutineScope {
+    val adapter = Adapter.getAdapters().first()
+
+    val found = launch(start = CoroutineStart.UNDISPATCHED) { adapter.onScanFound.collect { report(it) } }
+    val updated = launch(start = CoroutineStart.UNDISPATCHED) { adapter.onScanUpdated.collect { report(it) } }
+
+    adapter.scanFor(15000)
+    found.cancel()
+    updated.cancel()
+}
+```
+
+</Tab>
+</Tabs>
+
+## What you should see
+
+A new line every time the device advertises. Hold the device still and the bar still wobbles:
+
+```
+-52 dBm ################################################
+-55 dBm #############################################
+-49 dBm ###################################################
+-58 dBm ##########################################
+-53 dBm ###############################################
+```
+
+Walk away with the device and the bars shrink. Come back and they grow again.
+
+## Exercise
+
+Smooth the readings. Keep the last five RSSI values for the target and print their average instead of each reading. Run it again while you walk away and back: the averaged bar moves steadily, like the line in the diagram.
+
+## Troubleshooting
+
+- **Nothing is printed.** `TARGET` must match the advertised name exactly, including capitals and spaces. Run the program from [Scan for BLE devices](/learn/scan-for-ble-devices) and copy the name from its output.
+- **Readings stop after a few seconds.** The device stopped advertising. Keep the nRF Connect advertiser running and the phone's screen on.
+- **The RSSI jumps 10 dB with nothing moving.** That is normal for single readings. Average them, as in the exercise.
+- **The signal is weaker than expected at close range.** A hand, a case or your body between the devices absorbs 2.4 GHz signals. Hold the phone by its edges, in clear view of the computer.
+
+## Next lesson
+
+You can now find the devices around you and read what they broadcast. Module 2 turns it around, starting with [BLE Advertising](/fundamentals/advertising): what happens on the air when a device advertises. Then your computer advertises on its own.

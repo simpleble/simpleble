@@ -1,0 +1,12 @@
+{
+  "title": "Learn Bluetooth Low Energy",
+  "defaultOpen": true,
+  "pages": [
+    "---Module 1: First contact---",
+    "what-is-bluetooth-low-energy",
+    "central-and-peripheral",
+    "scan-for-ble-devices",
+    "read-ble-advertisements",
+    "rssi-signal-strength"
+  ]
+}

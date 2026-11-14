@@ -1,3 +1,4 @@
+import { getCourseJsonLd } from "@/lib/course";
 import { getPageImage } from "@/lib/metadata";
 import { getPageTitle, source } from "@/lib/source";
 import {
@@ -25,6 +26,7 @@ export default async function Page(props: DocsRouteProps) {
   if (!page) notFound();
 
   const MDX = page.data.body;
+  const jsonLd = getCourseJsonLd(page);
   const gitConfig = {
     user: "username",
     repo: "repo",
@@ -39,6 +41,13 @@ export default async function Page(props: DocsRouteProps) {
         style: "normal",
       }}
     >
+      {jsonLd.map((data, index) => (
+        <script
+          key={index}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }}
+        />
+      ))}
       <DocsTitle className="text-4xl sm:text-5xl font-sora font-bold tracking-tight">
         {page.data.title}
       </DocsTitle>

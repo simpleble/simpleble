@@ -1,0 +1,394 @@
+---
+title: BLE Central and Peripheral Roles
+description: What centrals, peripherals, observers and broadcasters do in Bluetooth Low Energy, and which role your computer and your devices play.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Every BLE device plays a role. The role decides who announces itself, who listens, and who starts a connection.
+
+## The roles
+
+- **Peripheral.** Advertises its presence and accepts a connection. A heart rate strap, a smart lock or a sensor is a peripheral.
+- **Central.** Scans for advertisements and connects to the peripheral it wants. A phone or a computer is usually the central.
+- **Broadcaster.** Advertises and never accepts a connection. Beacons are broadcasters: everything they have to say fits in the advertisement.
+- **Observer.** Scans and never connects. A program that only collects beacon readings is an observer.
+
+The roles describe what a device is doing, not what it is. A phone is a central when it talks to a smartwatch and a peripheral when it unlocks a door. Your computer can take either role with SimpleBLE: in this module it scans as a central, and in Module 2 it advertises as a peripheral.
+
+<RolesSequenceDiagram />
+
+A peripheral advertises until a central connects. Once connected, the central acts as the GATT client: it reads and writes the peripheral's data. The peripheral acts as the GATT server: it holds the data and sends notifications when values change. Module 3 covers that exchange.
+
+Before the connection, everything the central knows about a peripheral comes from its advertisements, including whether it accepts connections at all. The [BLE Advertisement Builder](https://simpleble.org/tools/ble-advertisement-builder) shows what a device puts in those few bytes.
+
+## Count the roles around you
+
+This program scans for five seconds as a central. It lists the peripherals it heard, the devices that accept connections, and counts the broadcasters, the devices that only advertise.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <iostream>
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    size_t peripherals = 0;
+    for (auto& device : results) {
+        if (device.is_connectable()) {
+            std::cout << "Peripheral: " << device.identifier() << " [" << device.address() << "]" << std::endl;
+            peripherals++;
+        }
+    }
+
+    std::cout << "Peripherals (accept connections): " << peripherals << std::endl;
+    std::cout << "Broadcasters (advertise only): " << results.size() - peripherals << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <simplecble/simplecble.h>
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    if (!error) simpleble_adapter_scan_for(adapter, 5000, &error);
+    if (!error) count = simpleble_adapter_scan_get_results(adapter, &results, &error);
+
+    size_t peripherals = 0;
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, &error);
+        if (error) break;
+
+        if (simpleble_peripheral_is_connectable(device, &error)) {
+            char* identifier = simpleble_peripheral_identifier(device, &error);
+            char* address = error ? NULL : simpleble_peripheral_address(device, &error);
+            if (!error) printf("Peripheral: %s [%s]\n", identifier, address);
+            simpleble_free(identifier);
+            simpleble_free(address);
+            peripherals++;
+        }
+        simpleble_peripheral_release_handle(device);
+    }
+
+    if (!error) {
+        printf("Peripherals (accept connections): %zu\n", peripherals);
+        printf("Broadcasters (advertise only): %zu\n", count - peripherals);
+    }
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_list_release(results);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+results = adapter.scan_get_results()
+peripherals = 0
+for device in results:
+    if device.is_connectable():
+        print(f"Peripheral: {device.identifier()} [{device.address()}]")
+        peripherals += 1
+
+print(f"Peripherals (accept connections): {peripherals}")
+print(f"Broadcasters (advertise only): {len(results) - peripherals}")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.util.List;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+
+public class Roles {
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        List<Peripheral> results = adapter.scanGetResults();
+        int peripherals = 0;
+        for (Peripheral device : results) {
+            if (device.isConnectable()) {
+                System.out.println("Peripheral: " + device.getIdentifier() + " [" + device.getAddress() + "]");
+                peripherals++;
+            }
+        }
+
+        System.out.println("Peripherals (accept connections): " + peripherals);
+        System.out.println("Broadcasters (advertise only): " + (results.size() - peripherals));
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use simplersble::Adapter;
+
+fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let mut peripherals = 0;
+    for device in &results {
+        if device.is_connectable().unwrap() {
+            println!("Peripheral: {} [{}]", device.identifier().unwrap(), device.address().unwrap());
+            peripherals += 1;
+        }
+    }
+
+    println!("Peripherals (accept connections): {}", peripherals);
+    println!("Broadcasters (advertise only): {}", results.len() - peripherals);
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const results = adapter.scanGetResults();
+let peripherals = 0;
+for (const device of results) {
+  if (device.isConnectable()) {
+    console.log(`Peripheral: ${device.identifier()} [${device.address()}]`);
+    peripherals++;
+  }
+}
+
+console.log(`Peripherals (accept connections): ${peripherals}`);
+console.log(`Broadcasters (advertise only): ${results.length - peripherals}`);
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+export async function countRoles() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const results = adapter.scanGetResults();
+  let peripherals = 0;
+  for (const device of results) {
+    if (device.isConnectable()) {
+      console.log(`Peripheral: ${device.identifier()} [${device.address()}]`);
+      peripherals++;
+    }
+  }
+
+  console.log(`Peripherals (accept connections): ${peripherals}`);
+  console.log(`Broadcasters (advertise only): ${results.length - peripherals}`);
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val results = adapter.scanGetResults()
+    var peripherals = 0
+    for (device in results) {
+        if (device.isConnectable) {
+            println("Peripheral: ${device.identifier} [${device.address}]")
+            peripherals++
+        }
+    }
+
+    println("Peripherals (accept connections): $peripherals")
+    println("Broadcasters (advertise only): ${results.size - peripherals}")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+let results = try adapter.scanGetResults()
+var peripherals = 0
+for device in results where device.isConnectable {
+    print("Peripheral: \(device.identifier) [\(device.address)]")
+    peripherals += 1
+}
+
+print("Peripherals (accept connections): \(peripherals)")
+print("Broadcasters (advertise only): \(results.count - peripherals)")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final results = adapter.scanGetResults();
+  var peripherals = 0;
+  for (final device in results) {
+    if (device.isConnectable) {
+      print('Peripheral: ${device.identifier} [${device.address}]');
+      peripherals++;
+    }
+  }
+
+  print('Peripherals (accept connections): $peripherals');
+  print('Broadcasters (advertise only): ${results.length - peripherals}');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Roles;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SimpleDelphiBLE;
+
+var
+  Adapter: TBleAdapter;
+  Results: TArray<TBlePeripheral>;
+  Device: TBlePeripheral;
+  Peripherals: Integer;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Results := Adapter.ScanGetResults;
+  Peripherals := 0;
+  for Device in Results do
+    if Device.IsConnectable then
+    begin
+      WriteLn('Peripheral: ', Device.Identifier, ' [', Device.Address, ']');
+      Inc(Peripherals);
+    end;
+
+  WriteLn('Peripherals (accept connections): ', Peripherals);
+  WriteLn('Broadcasters (advertise only): ', Length(Results) - Peripherals);
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import org.simpleble.android.Adapter
+
+suspend fun countRoles() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val results = adapter.scanGetResults()
+    var peripherals = 0
+    for (device in results) {
+        if (device.isConnectable) {
+            Log.d("SimpleBLE", "Peripheral: ${device.identifier} [${device.address}]")
+            peripherals++
+        }
+    }
+
+    Log.d("SimpleBLE", "Peripherals (accept connections): $peripherals")
+    Log.d("SimpleBLE", "Broadcasters (advertise only): ${results.size - peripherals}")
+}
+```
+
+</Tab>
+</Tabs>
+
+## What you should see
+
+The peripherals by name, then the two counts:
+
+```
+Peripheral: Kitchen Sensor [E4:7F:12:A0:6B:C2]
+Peripheral: My Phone [5A:21:7C:90:3E:11]
+Peripheral:  [71:E2:A9:AC:B5:E0]
+Peripherals (accept connections): 3
+Broadcasters (advertise only): 18
+```
+
+Most rooms hold more broadcasters than you expect. Phones, laptops, earbuds and trackers send short status advertisements all day, usually without a name. Some peripherals advertise without a name too, so their line shows only the address. On macOS the address is a UUID that macOS assigns to each device.
+
+## Exercise
+
+Make your phone a peripheral. In nRF Connect for Mobile, open the Advertiser, add a connectable advertisement that includes the device name, and start it. Run the program again: the peripheral count goes up by one, and your phone's name appears in the list.
+
+## Troubleshooting
+
+- **Both counts are zero.** Bluetooth is off, or the program has no permission to scan. Run the program from [What is Bluetooth Low Energy?](/learn/what-is-bluetooth-low-energy) first, then check [Permissions](/fundamentals/permissions).
+- **Your phone doesn't appear.** Keep the nRF Connect advertiser running and the phone unlocked, within a few meters of the computer.
+- **React Native or Android finds nothing.** The app needs its Bluetooth permissions before the scan. Android also delivers scan results only to apps that hold the location permission, unless the app declares that it never derives location from scans.
+
+Lesson 1 introduces [GATT](/learn/what-is-bluetooth-low-energy#how-ble-devices-exchange-data), the data model a central and a peripheral share once connected, and Module 3 covers it in depth.
+
+## Next lesson
+
+[Scan for BLE devices](/learn/scan-for-ble-devices): how scanning works, and how to find the closest device.

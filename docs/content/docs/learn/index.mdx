@@ -1,0 +1,74 @@
+---
+title: "Learn Bluetooth Low Energy: Free BLE Course"
+description: A free, hands-on Bluetooth Low Energy course. Every lesson runs on your own computer, with working code in 12 languages and no hardware to buy.
+---
+
+Learn Bluetooth Low Energy by running it. This free course starts with your first scan and ends with a connection that streams data. Every lesson runs on your own computer, in your language, with nothing to buy.
+
+## How each lesson works
+
+Each lesson teaches one idea and has you run it:
+
+- **Concept.** A short explanation and one diagram.
+- **Code.** A complete program in C++, C, Python, Java, Rust, Node.js, React Native, Kotlin Multiplatform, Swift, Dart, Delphi or Android. Pick your language once and every lesson opens in it.
+- **What you should see.** The output that tells you it worked.
+- **Exercise.** One change to make on your own.
+- **Troubleshooting.** The fixes for the problems learners hit most often.
+- **Tool.** A free SimpleBLE browser tool for the lesson's topic.
+
+## What you need
+
+- **A computer with Bluetooth.** Windows, macOS or Linux.
+- **SimpleBLE for your language.** [Installation](/installation) lists the package for each language. For Python, run `pip install simplepyble`.
+- **A device to talk to.** A phone with [nRF Connect for Mobile](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile), a free app for Android and iOS, or a second computer running these lessons.
+
+A computer without Bluetooth uses an nRF52840 USB dongle with the [free Dongl firmware](https://simpleble.org/dongl/nrf52840). The dongle appears as a Bluetooth adapter next to the computer's own.
+
+## Module 1: First contact
+
+Find the devices around you and read what they broadcast.
+
+<Cards>
+  <Card title="1. What Is Bluetooth Low Energy (BLE)?" href="/learn/what-is-bluetooth-low-energy" description="How BLE differs from Bluetooth Classic, how devices exchange data, and your first program." />
+  <Card title="2. BLE Central and Peripheral Roles" href="/learn/central-and-peripheral" description="The roles devices play, and which ones are around you." />
+  <Card title="3. Scan for BLE Devices From Your Computer" href="/learn/scan-for-ble-devices" description="Discover nearby devices and find the closest one." />
+  <Card title="4. Read BLE Advertisement Data" href="/learn/read-ble-advertisements" description="Names, manufacturer data, services and transmit power." />
+  <Card title="5. BLE RSSI: Signal Strength and Distance" href="/learn/rssi-signal-strength" description="Watch signal strength change as a device moves." />
+</Cards>
+
+## Module 2: Advertising
+
+Make your computer visible and broadcast data of your own.
+
+<Cards>
+  <Card title="6. BLE Advertising" href="/fundamentals/advertising" description="Advertising channels, packet types, scan responses and extended advertising." />
+  <Card title="7. BLE Manufacturer Data and Beacons" description="Company identifiers, iBeacon, Eddystone and a payload format of your own." />
+  <Card title="8. Advertise BLE From Your Computer" description="Make your computer a peripheral that a phone can find." />
+  <Card title="9. BLE Advertising Interval and Discovery Time" description="How advertising and scan timing decide how fast a device is found." />
+</Cards>
+
+## Module 3: Connections and GATT
+
+Connect to a device and exchange data with it.
+
+<Cards>
+  <Card title="10. Connect to a BLE Device" description="Open a connection, list its services and disconnect cleanly." />
+  <Card title="11. GATT Services and Characteristics" description="How a connected device organizes its data." />
+  <Card title="12. Bluetooth UUIDs" href="/fundamentals/uuids" description="16-bit and 128-bit UUIDs, standard and custom." />
+  <Card title="13. Read and Write BLE Characteristics" description="Read values, and write with and without a response." />
+  <Card title="14. BLE Notify vs Indicate" description="Receive new values the moment they change." />
+  <Card title="15. BLE MTU and Throughput" description="How much data fits in a packet and how fast it moves." />
+  <Card title="16. BLE Connection Interval, Latency and Timeout" description="How connection parameters trade power for speed, and who sets them." />
+</Cards>
+
+## Coming next
+
+- **Module 4: Build a peripheral.** Serve GATT from your computer, build a heart rate service end to end, and connect your own central to it.
+- **Module 5: Real devices.** Read a heart rate strap, test your nRF or ESP32 devkit, and keep a device connected with a reconnect loop.
+- **Module 6: Debugging and shipping.** Disconnects, error codes, HCI logs, addresses and privacy, OS permissions and concurrency.
+
+## Go deeper
+
+The [Fundamentals](/fundamentals) pages are the reference for each topic, and the [Recipes](/recipes/scan) show the patterns for production code. The free [SimpleBLE tools](https://simpleble.org/tools) decode advertisements, look up UUIDs, validate connection parameters and more, in the browser.
+
+SimpleBLE is a source-available Bluetooth Low Energy library for Windows, macOS, Linux, iOS and Android. The course uses it so the same lesson runs on every operating system and in every language.

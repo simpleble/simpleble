@@ -1,9 +1,12 @@
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import type { MDXComponents } from 'mdx/types';
 
+import * as firstContactDiagrams from '@/components/learn/first-contact-diagrams';
+
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
+    ...firstContactDiagrams,
     h1: (props) => (
       <h1 {...props} className="font-sora font-bold tracking-tight text-3xl mt-12 mb-6 border-b pb-2 border-fd-border/50" />
     ),

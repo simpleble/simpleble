@@ -1,0 +1,489 @@
+---
+title: Read BLE Advertisement Data
+description: Read a device's name, services and manufacturer data from its Bluetooth Low Energy advertisements, then decode the raw bytes yourself.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+An advertisement is a device's business card. Before any connection, it tells a scanner the device's name, what it does, who made it and how strongly it transmits. Many devices, such as beacons and environmental sensors, put their entire purpose in it.
+
+## What is inside an advertisement
+
+An advertisement carries up to 31 bytes of advertising data. The data is a list of small structures, and each one starts with its length and its type. A scanner reads the type to know what the rest of the structure means, and skips the types it doesn't use.
+
+<AdvertisingStructuresDiagram />
+
+These are the fields you will meet most:
+
+- **Name.** The device's local name, complete or shortened. Many devices leave it out of the advertisement and send it in the scan response, a second packet with another 31 bytes.
+- **Service UUIDs.** The services the device offers, such as `0x180F` for Battery Service or `0x180D` for Heart Rate. Scanners use them to find devices of a kind.
+- **Service data.** A value attached to a service UUID. Many sensors broadcast their readings this way.
+- **Manufacturer data.** A company identifier assigned by the Bluetooth SIG, followed by bytes in the company's own format. Beacons and many consumer devices use it.
+- **TX power.** The power the device transmits at, in dBm. The RSSI lesson uses it.
+
+Whether a device accepts connections is not a field in the data: it is part of the advertisement's type. SimpleBLE reports it as `is_connectable()`.
+
+Copy the raw bytes of any advertisement into the [BLE Advertisement Decoder](https://simpleble.org/tools/ble-advertisement-decoder) to see each structure, its type and its value, including company names and known beacon formats.
+
+## Print every field
+
+This program scans for five seconds and prints each device's advertisement, field by field.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <iomanip>
+#include <iostream>
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    for (auto& device : adapter.scan_get_results()) {
+        std::cout << device.identifier() << " [" << device.address() << "]" << std::endl;
+        std::cout << "  connectable: " << (device.is_connectable() ? "yes" : "no") << std::endl;
+        if (device.tx_power() != -32768) {
+            std::cout << "  tx power: " << device.tx_power() << " dBm" << std::endl;
+        }
+        for (auto& [company_id, data] : device.manufacturer_data()) {
+            std::cout << "  manufacturer data: company 0x" << std::hex << std::uppercase << std::setw(4)
+                      << std::setfill('0') << company_id << std::dec << ", " << data.toHex() << std::endl;
+        }
+        for (auto& service : device.services()) {
+            std::cout << "  service: " << service.uuid() << " " << service.data().toHex() << std::endl;
+        }
+    }
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <simplecble/simplecble.h>
+
+static void print_hex(const uint8_t* data, size_t length) {
+    for (size_t i = 0; i < length; i++) printf("%02x", data[i]);
+}
+
+static void print_advertisement(simpleble_peripheral_t device) {
+    simpleble_error_t* error = NULL;
+
+    char* identifier = simpleble_peripheral_identifier(device, &error);
+    char* address = error ? NULL : simpleble_peripheral_address(device, &error);
+    bool connectable = !error && simpleble_peripheral_is_connectable(device, &error);
+    int16_t tx_power = error ? INT16_MIN : simpleble_peripheral_tx_power(device, &error);
+    if (!error) {
+        printf("%s [%s]\n", identifier, address);
+        printf("  connectable: %s\n", connectable ? "yes" : "no");
+        if (tx_power != INT16_MIN) printf("  tx power: %d dBm\n", tx_power);
+    }
+    simpleble_free(identifier);
+    simpleble_free(address);
+
+    simpleble_manufacturer_data_list_t manufacturer_data = NULL;
+    size_t count = error ? 0 : simpleble_peripheral_manufacturer_data(device, &manufacturer_data, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_manufacturer_data_t entry = {0};
+        simpleble_manufacturer_data_list_get(manufacturer_data, i, &entry, &error);
+        if (error) break;
+        printf("  manufacturer data: company 0x%04X, ", entry.manufacturer_id);
+        print_hex(entry.data, entry.data_length);
+        printf("\n");
+        simpleble_manufacturer_data_release(&entry);
+    }
+    simpleble_manufacturer_data_list_release(manufacturer_data);
+
+    simpleble_service_list_t services = NULL;
+    count = error ? 0 : simpleble_peripheral_services(device, &services, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, &error);
+        if (error) break;
+        printf("  service: %s ", service.uuid.value);
+        print_hex(service.data, service.data_length);
+        printf("\n");
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    if (!error) simpleble_adapter_scan_for(adapter, 5000, &error);
+    if (!error) count = simpleble_adapter_scan_get_results(adapter, &results, &error);
+
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, &error);
+        if (error) break;
+        print_advertisement(device);
+        simpleble_peripheral_release_handle(device);
+    }
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_list_release(results);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+for device in adapter.scan_get_results():
+    print(f"{device.identifier()} [{device.address()}]")
+    print(f"  connectable: {'yes' if device.is_connectable() else 'no'}")
+    if device.tx_power() != -32768:
+        print(f"  tx power: {device.tx_power()} dBm")
+    for company_id, data in device.manufacturer_data().items():
+        print(f"  manufacturer data: company 0x{company_id:04X}, {data.hex()}")
+    for service in device.services():
+        print(f"  service: {service.uuid()} {service.data().hex()}")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.util.HexFormat;
+import java.util.Map;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+import org.simplejavable.Service;
+
+public class Advertisements {
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        HexFormat hex = HexFormat.of();
+        for (Peripheral device : adapter.scanGetResults()) {
+            System.out.println(device.getIdentifier() + " [" + device.getAddress() + "]");
+            System.out.println("  connectable: " + (device.isConnectable() ? "yes" : "no"));
+            if (device.getTxPower() != -32768) {
+                System.out.println("  tx power: " + device.getTxPower() + " dBm");
+            }
+            for (Map.Entry<Integer, byte[]> entry : device.manufacturerData().entrySet()) {
+                System.out.printf("  manufacturer data: company 0x%04X, %s%n", entry.getKey(),
+                        hex.formatHex(entry.getValue()));
+            }
+            for (Service service : device.services()) {
+                System.out.println("  service: " + service.uuid());
+            }
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use simplersble::Adapter;
+
+fn hex(data: &[u8]) -> String {
+    data.iter().map(|byte| format!("{:02x}", byte)).collect()
+}
+
+fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    for device in adapter.scan_get_results().unwrap() {
+        println!("{} [{}]", device.identifier().unwrap(), device.address().unwrap());
+        println!("  connectable: {}", if device.is_connectable().unwrap() { "yes" } else { "no" });
+        let tx_power = device.tx_power().unwrap();
+        if tx_power != -32768 {
+            println!("  tx power: {} dBm", tx_power);
+        }
+        for (company_id, data) in device.manufacturer_data().unwrap() {
+            println!("  manufacturer data: company 0x{:04X}, {}", company_id, hex(&data));
+        }
+        for service in device.services().unwrap() {
+            println!("  service: {} {}", service.uuid(), hex(&service.data()));
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+for (const device of adapter.scanGetResults()) {
+  console.log(`${device.identifier()} [${device.address()}]`);
+  console.log(`  connectable: ${device.isConnectable() ? 'yes' : 'no'}`);
+  if (device.txPower() !== undefined) console.log(`  tx power: ${device.txPower()} dBm`);
+  for (const [companyId, data] of device.manufacturerData()) {
+    const company = companyId.toString(16).toUpperCase().padStart(4, '0');
+    console.log(`  manufacturer data: company 0x${company}, ${data.toString('hex')}`);
+  }
+  for (const service of device.services()) {
+    console.log(`  service: ${service.uuid} ${service.data.toString('hex')}`);
+  }
+}
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+const hex = (data: Uint8Array) => Array.from(data, byte => byte.toString(16).padStart(2, '0')).join('');
+
+export async function readAdvertisements() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  for (const device of adapter.scanGetResults()) {
+    console.log(`${device.identifier()} [${device.address()}]`);
+    console.log(`  connectable: ${device.isConnectable() ? 'yes' : 'no'}`);
+    if (device.txPower() !== undefined) console.log(`  tx power: ${device.txPower()} dBm`);
+    for (const [companyId, data] of device.manufacturerData()) {
+      const company = companyId.toString(16).toUpperCase().padStart(4, '0');
+      console.log(`  manufacturer data: company 0x${company}, ${hex(data)}`);
+    }
+    for (const service of device.services()) {
+      console.log(`  service: ${service.uuid} ${hex(service.data)}`);
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+
+fun ByteArray.toHex() = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    for (device in adapter.scanGetResults()) {
+        println("${device.identifier} [${device.address}]")
+        println("  connectable: ${if (device.isConnectable) "yes" else "no"}")
+        if (device.txPower != -32768) println("  tx power: ${device.txPower} dBm")
+        for ((companyId, data) in device.manufacturerData()) {
+            val company = companyId.toString(16).uppercase().padStart(4, '0')
+            println("  manufacturer data: company 0x$company, ${data.toHex()}")
+        }
+        for (service in device.services()) {
+            println("  service: ${service.uuid} ${service.data.toHex()}")
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+extension Data {
+    var hex: String { map { String(format: "%02x", $0) }.joined() }
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+for device in try adapter.scanGetResults() {
+    print("\(device.identifier) [\(device.address)]")
+    print("  connectable: \(device.isConnectable ? "yes" : "no")")
+    if device.txPower != -32768 {
+        print("  tx power: \(device.txPower) dBm")
+    }
+    for (companyId, data) in try device.manufacturerData() {
+        print("  manufacturer data: company \(String(format: "0x%04X", UInt32(companyId))), \(data.hex)")
+    }
+    for service in try device.services() {
+        print("  service: \(service.uuid) \(service.data.hex)")
+    }
+}
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+String hex(List<int> data) => data.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  for (final device in adapter.scanGetResults()) {
+    print('${device.identifier} [${device.address}]');
+    print('  connectable: ${device.isConnectable ? 'yes' : 'no'}');
+    if (device.txPower != null) print('  tx power: ${device.txPower} dBm');
+    for (final MapEntry(key: companyId, value: data) in device.manufacturerData().entries) {
+      final company = companyId.toRadixString(16).toUpperCase().padLeft(4, '0');
+      print('  manufacturer data: company 0x$company, ${hex(data)}');
+    }
+    for (final service in device.services()) {
+      print('  service: ${service.uuid} ${hex(service.data)}');
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Advertisements;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+function Hex(const Data: TBytes): string;
+var
+  B: Byte;
+begin
+  Result := '';
+  for B in Data do
+    Result := Result + LowerCase(IntToHex(B, 2));
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device: TBlePeripheral;
+  Entry: TBleManufacturerData;
+  Service: TBleService;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  for Device in Adapter.ScanGetResults do
+  begin
+    WriteLn(Device.Identifier, ' [', Device.Address, ']');
+    if Device.IsConnectable then
+      WriteLn('  connectable: yes')
+    else
+      WriteLn('  connectable: no');
+    if Device.TxPower <> -32768 then
+      WriteLn('  tx power: ', Device.TxPower, ' dBm');
+    for Entry in Device.ManufacturerData do
+      WriteLn('  manufacturer data: company 0x', IntToHex(Entry.CompanyId, 4), ', ', Hex(Entry.Data));
+    for Service in Device.Services do
+      WriteLn('  service: ', Service.Uuid, ' ', Hex(Service.Data));
+  end;
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import org.simpleble.android.Adapter
+
+private fun ByteArray.toHex() = joinToString("") { "%02x".format(it) }
+
+suspend fun readAdvertisements() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    for (device in adapter.scanGetResults()) {
+        Log.d("SimpleBLE", "${device.identifier} [${device.address}]")
+        Log.d("SimpleBLE", "  connectable: ${if (device.isConnectable) "yes" else "no"}")
+        if (device.txPower != -32768) Log.d("SimpleBLE", "  tx power: ${device.txPower} dBm")
+        for ((companyId, data) in device.manufacturerData()) {
+            Log.d("SimpleBLE", "  manufacturer data: company 0x%04X, %s".format(companyId, data.toHex()))
+        }
+        for (service in device.services()) {
+            Log.d("SimpleBLE", "  service: ${service.uuid}")
+        }
+    }
+}
+```
+
+</Tab>
+</Tabs>
+
+## What you should see
+
+A block for each device. Most show only some of the fields:
+
+```
+Kitchen Sensor [E4:7F:12:A0:6B:C2]
+  connectable: yes
+  manufacturer data: company 0x0059, 0107000c00
+  service: 0000181a-0000-1000-8000-00805f9b34fb
+ [47:3C:ED:B7:9A:26]
+  connectable: no
+  tx power: 12 dBm
+  manufacturer data: company 0x004C, 1006441ddf6e8e38
+```
+
+SimpleBLE prints every service UUID in its full 128-bit form. `0000181a-0000-1000-8000-00805f9b34fb` is the standard 16-bit UUID `0x181A`, Environmental Sensing. The [BLE UUIDs](/fundamentals/uuids) page explains the conversion.
+
+Manufacturer data is in the company's own format. Company `0x004C` is Apple, and the nameless broadcasters you saw in the [roles lesson](/learn/central-and-peripheral) are often phones, laptops and earbuds announcing their status this way.
+
+## Exercise
+
+Pick a company identifier from your output and look it up in the [Bluetooth Assigned Numbers Explorer](https://simpleble.org/tools/bluetooth-assigned-numbers). Then change the program to print only the devices whose manufacturer data uses that identifier.
+
+## Troubleshooting
+
+- **A device shows no name.** It doesn't advertise one, or it sends the name only in the scan response. SimpleBLE requests scan responses, so a device that has a name usually shows it after a scan of a few seconds.
+- **The same manufacturer data changes on every run.** Many formats carry a counter, a rotating identifier or encrypted status, so the bytes change by design.
+- **Service data is empty.** Most devices advertise the service UUID alone. Service data appears when the device attaches a value to it.
+
+For the full list of advertising data types, scan responses and extended advertising, see [BLE Advertising](/fundamentals/advertising).
+
+## Next lesson
+
+[RSSI and signal strength](/learn/rssi-signal-strength): what the signal strength number means and how far you can trust it.

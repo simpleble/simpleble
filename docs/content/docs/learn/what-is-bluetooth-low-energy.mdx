@@ -1,0 +1,321 @@
+---
+title: What Is Bluetooth Low Energy (BLE)?
+description: What Bluetooth Low Energy is, how it differs from Bluetooth Classic, and how BLE devices exchange data. Lesson 1 of a free hands-on BLE course.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Bluetooth Low Energy (BLE) is the short-range radio inside phones, watches, fitness sensors, medical devices, smart locks and beacons. It was designed for devices that run for months or years on a coin cell battery: they send small amounts of data in short bursts and keep the radio off the rest of the time.
+
+## BLE vs Bluetooth Classic
+
+Bluetooth is two technologies under one name. Bluetooth Classic, the original, keeps a link open for continuous streams such as headphone audio and file transfers. Bluetooth Low Energy, introduced with Bluetooth 4.0, wakes up, sends a few bytes and goes back to sleep.
+
+| | Bluetooth Classic | Bluetooth Low Energy |
+| --- | --- | --- |
+| Built for | Continuous streams: audio, files, serial links | Small messages: readings, commands, status |
+| Battery life | Hours to days on a rechargeable battery | Months to years on a coin cell |
+| Radio channels | 79 channels, 1 MHz wide | 40 channels, 2 MHz wide |
+| Finding devices | Inquiry, answered by discoverable devices | Advertising, heard by any scanner |
+| Data model | Profiles such as A2DP, HFP and SPP | GATT services and characteristics |
+| Typical devices | Headphones, car kits, speakers | Sensors, wearables, beacons, locks |
+
+Both work in the 2.4 GHz band, but they are separate protocols: a BLE sensor can't talk to a Classic-only device. Phones and computers carry both, which is why the same phone pairs with headphones and reads a fitness tracker. Since Bluetooth 5.2, BLE also carries audio, called LE Audio, while most BLE devices still exchange small messages.
+
+## How BLE devices exchange data
+
+- **Roles.** A peripheral, such as a sensor, announces that it is there. A central, such as a phone or your computer, listens for those announcements and connects. [Lesson 2](/learn/central-and-peripheral) covers the roles.
+- **Advertising.** A peripheral announces itself with advertisements, short broadcasts that any nearby scanner can hear without a connection. Each one carries up to 31 bytes: a name, the services the device offers, and data such as a sensor reading. Beacons never do more than advertise.
+- **Connections and GATT.** Once a central connects, the two exchange data through GATT, the Generic Attribute Profile. The peripheral keeps its data in a table of services and characteristics. A service groups the data for one feature, such as Heart Rate. A characteristic is one value inside a service, such as the heart rate measurement, and its properties say what a central may do with it: read it, write it, or subscribe to notifications or indications when it changes. Descriptors add details to a characteristic, such as whether its notifications are on.
+- **UUIDs.** Every service and characteristic has a UUID. Standard ones from the Bluetooth SIG have a short 16-bit form, such as `0x180D` for Heart Rate. Your own services use random 128-bit UUIDs. [Bluetooth UUIDs](/fundamentals/uuids) explains both forms.
+- **Pairing and bonding.** Pairing exchanges keys so the two devices can encrypt their connection. Bonding stores those keys, so later connections are encrypted without pairing again. Many devices need neither and exchange data on an open connection.
+
+Modules 1 and 2 of this course cover advertising, and Module 3 covers connections and GATT.
+
+## From your program to the air
+
+<BleStackDiagram />
+
+Your computer reaches the air through a Bluetooth adapter: the radio built into the computer, or a USB dongle. The operating system's Bluetooth stack drives the adapter, and each operating system has its own: WinRT on Windows, CoreBluetooth on macOS and iOS, BlueZ on Linux, and the Android Bluetooth API. SimpleBLE puts one API on top of all of them, in your language, so every program in this course runs the same on each.
+
+Every BLE device agrees on a shared set of numbers assigned by the Bluetooth SIG: company identifiers, service UUIDs, advertising data types and more. The [Bluetooth Assigned Numbers Explorer](https://simpleble.org/tools/bluetooth-assigned-numbers) searches all of them. You will meet many of them in the next lessons.
+
+## Your first program
+
+Install SimpleBLE for your language from [Installation](/installation), then run this program. It checks that Bluetooth is on and lists the adapters your computer has.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <iostream>
+#include <simpleble/SimpleBLE.h>
+
+int main() {
+    if (!SimpleBLE::Adapter::bluetooth_enabled()) {
+        std::cout << "Bluetooth is off, or this program has no permission to use it." << std::endl;
+        return 1;
+    }
+
+    for (auto& adapter : SimpleBLE::Adapter::get_adapters()) {
+        std::cout << "Adapter: " << adapter.identifier() << " [" << adapter.address() << "]" << std::endl;
+    }
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <simplecble/simplecble.h>
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    if (!simpleble_adapter_is_bluetooth_enabled(&error)) {
+        printf("Bluetooth is off, or this program has no permission to use it.\n");
+        simpleble_error_release(&error);
+        return EXIT_FAILURE;
+    }
+
+    simpleble_adapter_list_t adapters = NULL;
+    size_t count = simpleble_adapter_get_adapters(&adapters, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_adapter_t adapter = simpleble_adapter_list_get(adapters, i, &error);
+        if (error) break;
+
+        char* identifier = simpleble_adapter_identifier(adapter, &error);
+        char* address = error ? NULL : simpleble_adapter_address(adapter, &error);
+        if (!error) printf("Adapter: %s [%s]\n", identifier, address);
+        simpleble_free(identifier);
+        simpleble_free(address);
+        simpleble_adapter_release_handle(adapter);
+    }
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_adapter_list_release(adapters);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import simplepyble
+
+if not simplepyble.Adapter.bluetooth_enabled():
+    raise SystemExit("Bluetooth is off, or this program has no permission to use it.")
+
+for adapter in simplepyble.Adapter.get_adapters():
+    print(f"Adapter: {adapter.identifier()} [{adapter.address()}]")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+
+public class FirstProgram {
+    public static void main(String[] args) {
+        if (!Adapter.isBluetoothEnabled()) {
+            System.out.println("Bluetooth is off, or this program has no permission to use it.");
+            return;
+        }
+
+        for (Adapter adapter : Adapter.getAdapters()) {
+            System.out.println("Adapter: " + adapter.getIdentifier() + " [" + adapter.getAddress() + "]");
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use simplersble::Adapter;
+
+fn main() {
+    if !Adapter::bluetooth_enabled().unwrap() {
+        println!("Bluetooth is off, or this program has no permission to use it.");
+        return;
+    }
+
+    for adapter in Adapter::get_adapters().unwrap() {
+        println!("Adapter: {} [{}]", adapter.identifier().unwrap(), adapter.address().unwrap());
+    }
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+if (!(await Adapter.bluetoothEnabled())) {
+  console.log('Bluetooth is off, or this program has no permission to use it.');
+  process.exit(1);
+}
+
+for (const adapter of await Adapter.getAdapters()) {
+  console.log(`Adapter: ${adapter.identifier()} [${adapter.address()}]`);
+}
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+export async function listAdapters() {
+  if (!(await Adapter.bluetoothEnabled())) {
+    console.log('Bluetooth is off, or this app has no permission to use it.');
+    return;
+  }
+
+  for (const adapter of await Adapter.getAdapters()) {
+    console.log(`Adapter: ${adapter.identifier()} [${adapter.address()}]`);
+  }
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import org.simplektble.Adapter
+
+fun main() {
+    if (!Adapter.isBluetoothEnabled()) {
+        println("Bluetooth is off, or this program has no permission to use it.")
+        return
+    }
+
+    for (adapter in Adapter.getAdapters()) {
+        println("Adapter: ${adapter.identifier} [${adapter.address}]")
+    }
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+if try Adapter.isBluetoothEnabled() {
+    for adapter in try Adapter.getAdapters() {
+        print("Adapter: \(adapter.identifier) [\(adapter.address)]")
+    }
+} else {
+    print("Bluetooth is off, or this program has no permission to use it.")
+}
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+Future<void> main() async {
+  if (!await Adapter.isBluetoothEnabled()) {
+    print('Bluetooth is off, or this program has no permission to use it.');
+    return;
+  }
+
+  for (final adapter in await Adapter.getAdapters()) {
+    print('Adapter: ${adapter.identifier} [${adapter.address}]');
+  }
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program FirstProgram;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SimpleDelphiBLE;
+
+var
+  Adapter: TBleAdapter;
+
+begin
+  if not TBleAdapter.IsBluetoothEnabled then
+  begin
+    WriteLn('Bluetooth is off, or this program has no permission to use it.');
+    Halt(1);
+  end;
+
+  for Adapter in TBleAdapter.GetAdapters do
+    WriteLn('Adapter: ', Adapter.Identifier, ' [', Adapter.Address, ']');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import org.simpleble.android.Adapter
+
+fun listAdapters() {
+    if (!Adapter.isBluetoothEnabled()) {
+        Log.d("SimpleBLE", "Bluetooth is off, or this app has no permission to use it.")
+        return
+    }
+
+    for (adapter in Adapter.getAdapters()) {
+        Log.d("SimpleBLE", "Adapter: ${adapter.identifier} [${adapter.address}]")
+    }
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call the function from your app once it holds the Bluetooth permissions. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+One line for each adapter:
+
+```
+Adapter: hci0 [5C:F3:70:8A:1D:42]
+```
+
+The identifier names the adapter on your system: `hci0` on Linux, the radio's device name on Windows, and `Default Adapter` on macOS, where the address is an identifier that macOS assigns. An nRF52840 dongle with the Dongl firmware appears as one more adapter, `SimpleBLE Dongl N-Series`.
+
+## Exercise
+
+Turn Bluetooth off in your system settings and run the program again. It reports that Bluetooth is off. Turn Bluetooth back on before the next lesson.
+
+## Troubleshooting
+
+- **Bluetooth is on, but the program says it is off.** The program needs permission to use Bluetooth. On macOS, allow your terminal or IDE in System Settings, Privacy and Security, Bluetooth. On Linux, BlueZ must be running (`systemctl status bluetooth`). [Permissions](/fundamentals/permissions) covers every platform.
+- **No adapters are listed.** The computer has no Bluetooth radio, or its driver is missing. Plug in an nRF52840 USB dongle with the [free Dongl firmware](https://simpleble.org/dongl/nrf52840).
+- **The import or package is not found.** Install SimpleBLE for your language from [Installation](/installation). In Python, install it with the same interpreter that runs the program: `python -m pip install simplepyble`.
+
+## Next lesson
+
+[Central and peripheral](/learn/central-and-peripheral): the roles BLE devices play, and which ones are around you right now.
