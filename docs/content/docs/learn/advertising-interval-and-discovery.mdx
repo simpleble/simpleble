@@ -1,0 +1,749 @@
+---
+title: BLE Advertising Interval and Discovery Time
+description: How advertising interval, scan interval and scan window decide how fast a central finds a peripheral, with a calculator to try it.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+A device doesn't appear the moment your program starts a scan. It appears when one of its advertisements reaches your adapter while the adapter is listening. How long that takes depends on how often the device advertises and how often your computer listens, and it changes from one scan to the next.
+
+## Advertising events and scan windows
+
+A peripheral advertises in advertising events. In each event, it sends its advertisement once on each of the three advertising channels, 37, 38 and 39. Events repeat at the advertising interval, from 20 ms to 10.24 s, and the peripheral adds a random delay of 0 to 10 ms to each one so that two devices with the same interval don't keep colliding. [BLE Advertising](/fundamentals/advertising) covers the channels and the packets.
+
+A scanner listens in turns too. Once every scan interval, it listens on one advertising channel for the length of the scan window, and it uses another channel for the next window. The scan window divided by the scan interval is the duty cycle, the share of time the scanner listens. A window as long as the interval means the scanner listens all the time.
+
+<DiscoveryTimingDiagram />
+
+A device is discovered when one of its advertisements arrives inside a scan window, on the channel that window listens to.
+
+## What decides discovery time
+
+- **The advertising interval.** A device that advertises every 100 ms gives the scanner ten chances a second. One that advertises every second gives it one.
+- **The scan duty cycle.** The more of the time the scanner listens, the sooner one of those chances lands in a window.
+- **Alignment.** Where the first advertising event falls against the scan windows is luck. The same device can be found on its first advertisement in one scan and on a later one in the next.
+
+Your program doesn't set the scan interval and window: the operating system chooses them when your program starts a scan. The time your program measures also includes the time the operating system takes to start scanning and to deliver the report.
+
+The [BLE Discovery Latency Calculator](https://simpleble.org/tools/ble-discovery-latency-calculator) takes an advertising interval, a scan interval and a scan window, and shows how long discovery takes in typical and slow cases.
+
+## Advertising interval and battery life
+
+Every advertising event costs energy, so a battery-powered device can't advertise fast all the time. Halving the interval roughly doubles the energy the device spends advertising. The usual pattern is to advertise fast while a user is waiting for the device, such as right after it powers on or after a button press, and slowly the rest of the time.
+
+## Measure discovery time
+
+This program scans five times and measures how long the course peripheral takes to appear in each scan. Run the course peripheral from [Advertise BLE From Your Computer](/learn/advertise-from-your-computer) on a second computer, or start nRF Connect for Mobile's advertiser on your phone with the service UUID `76a60001-a8e9-4660-bc7b-ed8d93a6849e` in its advertising data.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <atomic>
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <thread>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+int main() {
+    std::atomic<bool> found{false};
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+
+    auto check = [&found](SimpleBLE::Peripheral device) {
+        for (auto& service : device.services()) {
+            if (service.uuid() == SERVICE) {
+                found = true;
+            }
+        }
+    };
+    adapter.set_callback_on_scan_found(check);
+    adapter.set_callback_on_scan_updated(check);
+
+    long long total = 0;
+    int count = 0;
+    for (int trial = 1; trial <= 5; trial++) {
+        found = false;
+        auto start = std::chrono::steady_clock::now();
+        adapter.scan_start();
+        while (!found && std::chrono::steady_clock::now() - start < std::chrono::seconds(10)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+        adapter.scan_stop();
+
+        if (found) {
+            std::cout << "Trial " << trial << ": found after " << elapsed.count() << " ms" << std::endl;
+            total += elapsed.count();
+            count++;
+        } else {
+            std::cout << "Trial " << trial << ": not found in 10 s" << std::endl;
+        }
+    }
+    if (count > 0) {
+        std::cout << "Average: " << total / count << " ms" << std::endl;
+    }
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#ifdef _WIN32
+#include <windows.h>
+#else
+#define _POSIX_C_SOURCE 200809L
+#include <time.h>
+#endif
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const char* SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+static volatile bool found = false;
+
+static long long now_ms(void) {
+#ifdef _WIN32
+    return (long long)GetTickCount64();
+#else
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long long)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
+}
+
+static void sleep_ms(long ms) {
+#ifdef _WIN32
+    Sleep((DWORD)ms);
+#else
+    struct timespec duration = {ms / 1000, (ms % 1000) * 1000000};
+    nanosleep(&duration, NULL);
+#endif
+}
+
+static void check(simpleble_adapter_t adapter, simpleble_peripheral_t device, void* userdata) {
+    (void)adapter;
+    (void)userdata;
+    simpleble_error_t* error = NULL;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, &error);
+        if (error) break;
+        if (strcmp(service.uuid.value, SERVICE) == 0) found = true;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(device);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    if (!error) {
+        simpleble_adapter_set_callback_on_scan_found(adapter, check, NULL);
+        simpleble_adapter_set_callback_on_scan_updated(adapter, check, NULL);
+    }
+
+    long long total = 0;
+    int count = 0;
+    for (int trial = 1; trial <= 5 && !error; trial++) {
+        found = false;
+        long long start = now_ms();
+        simpleble_adapter_scan_start(adapter, &error);
+        while (!error && !found && now_ms() - start < 10000) sleep_ms(10);
+        long long elapsed = now_ms() - start;
+        if (!error) simpleble_adapter_scan_stop(adapter, &error);
+        if (error) break;
+
+        if (found) {
+            printf("Trial %d: found after %lld ms\n", trial, elapsed);
+            total += elapsed;
+            count++;
+        } else {
+            printf("Trial %d: not found in 10 s\n", trial);
+        }
+    }
+    if (!error && count > 0) printf("Average: %lld ms\n", total / count);
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import time
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+found = False
+
+
+def check(device):
+    global found
+    if any(service.uuid() == SERVICE for service in device.services()):
+        found = True
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.set_callback_on_scan_found(check)
+adapter.set_callback_on_scan_updated(check)
+
+times = []
+for trial in range(1, 6):
+    found = False
+    start = time.monotonic()
+    adapter.scan_start()
+    while not found and time.monotonic() - start < 10:
+        time.sleep(0.01)
+    elapsed = round((time.monotonic() - start) * 1000)
+    adapter.scan_stop()
+
+    if found:
+        print(f"Trial {trial}: found after {elapsed} ms")
+        times.append(elapsed)
+    else:
+        print(f"Trial {trial}: not found in 10 s")
+
+if times:
+    print(f"Average: {round(sum(times) / len(times))} ms")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+import org.simplejavable.Service;
+
+public class DiscoveryTime {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+    static volatile boolean found = false;
+
+    static void check(Peripheral device) {
+        for (Service service : device.services()) {
+            if (service.uuid().equals(SERVICE)) {
+                found = true;
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+
+        adapter.setEventListener(new Adapter.EventListener() {
+            @Override
+            public void onScanFound(Peripheral device) {
+                check(device);
+            }
+
+            @Override
+            public void onScanUpdated(Peripheral device) {
+                check(device);
+            }
+        });
+
+        long total = 0;
+        int count = 0;
+        for (int trial = 1; trial <= 5; trial++) {
+            found = false;
+            long start = System.nanoTime();
+            adapter.scanStart();
+            while (!found && System.nanoTime() - start < 10_000_000_000L) {
+                Thread.sleep(10);
+            }
+            long elapsed = (System.nanoTime() - start) / 1_000_000;
+            adapter.scanStop();
+
+            if (found) {
+                System.out.println("Trial " + trial + ": found after " + elapsed + " ms");
+                total += elapsed;
+                count++;
+            } else {
+                System.out.println("Trial " + trial + ": not found in 10 s");
+            }
+        }
+        if (count > 0) {
+            System.out.println("Average: " + total / count + " ms");
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use futures::StreamExt;
+use simplersble::{Adapter, Peripheral, ScanEvent};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+
+    let found = Arc::new(AtomicBool::new(false));
+    let flag = found.clone();
+    let mut events = adapter.on_scan_event();
+    tokio::spawn(async move {
+        while let Some(event) = events.next().await {
+            match event {
+                ScanEvent::Found(device) | ScanEvent::Updated(device) => {
+                    if advertises_service(&device) {
+                        flag.store(true, Ordering::SeqCst);
+                    }
+                }
+                _ => {}
+            }
+        }
+    });
+
+    let mut times = Vec::new();
+    for trial in 1..=5 {
+        found.store(false, Ordering::SeqCst);
+        let start = Instant::now();
+        adapter.scan_start().unwrap();
+        while !found.load(Ordering::SeqCst) && start.elapsed() < Duration::from_secs(10) {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let elapsed = start.elapsed().as_millis();
+        adapter.scan_stop().unwrap();
+
+        if found.load(Ordering::SeqCst) {
+            println!("Trial {}: found after {} ms", trial, elapsed);
+            times.push(elapsed);
+        } else {
+            println!("Trial {}: not found in 10 s", trial);
+        }
+    }
+    if !times.is_empty() {
+        println!("Average: {} ms", times.iter().sum::<u128>() / times.len() as u128);
+    }
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { setTimeout as sleep } from 'node:timers/promises';
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+let found = false;
+function check(device) {
+  if (device.services().some(service => service.uuid === SERVICE)) found = true;
+}
+
+const [adapter] = await Adapter.getAdapters();
+adapter.on('scanFound', check);
+adapter.on('scanUpdated', check);
+
+const times = [];
+for (let trial = 1; trial <= 5; trial++) {
+  found = false;
+  const start = performance.now();
+  await adapter.scanStart();
+  while (!found && performance.now() - start < 10000) {
+    await sleep(10);
+  }
+  const elapsed = Math.round(performance.now() - start);
+  await adapter.scanStop();
+
+  if (found) {
+    console.log(`Trial ${trial}: found after ${elapsed} ms`);
+    times.push(elapsed);
+  } else {
+    console.log(`Trial ${trial}: not found in 10 s`);
+  }
+}
+if (times.length > 0) {
+  const average = times.reduce((sum, time) => sum + time, 0) / times.length;
+  console.log(`Average: ${Math.round(average)} ms`);
+}
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+export async function measureDiscoveryTime() {
+  const [adapter] = await Adapter.getAdapters();
+
+  let found = false;
+  const check = (device: Peripheral) => {
+    if (device.services().some(service => service.uuid === SERVICE)) found = true;
+  };
+  adapter.on('scanFound', check);
+  adapter.on('scanUpdated', check);
+
+  const times: number[] = [];
+  for (let trial = 1; trial <= 5; trial++) {
+    found = false;
+    const start = performance.now();
+    await adapter.scanStart();
+    while (!found && performance.now() - start < 10000) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    const elapsed = Math.round(performance.now() - start);
+    await adapter.scanStop();
+
+    if (found) {
+      console.log(`Trial ${trial}: found after ${elapsed} ms`);
+      times.push(elapsed);
+    } else {
+      console.log(`Trial ${trial}: not found in 10 s`);
+    }
+  }
+  if (times.length > 0) {
+    const average = times.reduce((sum, time) => sum + time, 0) / times.length;
+    console.log(`Average: ${Math.round(average)} ms`);
+  }
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.Peripheral
+
+const val SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid.value == SERVICE }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+
+    var found = false
+    val foundEvents = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { if (advertisesService(it)) found = true }
+    }
+    val updatedEvents = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanUpdated.collect { if (advertisesService(it)) found = true }
+    }
+
+    val times = mutableListOf<Long>()
+    for (trial in 1..5) {
+        found = false
+        val start = TimeSource.Monotonic.markNow()
+        adapter.scanStart()
+        while (!found && start.elapsedNow() < 10.seconds) delay(10)
+        val elapsed = start.elapsedNow().inWholeMilliseconds
+        adapter.scanStop()
+
+        if (found) {
+            println("Trial $trial: found after $elapsed ms")
+            times.add(elapsed)
+        } else {
+            println("Trial $trial: not found in 10 s")
+        }
+    }
+    if (times.isNotEmpty()) println("Average: ${times.sum() / times.size} ms")
+
+    foundEvents.cancel()
+    updatedEvents.cancel()
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import SimpleSwiftBLE
+
+let service = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) -> Bool {
+    let services = (try? device.services()) ?? []
+    return services.contains { $0.uuid.value == service }
+}
+
+let adapter = try Adapter.getAdapters().first!
+
+var found = false
+let foundEvents = adapter.onScanFound
+let updatedEvents = adapter.onScanUpdated
+let foundTask = Task { for await device in foundEvents where advertisesService(device) { found = true } }
+let updatedTask = Task { for await device in updatedEvents where advertisesService(device) { found = true } }
+
+var times: [Int] = []
+for trial in 1...5 {
+    found = false
+    let start = ContinuousClock.now
+    try adapter.scanStart()
+    while !found && ContinuousClock.now - start < .seconds(10) {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    let elapsed = Int((ContinuousClock.now - start) / .milliseconds(1))
+    try adapter.scanStop()
+
+    if found {
+        print("Trial \(trial): found after \(elapsed) ms")
+        times.append(elapsed)
+    } else {
+        print("Trial \(trial): not found in 10 s")
+    }
+}
+if !times.isEmpty {
+    print("Average: \(times.reduce(0, +) / times.count) ms")
+}
+
+foundTask.cancel()
+updatedTask.cancel()
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+const service = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+
+  var found = false;
+  void check(Peripheral device) {
+    if (device.services().any((s) => s.uuid == service)) found = true;
+  }
+
+  final onFound = adapter.onScanFound.listen(check);
+  final onUpdated = adapter.onScanUpdated.listen(check);
+
+  final times = <int>[];
+  for (var trial = 1; trial <= 5; trial++) {
+    found = false;
+    final stopwatch = Stopwatch()..start();
+    await adapter.scanStart();
+    while (!found && stopwatch.elapsed < const Duration(seconds: 10)) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final elapsed = stopwatch.elapsedMilliseconds;
+    await adapter.scanStop();
+
+    if (found) {
+      print('Trial $trial: found after $elapsed ms');
+      times.add(elapsed);
+    } else {
+      print('Trial $trial: not found in 10 s');
+    }
+  }
+  if (times.isNotEmpty) print('Average: ${times.reduce((a, b) => a + b) ~/ times.length} ms');
+
+  await onFound.cancel();
+  await onUpdated.cancel();
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program DiscoveryTime;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  Classes,
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+type
+  TDiscoveryWatcher = class
+    Found: Boolean;
+    procedure Check(Sender: TBleAdapter; Device: TBlePeripheral);
+  end;
+
+procedure TDiscoveryWatcher.Check(Sender: TBleAdapter; Device: TBlePeripheral);
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Found := True;
+end;
+
+var
+  Watcher: TDiscoveryWatcher;
+  Adapter: TBleAdapter;
+  Trial: Integer;
+  Count: Cardinal;
+  Start, Elapsed, Total: UInt64;
+
+begin
+  Watcher := TDiscoveryWatcher.Create;
+  Adapter := TBleAdapter.GetAdapters[0];
+
+  Adapter.OnScanFound := Watcher.Check;
+  Adapter.OnScanUpdated := Watcher.Check;
+
+  Total := 0;
+  Count := 0;
+  for Trial := 1 to 5 do
+  begin
+    Watcher.Found := False;
+    Start := TThread.GetTickCount64;
+    Adapter.ScanStart;
+    while not Watcher.Found and (TThread.GetTickCount64 - Start < 10000) do
+      Sleep(10);
+    Elapsed := TThread.GetTickCount64 - Start;
+    Adapter.ScanStop;
+
+    if Watcher.Found then
+    begin
+      WriteLn('Trial ', Trial, ': found after ', Elapsed, ' ms');
+      Total := Total + Elapsed;
+      Inc(Count);
+    end
+    else
+      WriteLn('Trial ', Trial, ': not found in 10 s');
+  end;
+  if Count > 0 then
+    WriteLn('Average: ', Total div Count, ' ms');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.simpleble.android.Adapter
+import org.simpleble.android.Peripheral
+
+private const val SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid.value == SERVICE }
+
+suspend fun measureDiscoveryTime() = coroutineScope {
+    val adapter = Adapter.getAdapters().first()
+
+    var found = false
+    val foundEvents = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanFound.collect { if (advertisesService(it)) found = true }
+    }
+    val updatedEvents = launch(start = CoroutineStart.UNDISPATCHED) {
+        adapter.onScanUpdated.collect { if (advertisesService(it)) found = true }
+    }
+
+    val times = mutableListOf<Long>()
+    for (trial in 1..5) {
+        found = false
+        val start = TimeSource.Monotonic.markNow()
+        adapter.scanStart()
+        while (!found && start.elapsedNow() < 10.seconds) delay(10)
+        val elapsed = start.elapsedNow().inWholeMilliseconds
+        adapter.scanStop()
+
+        if (found) {
+            Log.d("SimpleBLE", "Trial $trial: found after $elapsed ms")
+            times.add(elapsed)
+        } else {
+            Log.d("SimpleBLE", "Trial $trial: not found in 10 s")
+        }
+    }
+    if (times.isNotEmpty()) Log.d("SimpleBLE", "Average: ${times.sum() / times.size} ms")
+
+    foundEvents.cancel()
+    updatedEvents.cancel()
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call the function from your app once it holds the Bluetooth permissions. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+One line for each trial, then the average of the trials that found the device:
+
+```
+Trial 1: found after 1294 ms
+Trial 2: found after 376 ms
+Trial 3: found after 2838 ms
+Trial 4: found after 175 ms
+Trial 5: found after 1180 ms
+Average: 1173 ms
+```
+
+The device and the distance stay the same, yet every trial takes a different time. Each scan starts at a different point in the device's advertising schedule: in some trials an advertisement lands in the first scan window, and in others the scanner waits for a later one. The first trial can be the slowest, because it also includes the time the operating system takes to start the scanner.
+
+Your numbers depend on the target's advertising interval and on the scan timing your operating system chooses. The course peripheral leaves its advertising interval to the operating system, which often advertises about once a second, so trials range from a few hundred milliseconds to several seconds.
+
+## Exercise
+
+In the BLE Discovery Latency Calculator, set **Measure latency from** to **Scan start, advertiser already running**. Enter your target's advertising interval, or 1,000 ms if you don't know it, and pick the **Continuous** scanner preset. Compare the median latency with your average. Your average also includes the time the operating system takes to start the scan and deliver the report, so it is usually higher. Then lower the advertising interval in the calculator to 100 ms and raise it to 2,000 ms, and watch the median follow it.
+
+If your advertiser lets you choose its interval, as nRF Connect's advertiser on Android does, choose a longer one, run the program again and compare the new average with the calculator's prediction.
+
+## Troubleshooting
+
+- **Every trial says not found.** The target isn't advertising the course service, or it is out of range. The course peripheral stops advertising after 10 minutes, so start it again. In nRF Connect, check that the advertiser is on and that its advertising data lists `76a60001-a8e9-4660-bc7b-ed8d93a6849e`.
+- **The first trial is much slower than the rest.** The first scan also starts the scanner in the operating system. Leave the first trial out of the average, or run more trials.
+- **The times spread from tens to hundreds of milliseconds.** That spread is the alignment this lesson is about. Compare averages over several runs rather than single trials.
+- **Android finds nothing when you run the program again right away.** Android allows an app five scan starts in 30 seconds, and each trial starts a scan. Wait 30 seconds before you run the program again.
+
+## Next lesson
+
+[Connect to a BLE Device](/learn/connect-to-a-ble-device): open a connection to the course peripheral and list its services.

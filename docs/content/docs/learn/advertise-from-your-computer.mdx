@@ -1,0 +1,834 @@
+---
+title: Advertise BLE From Your Computer
+description: Turn your computer into a Bluetooth Low Energy peripheral that advertises, and watch it appear in a scanner app on your phone.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Until now, your computer has listened. In this lesson it advertises: your phone finds it, connects to it and exchanges data with it.
+
+## Your computer as a peripheral
+
+A peripheral has two jobs. It advertises, so that centrals can find it, and it serves GATT, a table of services and characteristics, to each central that connects. In the [roles lesson](/learn/central-and-peripheral), your computer scanned as a central. Here it takes the other role, and your phone is the central.
+
+<CoursePeripheralDiagram />
+
+A connected central reads and writes characteristics, and subscribes to the ones that notify or indicate. When the peripheral sets a new value on a characteristic, every subscribed central receives it without asking.
+
+## The course peripheral
+
+The program in this lesson builds the peripheral that the rest of the course connects to. It has one service with two characteristics:
+
+| | UUID | Properties | Value |
+| --- | --- | --- | --- |
+| **Service** | `76a60001-a8e9-4660-bc7b-ed8d93a6849e` | Advertised | |
+| **Message** | `76a60002-a8e9-4660-bc7b-ed8d93a6849e` | Read, write, write without response | The text `Hello from SimpleBLE` |
+| **Counter** | `76a60003-a8e9-4660-bc7b-ed8d93a6849e` | Read, notify, indicate | An unsigned 32-bit number, little-endian, starting at 0 |
+
+Message holds text that a central can read and replace. In code, its two kinds of write are `WRITE_REQUEST`, which the peripheral acknowledges, and `WRITE_COMMAND`, which it doesn't. Counter counts up once a second. Little-endian means the lowest byte comes first, so 5 is `05 00 00 00`.
+
+The UUIDs are random 128-bit UUIDs, the form every custom service uses. These three differ only in their first group, so you can tell they belong together. For a service of your own, generate new ones with the [BLE UUID Generator](https://simpleble.org/tools/ble-uuid-generator). [Bluetooth UUIDs](/fundamentals/uuids) explains the 16-bit and 128-bit forms.
+
+## Find a device by its service
+
+The advertisement carries the service UUID, which takes 18 of its 31 bytes. A central that looks for the course peripheral scans for that UUID, so it finds any computer running this program without knowing its name or address. The program sets no name, so on your phone you look for the UUID.
+
+## Run the course peripheral
+
+This program builds the course peripheral and advertises it for 10 minutes. Every second it increments Counter, and setting the new value publishes it to the subscribed centrals. The lessons in Module 3 connect to this same program, so keep it at hand.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <chrono>
+#include <cstdint>
+#include <iostream>
+#include <string>
+#include <thread>
+#include <simpleble/SimpleBLE.h>
+
+using Capability = SimpleBLE::Local::CharacteristicCapability;
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+SimpleBLE::ByteArray to_bytes(uint32_t value) {
+    return {uint8_t(value), uint8_t(value >> 8), uint8_t(value >> 16), uint8_t(value >> 24)};
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    auto peripheral = adapter.create_local_peripheral();
+    peripheral.add_advertised_service(SERVICE);
+
+    auto service = peripheral.add_service(SERVICE);
+    auto message =
+        service.add_characteristic(MESSAGE, {Capability::READ, Capability::WRITE_REQUEST, Capability::WRITE_COMMAND});
+    message.set_value(SimpleBLE::ByteArray("Hello from SimpleBLE"));
+    auto counter = service.add_characteristic(COUNTER, {Capability::READ, Capability::NOTIFY, Capability::INDICATE});
+    counter.set_value(to_bytes(0));
+
+    message.set_callback_on_write([](SimpleBLE::ByteArray value) {
+        std::cout << "Message: " << std::string(value) << std::endl;
+    });
+    peripheral.set_callback_on_client_connected([](SimpleBLE::BluetoothAddress address) {
+        std::cout << "Client connected: " << address << std::endl;
+    });
+    peripheral.set_callback_on_client_disconnected([](SimpleBLE::BluetoothAddress address) {
+        std::cout << "Client disconnected: " << address << std::endl;
+    });
+
+    peripheral.start();
+    std::cout << "Advertising for 10 minutes. Connect from your phone." << std::endl;
+
+    for (uint32_t count = 1; count <= 600; count++) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        counter.set_value(to_bytes(count));
+    }
+
+    peripheral.stop();
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <simplecble/simplecble.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#define sleep_one_second() Sleep(1000)
+#else
+#include <unistd.h>
+#define sleep_one_second() sleep(1)
+#endif
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t MESSAGE = {"76a60002-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t COUNTER = {"76a60003-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static void set_counter(simpleble_local_characteristic_t counter, uint32_t count, simpleble_error_t** error) {
+    const uint8_t value[4] = {count & 0xFF, (count >> 8) & 0xFF, (count >> 16) & 0xFF, (count >> 24) & 0xFF};
+    simpleble_local_characteristic_set_value(counter, value, sizeof(value), error);
+}
+
+static void on_message_write(simpleble_local_characteristic_t handle, const uint8_t* data, size_t length,
+                             void* userdata) {
+    (void)handle;
+    (void)userdata;
+    printf("Message: %.*s\n", (int)length, (const char*)data);
+}
+
+static void on_client_connected(simpleble_local_peripheral_t handle, const char* address, void* userdata) {
+    (void)handle;
+    (void)userdata;
+    printf("Client connected: %s\n", address);
+}
+
+static void on_client_disconnected(simpleble_local_peripheral_t handle, const char* address, void* userdata) {
+    (void)handle;
+    (void)userdata;
+    printf("Client disconnected: %s\n", address);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_local_peripheral_t peripheral = NULL;
+    simpleble_local_service_t service = NULL;
+    simpleble_local_characteristic_t message = NULL;
+    simpleble_local_characteristic_t counter = NULL;
+    const uint8_t greeting[] = "Hello from SimpleBLE";
+
+    if (!error) peripheral = simpleble_adapter_create_local_peripheral(adapter, &error);
+    if (!error) simpleble_local_peripheral_add_advertised_service(peripheral, SERVICE, &error);
+    if (!error) service = simpleble_local_peripheral_add_service(peripheral, SERVICE, &error);
+    if (!error) {
+        message = simpleble_local_service_add_characteristic(
+            service, MESSAGE,
+            SIMPLEBLE_LOCAL_CHARACTERISTIC_READ | SIMPLEBLE_LOCAL_CHARACTERISTIC_WRITE_REQUEST |
+                SIMPLEBLE_LOCAL_CHARACTERISTIC_WRITE_COMMAND,
+            &error);
+    }
+    if (!error) simpleble_local_characteristic_set_value(message, greeting, sizeof(greeting) - 1, &error);
+    if (!error) {
+        counter = simpleble_local_service_add_characteristic(
+            service, COUNTER,
+            SIMPLEBLE_LOCAL_CHARACTERISTIC_READ | SIMPLEBLE_LOCAL_CHARACTERISTIC_NOTIFY |
+                SIMPLEBLE_LOCAL_CHARACTERISTIC_INDICATE,
+            &error);
+    }
+    if (!error) set_counter(counter, 0, &error);
+
+    if (!error) {
+        simpleble_local_characteristic_set_callback_on_write(message, on_message_write, NULL);
+        simpleble_local_peripheral_set_callback_on_client_connected(peripheral, on_client_connected, NULL);
+        simpleble_local_peripheral_set_callback_on_client_disconnected(peripheral, on_client_disconnected, NULL);
+        simpleble_local_peripheral_start(peripheral, &error);
+    }
+    if (!error) printf("Advertising for 10 minutes. Connect from your phone.\n");
+
+    for (uint32_t count = 1; count <= 600 && !error; count++) {
+        sleep_one_second();
+        set_counter(counter, count, &error);
+    }
+    if (!error) simpleble_local_peripheral_stop(peripheral, &error);
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    if (message) simpleble_local_characteristic_set_callback_on_write(message, NULL, NULL);
+    if (peripheral) {
+        simpleble_local_peripheral_set_callback_on_client_connected(peripheral, NULL, NULL);
+        simpleble_local_peripheral_set_callback_on_client_disconnected(peripheral, NULL, NULL);
+    }
+    simpleble_local_characteristic_release_handle(counter);
+    simpleble_local_characteristic_release_handle(message);
+    simpleble_local_service_release_handle(service);
+    simpleble_local_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import time
+
+import simplepyble
+from simplepyble import LocalCharacteristicCapability as Capability
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e"
+COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+peripheral = adapter.create_local_peripheral()
+peripheral.add_advertised_service(SERVICE)
+
+service = peripheral.add_service(SERVICE)
+message = service.add_characteristic(MESSAGE, [Capability.READ, Capability.WRITE_REQUEST, Capability.WRITE_COMMAND])
+message.set_value(b"Hello from SimpleBLE")
+counter = service.add_characteristic(COUNTER, [Capability.READ, Capability.NOTIFY, Capability.INDICATE])
+counter.set_value((0).to_bytes(4, "little"))
+
+message.set_callback_on_write(lambda value: print(f"Message: {value.decode(errors='replace')}"))
+peripheral.set_callback_on_client_connected(lambda address: print(f"Client connected: {address}"))
+peripheral.set_callback_on_client_disconnected(lambda address: print(f"Client disconnected: {address}"))
+
+peripheral.start()
+print("Advertising for 10 minutes. Connect from your phone.")
+
+for count in range(1, 601):
+    time.sleep(1)
+    counter.set_value(count.to_bytes(4, "little"))
+
+peripheral.stop()
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.BluetoothAddress;
+import org.simplejavable.BluetoothUUID;
+import org.simplejavable.LocalCharacteristic;
+import org.simplejavable.LocalCharacteristicCapability;
+import org.simplejavable.LocalPeripheral;
+import org.simplejavable.LocalService;
+
+public class Advertise {
+    static final BluetoothUUID SERVICE = new BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e");
+    static final BluetoothUUID MESSAGE = new BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e");
+    static final BluetoothUUID COUNTER = new BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e");
+
+    static byte[] uint32(int value) {
+        return ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(value).array();
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        LocalPeripheral peripheral = adapter.createLocalPeripheral();
+        peripheral.addAdvertisedService(SERVICE);
+
+        LocalService service = peripheral.addService(SERVICE);
+        LocalCharacteristic message = service.addCharacteristic(MESSAGE, LocalCharacteristicCapability.READ,
+                LocalCharacteristicCapability.WRITE_REQUEST, LocalCharacteristicCapability.WRITE_COMMAND);
+        message.setValue("Hello from SimpleBLE".getBytes(StandardCharsets.UTF_8));
+        LocalCharacteristic counter = service.addCharacteristic(COUNTER, LocalCharacteristicCapability.READ,
+                LocalCharacteristicCapability.NOTIFY, LocalCharacteristicCapability.INDICATE);
+        counter.setValue(uint32(0));
+
+        message.setEventListener(new LocalCharacteristic.EventListener() {
+            @Override
+            public void onWrite(byte[] value) {
+                System.out.println("Message: " + new String(value, StandardCharsets.UTF_8));
+            }
+        });
+        peripheral.setEventListener(new LocalPeripheral.EventListener() {
+            @Override
+            public void onClientConnected(BluetoothAddress address) {
+                System.out.println("Client connected: " + address);
+            }
+
+            @Override
+            public void onClientDisconnected(BluetoothAddress address) {
+                System.out.println("Client disconnected: " + address);
+            }
+        });
+
+        peripheral.start();
+        System.out.println("Advertising for 10 minutes. Connect from your phone.");
+
+        for (int count = 1; count <= 600; count++) {
+            Thread.sleep(1000);
+            counter.setValue(uint32(count));
+        }
+
+        peripheral.stop();
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use futures::StreamExt;
+use simplersble::{Adapter, CharacteristicCapability, ClientEvent, LocalCharacteristicEvent};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const MESSAGE: &str = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+const COUNTER: &str = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    let peripheral = adapter.create_local_peripheral().unwrap();
+    peripheral.add_advertised_service(SERVICE).unwrap();
+
+    let service = peripheral.add_service(SERVICE).unwrap();
+    let message = service
+        .add_characteristic(
+            MESSAGE,
+            &[
+                CharacteristicCapability::Read,
+                CharacteristicCapability::WriteRequest,
+                CharacteristicCapability::WriteCommand,
+            ],
+        )
+        .unwrap();
+    message.set_value(b"Hello from SimpleBLE").unwrap();
+    let counter = service
+        .add_characteristic(
+            COUNTER,
+            &[
+                CharacteristicCapability::Read,
+                CharacteristicCapability::Notify,
+                CharacteristicCapability::Indicate,
+            ],
+        )
+        .unwrap();
+    counter.set_value(&0u32.to_le_bytes()).unwrap();
+
+    let mut writes = message.on_event();
+    tokio::spawn(async move {
+        while let Some(event) = writes.next().await {
+            if let LocalCharacteristicEvent::Written(value) = event {
+                println!("Message: {}", String::from_utf8_lossy(&value));
+            }
+        }
+    });
+
+    let mut clients = peripheral.on_client_event();
+    tokio::spawn(async move {
+        while let Some(event) = clients.next().await {
+            match event {
+                ClientEvent::Connected(address) => println!("Client connected: {}", address),
+                ClientEvent::Disconnected(address) => println!("Client disconnected: {}", address),
+            }
+        }
+    });
+
+    peripheral.start().unwrap();
+    println!("Advertising for 10 minutes. Connect from your phone.");
+
+    for count in 1..=600u32 {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        counter.set_value(&count.to_le_bytes()).unwrap();
+    }
+
+    peripheral.stop().unwrap();
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { setTimeout as sleep } from 'node:timers/promises';
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const MESSAGE = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+const uint32 = value => {
+  const bytes = Buffer.alloc(4);
+  bytes.writeUInt32LE(value);
+  return bytes;
+};
+
+const [adapter] = await Adapter.getAdapters();
+const peripheral = adapter.createLocalPeripheral();
+peripheral.addAdvertisedService(SERVICE);
+
+const service = peripheral.addService(SERVICE);
+const message = service.addCharacteristic(MESSAGE, ['read', 'writeRequest', 'writeCommand']);
+await message.setValue(Buffer.from('Hello from SimpleBLE'));
+const counter = service.addCharacteristic(COUNTER, ['read', 'notify', 'indicate']);
+await counter.setValue(uint32(0));
+
+message.on('write', value => console.log(`Message: ${value.toString()}`));
+peripheral.on('clientConnected', address => console.log(`Client connected: ${address}`));
+peripheral.on('clientDisconnected', address => console.log(`Client disconnected: ${address}`));
+
+await peripheral.start();
+console.log('Advertising for 10 minutes. Connect from your phone.');
+
+for (let count = 1; count <= 600; count++) {
+  await sleep(1000);
+  await counter.setValue(uint32(count));
+}
+
+await peripheral.stop();
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const MESSAGE = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+const uint32 = (value: number) => {
+  const bytes = new Uint8Array(4);
+  new DataView(bytes.buffer).setUint32(0, value, true);
+  return bytes;
+};
+
+export async function advertise() {
+  const [adapter] = await Adapter.getAdapters();
+  const peripheral = adapter.createLocalPeripheral();
+  peripheral.addAdvertisedService(SERVICE);
+
+  const service = peripheral.addService(SERVICE);
+  const message = service.addCharacteristic(MESSAGE, ['read', 'writeRequest', 'writeCommand']);
+  await message.setValue(Uint8Array.from('Hello from SimpleBLE', c => c.charCodeAt(0)));
+  const counter = service.addCharacteristic(COUNTER, ['read', 'notify', 'indicate']);
+  await counter.setValue(uint32(0));
+
+  message.on('write', value => console.log(`Message: ${String.fromCharCode(...value)}`));
+  peripheral.on('clientConnected', address => console.log(`Client connected: ${address}`));
+  peripheral.on('clientDisconnected', address => console.log(`Client disconnected: ${address}`));
+
+  await peripheral.start();
+  console.log('Advertising for 10 minutes. Connect from your phone.');
+
+  for (let count = 1; count <= 600; count++) {
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
+    await counter.setValue(uint32(count));
+  }
+
+  await peripheral.stop();
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.CharacteristicCapability
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+val MESSAGE = BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e")
+val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun Int.toLittleEndian() = ByteArray(4) { (this shr (8 * it)).toByte() }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    val peripheral = adapter.createLocalPeripheral()
+    peripheral.addAdvertisedService(SERVICE)
+
+    val service = peripheral.addService(SERVICE)
+    val message = service.addCharacteristic(
+        MESSAGE,
+        CharacteristicCapability.Read,
+        CharacteristicCapability.WriteRequest,
+        CharacteristicCapability.WriteCommand
+    )
+    message.setValue("Hello from SimpleBLE".encodeToByteArray())
+    val counter = service.addCharacteristic(
+        COUNTER,
+        CharacteristicCapability.Read,
+        CharacteristicCapability.Notify,
+        CharacteristicCapability.Indicate
+    )
+    counter.setValue(0.toLittleEndian())
+
+    val events = listOf(
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            message.onWrite.collect { value -> println("Message: ${value.decodeToString()}") }
+        },
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            peripheral.onClientConnected.collect { address -> println("Client connected: $address") }
+        },
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            peripheral.onClientDisconnected.collect { address -> println("Client disconnected: $address") }
+        },
+    )
+
+    peripheral.start()
+    println("Advertising for 10 minutes. Connect from your phone.")
+
+    for (count in 1..600) {
+        delay(1000)
+        counter.setValue(count.toLittleEndian())
+    }
+
+    peripheral.stop()
+    events.forEach { it.cancel() }
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+let messageUuid: BluetoothUUID = "76a60002-a8e9-4660-bc7b-ed8d93a6849e"
+let counterUuid: BluetoothUUID = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+func littleEndian(_ value: UInt32) -> Data {
+    withUnsafeBytes(of: value.littleEndian) { Data($0) }
+}
+
+let adapter = try Adapter.getAdapters().first!
+let peripheral = try adapter.createLocalPeripheral()
+try peripheral.addAdvertisedService(serviceUuid)
+
+let service = try peripheral.addService(serviceUuid)
+let message = try service.addCharacteristic(messageUuid, capabilities: [.read, .writeRequest, .writeCommand])
+try await message.setValue(Data("Hello from SimpleBLE".utf8))
+let counter = try service.addCharacteristic(counterUuid, capabilities: [.read, .notify, .indicate])
+try await counter.setValue(littleEndian(0))
+
+let writes = message.onWrite
+let connections = peripheral.onClientConnected
+let disconnections = peripheral.onClientDisconnected
+Task {
+    for await value in writes {
+        print("Message: \(String(decoding: value, as: UTF8.self))")
+    }
+}
+Task {
+    for await address in connections {
+        print("Client connected: \(address)")
+    }
+}
+Task {
+    for await address in disconnections {
+        print("Client disconnected: \(address)")
+    }
+}
+
+try await peripheral.start()
+print("Advertising for 10 minutes. Connect from your phone.")
+
+for count in UInt32(1)...600 {
+    try await Task.sleep(nanoseconds: 1_000_000_000)
+    try await counter.setValue(littleEndian(count))
+}
+
+try await peripheral.stop()
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const messageUuid = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+const counterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+Uint8List littleEndian(int value) => (ByteData(4)..setUint32(0, value, Endian.little)).buffer.asUint8List();
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  final peripheral = adapter.createLocalPeripheral();
+  peripheral.addAdvertisedService(serviceUuid);
+
+  final service = peripheral.addService(serviceUuid);
+  final message = service.addCharacteristic(messageUuid, {
+    CharacteristicCapability.read,
+    CharacteristicCapability.writeRequest,
+    CharacteristicCapability.writeCommand,
+  });
+  await message.setValue(utf8.encode('Hello from SimpleBLE'));
+  final counter = service.addCharacteristic(counterUuid, {
+    CharacteristicCapability.read,
+    CharacteristicCapability.notify,
+    CharacteristicCapability.indicate,
+  });
+  await counter.setValue(littleEndian(0));
+
+  message.onWrite.listen((value) => print('Message: ${utf8.decode(value, allowMalformed: true)}'));
+  peripheral.onClientConnected.listen((address) => print('Client connected: $address'));
+  peripheral.onClientDisconnected.listen((address) => print('Client disconnected: $address'));
+
+  await peripheral.start();
+  print('Advertising for 10 minutes. Connect from your phone.');
+
+  for (var count = 1; count <= 600; count++) {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    await counter.setValue(littleEndian(count));
+  }
+
+  await peripheral.stop();
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Advertise;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+  MessageUuid = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+  CounterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+type
+  THandlers = class
+    procedure MessageWritten(Sender: TBleLocalCharacteristic; const Data: TBytes);
+    procedure ClientConnected(Sender: TBleLocalPeripheral; const Address: string);
+    procedure ClientDisconnected(Sender: TBleLocalPeripheral; const Address: string);
+  end;
+
+procedure THandlers.MessageWritten(Sender: TBleLocalCharacteristic; const Data: TBytes);
+begin
+  WriteLn('Message: ', TEncoding.UTF8.GetString(Data));
+end;
+
+procedure THandlers.ClientConnected(Sender: TBleLocalPeripheral; const Address: string);
+begin
+  WriteLn('Client connected: ', Address);
+end;
+
+procedure THandlers.ClientDisconnected(Sender: TBleLocalPeripheral; const Address: string);
+begin
+  WriteLn('Client disconnected: ', Address);
+end;
+
+function LittleEndian(Value: Cardinal): TBytes;
+begin
+  Result := TBytes.Create(Byte(Value), Byte(Value shr 8), Byte(Value shr 16), Byte(Value shr 24));
+end;
+
+var
+  Handlers: THandlers;
+  Adapter: TBleAdapter;
+  Peripheral: TBleLocalPeripheral;
+  Service: TBleLocalService;
+  Message, Counter: TBleLocalCharacteristic;
+  Count: Cardinal;
+
+begin
+  Handlers := THandlers.Create;
+  Adapter := TBleAdapter.GetAdapters[0];
+  Peripheral := Adapter.CreateLocalPeripheral;
+  Peripheral.AddAdvertisedService(ServiceUuid);
+
+  Service := Peripheral.AddService(ServiceUuid);
+  Message := Service.AddCharacteristic(MessageUuid, [lcRead, lcWriteRequest, lcWriteCommand]);
+  Message.SetValue(TEncoding.UTF8.GetBytes('Hello from SimpleBLE'));
+  Counter := Service.AddCharacteristic(CounterUuid, [lcRead, lcNotify, lcIndicate]);
+  Counter.SetValue(LittleEndian(0));
+
+  Message.OnWrite := Handlers.MessageWritten;
+  Peripheral.OnClientConnected := Handlers.ClientConnected;
+  Peripheral.OnClientDisconnected := Handlers.ClientDisconnected;
+
+  Peripheral.Start;
+  WriteLn('Advertising for 10 minutes. Connect from your phone.');
+
+  for Count := 1 to 600 do
+  begin
+    Sleep(1000);
+    Counter.SetValue(LittleEndian(Count));
+  end;
+
+  Peripheral.Stop;
+  Peripheral.Free;
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.content.Context
+import android.util.Log
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.LocalCharacteristicCapability
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+private val MESSAGE = BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e")
+private val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun Int.toLittleEndian() = ByteArray(4) { (this shr (8 * it)).toByte() }
+
+suspend fun advertise(context: Context) = coroutineScope {
+    val adapter = Adapter.getAdapters().first()
+    val peripheral = adapter.createLocalPeripheral(context)
+    peripheral.addAdvertisedService(SERVICE)
+
+    val service = peripheral.addService(SERVICE)
+    val message = service.addCharacteristic(
+        MESSAGE,
+        LocalCharacteristicCapability.Read,
+        LocalCharacteristicCapability.WriteRequest,
+        LocalCharacteristicCapability.WriteCommand
+    )
+    message.value = "Hello from SimpleBLE".encodeToByteArray()
+    val counter = service.addCharacteristic(
+        COUNTER,
+        LocalCharacteristicCapability.Read,
+        LocalCharacteristicCapability.Notify,
+        LocalCharacteristicCapability.Indicate
+    )
+    counter.value = 0.toLittleEndian()
+
+    message.setWriteHandler { value -> Log.d("SimpleBLE", "Message: ${value.decodeToString()}") }
+    val clients = listOf(
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            peripheral.onClientConnected.collect { address -> Log.d("SimpleBLE", "Client connected: $address") }
+        },
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            peripheral.onClientDisconnected.collect { address -> Log.d("SimpleBLE", "Client disconnected: $address") }
+        },
+    )
+
+    peripheral.start()
+    Log.d("SimpleBLE", "Advertising for 10 minutes. Connect from your phone.")
+
+    for (count in 1..600) {
+        delay(1000)
+        counter.value = count.toLittleEndian()
+    }
+
+    peripheral.stop()
+    clients.forEach { it.cancel() }
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `advertise` from your app once it holds the Bluetooth permissions, including the one to advertise. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+Start the program, then open [nRF Connect for Mobile](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile) on your phone:
+
+1. Scan, and find the device whose advertisement lists the service `76A60001-A8E9-4660-BC7B-ED8D93A6849E`. Tap Connect.
+2. Read Message. It shows `Hello from SimpleBLE`.
+3. Enable notifications on Counter. Its value changes every second.
+4. Write `hi from my phone` to Message as text. The up arrow writes a value.
+
+The computer prints a line for each event:
+
+```
+Advertising for 10 minutes. Connect from your phone.
+Client connected: 4A:21:9C:7E:03:B5
+Message: hi from my phone
+```
+
+The first line appears once the computer advertises. `Client connected` follows when your phone connects, with the address the phone connected from, or the identifier your system gives it. Phones connect from a private address that changes, so it rarely matches the address in the phone's settings. `Message` prints each text a central writes, and the next read of Message returns it. When you disconnect, `Client disconnected` prints the same address.
+
+On the phone, Counter shows its four bytes in hexadecimal, lowest byte first: `0A 00 00 00` is 10. After 10 minutes, the program stops advertising.
+
+## Exercise
+
+Change the initial text of Message to your name, and make Counter count up by 10 instead of 1. Run the program again and connect from your phone: Message reads your name, and Counter grows by 10 each second. Then enable indications on Counter instead of notifications. The same values arrive, and lesson 14 explains the difference.
+
+## Troubleshooting
+
+- **The program stops with an error when it starts advertising.** Bluetooth is off, or the program has no permission to use it. Turn Bluetooth on and check [Permissions](/fundamentals/permissions). On Linux, `bluetoothd` must be running.
+- **Your phone doesn't list the computer.** Scan again and bring the phone closer. The program sets no name, so look for the service UUID `76A60001-A8E9-4660-BC7B-ED8D93A6849E` rather than a name.
+- **The phone connects, but the computer prints nothing.** Some systems report a client only once it uses a characteristic. Enable notifications on Counter, and `Client connected` appears.
+- **Message prints unreadable characters.** The phone wrote bytes instead of text. Choose text as the format when you write.
+
+For advertised names, beacons and production patterns, see the [Advertise recipe](/recipes/advertise).
+
+## Next lesson
+
+[BLE Advertising Interval and Discovery Time](/learn/advertising-interval-and-discovery): how fast a central finds your peripheral, and why.

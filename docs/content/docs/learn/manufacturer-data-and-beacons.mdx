@@ -1,0 +1,764 @@
+---
+title: BLE Manufacturer Data and Beacons
+description: Read manufacturer-specific data and decode iBeacon and Eddystone frames from your computer, then build a beacon payload of your own.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Companies put their own information in an advertisement as manufacturer data, and beacons broadcast their identity in a fixed format that any scanner can read. In the [advertisements lesson](/learn/read-ble-advertisements), you printed these fields as raw bytes. In this one, you read what the bytes mean.
+
+## Manufacturer data
+
+Manufacturer data is the advertising structure of type `0xFF`. It starts with a two-byte company identifier, followed by a payload in a format the company defines. The Bluetooth SIG assigns the identifiers, and the [Bluetooth Assigned Numbers Explorer](https://simpleble.org/tools/bluetooth-assigned-numbers) looks up any of them. Around you, you will often see Apple, `0x004C`, and Microsoft, `0x0006`.
+
+On air, the identifier is little-endian: Apple's `0x004C` travels as the bytes `4C 00`. SimpleBLE reads those two bytes for you. It gives you the identifier as a number and the payload as the bytes that follow it.
+
+## Beacons
+
+A beacon is a device that only advertises. It is usually non-connectable, and it repeats a fixed format that any scanner can decode, so a phone or a computer can recognize it, identify it and estimate how far away it is. You will meet two formats most often.
+
+**iBeacon** is Apple manufacturer data, company `0x004C`, with a payload of 23 bytes:
+
+<IBeaconLayoutDiagram />
+
+- **Type and length.** `0x02` marks an iBeacon, and `0x15` is the length of the 21 bytes that follow.
+- **Proximity UUID.** 16 bytes that identify the beacons of one organization or app.
+- **Major and minor.** Two bytes each, numbering groups and single beacons, such as a building and a room. Unlike the company identifier, both are big-endian: the high byte comes first.
+- **Measured power.** A signed byte: the RSSI a receiver should see at one meter, used to estimate distance.
+
+Apple phones, laptops and earbuds broadcast other formats under `0x004C` too. Only type `0x02` is an iBeacon.
+
+**Eddystone** travels in service data for the 16-bit UUID `0xFEAA`, which SimpleBLE reports in its full form, `0000feaa-0000-1000-8000-00805f9b34fb`. The first byte of the data is the frame type:
+
+| Frame type | Frame | Carries |
+| --- | --- | --- |
+| `0x00` | UID | A fixed beacon identifier |
+| `0x10` | URL | A web address |
+| `0x20` | TLM | Telemetry, such as battery voltage and temperature |
+| `0x30` | EID | An encrypted identifier that changes over time |
+
+The [BLE Advertisement Builder](https://simpleble.org/tools/ble-advertisement-builder) composes both formats from their fields and shows every byte it produces.
+
+## Decode the beacons around you
+
+This program scans for 10 seconds, then prints a line for each manufacturer data entry and each Eddystone frame it heard. `describe_manufacturer_data` returns the text for one entry: the decoded fields of an iBeacon, or the company and its bytes for anything else.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <simpleble/SimpleBLE.h>
+
+const std::string EDDYSTONE = "0000feaa-0000-1000-8000-00805f9b34fb";
+
+std::string describe_manufacturer_data(uint16_t company_id, const SimpleBLE::ByteArray& data) {
+    std::ostringstream text;
+    text << std::hex << std::setfill('0');
+
+    // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if (company_id == 0x004C && data.size() >= 23 && data[0] == 0x02 && data[1] == 0x15) {
+        text << "iBeacon ";
+        for (size_t i = 2; i < 18; i++) {
+            if (i == 6 || i == 8 || i == 10 || i == 12) {
+                text << "-";
+            }
+            text << std::setw(2) << int(data[i]);
+        }
+        text << std::dec << ", major " << ((data[18] << 8) | data[19]) << ", minor " << ((data[20] << 8) | data[21])
+             << ", power " << int(int8_t(data[22])) << " dBm";
+        return text.str();
+    }
+
+    text << "company 0x" << std::uppercase << std::setw(4) << company_id << std::nouppercase << ":";
+    for (uint8_t byte : data) {
+        text << " " << std::setw(2) << int(byte);
+    }
+    return text.str();
+}
+
+std::string describe_eddystone(const SimpleBLE::ByteArray& data) {
+    switch (data[0]) {
+        case 0x00:
+            return "Eddystone UID frame";
+        case 0x10:
+            return "Eddystone URL frame";
+        case 0x20:
+            return "Eddystone TLM frame";
+        case 0x30:
+            return "Eddystone EID frame";
+    }
+    std::ostringstream text;
+    text << "Eddystone frame 0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << int(data[0]);
+    return text.str();
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(10000);
+
+    for (auto& device : adapter.scan_get_results()) {
+        for (auto& [company_id, data] : device.manufacturer_data()) {
+            std::cout << device.address() << "  " << describe_manufacturer_data(company_id, data) << std::endl;
+        }
+        for (auto& service : device.services()) {
+            if (service.uuid() == EDDYSTONE && !service.data().empty()) {
+                std::cout << device.address() << "  " << describe_eddystone(service.data()) << std::endl;
+            }
+        }
+    }
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+#define EDDYSTONE "0000feaa-0000-1000-8000-00805f9b34fb"
+
+static void describe_manufacturer_data(uint16_t company_id, const uint8_t* data, size_t length, char* text,
+                                       size_t size) {
+    // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if (company_id == 0x004C && length >= 23 && data[0] == 0x02 && data[1] == 0x15) {
+        char uuid[37];
+        size_t used = 0;
+        for (size_t i = 2; i < 18; i++) {
+            if (i == 6 || i == 8 || i == 10 || i == 12) {
+                uuid[used++] = '-';
+            }
+            used += snprintf(uuid + used, sizeof(uuid) - used, "%02x", data[i]);
+        }
+        snprintf(text, size, "iBeacon %s, major %d, minor %d, power %d dBm", uuid, (data[18] << 8) | data[19],
+                 (data[20] << 8) | data[21], (int8_t)data[22]);
+        return;
+    }
+
+    size_t used = snprintf(text, size, "company 0x%04X:", company_id);
+    for (size_t i = 0; i < length && used + 3 < size; i++) {
+        used += snprintf(text + used, size - used, " %02x", data[i]);
+    }
+}
+
+static void describe_eddystone(const uint8_t* data, char* text, size_t size) {
+    switch (data[0]) {
+        case 0x00:
+            snprintf(text, size, "Eddystone UID frame");
+            break;
+        case 0x10:
+            snprintf(text, size, "Eddystone URL frame");
+            break;
+        case 0x20:
+            snprintf(text, size, "Eddystone TLM frame");
+            break;
+        case 0x30:
+            snprintf(text, size, "Eddystone EID frame");
+            break;
+        default:
+            snprintf(text, size, "Eddystone frame 0x%02X", data[0]);
+            break;
+    }
+}
+
+static void print_beacons(simpleble_peripheral_t device) {
+    simpleble_error_t* error = NULL;
+    char text[1024];
+
+    char* address = simpleble_peripheral_address(device, &error);
+
+    simpleble_manufacturer_data_list_t manufacturer_data = NULL;
+    size_t count = error ? 0 : simpleble_peripheral_manufacturer_data(device, &manufacturer_data, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_manufacturer_data_t entry = {0};
+        simpleble_manufacturer_data_list_get(manufacturer_data, i, &entry, &error);
+        if (error) break;
+        describe_manufacturer_data(entry.manufacturer_id, entry.data, entry.data_length, text, sizeof(text));
+        printf("%s  %s\n", address, text);
+        simpleble_manufacturer_data_release(&entry);
+    }
+    simpleble_manufacturer_data_list_release(manufacturer_data);
+
+    simpleble_service_list_t services = NULL;
+    count = error ? 0 : simpleble_peripheral_services(device, &services, &error);
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, &error);
+        if (error) break;
+        if (strcmp(service.uuid.value, EDDYSTONE) == 0 && service.data_length > 0) {
+            describe_eddystone(service.data, text, sizeof(text));
+            printf("%s  %s\n", address, text);
+        }
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_free(address);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    if (!error) simpleble_adapter_scan_for(adapter, 10000, &error);
+    if (!error) count = simpleble_adapter_scan_get_results(adapter, &results, &error);
+
+    for (size_t i = 0; i < count && !error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, &error);
+        if (error) break;
+        print_beacons(device);
+        simpleble_peripheral_release_handle(device);
+    }
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_list_release(results);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import struct
+import uuid
+
+import simplepyble
+
+EDDYSTONE = "0000feaa-0000-1000-8000-00805f9b34fb"
+EDDYSTONE_FRAMES = {0x00: "UID", 0x10: "URL", 0x20: "TLM", 0x30: "EID"}
+
+
+def describe_manufacturer_data(company_id, data):
+    # An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if company_id == 0x004C and len(data) >= 23 and data[0] == 0x02 and data[1] == 0x15:
+        major, minor, power = struct.unpack_from(">HHb", data, 18)
+        return f"iBeacon {uuid.UUID(bytes=data[2:18])}, major {major}, minor {minor}, power {power} dBm"
+    return f"company 0x{company_id:04X}: {data.hex(' ')}"
+
+
+def describe_eddystone(data):
+    frame = EDDYSTONE_FRAMES.get(data[0])
+    return f"Eddystone {frame} frame" if frame else f"Eddystone frame 0x{data[0]:02X}"
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(10000)
+
+for device in adapter.scan_get_results():
+    for company_id, data in device.manufacturer_data().items():
+        print(f"{device.address()}  {describe_manufacturer_data(company_id, data)}")
+    for service in device.services():
+        if service.uuid() == EDDYSTONE and service.data():
+            print(f"{device.address()}  {describe_eddystone(service.data())}")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.nio.ByteBuffer;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.UUID;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.Peripheral;
+
+public class Beacons {
+    static String describeManufacturerData(int companyId, byte[] data) {
+        // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+        if (companyId == 0x004C && data.length >= 23 && data[0] == 0x02 && data[1] == 0x15) {
+            ByteBuffer buffer = ByteBuffer.wrap(data);
+            UUID uuid = new UUID(buffer.getLong(2), buffer.getLong(10));
+            int major = buffer.getShort(18) & 0xFFFF;
+            int minor = buffer.getShort(20) & 0xFFFF;
+            return String.format("iBeacon %s, major %d, minor %d, power %d dBm", uuid, major, minor, data[22]);
+        }
+        return String.format("company 0x%04X: %s", companyId, HexFormat.ofDelimiter(" ").formatHex(data));
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(10000);
+
+        for (Peripheral device : adapter.scanGetResults()) {
+            for (Map.Entry<Integer, byte[]> entry : device.manufacturerData().entrySet()) {
+                String text = describeManufacturerData(entry.getKey(), entry.getValue());
+                System.out.println(device.getAddress() + "  " + text);
+            }
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use simplersble::Adapter;
+
+const EDDYSTONE: &str = "0000feaa-0000-1000-8000-00805f9b34fb";
+
+fn hex(data: &[u8], separator: &str) -> String {
+    let bytes: Vec<String> = data.iter().map(|byte| format!("{:02x}", byte)).collect();
+    bytes.join(separator)
+}
+
+fn describe_manufacturer_data(company_id: u16, data: &[u8]) -> String {
+    // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if company_id == 0x004C && data.len() >= 23 && data[0] == 0x02 && data[1] == 0x15 {
+        let groups = [2..6, 6..8, 8..10, 10..12, 12..18];
+        let uuid = groups.map(|range| hex(&data[range], "")).join("-");
+        let major = u16::from_be_bytes([data[18], data[19]]);
+        let minor = u16::from_be_bytes([data[20], data[21]]);
+        let power = data[22] as i8;
+        return format!("iBeacon {uuid}, major {major}, minor {minor}, power {power} dBm");
+    }
+    format!("company 0x{:04X}: {}", company_id, hex(data, " "))
+}
+
+fn describe_eddystone(data: &[u8]) -> String {
+    let frame = match data[0] {
+        0x00 => "UID",
+        0x10 => "URL",
+        0x20 => "TLM",
+        0x30 => "EID",
+        other => return format!("Eddystone frame 0x{:02X}", other),
+    };
+    format!("Eddystone {} frame", frame)
+}
+
+fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(10)).unwrap();
+
+    for device in adapter.scan_get_results().unwrap() {
+        let address = device.address().unwrap();
+        for (company_id, data) in device.manufacturer_data().unwrap() {
+            let text = describe_manufacturer_data(company_id, &data);
+            println!("{}  {}", address, text);
+        }
+        for service in device.services().unwrap() {
+            let data = service.data();
+            if service.uuid() == EDDYSTONE && !data.is_empty() {
+                println!("{}  {}", address, describe_eddystone(&data));
+            }
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const EDDYSTONE = '0000feaa-0000-1000-8000-00805f9b34fb';
+const EDDYSTONE_FRAMES = { 0x00: 'UID', 0x10: 'URL', 0x20: 'TLM', 0x30: 'EID' };
+
+const hex = (data, separator = '') =>
+  Array.from(data, byte => byte.toString(16).padStart(2, '0')).join(separator);
+
+function describeManufacturerData(companyId, data) {
+  // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+  if (companyId === 0x004c && data.length >= 23 && data[0] === 0x02 && data[1] === 0x15) {
+    const uuid = hex(data.subarray(2, 18)).replace(/(.{8})(.{4})(.{4})(.{4})/, '$1-$2-$3-$4-');
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const major = view.getUint16(18);
+    const minor = view.getUint16(20);
+    return `iBeacon ${uuid}, major ${major}, minor ${minor}, power ${view.getInt8(22)} dBm`;
+  }
+  const company = companyId.toString(16).toUpperCase().padStart(4, '0');
+  return `company 0x${company}: ${hex(data, ' ')}`;
+}
+
+function describeEddystone(data) {
+  const frame = EDDYSTONE_FRAMES[data[0]];
+  if (frame) return `Eddystone ${frame} frame`;
+  return `Eddystone frame 0x${data[0].toString(16).toUpperCase().padStart(2, '0')}`;
+}
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(10000);
+
+for (const device of adapter.scanGetResults()) {
+  for (const [companyId, data] of device.manufacturerData()) {
+    console.log(`${device.address()}  ${describeManufacturerData(companyId, data)}`);
+  }
+  for (const service of device.services()) {
+    if (service.uuid === EDDYSTONE && service.data.length > 0) {
+      console.log(`${device.address()}  ${describeEddystone(service.data)}`);
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter } from 'simplernble';
+
+const EDDYSTONE = '0000feaa-0000-1000-8000-00805f9b34fb';
+const EDDYSTONE_FRAMES: Record<number, string> = { 0x00: 'UID', 0x10: 'URL', 0x20: 'TLM', 0x30: 'EID' };
+
+const hex = (data: Uint8Array, separator = '') =>
+  Array.from(data, byte => byte.toString(16).padStart(2, '0')).join(separator);
+
+export function describeManufacturerData(companyId: number, data: Uint8Array): string {
+  // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+  if (companyId === 0x004c && data.length >= 23 && data[0] === 0x02 && data[1] === 0x15) {
+    const uuid = hex(data.subarray(2, 18)).replace(/(.{8})(.{4})(.{4})(.{4})/, '$1-$2-$3-$4-');
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const major = view.getUint16(18);
+    const minor = view.getUint16(20);
+    return `iBeacon ${uuid}, major ${major}, minor ${minor}, power ${view.getInt8(22)} dBm`;
+  }
+  const company = companyId.toString(16).toUpperCase().padStart(4, '0');
+  return `company 0x${company}: ${hex(data, ' ')}`;
+}
+
+function describeEddystone(data: Uint8Array): string {
+  const frame = EDDYSTONE_FRAMES[data[0]];
+  if (frame) return `Eddystone ${frame} frame`;
+  return `Eddystone frame 0x${data[0].toString(16).toUpperCase().padStart(2, '0')}`;
+}
+
+export async function decodeBeacons() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(10000);
+
+  for (const device of adapter.scanGetResults()) {
+    for (const [companyId, data] of device.manufacturerData()) {
+      console.log(`${device.address()}  ${describeManufacturerData(companyId, data)}`);
+    }
+    for (const service of device.services()) {
+      if (service.uuid === EDDYSTONE && service.data.length > 0) {
+        console.log(`${device.address()}  ${describeEddystone(service.data)}`);
+      }
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+
+const val EDDYSTONE = "0000feaa-0000-1000-8000-00805f9b34fb"
+
+fun ByteArray.toHex(separator: String = "") =
+    joinToString(separator) { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+
+fun describeManufacturerData(companyId: Int, data: ByteArray): String {
+    fun byte(index: Int) = data[index].toInt() and 0xFF
+
+    // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if (companyId == 0x004C && data.size >= 23 && byte(0) == 0x02 && byte(1) == 0x15) {
+        val uuid = listOf(2..5, 6..7, 8..9, 10..11, 12..17).joinToString("-") { data.sliceArray(it).toHex() }
+        val major = byte(18) shl 8 or byte(19)
+        val minor = byte(20) shl 8 or byte(21)
+        return "iBeacon $uuid, major $major, minor $minor, power ${data[22]} dBm"
+    }
+    val company = companyId.toString(16).uppercase().padStart(4, '0')
+    return "company 0x$company: ${data.toHex(" ")}"
+}
+
+fun describeEddystone(data: ByteArray): String = when (val frame = data[0].toInt() and 0xFF) {
+    0x00 -> "Eddystone UID frame"
+    0x10 -> "Eddystone URL frame"
+    0x20 -> "Eddystone TLM frame"
+    0x30 -> "Eddystone EID frame"
+    else -> "Eddystone frame 0x${frame.toString(16).uppercase().padStart(2, '0')}"
+}
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(10000)
+
+    for (device in adapter.scanGetResults()) {
+        for ((companyId, data) in device.manufacturerData()) {
+            println("${device.address}  ${describeManufacturerData(companyId, data)}")
+        }
+        for (service in device.services()) {
+            if (service.uuid.value == EDDYSTONE && service.data.isNotEmpty()) {
+                println("${device.address}  ${describeEddystone(service.data)}")
+            }
+        }
+    }
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let eddystone: BluetoothUUID = "0000feaa-0000-1000-8000-00805f9b34fb"
+
+func describeManufacturerData(companyId: UInt16, data: Data) -> String {
+    let bytes = [UInt8](data)
+    // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if companyId == 0x004C && bytes.count >= 23 && bytes[0] == 0x02 && bytes[1] == 0x15 {
+        let uuid = (2..<18).map { ([6, 8, 10, 12].contains($0) ? "-" : "") + String(format: "%02x", bytes[$0]) }
+        let major = UInt16(bytes[18]) << 8 | UInt16(bytes[19])
+        let minor = UInt16(bytes[20]) << 8 | UInt16(bytes[21])
+        return "iBeacon \(uuid.joined()), major \(major), minor \(minor), power \(Int8(bitPattern: bytes[22])) dBm"
+    }
+    let payload = bytes.map { String(format: "%02x", $0) }.joined(separator: " ")
+    return "company \(String(format: "0x%04X", UInt32(companyId))): \(payload)"
+}
+
+func describeEddystone(data: Data) -> String {
+    let frameType = [UInt8](data)[0]
+    switch frameType {
+    case 0x00: return "Eddystone UID frame"
+    case 0x10: return "Eddystone URL frame"
+    case 0x20: return "Eddystone TLM frame"
+    case 0x30: return "Eddystone EID frame"
+    default: return String(format: "Eddystone frame 0x%02X", UInt32(frameType))
+    }
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 10000)
+
+for device in try adapter.scanGetResults() {
+    for (companyId, data) in try device.manufacturerData() {
+        print("\(device.address)  \(describeManufacturerData(companyId: companyId, data: data))")
+    }
+    for service in try device.services() where service.uuid == eddystone && !service.data.isEmpty {
+        print("\(device.address)  \(describeEddystone(data: service.data))")
+    }
+}
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'package:simpledartble/simpledartble.dart';
+
+const eddystone = '0000feaa-0000-1000-8000-00805f9b34fb';
+const eddystoneFrames = {0x00: 'UID', 0x10: 'URL', 0x20: 'TLM', 0x30: 'EID'};
+
+String hex(List<int> data, [String separator = '']) =>
+    data.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(separator);
+
+String describeManufacturerData(int companyId, List<int> data) {
+  // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+  if (companyId == 0x004C && data.length >= 23 && data[0] == 0x02 && data[1] == 0x15) {
+    final groups = [(2, 6), (6, 8), (8, 10), (10, 12), (12, 18)];
+    final uuid = [for (final (start, end) in groups) hex(data.sublist(start, end))].join('-');
+    final major = data[18] << 8 | data[19];
+    final minor = data[20] << 8 | data[21];
+    return 'iBeacon $uuid, major $major, minor $minor, power ${data[22].toSigned(8)} dBm';
+  }
+  final company = companyId.toRadixString(16).toUpperCase().padLeft(4, '0');
+  return 'company 0x$company: ${hex(data, ' ')}';
+}
+
+String describeEddystone(List<int> data) {
+  final frame = eddystoneFrames[data[0]];
+  if (frame != null) return 'Eddystone $frame frame';
+  return 'Eddystone frame 0x${data[0].toRadixString(16).toUpperCase().padLeft(2, '0')}';
+}
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 10));
+
+  for (final device in adapter.scanGetResults()) {
+    for (final MapEntry(key: companyId, value: data) in device.manufacturerData().entries) {
+      print('${device.address}  ${describeManufacturerData(companyId, data)}');
+    }
+    for (final service in device.services()) {
+      if (service.uuid == eddystone && service.data.isNotEmpty) {
+        print('${device.address}  ${describeEddystone(service.data)}');
+      }
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Beacons;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  Eddystone = '0000feaa-0000-1000-8000-00805f9b34fb';
+
+function Hex(const Data: TBytes; const Separator: string): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to High(Data) do
+  begin
+    if I > 0 then
+      Result := Result + Separator;
+    Result := Result + LowerCase(IntToHex(Data[I], 2));
+  end;
+end;
+
+function DescribeManufacturerData(CompanyId: Word; const Data: TBytes): string;
+var
+  Uuid: string;
+begin
+  // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+  if (CompanyId = $004C) and (Length(Data) >= 23) and (Data[0] = $02) and (Data[1] = $15) then
+  begin
+    Uuid := Hex(Copy(Data, 2, 16), '');
+    Result := Format('iBeacon %s-%s-%s-%s-%s, major %d, minor %d, power %d dBm',
+      [Copy(Uuid, 1, 8), Copy(Uuid, 9, 4), Copy(Uuid, 13, 4), Copy(Uuid, 17, 4), Copy(Uuid, 21, 12),
+       Data[18] shl 8 or Data[19], Data[20] shl 8 or Data[21], ShortInt(Data[22])]);
+  end
+  else
+    Result := 'company 0x' + IntToHex(CompanyId, 4) + ': ' + Hex(Data, ' ');
+end;
+
+function DescribeEddystone(const Data: TBytes): string;
+begin
+  case Data[0] of
+    $00: Result := 'Eddystone UID frame';
+    $10: Result := 'Eddystone URL frame';
+    $20: Result := 'Eddystone TLM frame';
+    $30: Result := 'Eddystone EID frame';
+  else
+    Result := 'Eddystone frame 0x' + IntToHex(Data[0], 2);
+  end;
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device: TBlePeripheral;
+  Entry: TBleManufacturerData;
+  Service: TBleService;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(10000);
+
+  for Device in Adapter.ScanGetResults do
+  begin
+    for Entry in Device.ManufacturerData do
+      WriteLn(Device.Address, '  ', DescribeManufacturerData(Entry.CompanyId, Entry.Data));
+    for Service in Device.Services do
+      if (Service.Uuid = Eddystone) and (Length(Service.Data) > 0) then
+        WriteLn(Device.Address, '  ', DescribeEddystone(Service.Data));
+  end;
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import java.nio.ByteBuffer
+import java.util.UUID
+import org.simpleble.android.Adapter
+
+fun describeManufacturerData(companyId: Int, data: ByteArray): String {
+    // An iBeacon is Apple data that starts with type 0x02 and length 0x15 (21 bytes).
+    if (companyId == 0x004C && data.size >= 23 && data[0].toInt() == 0x02 && data[1].toInt() == 0x15) {
+        val buffer = ByteBuffer.wrap(data)
+        val uuid = UUID(buffer.getLong(2), buffer.getLong(10))
+        val major = buffer.getShort(18).toInt() and 0xFFFF
+        val minor = buffer.getShort(20).toInt() and 0xFFFF
+        return "iBeacon $uuid, major $major, minor $minor, power ${data[22]} dBm"
+    }
+    return "company 0x%04X: %s".format(companyId, data.joinToString(" ") { "%02x".format(it) })
+}
+
+suspend fun decodeBeacons() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(10000)
+
+    for (device in adapter.scanGetResults()) {
+        for ((companyId, data) in device.manufacturerData()) {
+            Log.d("SimpleBLE", "${device.address}  ${describeManufacturerData(companyId, data)}")
+        }
+    }
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `decodeBeacons` from your app once it holds the Bluetooth permissions. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+One line for each entry, after the address of the device that sent it:
+
+```
+6A:1F:C3:52:9E:04  company 0x004C: 10 05 41 1c 2f 9a 18
+4D:B2:7A:E1:38:C6  company 0x004C: 0c 0e 00 a7 3f 52 91 e8 6b 04 d2 7c 15 9a 3e 60
+1E:93:5C:A8:F2:71  company 0x0006: 01 09 20 22 6e 3b 9c 41 f0 1a 7d 52 08 3e a4 c1 29 b5 66 0d e7 4f 93 8c
+F3:58:2B:C9:0D:A7  iBeacon e2c56db5-dffb-48d2-b060-d0f5a71096e0, major 1, minor 2, power -59 dBm
+D9:64:E0:17:B3:5C  Eddystone URL frame
+```
+
+Company `0x004C` is Apple and `0x0006` is Microsoft. Phones, laptops and earbuds announce their status in formats of their own, and the program prints those as bytes. The iBeacon line shows the beacon's identity and its measured power, and the Eddystone line shows which frame the beacon sent.
+
+Most offices and homes are full of company data, but beacons are rarer, and you may see no iBeacon or Eddystone line at all. The exercise gives you one to decode.
+
+## Exercise
+
+Build an iBeacon of your own and decode it without a scan. In the BLE Advertisement Builder, pick the iBeacon template under Templates and enter your own Proximity UUID, Major, Minor and Measured power. Select **Replace advertising data with iBeacon**, then copy the Hex line of the Advertising Data output.
+
+The line starts with `02 01 06 1A FF 4C 00`: the Flags structure, then the manufacturer data structure's length, its type `0xFF` and the company `0x004C`, little-endian. The 23 bytes after `4C 00`, from `02 15` to the end, are the payload SimpleBLE gives you. Write them as a byte array in your language and pass them to `describe_manufacturer_data` with company `0x004C`, in place of the scan. Print what it returns: your UUID, in lowercase, with your major, minor and power.
+
+## Troubleshooting
+
+- **No iBeacon or Eddystone line appears.** Many places have no beacons, while company data is everywhere. Decode the beacon you build in the exercise.
+- **A company identifier looks reversed.** The identifier is little-endian on air, so Apple's `0x004C` appears as `4C 00` in raw advertising bytes. SimpleBLE gives you the identifier as a number in the right order: compare it with `0x004C`, not with the raw bytes.
+- **Your payload doesn't decode as an iBeacon.** The payload must start with `02 15` and hold at least 23 bytes, with company `0x004C`. Copy from `02 15` to the end of the line, without the `4C 00` in front of it.
+
+## Next lesson
+
+[Advertise BLE from your computer](/learn/advertise-from-your-computer): make your computer a peripheral that your phone can find and connect to.

@@ -84,7 +84,49 @@ const MODULES: Module[] = [
   {
     name: 'Module 2: Advertising',
     description: 'Make your computer visible and broadcast data of your own.',
-    lessons: [],
+    lessons: [
+      {
+        url: '/fundamentals/advertising',
+        position: 6,
+        minutes: 15,
+        teaches: [
+          'How advertising events repeat on channels 37, 38 and 39',
+          'Advertising types and AD structures',
+          'Scan responses and the 31-byte limit',
+          'Extended advertising',
+        ],
+      },
+      {
+        url: '/learn/manufacturer-data-and-beacons',
+        position: 7,
+        minutes: 15,
+        teaches: [
+          'Manufacturer specific data and company identifiers',
+          'Decoding iBeacon frames',
+          'Decoding Eddystone frames',
+        ],
+      },
+      {
+        url: '/learn/advertise-from-your-computer',
+        position: 8,
+        minutes: 20,
+        teaches: [
+          'Running a BLE peripheral on your computer',
+          'Advertising a service UUID',
+          'Serving readable, writable and notifying characteristics',
+        ],
+      },
+      {
+        url: '/learn/advertising-interval-and-discovery',
+        position: 9,
+        minutes: 15,
+        teaches: [
+          'Advertising interval, scan interval and scan window',
+          'What decides discovery time',
+          'Measuring how long discovery takes',
+        ],
+      },
+    ],
   },
   {
     name: 'Module 3: Connections and GATT',

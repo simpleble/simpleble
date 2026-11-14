@@ -5,9 +5,13 @@ description: How BLE advertising works, including AD structures, the 31-byte lim
 
 A Bluetooth Low Energy peripheral is found through advertising. It broadcasts short packets, called advertisements, that announce it and describe what it offers. A central scans for those packets and decides which devices to list, ignore or connect to. Before a connection, everything a central learns about a device comes from its advertisements.
 
+This page is also lesson 6 of [Learn Bluetooth Low Energy](/learn), a free hands-on BLE course.
+
 ## How advertising works
 
 A peripheral sends each advertisement on three advertising channels: 37, 38 and 39, at 2402, 2426 and 2480 MHz. It repeats at its advertising interval, anywhere from 20 ms to 10.24 s, plus a random delay of up to 10 ms so that two devices don't keep colliding. A short interval makes a device quick to find. A long interval saves battery.
+
+<AdvertisingEventDiagram />
 
 The advertising type tells a scanner what it can do next:
 
@@ -109,3 +113,21 @@ SimpleBLE also advertises. Create a local peripheral from an adapter, add the se
 - **Treating a service UUID as an identity.** A matching service UUID finds devices of a type, not one specific or trusted device. Confirm which device it is after connecting.
 - **Recognizing a device by its address.** Many devices advertise with a private address that changes periodically. Identify devices by their advertising data or after connecting.
 - **Reading the company identifier in the wrong byte order.** It is little-endian on air, so `59 00` is company `0x0059`. SimpleBLE hands it to you as a number.
+
+## Exercise
+
+Open the [BLE Advertisement Builder](https://simpleble.org/tools/ble-advertisement-builder) and rebuild the advertisement from [Advertising data](#advertising-data) in its advertising data: Flags, the 16-bit service UUID `0x180D`, the complete local name `Pulse`, and manufacturer specific data for company `0x0059` with the bytes `01 02`. Compare the builder's hex output with the example. Then add a 128-bit service UUID.
+
+## What you should see
+
+The builder's advertising data matches the example byte for byte, 20 of 31 octets:
+
+```
+02 01 06 03 03 0D 18 06 09 50 75 6C 73 65 05 FF 59 00 01 02
+```
+
+The 128-bit service UUID takes 18 more octets, 38 in all, and the advertising data no longer fits. Move the name to the scan response and both packets fit again. Every device makes this choice: what a central must see in the advertisement, and what can wait for the scan response.
+
+## Next lesson
+
+[BLE Manufacturer Data and Beacons](/learn/manufacturer-data-and-beacons): what the bytes inside manufacturer data mean, and how to decode iBeacon and Eddystone frames.

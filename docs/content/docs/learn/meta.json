@@ -7,6 +7,11 @@
     "central-and-peripheral",
     "scan-for-ble-devices",
     "read-ble-advertisements",
-    "rssi-signal-strength"
+    "rssi-signal-strength",
+    "---Module 2: Advertising---",
+    "[BLE Advertising](/fundamentals/advertising)",
+    "manufacturer-data-and-beacons",
+    "advertise-from-your-computer",
+    "advertising-interval-and-discovery"
   ]
 }
