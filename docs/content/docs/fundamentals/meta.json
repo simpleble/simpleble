@@ -1,0 +1,13 @@
+{
+  "title": "Fundamentals",
+  "pages": [
+    "uuids",
+    "advertising",
+    "addresses",
+    "permissions",
+    "concurrency",
+    "error-handling",
+    "disconnects",
+    "cmake_primer"
+  ]
+}
