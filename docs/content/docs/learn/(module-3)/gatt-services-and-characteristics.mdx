@@ -1,0 +1,838 @@
+---
+title: GATT Services and Characteristics
+description: How GATT organizes a Bluetooth Low Energy device into services, characteristics and descriptors, and how to explore a real one.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Once your program is connected, it reaches the device's data through GATT. In this lesson you learn how GATT arranges that data into services, characteristics and descriptors. Then your program connects to the course peripheral and prints every service, characteristic and descriptor it offers.
+
+## The attribute table
+
+GATT, the Generic Attribute Profile, keeps a device's data in a table of attributes. Each attribute has a handle, a type and a value. The handle is the attribute's number in the table. The type is a UUID that says what the attribute is. The value holds its data.
+
+<GattTableDiagram />
+
+## Services, characteristics and descriptors
+
+A service groups the characteristics of one feature. The course service groups Message and Counter, and a Battery Service groups what a device reports about its battery.
+
+A characteristic is a declaration, which holds its properties and its UUID, followed by its value. The properties say what a central may do with the value:
+
+- **Read.** The central asks for the current value.
+- **Write.** The central sends a new value, and the peripheral confirms it.
+- **Write without response.** The central sends a new value, and no confirmation follows.
+- **Notify.** The peripheral sends each new value to the centrals that subscribed.
+- **Indicate.** The peripheral sends each new value to the centrals that subscribed, and each central confirms it.
+
+Descriptors follow the value and describe it. The Client Characteristic Configuration descriptor (CCCD, `0x2902`) holds a central's subscription to notifications or indications. The Characteristic User Description (`0x2901`) holds a name people can read.
+
+Standard services and characteristics have 16-bit UUIDs from the Bluetooth SIG, such as `0x180A` for Device Information and `0x2A19` for Battery Level. A device's own services and characteristics use random 128-bit UUIDs, as the course peripheral does. The [GATT UUID Lookup](https://simpleble.org/tools/gatt-uuid-lookup) names the standard ones.
+
+## GATT in SimpleBLE
+
+SimpleBLE hides handles. After `connect()`, `services()` gives you the services, each with its characteristics, and each characteristic with its descriptors, all identified by UUID. Each characteristic also reports its properties. In SimpleBLE, a write is a write request, and a write without response is a write command.
+
+## Explore the course peripheral
+
+Start the course peripheral as in [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral). This program finds it and connects, as in the last lesson. It prints every service, every characteristic with its properties, and every descriptor, then disconnects.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+bool advertises_service(SimpleBLE::Peripheral& device) {
+    for (auto& service : device.services()) {
+        if (service.uuid() == SERVICE) return true;
+    }
+    return false;
+}
+
+std::string properties(SimpleBLE::Characteristic& characteristic) {
+    std::vector<std::string> names;
+    if (characteristic.can_read()) names.push_back("read");
+    if (characteristic.can_write_request()) names.push_back("write");
+    if (characteristic.can_write_command()) names.push_back("write without response");
+    if (characteristic.can_notify()) names.push_back("notify");
+    if (characteristic.can_indicate()) names.push_back("indicate");
+
+    std::string text;
+    for (auto& name : names) {
+        text += (text.empty() ? "" : ", ") + name;
+    }
+    return text;
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    auto found = std::find_if(results.begin(), results.end(), advertises_service);
+    if (found == results.end()) {
+        std::cout << "Course peripheral not found. Start it and run this program again." << std::endl;
+        return 1;
+    }
+    auto peripheral = *found;
+
+    std::cout << "Connecting to " << peripheral.address() << std::endl;
+    peripheral.connect();
+    std::cout << "Connected" << std::endl;
+
+    for (auto& service : peripheral.services()) {
+        std::cout << "Service " << service.uuid() << std::endl;
+        for (auto& characteristic : service.characteristics()) {
+            std::cout << "  Characteristic " << characteristic.uuid() << ": " << properties(characteristic) << std::endl;
+            for (auto& descriptor : characteristic.descriptors()) {
+                std::cout << "    Descriptor " << descriptor.uuid() << std::endl;
+            }
+        }
+    }
+
+    peripheral.disconnect();
+    std::cout << "Disconnected" << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static bool advertises_service(simpleble_peripheral_t device, simpleble_error_t** error) {
+    bool found = false;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, error);
+    for (size_t i = 0; i < count && !found && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        found = !*error && strcmp(service.uuid.value, SERVICE.value) == 0;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    return found;
+}
+
+// Returns an owned handle to the first device that advertises the course service, or NULL.
+static simpleble_peripheral_t find_course_peripheral(simpleble_adapter_t adapter, simpleble_error_t** error) {
+    simpleble_peripheral_t peripheral = NULL;
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    simpleble_adapter_scan_for(adapter, 5000, error);
+    if (!*error) count = simpleble_adapter_scan_get_results(adapter, &results, error);
+
+    for (size_t i = 0; i < count && !peripheral && !*error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, error);
+        if (!*error && advertises_service(device, error)) {
+            peripheral = device;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+    simpleble_peripheral_list_release(results);
+    return peripheral;
+}
+
+static void print_properties(const simpleble_characteristic_t* characteristic) {
+    const bool flags[] = {characteristic->can_read, characteristic->can_write_request,
+                          characteristic->can_write_command, characteristic->can_notify,
+                          characteristic->can_indicate};
+    const char* names[] = {"read", "write", "write without response", "notify", "indicate"};
+    const char* separator = "";
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+        if (!flags[i]) continue;
+        printf("%s%s", separator, names[i]);
+        separator = ", ";
+    }
+}
+
+static void print_services(simpleble_peripheral_t peripheral, simpleble_error_t** error) {
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(peripheral, &services, error);
+    for (size_t i = 0; i < count && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        if (*error) break;
+        printf("Service %s\n", service.uuid.value);
+        for (size_t j = 0; j < service.characteristic_count; j++) {
+            const simpleble_characteristic_t* characteristic = &service.characteristics[j];
+            printf("  Characteristic %s: ", characteristic->uuid.value);
+            print_properties(characteristic);
+            printf("\n");
+            for (size_t k = 0; k < characteristic->descriptor_count; k++) {
+                printf("    Descriptor %s\n", characteristic->descriptors[k].uuid.value);
+            }
+        }
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_t peripheral = error ? NULL : find_course_peripheral(adapter, &error);
+    if (!error && !peripheral) {
+        printf("Course peripheral not found. Start it and run this program again.\n");
+        simpleble_adapter_release_handle(adapter);
+        return EXIT_FAILURE;
+    }
+
+    char* address = error ? NULL : simpleble_peripheral_address(peripheral, &error);
+    if (!error) printf("Connecting to %s\n", address);
+    simpleble_free(address);
+
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (!error) printf("Connected\n");
+    if (!error) print_services(peripheral, &error);
+    if (!error) simpleble_peripheral_disconnect(peripheral, &error);
+    if (!error) printf("Disconnected\n");
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import sys
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+
+def advertises_service(device):
+    return any(service.uuid() == SERVICE for service in device.services())
+
+
+def properties(characteristic):
+    flags = [
+        (characteristic.can_read(), "read"),
+        (characteristic.can_write_request(), "write"),
+        (characteristic.can_write_command(), "write without response"),
+        (characteristic.can_notify(), "notify"),
+        (characteristic.can_indicate(), "indicate"),
+    ]
+    return ", ".join(name for present, name in flags if present)
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next((device for device in adapter.scan_get_results() if advertises_service(device)), None)
+if peripheral is None:
+    print("Course peripheral not found. Start it and run this program again.")
+    sys.exit(1)
+
+print(f"Connecting to {peripheral.address()}")
+peripheral.connect()
+print("Connected")
+
+for service in peripheral.services():
+    print(f"Service {service.uuid()}")
+    for characteristic in service.characteristics():
+        print(f"  Characteristic {characteristic.uuid()}: {properties(characteristic)}")
+        for descriptor in characteristic.descriptors():
+            print(f"    Descriptor {descriptor.uuid()}")
+
+peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.Characteristic;
+import org.simplejavable.Descriptor;
+import org.simplejavable.Peripheral;
+import org.simplejavable.Service;
+
+public class ExploreGatt {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+    static boolean advertisesService(Peripheral device) {
+        return device.services().stream().anyMatch(service -> service.uuid().equals(SERVICE));
+    }
+
+    static String properties(Characteristic characteristic) {
+        List<String> names = new ArrayList<>();
+        if (characteristic.canRead()) names.add("read");
+        if (characteristic.canWriteRequest()) names.add("write");
+        if (characteristic.canWriteCommand()) names.add("write without response");
+        if (characteristic.canNotify()) names.add("notify");
+        if (characteristic.canIndicate()) names.add("indicate");
+        return String.join(", ", names);
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        Peripheral peripheral = adapter.scanGetResults().stream()
+                .filter(ExploreGatt::advertisesService)
+                .findFirst()
+                .orElse(null);
+        if (peripheral == null) {
+            System.out.println("Course peripheral not found. Start it and run this program again.");
+            System.exit(1);
+        }
+
+        System.out.println("Connecting to " + peripheral.getAddress());
+        peripheral.connect();
+        System.out.println("Connected");
+
+        for (Service service : peripheral.services()) {
+            System.out.println("Service " + service.uuid());
+            for (Characteristic characteristic : service.characteristics()) {
+                System.out.println("  Characteristic " + characteristic.uuid() + ": " + properties(characteristic));
+                for (Descriptor descriptor : characteristic.descriptors()) {
+                    System.out.println("    Descriptor " + descriptor.uuid());
+                }
+            }
+        }
+
+        peripheral.disconnect();
+        System.out.println("Disconnected");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use simplersble::{Adapter, Characteristic, Peripheral};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+fn properties(characteristic: &Characteristic) -> String {
+    let flags = [
+        (characteristic.can_read(), "read"),
+        (characteristic.can_write_request(), "write"),
+        (characteristic.can_write_command(), "write without response"),
+        (characteristic.can_notify(), "notify"),
+        (characteristic.can_indicate(), "indicate"),
+    ];
+    let names: Vec<&str> = flags.iter().filter(|(present, _)| *present).map(|(_, name)| *name).collect();
+    names.join(", ")
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let Some(peripheral) = results.into_iter().find(advertises_service) else {
+        println!("Course peripheral not found. Start it and run this program again.");
+        std::process::exit(1);
+    };
+
+    println!("Connecting to {}", peripheral.address().unwrap());
+    peripheral.connect().unwrap();
+    println!("Connected");
+
+    for service in peripheral.services().unwrap() {
+        println!("Service {}", service.uuid());
+        for characteristic in service.characteristics() {
+            println!("  Characteristic {}: {}", characteristic.uuid(), properties(&characteristic));
+            for descriptor in characteristic.descriptors() {
+                println!("    Descriptor {}", descriptor.uuid());
+            }
+        }
+    }
+
+    peripheral.disconnect().unwrap();
+    println!("Disconnected");
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+const PROPERTIES = [
+  ['read', 'read'],
+  ['writeRequest', 'write'],
+  ['writeCommand', 'write without response'],
+  ['notify', 'notify'],
+  ['indicate', 'indicate'],
+];
+
+function advertisesService(device) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+function properties(characteristic) {
+  return PROPERTIES.filter(([capability]) => characteristic.capabilities.includes(capability))
+    .map(([, name]) => name)
+    .join(', ');
+}
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const peripheral = adapter.scanGetResults().find(advertisesService);
+if (!peripheral) {
+  console.log('Course peripheral not found. Start it and run this program again.');
+  process.exit(1);
+}
+
+console.log(`Connecting to ${peripheral.address()}`);
+await peripheral.connect();
+console.log('Connected');
+
+for (const service of peripheral.services()) {
+  console.log(`Service ${service.uuid}`);
+  for (const characteristic of service.characteristics) {
+    console.log(`  Characteristic ${characteristic.uuid}: ${properties(characteristic)}`);
+    for (const descriptor of characteristic.descriptors) {
+      console.log(`    Descriptor ${descriptor.uuid}`);
+    }
+  }
+}
+
+await peripheral.disconnect();
+console.log('Disconnected');
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Characteristic, type CharacteristicCapability, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+const PROPERTIES: [CharacteristicCapability, string][] = [
+  ['read', 'read'],
+  ['writeRequest', 'write'],
+  ['writeCommand', 'write without response'],
+  ['notify', 'notify'],
+  ['indicate', 'indicate'],
+];
+
+function advertisesService(device: Peripheral) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+function properties(characteristic: Characteristic) {
+  return PROPERTIES.filter(([capability]) => characteristic.capabilities.includes(capability))
+    .map(([, name]) => name)
+    .join(', ');
+}
+
+export async function exploreGatt() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const peripheral = adapter.scanGetResults().find(advertisesService);
+  if (!peripheral) {
+    console.log('Course peripheral not found. Start it and run this program again.');
+    return;
+  }
+
+  console.log(`Connecting to ${peripheral.address()}`);
+  await peripheral.connect();
+  console.log('Connected');
+
+  for (const service of peripheral.services()) {
+    console.log(`Service ${service.uuid}`);
+    for (const characteristic of service.characteristics) {
+      console.log(`  Characteristic ${characteristic.uuid}: ${properties(characteristic)}`);
+      for (const descriptor of characteristic.descriptors) {
+        console.log(`    Descriptor ${descriptor.uuid}`);
+      }
+    }
+  }
+
+  await peripheral.disconnect();
+  console.log('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.system.exitProcess
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.Characteristic
+import org.simplektble.Peripheral
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+fun properties(characteristic: Characteristic) = listOfNotNull(
+    "read".takeIf { characteristic.canRead },
+    "write".takeIf { characteristic.canWriteRequest },
+    "write without response".takeIf { characteristic.canWriteCommand },
+    "notify".takeIf { characteristic.canNotify },
+    "indicate".takeIf { characteristic.canIndicate },
+).joinToString(", ")
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        println("Course peripheral not found. Start it and run this program again.")
+        exitProcess(1)
+    }
+
+    println("Connecting to ${peripheral.address}")
+    peripheral.connect()
+    println("Connected")
+
+    for (service in peripheral.services()) {
+        println("Service ${service.uuid}")
+        for (characteristic in service.characteristics) {
+            println("  Characteristic ${characteristic.uuid}: ${properties(characteristic)}")
+            for (descriptor in characteristic.descriptors) {
+                println("    Descriptor ${descriptor.uuid}")
+            }
+        }
+    }
+
+    peripheral.disconnect()
+    println("Disconnected")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) throws -> Bool {
+    try device.services().contains { $0.uuid == serviceUuid }
+}
+
+func properties(_ characteristic: Characteristic) -> String {
+    let flags = [
+        (characteristic.canRead, "read"),
+        (characteristic.canWriteRequest, "write"),
+        (characteristic.canWriteCommand, "write without response"),
+        (characteristic.canNotify, "notify"),
+        (characteristic.canIndicate, "indicate"),
+    ]
+    return flags.filter { $0.0 }.map { $0.1 }.joined(separator: ", ")
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+guard let peripheral = try adapter.scanGetResults().first(where: advertisesService) else {
+    print("Course peripheral not found. Start it and run this program again.")
+    exit(1)
+}
+
+print("Connecting to \(peripheral.address)")
+try await peripheral.connect()
+print("Connected")
+
+for service in try peripheral.services() {
+    print("Service \(service.uuid)")
+    for characteristic in service.characteristics {
+        print("  Characteristic \(characteristic.uuid): \(properties(characteristic))")
+        for descriptor in characteristic.descriptors {
+            print("    Descriptor \(descriptor.uuid)")
+        }
+    }
+}
+
+try await peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:io';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+const propertyNames = {
+  CharacteristicCapability.read: 'read',
+  CharacteristicCapability.writeRequest: 'write',
+  CharacteristicCapability.writeCommand: 'write without response',
+  CharacteristicCapability.notify: 'notify',
+  CharacteristicCapability.indicate: 'indicate',
+};
+
+bool advertisesService(Peripheral device) => device.services().any((service) => service.uuid == serviceUuid);
+
+String properties(Characteristic characteristic) => propertyNames.entries
+    .where((entry) => characteristic.capabilities.contains(entry.key))
+    .map((entry) => entry.value)
+    .join(', ');
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final peripheral = adapter.scanGetResults().where(advertisesService).firstOrNull;
+  if (peripheral == null) {
+    print('Course peripheral not found. Start it and run this program again.');
+    exit(1);
+  }
+
+  print('Connecting to ${peripheral.address}');
+  await peripheral.connect();
+  print('Connected');
+
+  for (final service in peripheral.services()) {
+    print('Service ${service.uuid}');
+    for (final characteristic in service.characteristics) {
+      print('  Characteristic ${characteristic.uuid}: ${properties(characteristic)}');
+      for (final descriptor in characteristic.descriptors) {
+        print('    Descriptor ${descriptor.uuid}');
+      }
+    }
+  }
+
+  await peripheral.disconnect();
+  print('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program ExploreGatt;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+function AdvertisesService(Device: TBlePeripheral): Boolean;
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Exit(True);
+  Result := False;
+end;
+
+procedure AddProperty(var Text: string; Present: Boolean; const Name: string);
+begin
+  if not Present then
+    Exit;
+  if Text <> '' then
+    Text := Text + ', ';
+  Text := Text + Name;
+end;
+
+function Properties(const Characteristic: TBleCharacteristic): string;
+begin
+  Result := '';
+  AddProperty(Result, Characteristic.CanRead, 'read');
+  AddProperty(Result, Characteristic.CanWriteRequest, 'write');
+  AddProperty(Result, Characteristic.CanWriteCommand, 'write without response');
+  AddProperty(Result, Characteristic.CanNotify, 'notify');
+  AddProperty(Result, Characteristic.CanIndicate, 'indicate');
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device, Peripheral: TBlePeripheral;
+  Service: TBleService;
+  Characteristic: TBleCharacteristic;
+  Descriptor: string;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Peripheral := nil;
+  for Device in Adapter.ScanGetResults do
+    if AdvertisesService(Device) then
+    begin
+      Peripheral := Device;
+      Break;
+    end;
+  if Peripheral = nil then
+  begin
+    WriteLn('Course peripheral not found. Start it and run this program again.');
+    Halt(1);
+  end;
+
+  WriteLn('Connecting to ', Peripheral.Address);
+  Peripheral.Connect;
+  WriteLn('Connected');
+
+  for Service in Peripheral.Services do
+  begin
+    WriteLn('Service ', Service.Uuid);
+    for Characteristic in Service.Characteristics do
+    begin
+      WriteLn('  Characteristic ', Characteristic.Uuid, ': ', Properties(Characteristic));
+      for Descriptor in Characteristic.Descriptors do
+        WriteLn('    Descriptor ', Descriptor);
+    end;
+  end;
+
+  Peripheral.Disconnect;
+  WriteLn('Disconnected');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.Characteristic
+import org.simpleble.android.Peripheral
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+private fun properties(characteristic: Characteristic) = listOfNotNull(
+    "read".takeIf { characteristic.canRead },
+    "write".takeIf { characteristic.canWriteRequest },
+    "write without response".takeIf { characteristic.canWriteCommand },
+    "notify".takeIf { characteristic.canNotify },
+    "indicate".takeIf { characteristic.canIndicate },
+).joinToString(", ")
+
+suspend fun exploreGatt() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        Log.d("SimpleBLE", "Course peripheral not found. Start it and run this program again.")
+        return
+    }
+
+    Log.d("SimpleBLE", "Connecting to ${peripheral.address}")
+    peripheral.connect()
+    Log.d("SimpleBLE", "Connected")
+
+    for (service in peripheral.services()) {
+        Log.d("SimpleBLE", "Service ${service.uuid}")
+        for (characteristic in service.characteristics) {
+            Log.d("SimpleBLE", "  Characteristic ${characteristic.uuid}: ${properties(characteristic)}")
+            for (descriptor in characteristic.descriptors) {
+                Log.d("SimpleBLE", "    Descriptor ${descriptor.uuid}")
+            }
+        }
+    }
+
+    peripheral.disconnect()
+    Log.d("SimpleBLE", "Disconnected")
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `exploreGatt` from your app once it holds the Bluetooth permissions, including the one to connect. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+A line for every service, characteristic and descriptor, with the properties of each characteristic:
+
+```
+Connecting to 7C:2E:0D:A4:58:13
+Connected
+Service 0000180a-0000-1000-8000-00805f9b34fb
+  Characteristic 00002a50-0000-1000-8000-00805f9b34fb: read
+Service 76a60001-a8e9-4660-bc7b-ed8d93a6849e
+  Characteristic 76a60002-a8e9-4660-bc7b-ed8d93a6849e: read, write, write without response
+  Characteristic 76a60003-a8e9-4660-bc7b-ed8d93a6849e: read, notify, indicate
+    Descriptor 00002902-0000-1000-8000-00805f9b34fb
+Disconnected
+```
+
+Message allows read, write and write without response, and Counter allows read, notify and indicate, as the course peripheral defines them. Device Information, `0x180A`, and its PnP ID characteristic, `0x2A50`, come from the operating system on the peripheral side, which can add other standard services too.
+
+Counter has one descriptor, the CCCD, `0x2902`. The course peripheral never defined it. The system adds a CCCD to every characteristic that notifies or indicates, because that is where each central's subscription lives. Message neither notifies nor indicates, so it has no descriptors.
+
+## Exercise
+
+Look up every UUID your program printed in the GATT UUID Lookup, starting with the standard ones, such as `0x180A`, `0x2A50` and `0x2902`. Note which come from the Bluetooth SIG and which are the course's own. The lookup names each standard UUID as a Bluetooth SIG service, characteristic or descriptor. The course's UUIDs show as custom 128-bit UUIDs, because they belong to the course alone.
+
+If you own another device that accepts connections, such as a fitness band or a sensor, explore it too. Change the helper so it matches the device's name, the identifier you printed in [Scan for BLE Devices](/learn/scan-for-ble-devices), instead of the course service. Run the program and look up the UUIDs it prints. Most devices show standard services, such as Battery Service, `0x180F`, next to their maker's own 128-bit services.
+
+## Troubleshooting
+
+- **The program prints `Course peripheral not found`.** Start the course peripheral as in [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral). It advertises for 10 minutes and then stops, so start it again if it has been running longer.
+- **You see more services than the course peripheral defines.** The operating system on the peripheral side adds standard services of its own. That is normal, and the course service is among them.
+- **A characteristic has no descriptors.** That is normal for a characteristic that neither notifies nor indicates, such as Message. Descriptors other than the CCCD are optional, and many characteristics have none.
+
+## Next lesson
+
+[Bluetooth UUIDs](/fundamentals/uuids): the 16-bit and 128-bit forms of every UUID you just printed.

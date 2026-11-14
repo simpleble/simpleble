@@ -3,12 +3,14 @@ import type { MDXComponents } from 'mdx/types';
 
 import * as advertisingDiagrams from '@/components/learn/advertising-diagrams';
 import * as firstContactDiagrams from '@/components/learn/first-contact-diagrams';
+import * as gattDiagrams from '@/components/learn/gatt-diagrams';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
     ...firstContactDiagrams,
     ...advertisingDiagrams,
+    ...gattDiagrams,
     h1: (props) => (
       <h1 {...props} className="font-sora font-bold tracking-tight text-3xl mt-12 mb-6 border-b pb-2 border-fd-border/50" />
     ),

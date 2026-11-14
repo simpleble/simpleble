@@ -1,0 +1,649 @@
+---
+title: Connect to a BLE Device
+description: Connect to a Bluetooth Low Energy device from your computer, list its services and disconnect cleanly, in the language you use.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+An advertisement tells you what a device is. To read its data, write to it or receive its updates, your program connects to it. In this lesson your computer connects to the course peripheral, lists the services it offers and disconnects.
+
+## What a connection is
+
+A central opens a connection by answering an advertisement with a connection request. From then on, the two devices meet at moments they agreed on, called connection events, and exchange packets there. Between events, both radios can sleep. [Lesson 16](/learn/connection-parameters) covers their timing.
+
+<ConnectionSequenceDiagram />
+
+A connected peripheral disappears from other scanners only if it stops advertising. Many peripherals keep advertising while connected, so that other centrals can find them and connect too.
+
+## Connections in SimpleBLE
+
+`connect()` opens the connection and discovers the device's services, and returns once both are done. `services()` then lists the services, each with its characteristics. Before a connection, the same call returns only the services the device advertises, which is how the program below finds the course peripheral. `disconnect()` ends the connection.
+
+Connection and disconnection callbacks report every change, including a disconnection your program didn't ask for, such as a device that moves out of range. [Disconnects](/fundamentals/disconnects) explains why connections drop and how to reconnect. When a connection fails or drops, the reason is a standard Bluetooth error code, and the [Bluetooth Error Decoder](https://simpleble.org/tools/bluetooth-error-decoder) explains each one.
+
+## Disconnect when you're done
+
+The operating system keeps a connection open until your program calls `disconnect()` or exits. Some peripherals accept only one central at a time, so while your program holds the connection, no other central can connect. Disconnect as soon as your program is done with the device.
+
+## Start the course peripheral
+
+The program in this lesson connects to the course peripheral. Start it in one of two ways:
+
+1. Run the program from [Advertise BLE From Your Computer](/learn/advertise-from-your-computer) on a second computer.
+2. Recreate it on your phone with [nRF Connect for Mobile](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile). In the app's GATT server configuration, add a service with the UUID `76a60001-a8e9-4660-bc7b-ed8d93a6849e` and two characteristics:
+   - **Message**, `76a60002-a8e9-4660-bc7b-ed8d93a6849e`: read, write and write without response, with the text `Hello from SimpleBLE` as its value.
+   - **Counter**, `76a60003-a8e9-4660-bc7b-ed8d93a6849e`: read, notify and indicate, with the value `00 00 00 00`.
+
+   Then start an advertiser that is connectable and includes the service UUID in its advertising data.
+
+Every lesson in this module connects to the course peripheral, so keep this setup at hand.
+
+## Connect and list the services
+
+This program scans for 5 seconds and picks the first device that advertises the course service. It connects, prints each service with its characteristics, and disconnects.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+bool advertises_service(SimpleBLE::Peripheral& device) {
+    for (auto& service : device.services()) {
+        if (service.uuid() == SERVICE) return true;
+    }
+    return false;
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    auto found = std::find_if(results.begin(), results.end(), advertises_service);
+    if (found == results.end()) {
+        std::cout << "Course peripheral not found. Start it and run this program again." << std::endl;
+        return 1;
+    }
+    auto peripheral = *found;
+
+    std::cout << "Connecting to " << peripheral.address() << std::endl;
+    peripheral.connect();
+    std::cout << "Connected" << std::endl;
+
+    for (auto& service : peripheral.services()) {
+        std::cout << "Service " << service.uuid() << std::endl;
+        for (auto& characteristic : service.characteristics()) {
+            std::cout << "  Characteristic " << characteristic.uuid() << std::endl;
+        }
+    }
+
+    peripheral.disconnect();
+    std::cout << "Disconnected" << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static bool advertises_service(simpleble_peripheral_t device, simpleble_error_t** error) {
+    bool found = false;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, error);
+    for (size_t i = 0; i < count && !found && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        found = !*error && strcmp(service.uuid.value, SERVICE.value) == 0;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    return found;
+}
+
+// Returns an owned handle to the first device that advertises the course service, or NULL.
+static simpleble_peripheral_t find_course_peripheral(simpleble_adapter_t adapter, simpleble_error_t** error) {
+    simpleble_peripheral_t peripheral = NULL;
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    simpleble_adapter_scan_for(adapter, 5000, error);
+    if (!*error) count = simpleble_adapter_scan_get_results(adapter, &results, error);
+
+    for (size_t i = 0; i < count && !peripheral && !*error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, error);
+        if (!*error && advertises_service(device, error)) {
+            peripheral = device;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+    simpleble_peripheral_list_release(results);
+    return peripheral;
+}
+
+static void print_services(simpleble_peripheral_t peripheral, simpleble_error_t** error) {
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(peripheral, &services, error);
+    for (size_t i = 0; i < count && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        if (*error) break;
+        printf("Service %s\n", service.uuid.value);
+        for (size_t j = 0; j < service.characteristic_count; j++) {
+            printf("  Characteristic %s\n", service.characteristics[j].uuid.value);
+        }
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_t peripheral = error ? NULL : find_course_peripheral(adapter, &error);
+    if (!error && !peripheral) {
+        printf("Course peripheral not found. Start it and run this program again.\n");
+        simpleble_adapter_release_handle(adapter);
+        return EXIT_FAILURE;
+    }
+
+    char* address = error ? NULL : simpleble_peripheral_address(peripheral, &error);
+    if (!error) printf("Connecting to %s\n", address);
+    simpleble_free(address);
+
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (!error) printf("Connected\n");
+    if (!error) print_services(peripheral, &error);
+    if (!error) simpleble_peripheral_disconnect(peripheral, &error);
+    if (!error) printf("Disconnected\n");
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import sys
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+
+def advertises_service(device):
+    return any(service.uuid() == SERVICE for service in device.services())
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next((device for device in adapter.scan_get_results() if advertises_service(device)), None)
+if peripheral is None:
+    print("Course peripheral not found. Start it and run this program again.")
+    sys.exit(1)
+
+print(f"Connecting to {peripheral.address()}")
+peripheral.connect()
+print("Connected")
+
+for service in peripheral.services():
+    print(f"Service {service.uuid()}")
+    for characteristic in service.characteristics():
+        print(f"  Characteristic {characteristic.uuid()}")
+
+peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.Characteristic;
+import org.simplejavable.Peripheral;
+import org.simplejavable.Service;
+
+public class Connect {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+    static boolean advertisesService(Peripheral device) {
+        return device.services().stream().anyMatch(service -> service.uuid().equals(SERVICE));
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        Peripheral peripheral = adapter.scanGetResults().stream()
+                .filter(Connect::advertisesService)
+                .findFirst()
+                .orElse(null);
+        if (peripheral == null) {
+            System.out.println("Course peripheral not found. Start it and run this program again.");
+            System.exit(1);
+        }
+
+        System.out.println("Connecting to " + peripheral.getAddress());
+        peripheral.connect();
+        System.out.println("Connected");
+
+        for (Service service : peripheral.services()) {
+            System.out.println("Service " + service.uuid());
+            for (Characteristic characteristic : service.characteristics()) {
+                System.out.println("  Characteristic " + characteristic.uuid());
+            }
+        }
+
+        peripheral.disconnect();
+        System.out.println("Disconnected");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use simplersble::{Adapter, Peripheral};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let Some(peripheral) = results.into_iter().find(advertises_service) else {
+        println!("Course peripheral not found. Start it and run this program again.");
+        std::process::exit(1);
+    };
+
+    println!("Connecting to {}", peripheral.address().unwrap());
+    peripheral.connect().unwrap();
+    println!("Connected");
+
+    for service in peripheral.services().unwrap() {
+        println!("Service {}", service.uuid());
+        for characteristic in service.characteristics() {
+            println!("  Characteristic {}", characteristic.uuid());
+        }
+    }
+
+    peripheral.disconnect().unwrap();
+    println!("Disconnected");
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const peripheral = adapter.scanGetResults().find(advertisesService);
+if (!peripheral) {
+  console.log('Course peripheral not found. Start it and run this program again.');
+  process.exit(1);
+}
+
+console.log(`Connecting to ${peripheral.address()}`);
+await peripheral.connect();
+console.log('Connected');
+
+for (const service of peripheral.services()) {
+  console.log(`Service ${service.uuid}`);
+  for (const characteristic of service.characteristics) {
+    console.log(`  Characteristic ${characteristic.uuid}`);
+  }
+}
+
+await peripheral.disconnect();
+console.log('Disconnected');
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device: Peripheral) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+export async function listServices() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const peripheral = adapter.scanGetResults().find(advertisesService);
+  if (!peripheral) {
+    console.log('Course peripheral not found. Start it and run this program again.');
+    return;
+  }
+
+  console.log(`Connecting to ${peripheral.address()}`);
+  await peripheral.connect();
+  console.log('Connected');
+
+  for (const service of peripheral.services()) {
+    console.log(`Service ${service.uuid}`);
+    for (const characteristic of service.characteristics) {
+      console.log(`  Characteristic ${characteristic.uuid}`);
+    }
+  }
+
+  await peripheral.disconnect();
+  console.log('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.system.exitProcess
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.Peripheral
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        println("Course peripheral not found. Start it and run this program again.")
+        exitProcess(1)
+    }
+
+    println("Connecting to ${peripheral.address}")
+    peripheral.connect()
+    println("Connected")
+
+    for (service in peripheral.services()) {
+        println("Service ${service.uuid}")
+        for (characteristic in service.characteristics) {
+            println("  Characteristic ${characteristic.uuid}")
+        }
+    }
+
+    peripheral.disconnect()
+    println("Disconnected")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) throws -> Bool {
+    try device.services().contains { $0.uuid == serviceUuid }
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+guard let peripheral = try adapter.scanGetResults().first(where: advertisesService) else {
+    print("Course peripheral not found. Start it and run this program again.")
+    exit(1)
+}
+
+print("Connecting to \(peripheral.address)")
+try await peripheral.connect()
+print("Connected")
+
+for service in try peripheral.services() {
+    print("Service \(service.uuid)")
+    for characteristic in service.characteristics {
+        print("  Characteristic \(characteristic.uuid)")
+    }
+}
+
+try await peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:io';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+bool advertisesService(Peripheral device) => device.services().any((service) => service.uuid == serviceUuid);
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final peripheral = adapter.scanGetResults().where(advertisesService).firstOrNull;
+  if (peripheral == null) {
+    print('Course peripheral not found. Start it and run this program again.');
+    exit(1);
+  }
+
+  print('Connecting to ${peripheral.address}');
+  await peripheral.connect();
+  print('Connected');
+
+  for (final service in peripheral.services()) {
+    print('Service ${service.uuid}');
+    for (final characteristic in service.characteristics) {
+      print('  Characteristic ${characteristic.uuid}');
+    }
+  }
+
+  await peripheral.disconnect();
+  print('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Connect;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+
+function AdvertisesService(Device: TBlePeripheral): Boolean;
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Exit(True);
+  Result := False;
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device, Peripheral: TBlePeripheral;
+  Service: TBleService;
+  Characteristic: TBleCharacteristic;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Peripheral := nil;
+  for Device in Adapter.ScanGetResults do
+    if AdvertisesService(Device) then
+    begin
+      Peripheral := Device;
+      Break;
+    end;
+  if Peripheral = nil then
+  begin
+    WriteLn('Course peripheral not found. Start it and run this program again.');
+    Halt(1);
+  end;
+
+  WriteLn('Connecting to ', Peripheral.Address);
+  Peripheral.Connect;
+  WriteLn('Connected');
+
+  for Service in Peripheral.Services do
+  begin
+    WriteLn('Service ', Service.Uuid);
+    for Characteristic in Service.Characteristics do
+      WriteLn('  Characteristic ', Characteristic.Uuid);
+  end;
+
+  Peripheral.Disconnect;
+  WriteLn('Disconnected');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.Peripheral
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+suspend fun listServices() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        Log.d("SimpleBLE", "Course peripheral not found. Start it and run this program again.")
+        return
+    }
+
+    Log.d("SimpleBLE", "Connecting to ${peripheral.address}")
+    peripheral.connect()
+    Log.d("SimpleBLE", "Connected")
+
+    for (service in peripheral.services()) {
+        Log.d("SimpleBLE", "Service ${service.uuid}")
+        for (characteristic in service.characteristics) {
+            Log.d("SimpleBLE", "  Characteristic ${characteristic.uuid}")
+        }
+    }
+
+    peripheral.disconnect()
+    Log.d("SimpleBLE", "Disconnected")
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `listServices` from your app once it holds the Bluetooth permissions, including the one to connect. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+The program prints each step, and a line for every service and characteristic:
+
+```
+Connecting to 7C:2E:0D:A4:58:13
+Connected
+Service 0000180a-0000-1000-8000-00805f9b34fb
+  Characteristic 00002a50-0000-1000-8000-00805f9b34fb
+Service 76a60001-a8e9-4660-bc7b-ed8d93a6849e
+  Characteristic 76a60002-a8e9-4660-bc7b-ed8d93a6849e
+  Characteristic 76a60003-a8e9-4660-bc7b-ed8d93a6849e
+Disconnected
+```
+
+`Connecting to` shows the address of the device, or the identifier your system gives it. `Connected` follows once the connection is open and the services are discovered. The course service, `76a60001-a8e9-4660-bc7b-ed8d93a6849e`, lists Message and Counter, and it is the service this course uses.
+
+The operating system on the peripheral side adds services of its own, such as Device Information, `0000180a-0000-1000-8000-00805f9b34fb`, so your list can show more services than the course peripheral defines. If the connection can't be opened, `connect()` fails after a timeout and the program stops with an error message.
+
+## Exercise
+
+Make the program report a disconnection it didn't ask for. Register the disconnection callback before `connect()`, and print `Connection lost` from it. After the program lists the services, have it wait 30 seconds instead of disconnecting. Run it, and while it waits, stop the course peripheral by turning Bluetooth off on the second computer or on your phone.
+
+`Connection lost` appears right away, because the peripheral's system ends the connection as Bluetooth turns off. When a device loses power or moves out of range instead, nothing ends the connection, and the line appears only once the supervision timeout has passed, several seconds later.
+
+The callback is `set_callback_on_disconnected` in C++ and Python, and `simpleble_peripheral_set_callback_on_disconnected` in C. Java has `onDisconnected` in `Peripheral.EventListener`, Rust the `ConnectionEvent::Disconnected` event from `on_connection_event()`, Node.js and React Native the `disconnected` event, Delphi the `OnDisconnected` event, and Kotlin Multiplatform, Swift, Dart and Android the `onDisconnected` stream.
+
+## Troubleshooting
+
+- **The program prints `Course peripheral not found`.** The course peripheral advertises for 10 minutes and then stops, so start it again. Bring the two devices closer. On your phone, check that the advertiser is on and that its advertising data includes `76a60001-a8e9-4660-bc7b-ed8d93a6849e`.
+- **Connecting fails or times out.** The course peripheral may already be connected to another central, such as nRF Connect on your phone. Disconnect it there and run the program again. A device at the edge of range can also fail to connect, so bring it closer.
+- **The connection drops right after it opens.** A weak signal is the usual cause, so bring the devices closer. [Disconnects](/fundamentals/disconnects) lists the reasons a connection ends, and the Bluetooth Error Decoder explains the code in an error message.
+
+## Next lesson
+
+[GATT Services and Characteristics](/learn/gatt-services-and-characteristics): how the device organizes its data, and how to explore it.

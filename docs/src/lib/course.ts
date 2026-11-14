@@ -131,7 +131,78 @@ const MODULES: Module[] = [
   {
     name: 'Module 3: Connections and GATT',
     description: 'Connect to a device and exchange data with it.',
-    lessons: [],
+    lessons: [
+      {
+        url: '/learn/connect-to-a-ble-device',
+        position: 10,
+        minutes: 15,
+        teaches: [
+          'What a BLE connection is',
+          'Connecting to a device and discovering its services',
+          'Disconnecting cleanly and detecting a lost connection',
+        ],
+      },
+      {
+        url: '/learn/gatt-services-and-characteristics',
+        position: 11,
+        minutes: 15,
+        teaches: [
+          'How GATT organizes a device into services, characteristics and descriptors',
+          'Characteristic properties',
+          'Exploring the GATT table of a real device',
+        ],
+      },
+      {
+        url: '/fundamentals/uuids',
+        position: 12,
+        minutes: 10,
+        teaches: [
+          '16-bit and 128-bit UUIDs and the Bluetooth Base UUID',
+          'Standard and custom UUIDs',
+          'Comparing UUIDs reliably',
+        ],
+      },
+      {
+        url: '/learn/read-and-write-characteristics',
+        position: 13,
+        minutes: 15,
+        teaches: [
+          'Reading a characteristic',
+          'Write requests and write commands',
+          'Decoding text and little-endian numbers',
+        ],
+      },
+      {
+        url: '/learn/notify-vs-indicate',
+        position: 14,
+        minutes: 15,
+        teaches: [
+          'The difference between notifications and indications',
+          'Subscribing and unsubscribing',
+          'When to use each',
+        ],
+      },
+      {
+        url: '/learn/mtu-and-throughput',
+        position: 15,
+        minutes: 20,
+        teaches: [
+          'What the ATT MTU is and how it is negotiated',
+          'How MTU and write size affect throughput',
+          'Measuring the throughput of a link',
+        ],
+      },
+      {
+        url: '/learn/connection-parameters',
+        position: 16,
+        minutes: 15,
+        teaches: [
+          'Connection interval, peripheral latency and supervision timeout',
+          'How connection parameters trade power for speed',
+          'Who sets connection parameters',
+        ],
+      },
+    ],
   },
   {
     name: 'Module 4: Build a peripheral',

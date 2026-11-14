@@ -1,0 +1,820 @@
+---
+title: BLE MTU and Throughput
+description: How MTU, data length and connection interval set Bluetooth Low Energy throughput, and how to measure what your link achieves.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Every value your program writes travels in packets. How much one packet holds and how often packets go out decide how many bytes a connection moves per second, its throughput. In this lesson you learn what sets both, and you measure the throughput of your own link to the course peripheral.
+
+## The ATT MTU
+
+Reads, writes and notifications travel as ATT packets. The ATT MTU, the maximum transmission unit, is the size of the largest ATT packet a connection carries. Every connection starts with an MTU of 23 bytes. A write or a notification spends 3 bytes of its packet on a header that names the operation and the attribute, so one write carries at most the MTU minus 3 bytes: 20 bytes at the start.
+
+Right after the connection opens, the central and the peripheral each state the largest MTU they support, and both use the smaller of the two. Your program doesn't run this exchange: SimpleBLE and the operating system handle it when you connect. `mtu()` then reports the payload one write can carry, the MTU minus 3.
+
+<MtuPacketsDiagram />
+
+Data longer than `mtu()` goes out as several writes, each of up to `mtu()` bytes.
+
+## What sets throughput
+
+Below ATT, the link layer sends data in packets of its own, called protocol data units, or PDUs. A PDU carries up to 27 bytes of payload by default, and up to 251 with Data Length Extension, which the operating systems negotiate as well. Each ATT packet travels with a 4-byte L2CAP header, so an ATT MTU of 23 fills one default PDU, and an ATT MTU of 247, a payload of 244 bytes, fills one PDU of 251 bytes. A larger ATT packet is split across several PDUs and joined again on the other side.
+
+Throughput, the number of bytes your application moves per second, depends on four things:
+
+- **Bytes per packet**, set by the MTU and the data length.
+- **Packets per connection event.** The two devices can exchange several packets each time they meet, as many as their controllers manage.
+- **The connection interval**, the time between connection events. [Lesson 16](/learn/connection-parameters) covers it.
+- **The PHY**, the radio's physical layer. LE 1M sends 1 megabit per second and LE 2M sends 2, so the same packet takes half the air time on LE 2M.
+
+The [BLE Throughput Calculator](https://simpleble.org/tools/ble-throughput-calculator) combines these into an estimate of the bytes per second a link can carry.
+
+## Write requests wait for a response
+
+A write request waits for the peripheral's response, and ATT allows one request at a time. The response comes back in the same connection event or a later one, and only then can the next request go out. A stream of write requests therefore moves one value per round trip. A large value takes a little longer than a small one, because it spans several link-layer packets, but it moves many more bytes in each round trip, so the rate rises with the MTU.
+
+Write commands don't wait for a response, so several of them can share one connection event.
+
+## Measure your link
+
+This program connects to the course peripheral and prints the MTU payload. It then times two runs of 20 write requests to Message: the first with 20-byte values, the second with values as long as one write can carry, up to 512 bytes, the largest value an attribute holds. The values are ASCII digits, because the course peripheral prints every message it receives. Start the course peripheral as [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral) describes.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+
+bool advertises_service(SimpleBLE::Peripheral& device) {
+    for (auto& service : device.services()) {
+        if (service.uuid() == SERVICE) return true;
+    }
+    return false;
+}
+
+void measure(SimpleBLE::Peripheral& peripheral, size_t size) {
+    std::string text;
+    for (size_t i = 0; i < size; i++) text += char('0' + i % 10);
+    SimpleBLE::ByteArray value(text);
+
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 20; i++) {
+        peripheral.write_request(SERVICE, MESSAGE, value);
+    }
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+
+    std::cout << "20 writes of " << size << " bytes: " << 20 * size * 1000 / elapsed.count() << " bytes/s" << std::endl;
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    auto found = std::find_if(results.begin(), results.end(), advertises_service);
+    if (found == results.end()) {
+        std::cout << "Course peripheral not found. Start it and run this program again." << std::endl;
+        return 1;
+    }
+    auto peripheral = *found;
+
+    std::cout << "Connecting to " << peripheral.address() << std::endl;
+    peripheral.connect();
+    std::cout << "Connected" << std::endl;
+
+    size_t payload = peripheral.mtu();
+    std::cout << "MTU payload: " << payload << " bytes" << std::endl;
+
+    measure(peripheral, 20);
+    measure(peripheral, std::min<size_t>(payload, 512));
+
+    peripheral.disconnect();
+    std::cout << "Disconnected" << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#ifdef _WIN32
+#include <windows.h>
+#else
+#define _POSIX_C_SOURCE 200809L
+#include <time.h>
+#endif
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t MESSAGE = {"76a60002-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static long long now_ms(void) {
+#ifdef _WIN32
+    return (long long)GetTickCount64();
+#else
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long long)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
+}
+
+static bool advertises_service(simpleble_peripheral_t device, simpleble_error_t** error) {
+    bool found = false;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, error);
+    for (size_t i = 0; i < count && !found && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        found = !*error && strcmp(service.uuid.value, SERVICE.value) == 0;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    return found;
+}
+
+// Returns an owned handle to the first device that advertises the course service, or NULL.
+static simpleble_peripheral_t find_course_peripheral(simpleble_adapter_t adapter, simpleble_error_t** error) {
+    simpleble_peripheral_t peripheral = NULL;
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    simpleble_adapter_scan_for(adapter, 5000, error);
+    if (!*error) count = simpleble_adapter_scan_get_results(adapter, &results, error);
+
+    for (size_t i = 0; i < count && !peripheral && !*error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, error);
+        if (!*error && advertises_service(device, error)) {
+            peripheral = device;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+    simpleble_peripheral_list_release(results);
+    return peripheral;
+}
+
+static void measure(simpleble_peripheral_t peripheral, size_t size, simpleble_error_t** error) {
+    uint8_t value[512];
+    for (size_t i = 0; i < size; i++) value[i] = (uint8_t)('0' + i % 10);
+
+    long long start = now_ms();
+    for (int i = 0; i < 20 && !*error; i++) {
+        simpleble_peripheral_write_request(peripheral, SERVICE, MESSAGE, value, size, error);
+    }
+    long long elapsed = now_ms() - start;
+
+    if (!*error) printf("20 writes of %zu bytes: %lld bytes/s\n", size, 20 * (long long)size * 1000 / elapsed);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_t peripheral = error ? NULL : find_course_peripheral(adapter, &error);
+    if (!error && !peripheral) {
+        printf("Course peripheral not found. Start it and run this program again.\n");
+        simpleble_adapter_release_handle(adapter);
+        return EXIT_FAILURE;
+    }
+
+    char* address = error ? NULL : simpleble_peripheral_address(peripheral, &error);
+    if (!error) printf("Connecting to %s\n", address);
+    simpleble_free(address);
+
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (!error) printf("Connected\n");
+
+    size_t payload = error ? 0 : simpleble_peripheral_mtu(peripheral, &error);
+    if (!error) printf("MTU payload: %zu bytes\n", payload);
+
+    if (!error) measure(peripheral, 20, &error);
+    if (!error) measure(peripheral, payload < 512 ? payload : 512, &error);
+    if (!error) simpleble_peripheral_disconnect(peripheral, &error);
+    if (!error) printf("Disconnected\n");
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import sys
+import time
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e"
+
+
+def advertises_service(device):
+    return any(service.uuid() == SERVICE for service in device.services())
+
+
+def measure(peripheral, size):
+    value = bytes(ord("0") + i % 10 for i in range(size))
+
+    start = time.monotonic()
+    for _ in range(20):
+        peripheral.write_request(SERVICE, MESSAGE, value)
+    elapsed = round((time.monotonic() - start) * 1000)
+
+    print(f"20 writes of {size} bytes: {20 * size * 1000 // elapsed} bytes/s")
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next((device for device in adapter.scan_get_results() if advertises_service(device)), None)
+if peripheral is None:
+    print("Course peripheral not found. Start it and run this program again.")
+    sys.exit(1)
+
+print(f"Connecting to {peripheral.address()}")
+peripheral.connect()
+print("Connected")
+
+payload = peripheral.mtu()
+print(f"MTU payload: {payload} bytes")
+
+measure(peripheral, 20)
+measure(peripheral, min(payload, 512))
+
+peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import org.simplejavable.Adapter;
+import org.simplejavable.BluetoothUUID;
+import org.simplejavable.Peripheral;
+
+public class Throughput {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+    static final String MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+
+    static boolean advertisesService(Peripheral device) {
+        return device.services().stream().anyMatch(service -> service.uuid().equals(SERVICE));
+    }
+
+    static void measure(Peripheral peripheral, int size) {
+        byte[] value = new byte[size];
+        for (int i = 0; i < size; i++) {
+            value[i] = (byte) ('0' + i % 10);
+        }
+        BluetoothUUID service = new BluetoothUUID(SERVICE);
+        BluetoothUUID message = new BluetoothUUID(MESSAGE);
+
+        long start = System.nanoTime();
+        for (int i = 0; i < 20; i++) {
+            peripheral.writeRequest(service, message, value);
+        }
+        long elapsed = (System.nanoTime() - start) / 1_000_000;
+
+        System.out.println("20 writes of " + size + " bytes: " + 20L * size * 1000 / elapsed + " bytes/s");
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        Peripheral peripheral = adapter.scanGetResults().stream()
+                .filter(Throughput::advertisesService)
+                .findFirst()
+                .orElse(null);
+        if (peripheral == null) {
+            System.out.println("Course peripheral not found. Start it and run this program again.");
+            System.exit(1);
+        }
+
+        System.out.println("Connecting to " + peripheral.getAddress());
+        peripheral.connect();
+        System.out.println("Connected");
+
+        int payload = peripheral.getMtu();
+        System.out.println("MTU payload: " + payload + " bytes");
+
+        measure(peripheral, 20);
+        measure(peripheral, Math.min(payload, 512));
+
+        peripheral.disconnect();
+        System.out.println("Disconnected");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::{Duration, Instant};
+
+use simplersble::{Adapter, Peripheral};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const MESSAGE: &str = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+fn measure(peripheral: &Peripheral, size: usize) {
+    let value: Vec<u8> = (0..size).map(|i| b'0' + (i % 10) as u8).collect();
+    let service = SERVICE.to_string();
+    let message = MESSAGE.to_string();
+
+    let start = Instant::now();
+    for _ in 0..20 {
+        peripheral.write_request(&service, &message, &value).unwrap();
+    }
+    let elapsed = start.elapsed().as_millis() as usize;
+
+    println!("20 writes of {} bytes: {} bytes/s", size, 20 * size * 1000 / elapsed);
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let Some(peripheral) = results.into_iter().find(advertises_service) else {
+        println!("Course peripheral not found. Start it and run this program again.");
+        std::process::exit(1);
+    };
+
+    println!("Connecting to {}", peripheral.address().unwrap());
+    peripheral.connect().unwrap();
+    println!("Connected");
+
+    let payload = usize::from(peripheral.mtu().unwrap());
+    println!("MTU payload: {} bytes", payload);
+
+    measure(&peripheral, 20);
+    measure(&peripheral, payload.min(512));
+
+    peripheral.disconnect().unwrap();
+    println!("Disconnected");
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const MESSAGE = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+async function measure(peripheral, size) {
+  const value = Uint8Array.from({ length: size }, (_, i) => '0'.charCodeAt(0) + (i % 10));
+
+  const start = performance.now();
+  for (let i = 0; i < 20; i++) {
+    await peripheral.writeRequest(SERVICE, MESSAGE, value);
+  }
+  const elapsed = Math.round(performance.now() - start);
+
+  console.log(`20 writes of ${size} bytes: ${Math.floor((20 * size * 1000) / elapsed)} bytes/s`);
+}
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const peripheral = adapter.scanGetResults().find(advertisesService);
+if (!peripheral) {
+  console.log('Course peripheral not found. Start it and run this program again.');
+  process.exit(1);
+}
+
+console.log(`Connecting to ${peripheral.address()}`);
+await peripheral.connect();
+console.log('Connected');
+
+const payload = peripheral.mtu();
+console.log(`MTU payload: ${payload} bytes`);
+
+await measure(peripheral, 20);
+await measure(peripheral, Math.min(payload, 512));
+
+await peripheral.disconnect();
+console.log('Disconnected');
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const MESSAGE = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device: Peripheral) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+async function measure(peripheral: Peripheral, size: number) {
+  const value = Uint8Array.from({ length: size }, (_, i) => '0'.charCodeAt(0) + (i % 10));
+
+  const start = performance.now();
+  for (let i = 0; i < 20; i++) {
+    await peripheral.writeRequest(SERVICE, MESSAGE, value);
+  }
+  const elapsed = Math.round(performance.now() - start);
+
+  console.log(`20 writes of ${size} bytes: ${Math.floor((20 * size * 1000) / elapsed)} bytes/s`);
+}
+
+export async function measureThroughput() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const peripheral = adapter.scanGetResults().find(advertisesService);
+  if (!peripheral) {
+    console.log('Course peripheral not found. Start it and run this program again.');
+    return;
+  }
+
+  console.log(`Connecting to ${peripheral.address()}`);
+  await peripheral.connect();
+  console.log('Connected');
+
+  const payload = peripheral.mtu();
+  console.log(`MTU payload: ${payload} bytes`);
+
+  await measure(peripheral, 20);
+  await measure(peripheral, Math.min(payload, 512));
+
+  await peripheral.disconnect();
+  console.log('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.system.exitProcess
+import kotlin.time.TimeSource
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.Peripheral
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+val MESSAGE = BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+suspend fun measure(peripheral: Peripheral, size: Int) {
+    val value = ByteArray(size) { ('0' + it % 10).code.toByte() }
+
+    val start = TimeSource.Monotonic.markNow()
+    repeat(20) {
+        peripheral.writeRequest(SERVICE, MESSAGE, value)
+    }
+    val elapsed = start.elapsedNow().inWholeMilliseconds
+
+    println("20 writes of $size bytes: ${20L * size * 1000 / elapsed} bytes/s")
+}
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        println("Course peripheral not found. Start it and run this program again.")
+        exitProcess(1)
+    }
+
+    println("Connecting to ${peripheral.address}")
+    peripheral.connect()
+    println("Connected")
+
+    val payload = peripheral.mtu
+    println("MTU payload: $payload bytes")
+
+    measure(peripheral, 20)
+    measure(peripheral, minOf(payload, 512))
+
+    peripheral.disconnect()
+    println("Disconnected")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+let messageUuid: BluetoothUUID = "76a60002-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) throws -> Bool {
+    try device.services().contains { $0.uuid == serviceUuid }
+}
+
+func measure(_ peripheral: Peripheral, size: Int) async throws {
+    let value = Data((0..<size).map { UInt8(ascii: "0") + UInt8($0 % 10) })
+
+    let start = ContinuousClock.now
+    for _ in 0..<20 {
+        try await peripheral.writeRequest(service: serviceUuid, characteristic: messageUuid, data: value)
+    }
+    let elapsed = Int((ContinuousClock.now - start) / .milliseconds(1))
+
+    print("20 writes of \(size) bytes: \(20 * size * 1000 / elapsed) bytes/s")
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+guard let peripheral = try adapter.scanGetResults().first(where: advertisesService) else {
+    print("Course peripheral not found. Start it and run this program again.")
+    exit(1)
+}
+
+print("Connecting to \(peripheral.address)")
+try await peripheral.connect()
+print("Connected")
+
+let payload = peripheral.mtu
+print("MTU payload: \(payload) bytes")
+
+try await measure(peripheral, size: 20)
+try await measure(peripheral, size: min(payload, 512))
+
+try await peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const messageUuid = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+
+bool advertisesService(Peripheral device) => device.services().any((service) => service.uuid == serviceUuid);
+
+Future<void> measure(Peripheral peripheral, int size) async {
+  final value = Uint8List.fromList(List.generate(size, (i) => '0'.codeUnitAt(0) + i % 10));
+
+  final stopwatch = Stopwatch()..start();
+  for (var i = 0; i < 20; i++) {
+    await peripheral.writeRequest(serviceUuid, messageUuid, value);
+  }
+  final elapsed = stopwatch.elapsedMilliseconds;
+
+  print('20 writes of $size bytes: ${20 * size * 1000 ~/ elapsed} bytes/s');
+}
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final peripheral = adapter.scanGetResults().where(advertisesService).firstOrNull;
+  if (peripheral == null) {
+    print('Course peripheral not found. Start it and run this program again.');
+    exit(1);
+  }
+
+  print('Connecting to ${peripheral.address}');
+  await peripheral.connect();
+  print('Connected');
+
+  final payload = peripheral.mtu;
+  print('MTU payload: $payload bytes');
+
+  await measure(peripheral, 20);
+  await measure(peripheral, min(payload, 512));
+
+  await peripheral.disconnect();
+  print('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Throughput;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  Classes,
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+  MessageUuid = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+
+function AdvertisesService(Device: TBlePeripheral): Boolean;
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Exit(True);
+  Result := False;
+end;
+
+procedure Measure(Peripheral: TBlePeripheral; Size: Integer);
+var
+  Text: string;
+  Value: TBytes;
+  I: Integer;
+  Start, Elapsed: UInt64;
+begin
+  Text := '';
+  for I := 0 to Size - 1 do
+    Text := Text + Char(Ord('0') + I mod 10);
+  Value := TEncoding.UTF8.GetBytes(Text);
+
+  Start := TThread.GetTickCount64;
+  for I := 1 to 20 do
+    Peripheral.WriteRequest(ServiceUuid, MessageUuid, Value);
+  Elapsed := TThread.GetTickCount64 - Start;
+
+  WriteLn('20 writes of ', Size, ' bytes: ', UInt64(20 * Size) * 1000 div Elapsed, ' bytes/s');
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device, Peripheral: TBlePeripheral;
+  Payload: Integer;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Peripheral := nil;
+  for Device in Adapter.ScanGetResults do
+    if AdvertisesService(Device) then
+    begin
+      Peripheral := Device;
+      Break;
+    end;
+  if Peripheral = nil then
+  begin
+    WriteLn('Course peripheral not found. Start it and run this program again.');
+    Halt(1);
+  end;
+
+  WriteLn('Connecting to ', Peripheral.Address);
+  Peripheral.Connect;
+  WriteLn('Connected');
+
+  Payload := Peripheral.Mtu;
+  WriteLn('MTU payload: ', Payload, ' bytes');
+
+  Measure(Peripheral, 20);
+  if Payload > 512 then
+    Payload := 512;
+  Measure(Peripheral, Payload);
+
+  Peripheral.Disconnect;
+  WriteLn('Disconnected');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import kotlin.time.TimeSource
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.Peripheral
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+private val MESSAGE = BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+private suspend fun measure(peripheral: Peripheral, size: Int) {
+    val value = ByteArray(size) { ('0' + it % 10).code.toByte() }
+
+    val start = TimeSource.Monotonic.markNow()
+    repeat(20) {
+        peripheral.writeRequest(SERVICE, MESSAGE, value)
+    }
+    val elapsed = start.elapsedNow().inWholeMilliseconds
+
+    Log.d("SimpleBLE", "20 writes of $size bytes: ${20L * size * 1000 / elapsed} bytes/s")
+}
+
+suspend fun measureThroughput() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        Log.d("SimpleBLE", "Course peripheral not found. Start it and run this program again.")
+        return
+    }
+
+    Log.d("SimpleBLE", "Connecting to ${peripheral.address}")
+    peripheral.connect()
+    Log.d("SimpleBLE", "Connected")
+
+    val payload = peripheral.mtu
+    Log.d("SimpleBLE", "MTU payload: $payload bytes")
+
+    measure(peripheral, 20)
+    measure(peripheral, minOf(payload, 512))
+
+    peripheral.disconnect()
+    Log.d("SimpleBLE", "Disconnected")
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `measureThroughput` from your app once it holds the Bluetooth permissions, including the one to connect. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+The program prints the MTU payload, then the rate of each run:
+
+```
+Connecting to 7C:2E:0D:A4:58:13
+Connected
+MTU payload: 244 bytes
+20 writes of 20 bytes: 1240 bytes/s
+20 writes of 244 bytes: 11900 bytes/s
+Disconnected
+```
+
+Each write request costs one round trip, so both runs take a similar time: about a third of a second for the small writes here, and a little longer for the large ones, which span several link-layer packets. The second run carries 12 times as many bytes, so its rate is about 10 times higher. Meanwhile, the course peripheral's terminal prints a `Message:` line for each of the 40 writes.
+
+Your numbers depend on the connection interval your two systems agree on, which sets how long each round trip takes. The MTU payload depends on what both devices support.
+
+## Exercise
+
+Open the BLE Throughput Calculator. Set **ATT MTU (bytes)** to your MTU payload plus 3, such as 247 for a payload of 244, and **Connection interval (ms)** to your connection interval, or to 30 if you don't know it yet. Set **Scheduling utilization (%)** to 100 to see the best case. The calculator shows its estimate in kbps and in kB/s: multiply the kB/s figure by 1,000 and compare it with the rate of your large writes.
+
+Your measured rate comes in lower. The calculator models write commands and notifications, which fill each connection event with packets. Your program sends write requests, which move one value per round trip, so most of each connection event goes unused.
+
+## Troubleshooting
+
+- **The program prints `Course peripheral not found`.** Start the course peripheral as [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral) describes. It advertises for 10 minutes and then stops, so start it again if it has run longer.
+- **MTU payload stays at 20 bytes.** One of the two devices doesn't support a larger MTU, so the connection keeps the default. The program still works: both runs use 20-byte values, and both show about the same rate.
+- **A write fails with a large value.** The value is longer than one write can carry. Never write more than `mtu()` bytes in one write, and split longer data into several writes.
+
+## Next lesson
+
+[BLE Connection Interval, Latency and Timeout](/learn/connection-parameters): the timing behind every connection event.

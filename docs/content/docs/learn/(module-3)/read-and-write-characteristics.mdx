@@ -1,0 +1,839 @@
+---
+title: Read and Write BLE Characteristics
+description: Read a characteristic, write with and without response, and decode the bytes a Bluetooth Low Energy device sends back.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Characteristics hold a device's data. In this lesson your computer reads two characteristics of the course peripheral, decodes their bytes and writes new text to one of them, first with a response and then without one.
+
+## Reads, write requests and write commands
+
+A read asks the peripheral for a characteristic's value and waits for the response. A write carries a new value to the peripheral, in one of two ways:
+
+<ReadWriteDiagram />
+
+- A **write request** waits for the peripheral to acknowledge it. If the peripheral rejects the value, the error comes back to your program.
+- A **write command** gets no response. It is faster, because the next write doesn't wait, so it is the right choice for a stream of data. In exchange, nothing tells you whether the value arrived.
+
+A characteristic's properties say which of these it allows. Message allows reads and both kinds of write, and Counter allows reads but no writes. One write carries up to `mtu()` bytes, and [lesson 15](/learn/mtu-and-throughput) covers the MTU. The values in this lesson stay within 20 bytes, which fit in every connection.
+
+## Bytes and what they mean
+
+A value is a sequence of bytes, and the characteristic's definition says how to decode them. Message holds UTF-8 text, so its bytes read as `Hello from SimpleBLE`. Counter holds an unsigned 32-bit number, little-endian: four bytes with the lowest first, so `2a 00 00 00` is 42. Standard characteristics, such as Battery Level and Heart Rate Measurement, have formats the Bluetooth SIG defines, and the [GATT Characteristic Value Decoder](https://simpleble.org/tools/gatt-characteristic-value-decoder) decodes them field by field.
+
+## Reads and writes in SimpleBLE
+
+`read()` returns the value once the response arrives. `write_request()` returns once the peripheral acknowledges the write, and fails with an error if the peripheral rejects it. `write_command()` returns without waiting for the peripheral.
+
+Each call names the service and the characteristic by their UUIDs. Some languages take the UUIDs as text, and others as a UUID type made from the text, such as `BluetoothUUID`. [Bluetooth UUIDs](/fundamentals/uuids) explains their forms.
+
+## Read and write the course peripheral
+
+Start the course peripheral as [lesson 10](/learn/connect-to-a-ble-device#start-the-course-peripheral) describes. This program finds it and connects, as lesson 10's did. It reads Message and Counter, writes to Message with a write request and then with a write command, reads Message back after each write, and disconnects.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <cstdint>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+bool advertises_service(SimpleBLE::Peripheral& device) {
+    for (auto& service : device.services()) {
+        if (service.uuid() == SERVICE) return true;
+    }
+    return false;
+}
+
+std::string hex(const SimpleBLE::ByteArray& data) {
+    std::ostringstream text;
+    for (size_t i = 0; i < data.size(); i++) {
+        text << (i > 0 ? " " : "") << std::hex << std::setw(2) << std::setfill('0') << int(data[i]);
+    }
+    return text.str();
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    auto found = std::find_if(results.begin(), results.end(), advertises_service);
+    if (found == results.end()) {
+        std::cout << "Course peripheral not found. Start it and run this program again." << std::endl;
+        return 1;
+    }
+    auto peripheral = *found;
+
+    std::cout << "Connecting to " << peripheral.address() << std::endl;
+    peripheral.connect();
+    std::cout << "Connected" << std::endl;
+
+    std::string message = peripheral.read(SERVICE, MESSAGE);
+    std::cout << "Message: " << message << std::endl;
+
+    auto counter = peripheral.read(SERVICE, COUNTER);
+    // The lowest byte comes first.
+    uint32_t count = counter[0] | counter[1] << 8 | counter[2] << 16 | uint32_t(counter[3]) << 24;
+    std::cout << "Counter: " << count << " (" << hex(counter) << ")" << std::endl;
+
+    peripheral.write_request(SERVICE, MESSAGE, SimpleBLE::ByteArray("request hi"));
+    message = peripheral.read(SERVICE, MESSAGE);
+    std::cout << "After a write request: " << message << std::endl;
+
+    peripheral.write_command(SERVICE, MESSAGE, SimpleBLE::ByteArray("command hi"));
+    message = peripheral.read(SERVICE, MESSAGE);
+    std::cout << "After a write command: " << message << std::endl;
+
+    peripheral.disconnect();
+    std::cout << "Disconnected" << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t MESSAGE = {"76a60002-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t COUNTER = {"76a60003-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static bool advertises_service(simpleble_peripheral_t device, simpleble_error_t** error) {
+    bool found = false;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, error);
+    for (size_t i = 0; i < count && !found && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        found = !*error && strcmp(service.uuid.value, SERVICE.value) == 0;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    return found;
+}
+
+// Returns an owned handle to the first device that advertises the course service, or NULL.
+static simpleble_peripheral_t find_course_peripheral(simpleble_adapter_t adapter, simpleble_error_t** error) {
+    simpleble_peripheral_t peripheral = NULL;
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    simpleble_adapter_scan_for(adapter, 5000, error);
+    if (!*error) count = simpleble_adapter_scan_get_results(adapter, &results, error);
+
+    for (size_t i = 0; i < count && !peripheral && !*error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, error);
+        if (!*error && advertises_service(device, error)) {
+            peripheral = device;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+    simpleble_peripheral_list_release(results);
+    return peripheral;
+}
+
+static void print_message(simpleble_peripheral_t peripheral, const char* label, simpleble_error_t** error) {
+    size_t length = 0;
+    uint8_t* value = simpleble_peripheral_read(peripheral, SERVICE, MESSAGE, &length, error);
+    if (!*error) printf("%s: %.*s\n", label, (int)length, (const char*)value);
+    simpleble_free(value);
+}
+
+static void print_counter(simpleble_peripheral_t peripheral, simpleble_error_t** error) {
+    size_t length = 0;
+    uint8_t* value = simpleble_peripheral_read(peripheral, SERVICE, COUNTER, &length, error);
+    if (!*error && length >= 4) {
+        // The lowest byte comes first.
+        uint32_t count = value[0] | value[1] << 8 | value[2] << 16 | (uint32_t)value[3] << 24;
+        printf("Counter: %u (%02x %02x %02x %02x)\n", (unsigned)count, value[0], value[1], value[2], value[3]);
+    }
+    simpleble_free(value);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_t peripheral = error ? NULL : find_course_peripheral(adapter, &error);
+    if (!error && !peripheral) {
+        printf("Course peripheral not found. Start it and run this program again.\n");
+        simpleble_adapter_release_handle(adapter);
+        return EXIT_FAILURE;
+    }
+
+    char* address = error ? NULL : simpleble_peripheral_address(peripheral, &error);
+    if (!error) printf("Connecting to %s\n", address);
+    simpleble_free(address);
+
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (!error) printf("Connected\n");
+
+    if (!error) print_message(peripheral, "Message", &error);
+    if (!error) print_counter(peripheral, &error);
+
+    const uint8_t request[] = "request hi";
+    if (!error) simpleble_peripheral_write_request(peripheral, SERVICE, MESSAGE, request, sizeof(request) - 1, &error);
+    if (!error) print_message(peripheral, "After a write request", &error);
+
+    const uint8_t command[] = "command hi";
+    if (!error) simpleble_peripheral_write_command(peripheral, SERVICE, MESSAGE, command, sizeof(command) - 1, &error);
+    if (!error) print_message(peripheral, "After a write command", &error);
+
+    if (!error) simpleble_peripheral_disconnect(peripheral, &error);
+    if (!error) printf("Disconnected\n");
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import sys
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+MESSAGE = "76a60002-a8e9-4660-bc7b-ed8d93a6849e"
+COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+
+def advertises_service(device):
+    return any(service.uuid() == SERVICE for service in device.services())
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next((device for device in adapter.scan_get_results() if advertises_service(device)), None)
+if peripheral is None:
+    print("Course peripheral not found. Start it and run this program again.")
+    sys.exit(1)
+
+print(f"Connecting to {peripheral.address()}")
+peripheral.connect()
+print("Connected")
+
+message = peripheral.read(SERVICE, MESSAGE)
+print(f"Message: {message.decode(errors='replace')}")
+
+counter = peripheral.read(SERVICE, COUNTER)
+print(f"Counter: {int.from_bytes(counter, 'little')} ({counter.hex(' ')})")
+
+peripheral.write_request(SERVICE, MESSAGE, "request hi".encode())
+message = peripheral.read(SERVICE, MESSAGE)
+print(f"After a write request: {message.decode(errors='replace')}")
+
+peripheral.write_command(SERVICE, MESSAGE, "command hi".encode())
+message = peripheral.read(SERVICE, MESSAGE)
+print(f"After a write command: {message.decode(errors='replace')}")
+
+peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.BluetoothUUID;
+import org.simplejavable.Peripheral;
+
+public class ReadWrite {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+    static final BluetoothUUID SERVICE_UUID = new BluetoothUUID(SERVICE);
+    static final BluetoothUUID MESSAGE_UUID = new BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e");
+    static final BluetoothUUID COUNTER_UUID = new BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e");
+
+    static boolean advertisesService(Peripheral device) {
+        return device.services().stream().anyMatch(service -> service.uuid().equals(SERVICE));
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        Peripheral peripheral = adapter.scanGetResults().stream()
+                .filter(ReadWrite::advertisesService)
+                .findFirst()
+                .orElse(null);
+        if (peripheral == null) {
+            System.out.println("Course peripheral not found. Start it and run this program again.");
+            System.exit(1);
+        }
+
+        System.out.println("Connecting to " + peripheral.getAddress());
+        peripheral.connect();
+        System.out.println("Connected");
+
+        byte[] message = peripheral.read(SERVICE_UUID, MESSAGE_UUID);
+        System.out.println("Message: " + new String(message, StandardCharsets.UTF_8));
+
+        byte[] counter = peripheral.read(SERVICE_UUID, COUNTER_UUID);
+        int count = ByteBuffer.wrap(counter).order(ByteOrder.LITTLE_ENDIAN).getInt();
+        String bytes = HexFormat.ofDelimiter(" ").formatHex(counter);
+        System.out.println("Counter: " + Integer.toUnsignedString(count) + " (" + bytes + ")");
+
+        peripheral.writeRequest(SERVICE_UUID, MESSAGE_UUID, "request hi".getBytes(StandardCharsets.UTF_8));
+        message = peripheral.read(SERVICE_UUID, MESSAGE_UUID);
+        System.out.println("After a write request: " + new String(message, StandardCharsets.UTF_8));
+
+        peripheral.writeCommand(SERVICE_UUID, MESSAGE_UUID, "command hi".getBytes(StandardCharsets.UTF_8));
+        message = peripheral.read(SERVICE_UUID, MESSAGE_UUID);
+        System.out.println("After a write command: " + new String(message, StandardCharsets.UTF_8));
+
+        peripheral.disconnect();
+        System.out.println("Disconnected");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use simplersble::{Adapter, Peripheral};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const MESSAGE: &str = "76a60002-a8e9-4660-bc7b-ed8d93a6849e";
+const COUNTER: &str = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+fn hex(data: &[u8]) -> String {
+    let bytes: Vec<String> = data.iter().map(|byte| format!("{:02x}", byte)).collect();
+    bytes.join(" ")
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let Some(peripheral) = results.into_iter().find(advertises_service) else {
+        println!("Course peripheral not found. Start it and run this program again.");
+        std::process::exit(1);
+    };
+
+    println!("Connecting to {}", peripheral.address().unwrap());
+    peripheral.connect().unwrap();
+    println!("Connected");
+
+    let service = SERVICE.to_string();
+    let message = MESSAGE.to_string();
+    let counter = COUNTER.to_string();
+
+    let value = peripheral.read(&service, &message).unwrap();
+    println!("Message: {}", String::from_utf8_lossy(&value));
+
+    let value = peripheral.read(&service, &counter).unwrap();
+    let count = u32::from_le_bytes([value[0], value[1], value[2], value[3]]);
+    println!("Counter: {} ({})", count, hex(&value));
+
+    let request = "request hi".as_bytes().to_vec();
+    peripheral.write_request(&service, &message, &request).unwrap();
+    let value = peripheral.read(&service, &message).unwrap();
+    println!("After a write request: {}", String::from_utf8_lossy(&value));
+
+    let command = "command hi".as_bytes().to_vec();
+    peripheral.write_command(&service, &message, &command).unwrap();
+    let value = peripheral.read(&service, &message).unwrap();
+    println!("After a write command: {}", String::from_utf8_lossy(&value));
+
+    peripheral.disconnect().unwrap();
+    println!("Disconnected");
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const MESSAGE = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+const hex = data => Array.from(data, byte => byte.toString(16).padStart(2, '0')).join(' ');
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const peripheral = adapter.scanGetResults().find(advertisesService);
+if (!peripheral) {
+  console.log('Course peripheral not found. Start it and run this program again.');
+  process.exit(1);
+}
+
+console.log(`Connecting to ${peripheral.address()}`);
+await peripheral.connect();
+console.log('Connected');
+
+let message = await peripheral.read(SERVICE, MESSAGE);
+console.log(`Message: ${message.toString()}`);
+
+const counter = await peripheral.read(SERVICE, COUNTER);
+console.log(`Counter: ${counter.readUInt32LE()} (${hex(counter)})`);
+
+await peripheral.writeRequest(SERVICE, MESSAGE, Buffer.from('request hi'));
+message = await peripheral.read(SERVICE, MESSAGE);
+console.log(`After a write request: ${message.toString()}`);
+
+await peripheral.writeCommand(SERVICE, MESSAGE, Buffer.from('command hi'));
+message = await peripheral.read(SERVICE, MESSAGE);
+console.log(`After a write command: ${message.toString()}`);
+
+await peripheral.disconnect();
+console.log('Disconnected');
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const MESSAGE = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device: Peripheral) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+const hex = (data: Uint8Array) => Array.from(data, byte => byte.toString(16).padStart(2, '0')).join(' ');
+const toText = (data: Uint8Array) => String.fromCharCode(...data);
+const toBytes = (text: string) => Uint8Array.from(text, c => c.charCodeAt(0));
+
+export async function readAndWrite() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const peripheral = adapter.scanGetResults().find(advertisesService);
+  if (!peripheral) {
+    console.log('Course peripheral not found. Start it and run this program again.');
+    return;
+  }
+
+  console.log(`Connecting to ${peripheral.address()}`);
+  await peripheral.connect();
+  console.log('Connected');
+
+  let message = await peripheral.read(SERVICE, MESSAGE);
+  console.log(`Message: ${toText(message)}`);
+
+  const counter = await peripheral.read(SERVICE, COUNTER);
+  const count = new DataView(counter.buffer, counter.byteOffset, counter.byteLength).getUint32(0, true);
+  console.log(`Counter: ${count} (${hex(counter)})`);
+
+  await peripheral.writeRequest(SERVICE, MESSAGE, toBytes('request hi'));
+  message = await peripheral.read(SERVICE, MESSAGE);
+  console.log(`After a write request: ${toText(message)}`);
+
+  await peripheral.writeCommand(SERVICE, MESSAGE, toBytes('command hi'));
+  message = await peripheral.read(SERVICE, MESSAGE);
+  console.log(`After a write command: ${toText(message)}`);
+
+  await peripheral.disconnect();
+  console.log('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.system.exitProcess
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.Peripheral
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+val MESSAGE = BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e")
+val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+fun ByteArray.toHex() = joinToString(" ") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+
+// The lowest byte comes first.
+fun ByteArray.toUInt32() = (0..3).sumOf { this[it].toUByte().toUInt() shl (8 * it) }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        println("Course peripheral not found. Start it and run this program again.")
+        exitProcess(1)
+    }
+
+    println("Connecting to ${peripheral.address}")
+    peripheral.connect()
+    println("Connected")
+
+    var message = peripheral.read(SERVICE, MESSAGE)
+    println("Message: ${message.decodeToString()}")
+
+    val counter = peripheral.read(SERVICE, COUNTER)
+    println("Counter: ${counter.toUInt32()} (${counter.toHex()})")
+
+    peripheral.writeRequest(SERVICE, MESSAGE, "request hi".encodeToByteArray())
+    message = peripheral.read(SERVICE, MESSAGE)
+    println("After a write request: ${message.decodeToString()}")
+
+    peripheral.writeCommand(SERVICE, MESSAGE, "command hi".encodeToByteArray())
+    message = peripheral.read(SERVICE, MESSAGE)
+    println("After a write command: ${message.decodeToString()}")
+
+    peripheral.disconnect()
+    println("Disconnected")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+let messageUuid: BluetoothUUID = "76a60002-a8e9-4660-bc7b-ed8d93a6849e"
+let counterUuid: BluetoothUUID = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) throws -> Bool {
+    try device.services().contains { $0.uuid == serviceUuid }
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+guard let peripheral = try adapter.scanGetResults().first(where: advertisesService) else {
+    print("Course peripheral not found. Start it and run this program again.")
+    exit(1)
+}
+
+print("Connecting to \(peripheral.address)")
+try await peripheral.connect()
+print("Connected")
+
+var message = try await peripheral.read(service: serviceUuid, characteristic: messageUuid)
+print("Message: \(String(decoding: message, as: UTF8.self))")
+
+let counter = [UInt8](try await peripheral.read(service: serviceUuid, characteristic: counterUuid))
+// The lowest byte comes first.
+let count = UInt32(counter[0]) | UInt32(counter[1]) << 8 | UInt32(counter[2]) << 16 | UInt32(counter[3]) << 24
+print("Counter: \(count) (\(counter.map { String(format: "%02x", $0) }.joined(separator: " ")))")
+
+try await peripheral.writeRequest(service: serviceUuid, characteristic: messageUuid, data: Data("request hi".utf8))
+message = try await peripheral.read(service: serviceUuid, characteristic: messageUuid)
+print("After a write request: \(String(decoding: message, as: UTF8.self))")
+
+try await peripheral.writeCommand(service: serviceUuid, characteristic: messageUuid, data: Data("command hi".utf8))
+message = try await peripheral.read(service: serviceUuid, characteristic: messageUuid)
+print("After a write command: \(String(decoding: message, as: UTF8.self))")
+
+try await peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const messageUuid = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+const counterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+bool advertisesService(Peripheral device) => device.services().any((service) => service.uuid == serviceUuid);
+
+String hex(List<int> data) => data.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(' ');
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final peripheral = adapter.scanGetResults().where(advertisesService).firstOrNull;
+  if (peripheral == null) {
+    print('Course peripheral not found. Start it and run this program again.');
+    exit(1);
+  }
+
+  print('Connecting to ${peripheral.address}');
+  await peripheral.connect();
+  print('Connected');
+
+  var message = await peripheral.read(serviceUuid, messageUuid);
+  print('Message: ${utf8.decode(message, allowMalformed: true)}');
+
+  final counter = await peripheral.read(serviceUuid, counterUuid);
+  final count = ByteData.sublistView(counter).getUint32(0, Endian.little);
+  print('Counter: $count (${hex(counter)})');
+
+  await peripheral.writeRequest(serviceUuid, messageUuid, utf8.encode('request hi'));
+  message = await peripheral.read(serviceUuid, messageUuid);
+  print('After a write request: ${utf8.decode(message, allowMalformed: true)}');
+
+  await peripheral.writeCommand(serviceUuid, messageUuid, utf8.encode('command hi'));
+  message = await peripheral.read(serviceUuid, messageUuid);
+  print('After a write command: ${utf8.decode(message, allowMalformed: true)}');
+
+  await peripheral.disconnect();
+  print('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program ReadWrite;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+  MessageUuid = '76a60002-a8e9-4660-bc7b-ed8d93a6849e';
+  CounterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function AdvertisesService(Device: TBlePeripheral): Boolean;
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Exit(True);
+  Result := False;
+end;
+
+function Hex(const Data: TBytes): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to High(Data) do
+  begin
+    if I > 0 then
+      Result := Result + ' ';
+    Result := Result + LowerCase(IntToHex(Data[I], 2));
+  end;
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device, Peripheral: TBlePeripheral;
+  Message, Counter: TBytes;
+  Count: Cardinal;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Peripheral := nil;
+  for Device in Adapter.ScanGetResults do
+    if AdvertisesService(Device) then
+    begin
+      Peripheral := Device;
+      Break;
+    end;
+  if Peripheral = nil then
+  begin
+    WriteLn('Course peripheral not found. Start it and run this program again.');
+    Halt(1);
+  end;
+
+  WriteLn('Connecting to ', Peripheral.Address);
+  Peripheral.Connect;
+  WriteLn('Connected');
+
+  Message := Peripheral.Read(ServiceUuid, MessageUuid);
+  WriteLn('Message: ', TEncoding.UTF8.GetString(Message));
+
+  Counter := Peripheral.Read(ServiceUuid, CounterUuid);
+  // The lowest byte comes first.
+  Count := Counter[0] or Counter[1] shl 8 or Counter[2] shl 16 or Cardinal(Counter[3]) shl 24;
+  WriteLn('Counter: ', Count, ' (', Hex(Counter), ')');
+
+  Peripheral.WriteRequest(ServiceUuid, MessageUuid, TEncoding.UTF8.GetBytes('request hi'));
+  Message := Peripheral.Read(ServiceUuid, MessageUuid);
+  WriteLn('After a write request: ', TEncoding.UTF8.GetString(Message));
+
+  Peripheral.WriteCommand(ServiceUuid, MessageUuid, TEncoding.UTF8.GetBytes('command hi'));
+  Message := Peripheral.Read(ServiceUuid, MessageUuid);
+  WriteLn('After a write command: ', TEncoding.UTF8.GetString(Message));
+
+  Peripheral.Disconnect;
+  WriteLn('Disconnected');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.Peripheral
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+private val MESSAGE = BluetoothUUID("76a60002-a8e9-4660-bc7b-ed8d93a6849e")
+private val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+suspend fun readAndWrite() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        Log.d("SimpleBLE", "Course peripheral not found. Start it and run this program again.")
+        return
+    }
+
+    Log.d("SimpleBLE", "Connecting to ${peripheral.address}")
+    peripheral.connect()
+    Log.d("SimpleBLE", "Connected")
+
+    var message = peripheral.read(SERVICE, MESSAGE)
+    Log.d("SimpleBLE", "Message: ${message.decodeToString()}")
+
+    val counter = peripheral.read(SERVICE, COUNTER)
+    val count = ByteBuffer.wrap(counter).order(ByteOrder.LITTLE_ENDIAN).int.toUInt()
+    Log.d("SimpleBLE", "Counter: $count (${counter.joinToString(" ") { "%02x".format(it) }})")
+
+    peripheral.writeRequest(SERVICE, MESSAGE, "request hi".encodeToByteArray())
+    message = peripheral.read(SERVICE, MESSAGE)
+    Log.d("SimpleBLE", "After a write request: ${message.decodeToString()}")
+
+    peripheral.writeCommand(SERVICE, MESSAGE, "command hi".encodeToByteArray())
+    message = peripheral.read(SERVICE, MESSAGE)
+    Log.d("SimpleBLE", "After a write command: ${message.decodeToString()}")
+
+    peripheral.disconnect()
+    Log.d("SimpleBLE", "Disconnected")
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `readAndWrite` from your app once it holds the Bluetooth permissions, including the one to connect. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+The program prints each value it reads:
+
+```
+Connecting to 7C:2E:0D:A4:58:13
+Connected
+Message: Hello from SimpleBLE
+Counter: 42 (2a 00 00 00)
+After a write request: request hi
+After a write command: command hi
+Disconnected
+```
+
+`Message` is the text the course peripheral starts with. `Counter` shows the decoded number and, in parentheses, the four bytes it came from, lowest first. Your number differs, because Counter counts up once a second from the moment the course peripheral starts.
+
+Each write replaces Message, and the read after it returns the new text. The course peripheral's own terminal shows the connection and both writes:
+
+```
+Client connected: 5D:8A:2F:C6:41:E9
+Message: request hi
+Message: command hi
+Client disconnected: 5D:8A:2F:C6:41:E9
+```
+
+With nRF Connect's GATT server, Message and Counter start with the values you set in the app, so Counter reads `0 (00 00 00 00)`.
+
+## Exercise
+
+Decode a standard characteristic, then decode Counter by hand the same way.
+
+In the GATT Characteristic Value Decoder, select Heart Rate Measurement and enter `16 48 55 03`, a value a heart rate sensor sends. The decoder splits it into three fields:
+
+- **Flags**, `16`: the heart rate takes one byte, the sensor touches the skin, and an RR interval follows.
+- **Heart rate**, `48`: 72 bpm.
+- **RR interval**, `55 03`: 833.01 ms, the time between two heartbeats.
+
+The flags decide how the rest of the value is laid out, so a Heart Rate Measurement grows or shrinks as they change. Counter has a fixed layout and needs no flags.
+
+Now take the four Counter bytes your program printed, write them from last to first and read them as one hexadecimal number: `2a 00 00 00` becomes `0x0000002a`, which is 42. You get the number your program printed beside them. The RR interval uses the same byte order: `55 03` becomes `0x0355`, 853 units of 1/1024 second, which is the 833.01 ms the decoder shows.
+
+## Troubleshooting
+
+- **The program prints `Course peripheral not found`.** Start the course peripheral as [lesson 10](/learn/connect-to-a-ble-device#start-the-course-peripheral) describes. It advertises for 10 minutes and then stops, so start it again if it has run longer.
+- **A write fails with an error.** The characteristic doesn't allow that kind of write. Check its properties, as the program in [lesson 11](/learn/gatt-services-and-characteristics) prints them: a write request needs the write property, and a write command needs write without response. In nRF Connect's GATT server, give Message both.
+- **The text reads back garbled.** The value isn't UTF-8 text. Decode the bytes as the characteristic defines them, the way the program decodes Counter as a number. If you set Message in nRF Connect, choose text as its format.
+
+## Next lesson
+
+[BLE Notify vs Indicate](/learn/notify-vs-indicate): receive Counter's new values the moment they change.

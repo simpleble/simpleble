@@ -1,0 +1,724 @@
+---
+title: BLE Connection Interval, Latency and Timeout
+description: What connection interval, peripheral latency and supervision timeout do, how they trade power for speed, and who sets them.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+A connected central and peripheral don't exchange packets whenever they like. They meet on a schedule, and three connection parameters set it. Together they decide how fast a device answers, how much power it spends and how soon a lost connection is noticed. In this lesson your computer times reads from the course peripheral to measure the schedule of a real connection.
+
+## The three connection parameters
+
+Once a connection is open, the two devices meet at connection events. The central opens one every connection interval, the devices exchange packets, and both radios sleep until the next event.
+
+- **Connection interval.** The time from one connection event to the next, from 7.5 ms to 4 s in steps of 1.25 ms. Anything either device sends waits for the next event, so the interval sets how quickly a device can answer.
+- **Peripheral latency.** The number of consecutive connection events the peripheral may skip when it has nothing to send. Each skipped event saves power. When the peripheral has data, it uses the next event, so it still answers quickly.
+- **Supervision timeout.** How long the connection may go without a packet before both sides consider it lost, from 100 ms to 32 s. It must be longer than `(1 + latency) × interval × 2`, twice the longest silence the latency allows, so that one lost packet after a run of skipped events doesn't end a healthy connection.
+
+<ConnectionEventsDiagram />
+
+## Who sets the parameters
+
+The central chooses the parameters when it opens the connection. The peripheral can ask for others later, such as a longer interval once it has nothing urgent to send, and the central decides whether to accept them. On computers and phones, the operating system makes these choices: it picks the values for each connection and limits what an application can change.
+
+SimpleBLE leaves the parameters to the operating system, so your program doesn't set them. In this lesson, you measure their effect instead.
+
+## Speed or battery life
+
+A short interval gives quick answers and high throughput, because each second has more events to send data in. It also wakes both radios more often, so it costs power on both sides. A long interval and a high latency let the peripheral sleep through most events, which saves power, and a request from the central waits longer for its answer.
+
+The usual pattern is for a peripheral to ask for a short interval while it has data to move, such as during a firmware update, and for a long interval with some latency while it is idle. The [BLE Connection Parameter Validator](https://simpleble.org/tools/ble-connection-parameter-validator) checks a set of parameters against the rules above and shows the timing they give.
+
+## Measure a round trip
+
+A read is a round trip. Your computer sends the request at the next connection event, and the response comes back in the same event or, more often, in a later one. A read therefore takes about one connection interval or more, and timing reads tells you the interval your two systems agreed on.
+
+This program connects to the course peripheral, reads Counter 20 times in a row and times each read. It prints the fastest, average and slowest read, then disconnects. Start the course peripheral as [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral) describes.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <numeric>
+#include <string>
+#include <vector>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+bool advertises_service(SimpleBLE::Peripheral& device) {
+    for (auto& service : device.services()) {
+        if (service.uuid() == SERVICE) return true;
+    }
+    return false;
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    auto found = std::find_if(results.begin(), results.end(), advertises_service);
+    if (found == results.end()) {
+        std::cout << "Course peripheral not found. Start it and run this program again." << std::endl;
+        return 1;
+    }
+    auto peripheral = *found;
+
+    std::cout << "Connecting to " << peripheral.address() << std::endl;
+    peripheral.connect();
+    std::cout << "Connected" << std::endl;
+
+    std::vector<long long> times;
+    for (int i = 0; i < 20; i++) {
+        auto start = std::chrono::steady_clock::now();
+        peripheral.read(SERVICE, COUNTER);
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+        times.push_back(elapsed.count());
+    }
+
+    long long total = std::accumulate(times.begin(), times.end(), 0LL);
+    std::cout << "Fastest: " << *std::min_element(times.begin(), times.end()) << " ms" << std::endl;
+    std::cout << "Average: " << total / static_cast<long long>(times.size()) << " ms" << std::endl;
+    std::cout << "Slowest: " << *std::max_element(times.begin(), times.end()) << " ms" << std::endl;
+
+    peripheral.disconnect();
+    std::cout << "Disconnected" << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#ifdef _WIN32
+#include <windows.h>
+#else
+#define _POSIX_C_SOURCE 200809L
+#include <time.h>
+#endif
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t COUNTER = {"76a60003-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static long long now_ms(void) {
+#ifdef _WIN32
+    LARGE_INTEGER frequency, now;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&now);
+    return now.QuadPart / (frequency.QuadPart / 1000);
+#else
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long long)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
+}
+
+static bool advertises_service(simpleble_peripheral_t device, simpleble_error_t** error) {
+    bool found = false;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, error);
+    for (size_t i = 0; i < count && !found && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        found = !*error && strcmp(service.uuid.value, SERVICE.value) == 0;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    return found;
+}
+
+// Returns an owned handle to the first device that advertises the course service, or NULL.
+static simpleble_peripheral_t find_course_peripheral(simpleble_adapter_t adapter, simpleble_error_t** error) {
+    simpleble_peripheral_t peripheral = NULL;
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    simpleble_adapter_scan_for(adapter, 5000, error);
+    if (!*error) count = simpleble_adapter_scan_get_results(adapter, &results, error);
+
+    for (size_t i = 0; i < count && !peripheral && !*error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, error);
+        if (!*error && advertises_service(device, error)) {
+            peripheral = device;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+    simpleble_peripheral_list_release(results);
+    return peripheral;
+}
+
+static void measure_reads(simpleble_peripheral_t peripheral, simpleble_error_t** error) {
+    long long fastest = 0, slowest = 0, total = 0;
+    for (int i = 0; i < 20 && !*error; i++) {
+        size_t length = 0;
+        long long start = now_ms();
+        uint8_t* value = simpleble_peripheral_read(peripheral, SERVICE, COUNTER, &length, error);
+        long long elapsed = now_ms() - start;
+        simpleble_free(value);
+        if (i == 0 || elapsed < fastest) fastest = elapsed;
+        if (elapsed > slowest) slowest = elapsed;
+        total += elapsed;
+    }
+    if (*error) return;
+
+    printf("Fastest: %lld ms\n", fastest);
+    printf("Average: %lld ms\n", total / 20);
+    printf("Slowest: %lld ms\n", slowest);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_t peripheral = error ? NULL : find_course_peripheral(adapter, &error);
+    if (!error && !peripheral) {
+        printf("Course peripheral not found. Start it and run this program again.\n");
+        simpleble_adapter_release_handle(adapter);
+        return EXIT_FAILURE;
+    }
+
+    char* address = error ? NULL : simpleble_peripheral_address(peripheral, &error);
+    if (!error) printf("Connecting to %s\n", address);
+    simpleble_free(address);
+
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (!error) printf("Connected\n");
+    if (!error) measure_reads(peripheral, &error);
+    if (!error) simpleble_peripheral_disconnect(peripheral, &error);
+    if (!error) printf("Disconnected\n");
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import sys
+import time
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+
+def advertises_service(device):
+    return any(service.uuid() == SERVICE for service in device.services())
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next((device for device in adapter.scan_get_results() if advertises_service(device)), None)
+if peripheral is None:
+    print("Course peripheral not found. Start it and run this program again.")
+    sys.exit(1)
+
+print(f"Connecting to {peripheral.address()}")
+peripheral.connect()
+print("Connected")
+
+times = []
+for _ in range(20):
+    start = time.perf_counter()
+    peripheral.read(SERVICE, COUNTER)
+    times.append((time.perf_counter() - start) * 1000)
+
+print(f"Fastest: {round(min(times))} ms")
+print(f"Average: {round(sum(times) / len(times))} ms")
+print(f"Slowest: {round(max(times))} ms")
+
+peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.util.LongSummaryStatistics;
+import org.simplejavable.Adapter;
+import org.simplejavable.BluetoothUUID;
+import org.simplejavable.Peripheral;
+
+public class RoundTrip {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+    static final String COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+    static boolean advertisesService(Peripheral device) {
+        return device.services().stream().anyMatch(service -> service.uuid().equals(SERVICE));
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        Peripheral peripheral = adapter.scanGetResults().stream()
+                .filter(RoundTrip::advertisesService)
+                .findFirst()
+                .orElse(null);
+        if (peripheral == null) {
+            System.out.println("Course peripheral not found. Start it and run this program again.");
+            System.exit(1);
+        }
+
+        System.out.println("Connecting to " + peripheral.getAddress());
+        peripheral.connect();
+        System.out.println("Connected");
+
+        BluetoothUUID service = new BluetoothUUID(SERVICE);
+        BluetoothUUID counter = new BluetoothUUID(COUNTER);
+        LongSummaryStatistics times = new LongSummaryStatistics();
+        for (int i = 0; i < 20; i++) {
+            long start = System.nanoTime();
+            peripheral.read(service, counter);
+            times.accept((System.nanoTime() - start) / 1_000_000);
+        }
+        System.out.println("Fastest: " + times.getMin() + " ms");
+        System.out.println("Average: " + Math.round(times.getAverage()) + " ms");
+        System.out.println("Slowest: " + times.getMax() + " ms");
+
+        peripheral.disconnect();
+        System.out.println("Disconnected");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::{Duration, Instant};
+
+use simplersble::{Adapter, Peripheral};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const COUNTER: &str = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let Some(peripheral) = results.into_iter().find(advertises_service) else {
+        println!("Course peripheral not found. Start it and run this program again.");
+        std::process::exit(1);
+    };
+
+    println!("Connecting to {}", peripheral.address().unwrap());
+    peripheral.connect().unwrap();
+    println!("Connected");
+
+    let service = SERVICE.to_string();
+    let counter = COUNTER.to_string();
+    let mut times = Vec::new();
+    for _ in 0..20 {
+        let start = Instant::now();
+        peripheral.read(&service, &counter).unwrap();
+        times.push(start.elapsed().as_millis());
+    }
+    println!("Fastest: {} ms", times.iter().min().unwrap());
+    println!("Average: {} ms", times.iter().sum::<u128>() / times.len() as u128);
+    println!("Slowest: {} ms", times.iter().max().unwrap());
+
+    peripheral.disconnect().unwrap();
+    println!("Disconnected");
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const peripheral = adapter.scanGetResults().find(advertisesService);
+if (!peripheral) {
+  console.log('Course peripheral not found. Start it and run this program again.');
+  process.exit(1);
+}
+
+console.log(`Connecting to ${peripheral.address()}`);
+await peripheral.connect();
+console.log('Connected');
+
+const times = [];
+for (let i = 0; i < 20; i++) {
+  const start = performance.now();
+  await peripheral.read(SERVICE, COUNTER);
+  times.push(performance.now() - start);
+}
+const average = times.reduce((sum, time) => sum + time, 0) / times.length;
+console.log(`Fastest: ${Math.round(Math.min(...times))} ms`);
+console.log(`Average: ${Math.round(average)} ms`);
+console.log(`Slowest: ${Math.round(Math.max(...times))} ms`);
+
+await peripheral.disconnect();
+console.log('Disconnected');
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device: Peripheral) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+export async function measureRoundTrip() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const peripheral = adapter.scanGetResults().find(advertisesService);
+  if (!peripheral) {
+    console.log('Course peripheral not found. Start it and run this program again.');
+    return;
+  }
+
+  console.log(`Connecting to ${peripheral.address()}`);
+  await peripheral.connect();
+  console.log('Connected');
+
+  const times: number[] = [];
+  for (let i = 0; i < 20; i++) {
+    const start = performance.now();
+    await peripheral.read(SERVICE, COUNTER);
+    times.push(performance.now() - start);
+  }
+  const average = times.reduce((sum, time) => sum + time, 0) / times.length;
+  console.log(`Fastest: ${Math.round(Math.min(...times))} ms`);
+  console.log(`Average: ${Math.round(average)} ms`);
+  console.log(`Slowest: ${Math.round(Math.max(...times))} ms`);
+
+  await peripheral.disconnect();
+  console.log('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.system.exitProcess
+import kotlin.time.measureTime
+import kotlinx.coroutines.runBlocking
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.Peripheral
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        println("Course peripheral not found. Start it and run this program again.")
+        exitProcess(1)
+    }
+
+    println("Connecting to ${peripheral.address}")
+    peripheral.connect()
+    println("Connected")
+
+    val times = List(20) { measureTime { peripheral.read(SERVICE, COUNTER) }.inWholeMilliseconds }
+    println("Fastest: ${times.min()} ms")
+    println("Average: ${times.sum() / times.size} ms")
+    println("Slowest: ${times.max()} ms")
+
+    peripheral.disconnect()
+    println("Disconnected")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+let counterUuid: BluetoothUUID = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) throws -> Bool {
+    try device.services().contains { $0.uuid == serviceUuid }
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+guard let peripheral = try adapter.scanGetResults().first(where: advertisesService) else {
+    print("Course peripheral not found. Start it and run this program again.")
+    exit(1)
+}
+
+print("Connecting to \(peripheral.address)")
+try await peripheral.connect()
+print("Connected")
+
+var times: [Int] = []
+for _ in 1...20 {
+    let start = ContinuousClock.now
+    _ = try await peripheral.read(service: serviceUuid, characteristic: counterUuid)
+    times.append(Int((ContinuousClock.now - start) / .milliseconds(1)))
+}
+print("Fastest: \(times.min()!) ms")
+print("Average: \(times.reduce(0, +) / times.count) ms")
+print("Slowest: \(times.max()!) ms")
+
+try await peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:io';
+import 'dart:math';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const counterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+bool advertisesService(Peripheral device) => device.services().any((service) => service.uuid == serviceUuid);
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final peripheral = adapter.scanGetResults().where(advertisesService).firstOrNull;
+  if (peripheral == null) {
+    print('Course peripheral not found. Start it and run this program again.');
+    exit(1);
+  }
+
+  print('Connecting to ${peripheral.address}');
+  await peripheral.connect();
+  print('Connected');
+
+  final times = <int>[];
+  for (var i = 0; i < 20; i++) {
+    final stopwatch = Stopwatch()..start();
+    await peripheral.read(serviceUuid, counterUuid);
+    times.add(stopwatch.elapsedMilliseconds);
+  }
+  print('Fastest: ${times.reduce(min)} ms');
+  print('Average: ${times.reduce((a, b) => a + b) ~/ times.length} ms');
+  print('Slowest: ${times.reduce(max)} ms');
+
+  await peripheral.disconnect();
+  print('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program RoundTrip;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  Classes,
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+  CounterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function AdvertisesService(Device: TBlePeripheral): Boolean;
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Exit(True);
+  Result := False;
+end;
+
+var
+  Adapter: TBleAdapter;
+  Device, Peripheral: TBlePeripheral;
+  I: Integer;
+  Start, Elapsed, Fastest, Slowest, Total: UInt64;
+
+begin
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Peripheral := nil;
+  for Device in Adapter.ScanGetResults do
+    if AdvertisesService(Device) then
+    begin
+      Peripheral := Device;
+      Break;
+    end;
+  if Peripheral = nil then
+  begin
+    WriteLn('Course peripheral not found. Start it and run this program again.');
+    Halt(1);
+  end;
+
+  WriteLn('Connecting to ', Peripheral.Address);
+  Peripheral.Connect;
+  WriteLn('Connected');
+
+  Fastest := High(UInt64);
+  Slowest := 0;
+  Total := 0;
+  for I := 1 to 20 do
+  begin
+    Start := TThread.GetTickCount64;
+    Peripheral.Read(ServiceUuid, CounterUuid);
+    Elapsed := TThread.GetTickCount64 - Start;
+    if Elapsed < Fastest then
+      Fastest := Elapsed;
+    if Elapsed > Slowest then
+      Slowest := Elapsed;
+    Total := Total + Elapsed;
+  end;
+  WriteLn('Fastest: ', Fastest, ' ms');
+  WriteLn('Average: ', Total div 20, ' ms');
+  WriteLn('Slowest: ', Slowest, ' ms');
+
+  Peripheral.Disconnect;
+  WriteLn('Disconnected');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import kotlin.time.measureTime
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.Peripheral
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+private val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+suspend fun measureRoundTrip() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        Log.d("SimpleBLE", "Course peripheral not found. Start it and run this program again.")
+        return
+    }
+
+    Log.d("SimpleBLE", "Connecting to ${peripheral.address}")
+    peripheral.connect()
+    Log.d("SimpleBLE", "Connected")
+
+    val times = List(20) { measureTime { peripheral.read(SERVICE, COUNTER) }.inWholeMilliseconds }
+    Log.d("SimpleBLE", "Fastest: ${times.min()} ms")
+    Log.d("SimpleBLE", "Average: ${times.sum() / times.size} ms")
+    Log.d("SimpleBLE", "Slowest: ${times.max()} ms")
+
+    peripheral.disconnect()
+    Log.d("SimpleBLE", "Disconnected")
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `measureRoundTrip` from your app once it holds the Bluetooth permissions, including the one to connect. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+The program prints the address it connects to, then the three times:
+
+```
+Connecting to 7C:2E:0D:A4:58:13
+Connected
+Fastest: 29 ms
+Average: 44 ms
+Slowest: 61 ms
+Disconnected
+```
+
+The times differ from read to read. Each request waits for the next connection event, anywhere from almost no time to a full interval, depending on when the read starts. The peripheral's system may answer in the event after the request or in a later one. The fastest read is one whose request went out right away and whose answer came back in the next event.
+
+That's why the fastest read is the best estimate of the connection interval, within a factor of two: the interval lies between about half of it and all of it. In this sample, the interval is between about 15 and 29 ms. Your numbers depend on the interval your two systems agreed on. Reads don't make the course peripheral print anything: on a second computer, it prints only `Client connected` and `Client disconnected`.
+
+## Exercise
+
+In the BLE Connection Parameter Validator, enter 30 ms as both the minimum and the maximum interval, a peripheral latency of 4 and a supervision timeout of 1,000 ms. The validator reports a valid baseline parameter set. **Max peripheral listen spacing** is 150 ms, because a peripheral that skips four events listens once every five. **Minimum valid timeout** is 310 ms, the first 10 ms step above (1 + 4) × 30 ms × 2 = 300 ms.
+
+Raise the latency to 20. The validator now asks for a supervision timeout greater than 1,260 ms. A peripheral that skips 20 events in a row is silent for 21 × 30 ms = 630 ms, and the rule asks for twice that, (1 + 20) × 30 ms × 2 = 1,260 ms, so a 1,000 ms timeout is too short.
+
+Last, set the latency back to 0 and enter your own fastest read as both intervals, rounded to a multiple of 1.25 ms, such as 28.75 ms for a fastest read of 29 ms. **Connection event rate** shows how many connection events a second that interval gives. Your connection has at least that many, and up to twice as many.
+
+## Troubleshooting
+
+- **The program prints `Course peripheral not found`.** The course peripheral advertises for 10 minutes and then stops, so start it again as [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral) describes. Bring the two devices closer.
+- **Every read takes hundreds of milliseconds.** The two systems agreed on a long connection interval, often to save power. That's expected for some peripherals, and your measurement shows the interval they chose.
+- **One read is far slower than the rest.** A packet was lost and sent again in a later event, or a connection event was skipped. Single slow reads like this are what the average smooths out, so compare averages over several runs.
+
+## What comes next
+
+This is the last lesson of Module 3. Modules 4 to 6 are on their way: you'll build a peripheral of your own, work with real devices, and debug and ship your application. The [course home](/learn) lists what each module covers.

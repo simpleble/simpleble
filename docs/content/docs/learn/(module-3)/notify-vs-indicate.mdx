@@ -1,0 +1,706 @@
+---
+title: BLE Notify vs Indicate
+description: The difference between Bluetooth Low Energy notifications and indications, when to use each, and how to subscribe from your computer.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+A read tells you a value at one moment. To follow a value as it changes, your program subscribes, and the device sends each new value on its own. In this lesson your computer subscribes to notifications from the course peripheral's Counter and prints every value it receives.
+
+## Subscribe instead of reading
+
+Instead of reading a value again and again, a central subscribes to the characteristic, and the peripheral sends each new value as it sets it. The central learns of every change as it happens, without asking.
+
+To subscribe, the central writes the characteristic's Client Characteristic Configuration descriptor, the CCCD, `0x2902`, that you met in [GATT Services and Characteristics](/learn/gatt-services-and-characteristics). The value `0x0001` turns on notifications, `0x0002` turns on indications, and `0x0000` turns both off. SimpleBLE writes the CCCD for you when you call `notify()` or `indicate()`, and clears it when you unsubscribe.
+
+## Notifications and indications
+
+A notification is sent with no reply. The peripheral can send several in one connection event, so notifications suit streams of values, such as sensor readings.
+
+An indication waits for a confirmation. The peripheral sends the next indication only after the central confirms the last one, so only one is on its way at a time. Indications are slower, and each confirmation tells the peripheral that the value arrived. They suit state changes that must not be missed, such as an alarm.
+
+<NotifyIndicateDiagram />
+
+A characteristic's properties say which of the two it supports. In a Bluetooth log, a notification is one packet, and an indication is followed by its confirmation. Open a log in the [Bluetooth HCI Log Viewer](https://simpleble.org/tools/bluetooth-hci-log-viewer) to see both.
+
+## Subscriptions in SimpleBLE
+
+`notify()` subscribes to a characteristic's notifications. From then on, SimpleBLE delivers each value to your callback, or to the flow or stream that the call returns, until you unsubscribe or the connection ends. For a characteristic that indicates, `indicate()` subscribes to its indications and works the same way.
+
+In the C++, C, Python, Java and Delphi programs below, the callback runs on a SimpleBLE thread that also delivers every other event, so those programs can sleep while values arrive. The other languages receive each value on the program's own event loop, task or coroutine, so they wait without blocking it. Either way, keep the code that handles a value short: print or store the value, and return. [Concurrency](/fundamentals/concurrency) explains the rules.
+
+## Subscribe to Counter
+
+Start the course peripheral as in [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral). This program finds it and connects, as in the last lessons. It subscribes to Counter's notifications for 5 seconds, prints each value, then unsubscribes and disconnects. In Kotlin Multiplatform and Android, collecting the flow subscribes, and the timeout that ends the collection unsubscribes.
+
+<Tabs items={["C++", "C", "Python", "Java", "Rust", "Node.js", "React Native", "Kotlin Multiplatform", "Swift", "Dart", "Delphi", "Android"]} defaultIndex={2} groupId="learn-language" persist>
+<Tab value="C++">
+
+```cpp
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <iostream>
+#include <string>
+#include <thread>
+#include <simpleble/SimpleBLE.h>
+
+const std::string SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const std::string COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+bool advertises_service(SimpleBLE::Peripheral& device) {
+    for (auto& service : device.services()) {
+        if (service.uuid() == SERVICE) return true;
+    }
+    return false;
+}
+
+uint32_t to_uint32(const SimpleBLE::ByteArray& bytes) {
+    uint32_t value = 0;
+    for (size_t i = 0; i < bytes.size() && i < 4; i++) {
+        value |= uint32_t(bytes[i]) << (8 * i);
+    }
+    return value;
+}
+
+int main() {
+    auto adapter = SimpleBLE::Adapter::get_adapters().at(0);
+    adapter.scan_for(5000);
+
+    auto results = adapter.scan_get_results();
+    auto found = std::find_if(results.begin(), results.end(), advertises_service);
+    if (found == results.end()) {
+        std::cout << "Course peripheral not found. Start it and run this program again." << std::endl;
+        return 1;
+    }
+    auto peripheral = *found;
+
+    std::cout << "Connecting to " << peripheral.address() << std::endl;
+    peripheral.connect();
+    std::cout << "Connected" << std::endl;
+
+    peripheral.notify(SERVICE, COUNTER, [](SimpleBLE::ByteArray value) {
+        std::cout << "Notification: " << to_uint32(value) << std::endl;
+    });
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    peripheral.unsubscribe(SERVICE, COUNTER);
+
+    peripheral.disconnect();
+    std::cout << "Disconnected" << std::endl;
+    return 0;
+}
+```
+
+</Tab>
+<Tab value="C">
+
+```c
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <simplecble/simplecble.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#define sleep_seconds(seconds) Sleep((seconds) * 1000)
+#else
+#include <unistd.h>
+#define sleep_seconds(seconds) sleep(seconds)
+#endif
+
+static const simpleble_uuid_t SERVICE = {"76a60001-a8e9-4660-bc7b-ed8d93a6849e"};
+static const simpleble_uuid_t COUNTER = {"76a60003-a8e9-4660-bc7b-ed8d93a6849e"};
+
+static bool advertises_service(simpleble_peripheral_t device, simpleble_error_t** error) {
+    bool found = false;
+    simpleble_service_list_t services = NULL;
+    size_t count = simpleble_peripheral_services(device, &services, error);
+    for (size_t i = 0; i < count && !found && !*error; i++) {
+        simpleble_service_t service = {0};
+        simpleble_service_list_get(services, i, &service, error);
+        found = !*error && strcmp(service.uuid.value, SERVICE.value) == 0;
+        simpleble_service_release(&service);
+    }
+    simpleble_service_list_release(services);
+    return found;
+}
+
+// Returns an owned handle to the first device that advertises the course service, or NULL.
+static simpleble_peripheral_t find_course_peripheral(simpleble_adapter_t adapter, simpleble_error_t** error) {
+    simpleble_peripheral_t peripheral = NULL;
+    simpleble_peripheral_list_t results = NULL;
+    size_t count = 0;
+    simpleble_adapter_scan_for(adapter, 5000, error);
+    if (!*error) count = simpleble_adapter_scan_get_results(adapter, &results, error);
+
+    for (size_t i = 0; i < count && !peripheral && !*error; i++) {
+        simpleble_peripheral_t device = simpleble_peripheral_list_get(results, i, error);
+        if (!*error && advertises_service(device, error)) {
+            peripheral = device;
+        } else {
+            simpleble_peripheral_release_handle(device);
+        }
+    }
+    simpleble_peripheral_list_release(results);
+    return peripheral;
+}
+
+static void on_notification(simpleble_peripheral_t handle, simpleble_uuid_t service, simpleble_uuid_t characteristic,
+                            const uint8_t* data, size_t length, void* userdata) {
+    (void)handle;
+    (void)service;
+    (void)characteristic;
+    (void)userdata;
+    uint32_t value = 0;
+    for (size_t i = 0; i < length && i < 4; i++) value |= (uint32_t)data[i] << (8 * i);
+    printf("Notification: %lu\n", (unsigned long)value);
+}
+
+int main(void) {
+    simpleble_error_t* error = NULL;
+    simpleble_adapter_list_t adapters = NULL;
+    simpleble_adapter_get_adapters(&adapters, &error);
+    simpleble_adapter_t adapter = error ? NULL : simpleble_adapter_list_get(adapters, 0, &error);
+    simpleble_adapter_list_release(adapters);
+
+    simpleble_peripheral_t peripheral = error ? NULL : find_course_peripheral(adapter, &error);
+    if (!error && !peripheral) {
+        printf("Course peripheral not found. Start it and run this program again.\n");
+        simpleble_adapter_release_handle(adapter);
+        return EXIT_FAILURE;
+    }
+
+    char* address = error ? NULL : simpleble_peripheral_address(peripheral, &error);
+    if (!error) printf("Connecting to %s\n", address);
+    simpleble_free(address);
+
+    if (!error) simpleble_peripheral_connect(peripheral, &error);
+    if (!error) printf("Connected\n");
+
+    if (!error) simpleble_peripheral_notify(peripheral, SERVICE, COUNTER, on_notification, NULL, &error);
+    if (!error) sleep_seconds(5);
+    if (!error) simpleble_peripheral_unsubscribe(peripheral, SERVICE, COUNTER, &error);
+
+    if (!error) simpleble_peripheral_disconnect(peripheral, &error);
+    if (!error) printf("Disconnected\n");
+
+    int result = error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error) fprintf(stderr, "%s\n", simpleble_error_message(error));
+    simpleble_error_release(&error);
+    simpleble_peripheral_release_handle(peripheral);
+    simpleble_adapter_release_handle(adapter);
+    return result;
+}
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+import sys
+import time
+
+import simplepyble
+
+SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+
+def advertises_service(device):
+    return any(service.uuid() == SERVICE for service in device.services())
+
+
+adapter = simplepyble.Adapter.get_adapters()[0]
+adapter.scan_for(5000)
+
+peripheral = next((device for device in adapter.scan_get_results() if advertises_service(device)), None)
+if peripheral is None:
+    print("Course peripheral not found. Start it and run this program again.")
+    sys.exit(1)
+
+print(f"Connecting to {peripheral.address()}")
+peripheral.connect()
+print("Connected")
+
+peripheral.notify(SERVICE, COUNTER, lambda value: print(f"Notification: {int.from_bytes(value, 'little')}"))
+time.sleep(5)
+peripheral.unsubscribe(SERVICE, COUNTER)
+
+peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Java">
+
+```java
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
+import org.simplejavable.Adapter;
+import org.simplejavable.BluetoothUUID;
+import org.simplejavable.Peripheral;
+
+public class Subscribe {
+    static final String SERVICE = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+    static final String COUNTER = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+    static boolean advertisesService(Peripheral device) {
+        return device.services().stream().anyMatch(service -> service.uuid().equals(SERVICE));
+    }
+
+    static long uint32(byte[] value) {
+        return Integer.toUnsignedLong(ByteBuffer.wrap(value).order(ByteOrder.LITTLE_ENDIAN).getInt());
+    }
+
+    public static void main(String[] args) throws Exception {
+        Adapter adapter = Adapter.getAdapters().get(0);
+        adapter.scanFor(5000);
+
+        Peripheral peripheral = adapter.scanGetResults().stream()
+                .filter(Subscribe::advertisesService)
+                .findFirst()
+                .orElse(null);
+        if (peripheral == null) {
+            System.out.println("Course peripheral not found. Start it and run this program again.");
+            System.exit(1);
+        }
+
+        System.out.println("Connecting to " + peripheral.getAddress());
+        peripheral.connect();
+        System.out.println("Connected");
+
+        BluetoothUUID service = new BluetoothUUID(SERVICE);
+        BluetoothUUID counter = new BluetoothUUID(COUNTER);
+
+        peripheral.notify(service, counter, value -> System.out.println("Notification: " + uint32(value)));
+        Thread.sleep(5000);
+        peripheral.unsubscribe(service, counter);
+
+        peripheral.disconnect();
+        System.out.println("Disconnected");
+    }
+}
+```
+
+</Tab>
+<Tab value="Rust">
+
+```rust
+use std::time::Duration;
+
+use futures::StreamExt;
+use simplersble::{Adapter, Peripheral, ValueChangedEvent};
+
+const SERVICE: &str = "76a60001-a8e9-4660-bc7b-ed8d93a6849e";
+const COUNTER: &str = "76a60003-a8e9-4660-bc7b-ed8d93a6849e";
+
+fn advertises_service(device: &Peripheral) -> bool {
+    device.services().unwrap().iter().any(|service| service.uuid() == SERVICE)
+}
+
+#[tokio::main]
+async fn main() {
+    let adapter = Adapter::get_adapters().unwrap().remove(0);
+    adapter.scan_for(Duration::from_secs(5)).unwrap();
+
+    let results = adapter.scan_get_results().unwrap();
+    let Some(peripheral) = results.into_iter().find(advertises_service) else {
+        println!("Course peripheral not found. Start it and run this program again.");
+        std::process::exit(1);
+    };
+
+    println!("Connecting to {}", peripheral.address().unwrap());
+    peripheral.connect().unwrap();
+    println!("Connected");
+
+    let service = SERVICE.to_string();
+    let counter = COUNTER.to_string();
+
+    // The stream ends when you unsubscribe, which ends the task.
+    let mut notifications = peripheral.notify(&service, &counter).unwrap();
+    let printer = tokio::spawn(async move {
+        while let Some(ValueChangedEvent::ValueUpdated(value)) = notifications.next().await {
+            println!("Notification: {}", u32::from_le_bytes(value.try_into().unwrap()));
+        }
+    });
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    peripheral.unsubscribe(&service, &counter).unwrap();
+    printer.await.unwrap();
+
+    peripheral.disconnect().unwrap();
+    println!("Disconnected");
+}
+```
+
+</Tab>
+<Tab value="Node.js">
+
+```js
+import { setTimeout as sleep } from 'node:timers/promises';
+import { Adapter } from 'simplejsble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+const [adapter] = await Adapter.getAdapters();
+await adapter.scanFor(5000);
+
+const peripheral = adapter.scanGetResults().find(advertisesService);
+if (!peripheral) {
+  console.log('Course peripheral not found. Start it and run this program again.');
+  process.exit(1);
+}
+
+console.log(`Connecting to ${peripheral.address()}`);
+await peripheral.connect();
+console.log('Connected');
+
+await peripheral.notify(SERVICE, COUNTER, value => console.log(`Notification: ${value.readUInt32LE()}`));
+await sleep(5000);
+await peripheral.unsubscribe(SERVICE, COUNTER);
+
+await peripheral.disconnect();
+console.log('Disconnected');
+```
+
+</Tab>
+<Tab value="React Native">
+
+```ts
+import { Adapter, type Peripheral } from 'simplernble';
+
+const SERVICE = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const COUNTER = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+function advertisesService(device: Peripheral) {
+  return device.services().some(service => service.uuid === SERVICE);
+}
+
+const uint32 = (value: Uint8Array) => new DataView(value.buffer, value.byteOffset).getUint32(0, true);
+
+export async function subscribeToCounter() {
+  const [adapter] = await Adapter.getAdapters();
+  await adapter.scanFor(5000);
+
+  const peripheral = adapter.scanGetResults().find(advertisesService);
+  if (!peripheral) {
+    console.log('Course peripheral not found. Start it and run this program again.');
+    return;
+  }
+
+  console.log(`Connecting to ${peripheral.address()}`);
+  await peripheral.connect();
+  console.log('Connected');
+
+  await peripheral.notify(SERVICE, COUNTER, value => console.log(`Notification: ${uint32(value)}`));
+  await new Promise<void>(resolve => setTimeout(() => resolve(), 5000));
+  await peripheral.unsubscribe(SERVICE, COUNTER);
+
+  await peripheral.disconnect();
+  console.log('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Kotlin Multiplatform">
+
+```kotlin
+import kotlin.system.exitProcess
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import org.simplektble.Adapter
+import org.simplektble.BluetoothUUID
+import org.simplektble.Peripheral
+
+val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+fun ByteArray.toUInt32() = (0..3).sumOf { this[it].toUByte().toUInt() shl (8 * it) }
+
+fun main() = runBlocking {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        println("Course peripheral not found. Start it and run this program again.")
+        exitProcess(1)
+    }
+
+    println("Connecting to ${peripheral.address}")
+    peripheral.connect()
+    println("Connected")
+
+    // Collecting subscribes. When the timeout ends the collection, the flow unsubscribes.
+    withTimeoutOrNull(5000) {
+        peripheral.notify(SERVICE, COUNTER).collect { value ->
+            println("Notification: ${value.toUInt32()}")
+        }
+    }
+
+    peripheral.disconnect()
+    println("Disconnected")
+}
+```
+
+</Tab>
+<Tab value="Swift">
+
+```swift
+import Foundation
+import SimpleSwiftBLE
+
+let serviceUuid: BluetoothUUID = "76a60001-a8e9-4660-bc7b-ed8d93a6849e"
+let counterUuid: BluetoothUUID = "76a60003-a8e9-4660-bc7b-ed8d93a6849e"
+
+func advertisesService(_ device: Peripheral) throws -> Bool {
+    try device.services().contains { $0.uuid == serviceUuid }
+}
+
+func toUInt32(_ value: Data) -> UInt32 {
+    value.reversed().reduce(0) { $0 << 8 | UInt32($1) }
+}
+
+let adapter = try Adapter.getAdapters().first!
+try await adapter.scanFor(timeoutMs: 5000)
+
+guard let peripheral = try adapter.scanGetResults().first(where: advertisesService) else {
+    print("Course peripheral not found. Start it and run this program again.")
+    exit(1)
+}
+
+print("Connecting to \(peripheral.address)")
+try await peripheral.connect()
+print("Connected")
+
+// unsubscribe() ends the stream, so the task finishes once its values are printed.
+let notifications = try await peripheral.notify(service: serviceUuid, characteristic: counterUuid)
+let notificationTask = Task {
+    for await value in notifications {
+        print("Notification: \(toUInt32(value))")
+    }
+}
+try await Task.sleep(for: .seconds(5))
+try await peripheral.unsubscribe(service: serviceUuid, characteristic: counterUuid)
+await notificationTask.value
+
+try await peripheral.disconnect()
+print("Disconnected")
+```
+
+</Tab>
+<Tab value="Dart">
+
+```dart
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:simpledartble/simpledartble.dart';
+
+const serviceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+const counterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+bool advertisesService(Peripheral device) => device.services().any((service) => service.uuid == serviceUuid);
+
+int uint32(Uint8List value) => ByteData.sublistView(value).getUint32(0, Endian.little);
+
+Future<void> main() async {
+  final adapter = (await Adapter.getAdapters()).first;
+  await adapter.scanFor(const Duration(seconds: 5));
+
+  final peripheral = adapter.scanGetResults().where(advertisesService).firstOrNull;
+  if (peripheral == null) {
+    print('Course peripheral not found. Start it and run this program again.');
+    exit(1);
+  }
+
+  print('Connecting to ${peripheral.address}');
+  await peripheral.connect();
+  print('Connected');
+
+  final notifications = await peripheral.notify(serviceUuid, counterUuid);
+  notifications.listen((value) => print('Notification: ${uint32(value)}'));
+  await Future<void>.delayed(const Duration(seconds: 5));
+  await peripheral.unsubscribe(serviceUuid, counterUuid);
+
+  await peripheral.disconnect();
+  print('Disconnected');
+}
+```
+
+</Tab>
+<Tab value="Delphi">
+
+```pascal
+program Subscribe;
+
+{$IFDEF FPC}
+  {$MODE DELPHIUNICODE}
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  SysUtils,
+  SimpleDelphiBLE;
+
+const
+  ServiceUuid = '76a60001-a8e9-4660-bc7b-ed8d93a6849e';
+  CounterUuid = '76a60003-a8e9-4660-bc7b-ed8d93a6849e';
+
+type
+  THandlers = class
+    procedure Notified(Sender: TBlePeripheral; const Service, Characteristic: string; const Data: TBytes);
+  end;
+
+function ToCardinal(const Data: TBytes): Cardinal;
+begin
+  Result := Data[0] or (Data[1] shl 8) or (Data[2] shl 16) or (Cardinal(Data[3]) shl 24);
+end;
+
+procedure THandlers.Notified(Sender: TBlePeripheral; const Service, Characteristic: string; const Data: TBytes);
+begin
+  WriteLn('Notification: ', ToCardinal(Data));
+end;
+
+function AdvertisesService(Device: TBlePeripheral): Boolean;
+var
+  Service: TBleService;
+begin
+  for Service in Device.Services do
+    if Service.Uuid = ServiceUuid then
+      Exit(True);
+  Result := False;
+end;
+
+var
+  Handlers: THandlers;
+  Adapter: TBleAdapter;
+  Device, Peripheral: TBlePeripheral;
+
+begin
+  Handlers := THandlers.Create;
+  Adapter := TBleAdapter.GetAdapters[0];
+  Adapter.ScanFor(5000);
+
+  Peripheral := nil;
+  for Device in Adapter.ScanGetResults do
+    if AdvertisesService(Device) then
+    begin
+      Peripheral := Device;
+      Break;
+    end;
+  if Peripheral = nil then
+  begin
+    WriteLn('Course peripheral not found. Start it and run this program again.');
+    Halt(1);
+  end;
+
+  WriteLn('Connecting to ', Peripheral.Address);
+  Peripheral.Connect;
+  WriteLn('Connected');
+
+  Peripheral.Notify(ServiceUuid, CounterUuid, Handlers.Notified);
+  Sleep(5000);
+  Peripheral.Unsubscribe(ServiceUuid, CounterUuid);
+
+  Peripheral.Disconnect;
+  WriteLn('Disconnected');
+end.
+```
+
+</Tab>
+<Tab value="Android">
+
+```kotlin
+import android.util.Log
+import kotlinx.coroutines.withTimeoutOrNull
+import org.simpleble.android.Adapter
+import org.simpleble.android.BluetoothUUID
+import org.simpleble.android.Peripheral
+
+private val SERVICE = BluetoothUUID("76a60001-a8e9-4660-bc7b-ed8d93a6849e")
+private val COUNTER = BluetoothUUID("76a60003-a8e9-4660-bc7b-ed8d93a6849e")
+
+private fun advertisesService(device: Peripheral) = device.services().any { it.uuid == SERVICE }
+
+private fun ByteArray.toUInt32() = (0..3).sumOf { this[it].toUByte().toUInt() shl (8 * it) }
+
+suspend fun subscribeToCounter() {
+    val adapter = Adapter.getAdapters().first()
+    adapter.scanFor(5000)
+
+    val peripheral = adapter.scanGetResults().firstOrNull(::advertisesService)
+    if (peripheral == null) {
+        Log.d("SimpleBLE", "Course peripheral not found. Start it and run this program again.")
+        return
+    }
+
+    Log.d("SimpleBLE", "Connecting to ${peripheral.address}")
+    peripheral.connect()
+    Log.d("SimpleBLE", "Connected")
+
+    // Collecting subscribes. When the timeout ends the collection, the flow unsubscribes.
+    withTimeoutOrNull(5000) {
+        peripheral.notify(SERVICE, COUNTER).collect { value ->
+            Log.d("SimpleBLE", "Notification: ${value.toUInt32()}")
+        }
+    }
+
+    peripheral.disconnect()
+    Log.d("SimpleBLE", "Disconnected")
+}
+```
+
+</Tab>
+</Tabs>
+
+In React Native and Android, call `subscribeToCounter` from your app once it holds the Bluetooth permissions, including the one to connect. [Permissions](/fundamentals/permissions) lists them for each platform.
+
+## What you should see
+
+About five notifications, with numbers that count up:
+
+```
+Connecting to 7C:2E:0D:A4:58:13
+Connected
+Notification: 17
+Notification: 18
+Notification: 19
+Notification: 20
+Notification: 21
+Disconnected
+```
+
+The course peripheral sets Counter once a second, so the 5-second subscription receives about five values. The first number depends on how long the course peripheral has been running.
+
+With nRF Connect's GATT server, a value arrives each time you change Counter in the app. Enter its value as four bytes, such as `05 00 00 00`, which the program prints as 5.
+
+## Exercise
+
+Print the time since subscribing next to each value, in milliseconds. Note the time just before `notify()`, and print the difference with each value, the way [BLE Advertising Interval and Discovery Time](/learn/advertising-interval-and-discovery) measured discovery time. Values arrive about 1000 ms apart, because the course peripheral sets Counter once a second.
+
+If the peripheral sent 100 values a second, notifications would keep up, while indications would be limited to one per round trip to the central and back.
+
+## Troubleshooting
+
+- **The program prints `Course peripheral not found`.** Start the course peripheral as in [Connect to a BLE Device](/learn/connect-to-a-ble-device#start-the-course-peripheral). It advertises for 10 minutes and then stops, so start it again if it has been running longer.
+- **No values arrive.** The course peripheral stops after 10 minutes, so start it again and run the program. With nRF Connect, a value arrives only when Counter's value changes, so change it in the app while the program waits.
+- **Subscribing fails with an error.** The characteristic doesn't support notifications. The program in [GATT Services and Characteristics](/learn/gatt-services-and-characteristics) prints each characteristic's properties, and Counter needs notify. With nRF Connect, enable notify when you create Counter.
+
+## Next lesson
+
+[BLE MTU and Throughput](/learn/mtu-and-throughput): how much data one packet carries, and how fast your link moves it.

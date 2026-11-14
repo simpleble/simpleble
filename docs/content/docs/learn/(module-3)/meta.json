@@ -1,0 +1,12 @@
+{
+  "title": "Module 3: Connections and GATT",
+  "pages": [
+    "connect-to-a-ble-device",
+    "gatt-services-and-characteristics",
+    "[Bluetooth UUIDs](/fundamentals/uuids)",
+    "read-and-write-characteristics",
+    "notify-vs-indicate",
+    "mtu-and-throughput",
+    "connection-parameters"
+  ]
+}

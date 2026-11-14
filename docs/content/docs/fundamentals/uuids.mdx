@@ -5,6 +5,8 @@ description: How Bluetooth Low Energy UUIDs work, including the 16-bit and 128-b
 
 Every service, characteristic and descriptor in Bluetooth Low Energy is named by a UUID, a 128-bit identifier. Standard UUIDs also have a short 16-bit form. Both forms name the same thing, and code that treats them as different values can't find the characteristic it is looking for.
 
+This page is also lesson 12 of [Learn Bluetooth Low Energy](/learn), a free hands-on BLE course.
+
 ## 16-bit and 128-bit forms
 
 UUIDs are 128 bits long. The Bluetooth SIG reserves one range of them, built on the **Bluetooth Base UUID**:
@@ -20,6 +22,8 @@ A 16-bit UUID is shorthand for a full UUID in that range. Put the four hex digit
 ```
 
 So `0x2A37` and `00002a37-0000-1000-8000-00805f9b34fb` are the same UUID. A 32-bit UUID expands the same way into the first eight hex digits, `xxxxxxxx-0000-1000-8000-00805f9b34fb`.
+
+<UuidExpansionDiagram />
 
 The Bluetooth Core Specification compares UUIDs only in their full form. Expand both sides to 128 bits before comparing them.
 
@@ -74,3 +78,23 @@ The rest of your code then works with one spelling.
 - **Mixing uppercase and lowercase.** `00002A37-...` and `00002a37-...` are the same UUID but different strings. Lowercase both.
 - **Reversing the bytes in firmware.** A UUID entered with its bytes in the wrong order is a different UUID, and clients won't find it. `0x2902` entered as `0x0229` no longer names the Client Characteristic Configuration descriptor.
 - **Building custom UUIDs on the Base UUID.** A value such as `0000fff1-0000-1000-8000-00805f9b34fb` sits in the range the SIG reserves. Use a random 128-bit UUID instead.
+
+## Exercise
+
+Call `full_uuid` with `180D`, with `0x2a37` and with the course service UUID in uppercase, `76A60001-A8E9-4660-BC7B-ED8D93A6849E`, and print each result. Then generate a UUID for a service of your own in the [BLE UUID Generator](https://simpleble.org/tools/ble-uuid-generator), and convert `0x2A37` there to check your output.
+
+## What you should see
+
+Every UUID comes out in the one form SimpleBLE reports, full and lowercase:
+
+```
+0000180d-0000-1000-8000-00805f9b34fb
+00002a37-0000-1000-8000-00805f9b34fb
+76a60001-a8e9-4660-bc7b-ed8d93a6849e
+```
+
+The first two expand into the Base UUID, because the Bluetooth SIG assigned them. The course service is a random 128-bit UUID, so only its case changes. These are the strings to pass to `read()`, `write_request()` and `notify()`.
+
+## Next lesson
+
+[Read and Write BLE Characteristics](/learn/read-and-write-characteristics): read the course peripheral's values, write new ones, and decode the bytes that come back.
