@@ -8,7 +8,8 @@ const CONTENT_DIR = join(import.meta.dirname, 'content/docs');
 
 // Pages that moved, and code paths in the docs that crawlers requested as URLs.
 const MOVED_PAGES = [
-  ['/ble_basics', '/fundamentals/ble_basics'],
+  ['/ble_basics', '/learn/what-is-bluetooth-low-energy'],
+  ['/fundamentals/ble_basics', '/learn/what-is-bluetooth-low-energy'],
   ['/cmake_primer', '/fundamentals/cmake_primer'],
   ['/concurrency', '/fundamentals/concurrency'],
   ['/error-handling', '/fundamentals/error-handling'],

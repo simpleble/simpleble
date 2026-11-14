@@ -16,6 +16,11 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       {
+        text: "Learn",
+        url: "/learn",
+        active: "nested-url",
+      },
+      {
         text: "Store",
         url: "https://simpleble.store/?utm_source=simpleble_docs&utm_medium=website&utm_campaign=docs_nav",
         external: true,

@@ -29,9 +29,9 @@ const RESOURCES: ReadonlyArray<CardLink> = [
     href: "/changelog",
   },
   {
-    title: "Bluetooth LE Basics",
-    description: "A brief introduction to Bluetooth Low Energy concepts.",
-    href: "/fundamentals/ble_basics",
+    title: "What Is Bluetooth Low Energy?",
+    description: "How BLE works and how it differs from Bluetooth Classic.",
+    href: "/learn/what-is-bluetooth-low-energy",
   },
   {
     title: "Bluetooth Permissions",
