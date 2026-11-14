@@ -27,6 +27,9 @@ function folderRedirects(dir = CONTENT_DIR, url = '') {
     .filter((entry) => entry.isDirectory())
     .flatMap((entry) => {
       const folder = join(dir, entry.name);
+      // A folder group such as (module-1) groups pages in the sidebar and isn't part of their URLs.
+      if (/^\(.+\)$/.test(entry.name)) return folderRedirects(folder, url);
+
       const source = `${url}/${entry.name}`;
       const nested = folderRedirects(folder, source);
       if (existsSync(join(folder, 'index.mdx'))) return nested;

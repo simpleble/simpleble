@@ -1,0 +1,9 @@
+{
+  "title": "Module 2: Advertising",
+  "pages": [
+    "[BLE Advertising](/fundamentals/advertising)",
+    "manufacturer-data-and-beacons",
+    "advertise-from-your-computer",
+    "advertising-interval-and-discovery"
+  ]
+}

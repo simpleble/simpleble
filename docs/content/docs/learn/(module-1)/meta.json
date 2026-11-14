@@ -1,0 +1,10 @@
+{
+  "title": "Module 1: First contact",
+  "pages": [
+    "what-is-bluetooth-low-energy",
+    "central-and-peripheral",
+    "scan-for-ble-devices",
+    "read-ble-advertisements",
+    "rssi-signal-strength"
+  ]
+}
