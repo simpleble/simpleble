@@ -17,7 +17,8 @@ jobs:
         config:
           # Linux builds run in manylinux containers, so the library only needs glibc 2.28.
           - { name: linux-x64, runner-os: ubuntu-22.04, container-image: 'quay.io/pypa/manylinux_2_28_x86_64', targets: linux-x64 }
-          - { name: linux-arm64, runner-os: ubuntu-22.04-arm, container-image: 'quay.io/pypa/manylinux_2_28_aarch64', targets: linux-arm64 }
+          # NOTE: Dart 3.14.0's linux-arm64 SDK needs glibc 2.34, so this job stays on 3.13.7.
+          - { name: linux-arm64, runner-os: ubuntu-22.04-arm, container-image: 'quay.io/pypa/manylinux_2_28_aarch64', targets: linux-arm64, dart-sdk: '3.13.7' }
           - { name: apple, runner-os: macos-15, targets: 'macos-arm64 macos-x64 ios-iphoneos-arm64 ios-iphonesimulator-arm64 ios-iphonesimulator-x64' }
           - { name: windows-x64, runner-os: windows-2022, targets: windows-x64 }
           - { name: windows-arm64, runner-os: windows-11-arm, targets: windows-arm64 }
@@ -50,6 +51,8 @@ jobs:
           sudo -H apt-get install -y libdbus-1-dev
 
       - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.config.dart-sdk || 'stable' }}
 
       - name: Build the libraries
         run: |
