@@ -655,7 +655,8 @@ jobs:
 
   publish-simplektble:
     needs: [publish-release]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    # NOTE: Only releases publish, as -dev builds on every push used up the Maven Central monthly release limit.
+    if: github.event_name == 'release'
     # Apple targets build only on macOS, and every target is published from one build.
     runs-on: macos-15
     steps:

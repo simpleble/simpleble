@@ -105,7 +105,7 @@ Perform the following steps in order.
    (cd docs && npm run types:check && npm run build)
    ```
 
-5. Commit and push the release changes, and wait for the branch-triggered `CI Main` workflow to finish successfully. Like every `main` push, it publishes development packages: `X.Y.Z-dev.N` to crates.io, Maven Central, and NuGet, `X.Y.Z.devN` to PyPI, `X.Y.Z-dev.N` to npm under the `dev` tag, and `vX.Y.Z-dev.N` tags to `simpleble/simpleswiftble`, `simpleble/simplegoble`, and `simpleble/simpledelphible`.
+5. Commit and push the release changes, and wait for the branch-triggered `CI Main` workflow to finish successfully. Like every `main` push, it publishes development packages: `X.Y.Z-dev.N` to crates.io, Maven Central (except SimpleKtBLE, which publishes only on releases), and NuGet, `X.Y.Z.devN` to PyPI, `X.Y.Z-dev.N` to npm under the `dev` tag, and `vX.Y.Z-dev.N` tags to `simpleble/simpleswiftble`, `simpleble/simplegoble`, and `simpleble/simpledelphible`.
 
    ```bash
    gh run list -R simpleble/simpleble --workflow ci_main.yml --event push --commit <commit>

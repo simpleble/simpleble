@@ -57,8 +57,8 @@ Vanniktech Gradle properties. Do not store credentials in Gradle files.
 
 ## Publishing
 
-Main pushes publish immutable `-dev.N` versions. Published GitHub releases publish the stable version. The
-`ci_simplektble.yml` workflow builds the JNI libraries, and the `publish-simplektble` job in `ci_main.yml` publishes
+Only published GitHub releases publish, as `-dev.N` versions on every main push would exceed the Maven Central
+monthly release limit. The `ci_simplektble.yml` workflow builds the JNI libraries, and the `publish-simplektble` job in `ci_main.yml` publishes
 from macOS:
 
 ```bash
